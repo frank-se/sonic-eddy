@@ -6,14 +6,14 @@ public class MainWindowViewModel : ViewModelBase
 {
     private ViewModelBase? _currentPageViewModel;
 
+    private bool _mixerMenuItemSelected = true;
+    private bool _objectBrowserMenuItemSelected;
+
     public ViewModelBase? CurrentPageViewModel
     {
         get => _currentPageViewModel;
         set => this.RaiseAndSetIfChanged(ref _currentPageViewModel, value);
     }
-    
-    private bool _mixerMenuItemSelected = true;
-    private bool _objectBrowserMenuItemSelected;
 
     public bool MixerMenuItemSelected
     {

@@ -1,8 +1,37 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:SonicEddy.ViewModels"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-             x:Class="SonicEddy.Views.ObjectBrowserView">
-    Object Browser
+             x:Class="SonicEddy.Views.ObjectBrowserView"
+             x:DataType="vm:ObjectBrowserViewModel">
+
+    <Design.DataContext>
+        <!-- This only sets the DataContext for the previewer in an IDE,
+             the DataContext during runtime is automatically set by
+             Avalonia UI when it creates the view. -->
+        <vm:ObjectBrowserViewModel />
+    </Design.DataContext>
+
+    <SplitView IsPaneOpen="True"
+               DisplayMode="Inline"
+               OpenPaneLength="400"
+               PanePlacement="Right">
+        <SplitView.Pane>
+            <HeaderedContentControl Header="Objects"
+                                    Margin="4">
+                <TreeView ItemsSource="{Binding Objects}">
+                    <TreeView.ItemTemplate>
+                        <TreeDataTemplate ItemsSource="{Binding Children}">
+                            <TextBlock Text="{Binding Name}" />
+                        </TreeDataTemplate>
+                    </TreeView.ItemTemplate>
+                </TreeView>
+            </HeaderedContentControl>
+        </SplitView.Pane>
+
+        <HeaderedContentControl Header="Details"
+                                Margin="4" />
+    </SplitView>
 </UserControl>

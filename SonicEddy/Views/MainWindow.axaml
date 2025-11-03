@@ -19,12 +19,12 @@
     <Window.Styles>
         <Style Selector="Button">
             <Setter Property="Background"
-            Value="{DynamicResource ToggleButtonBackground}" />
+                    Value="{DynamicResource ToggleButtonBackground}" />
         </Style>
 
         <Style Selector="Button.selected">
             <Setter Property="Background"
-            Value="{DynamicResource ToggleButtonBackgroundChecked}" />
+                    Value="{DynamicResource ToggleButtonBackgroundChecked}" />
         </Style>
     </Window.Styles>
 
@@ -52,8 +52,7 @@
                 </StackPanel>
             </HeaderedContentControl>
         </SplitView.Pane>
-        <Grid>
-            <ContentControl Content="{Binding CurrentPageViewModel}" />
-        </Grid>
+
+        <ContentControl Content="{Binding CurrentPageViewModel}" />
     </SplitView>
 </Window>

@@ -23,7 +23,7 @@ public class App : Application
             };
 
         DataTemplates.Add(new ViewLocator());
-        
+
         base.OnFrameworkInitializationCompleted();
     }
 }
