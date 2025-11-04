@@ -19,7 +19,7 @@ public class ObjectBrowserViewModel : ViewModelBase, IActivatableViewModel
     public ObjectBrowserViewModel()
     {
         var clients = Wireplumber.Clients;
-        Objects = new ObservableCollection<PipewireObject>(clients.Select(PipewireObject.FromClient));
+        Objects = new(clients.Select(PipewireObject.FromClient));
 
         ProcessDevices();
         ProcessNodes();
@@ -77,18 +77,26 @@ public class ObjectBrowserViewModel : ViewModelBase, IActivatableViewModel
         if (_leftover.Count <= 0) return;
 
         var potentiallyChangedDevices = Wireplumber.Devices.Where(d =>
-            d.Client.Id == client.ObjectId && _leftover.Any(l => l.ObjectSerial == d.ObjectSerial)).ToList();
-
-        _leftover.RemoveAll(l => potentiallyChangedDevices.Any(d => d.ObjectSerial == l.ObjectSerial));
-        foreach (var device in potentiallyChangedDevices) HandleDeviceAddedEvent(device);
-
-        var potentiallyChangedNodes = Wireplumber.Nodes.Where(n => n.Client != null &&
-                                                                   n.Client.Id == client.ObjectId &&
-                                                                   _leftover.Any(l => l.ObjectSerial == n.ObjectSerial))
+                d.Client.Id == client.ObjectId &&
+                _leftover.Any(l => l.ObjectSerial == d.ObjectSerial))
             .ToList();
 
-        _leftover.RemoveAll(l => potentiallyChangedNodes.Any(n => n.ObjectSerial == l.ObjectSerial));
-        foreach (var node in potentiallyChangedNodes) HandleNodeAddedEvent(node);
+        _leftover.RemoveAll(l =>
+            potentiallyChangedDevices.Any(d =>
+                d.ObjectSerial == l.ObjectSerial));
+        foreach (var device in potentiallyChangedDevices)
+            HandleDeviceAddedEvent(device);
+
+        var potentiallyChangedNodes = Wireplumber.Nodes.Where(n =>
+                n.Client != null &&
+                n.Client.Id == client.ObjectId &&
+                _leftover.Any(l => l.ObjectSerial == n.ObjectSerial))
+            .ToList();
+
+        _leftover.RemoveAll(l =>
+            potentiallyChangedNodes.Any(n => n.ObjectSerial == l.ObjectSerial));
+        foreach (var node in potentiallyChangedNodes)
+            HandleNodeAddedEvent(node);
     }
 
     private void HandleDeviceAddedEvent(Device device)
@@ -116,9 +124,13 @@ public class ObjectBrowserViewModel : ViewModelBase, IActivatableViewModel
         if (_leftover.Count <= 0) return;
 
         var potentiallyChangedNodes = Wireplumber.Nodes.Where(n =>
-            n.Device?.Id == device.ObjectId && _leftover.Any(l => l.ObjectSerial == n.ObjectSerial)).ToList();
-        _leftover.RemoveAll(l => potentiallyChangedNodes.Any(n => n.ObjectSerial == l.ObjectSerial));
-        foreach (var node in potentiallyChangedNodes) HandleNodeAddedEvent(node);
+                n.Device?.Id == device.ObjectId &&
+                _leftover.Any(l => l.ObjectSerial == n.ObjectSerial))
+            .ToList();
+        _leftover.RemoveAll(l =>
+            potentiallyChangedNodes.Any(n => n.ObjectSerial == l.ObjectSerial));
+        foreach (var node in potentiallyChangedNodes)
+            HandleNodeAddedEvent(node);
     }
 
     private void HandleNodeAddedEvent(Node node)
@@ -138,7 +150,8 @@ public class ObjectBrowserViewModel : ViewModelBase, IActivatableViewModel
         }
         else if (node.Device is null && node.Client != null)
         {
-            var client = Objects.FirstOrDefault(o => o.ObjectId == node.Client.Id);
+            var client =
+                Objects.FirstOrDefault(o => o.ObjectId == node.Client.Id);
             if (client is null)
             {
                 _leftover.Add(PipewireObject.FromNode(node));
@@ -149,14 +162,17 @@ public class ObjectBrowserViewModel : ViewModelBase, IActivatableViewModel
         }
         else if (node.Device != null && node.Client != null)
         {
-            var client = Objects.FirstOrDefault(o => o.ObjectId == node.Client.Id);
+            var client =
+                Objects.FirstOrDefault(o => o.ObjectId == node.Client.Id);
             if (client is null)
             {
                 _leftover.Add(PipewireObject.FromNode(node));
                 return;
             }
 
-            var device = client.Children.FirstOrDefault(d => d.ObjectId == node.Device.Id);
+            var device =
+                client.Children.FirstOrDefault(d =>
+                    d.ObjectId == node.Device.Id);
             if (device is null)
             {
                 _leftover.Add(PipewireObject.FromNode(node));
@@ -166,9 +182,13 @@ public class ObjectBrowserViewModel : ViewModelBase, IActivatableViewModel
             device.Children.Add(PipewireObject.FromNode(node));
         }
 
-        var potentiallyChangedPorts = Wireplumber.Ports.Where(p => p.Node.Id == node.ObjectId).ToList();
-        _leftover.RemoveAll(l => potentiallyChangedPorts.Any(p => p.ObjectSerial == l.ObjectSerial));
-        foreach (var port in potentiallyChangedPorts) HandlePortAddedEvent(port);
+        var potentiallyChangedPorts = Wireplumber.Ports
+            .Where(p => p.Node.Id == node.ObjectId)
+            .ToList();
+        _leftover.RemoveAll(l =>
+            potentiallyChangedPorts.Any(p => p.ObjectSerial == l.ObjectSerial));
+        foreach (var port in potentiallyChangedPorts)
+            HandlePortAddedEvent(port);
     }
 
     private void HandlePortAddedEvent(Port port)
