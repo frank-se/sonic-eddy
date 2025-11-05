@@ -1,0 +1,57 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:objectDetailsViewModels="clr-namespace:SonicEddy.ViewModels.ObjectDetailsViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="SonicEddy.Views.ObjectDetailsViews.ClientDetailsView"
+             x:DataType="objectDetailsViewModels:ClientDetailsViewModel">
+    <ScrollViewer>
+        <HeaderedContentControl Header="{Binding Title}"
+                                Margin="4">
+            <Grid ColumnDefinitions="*,3*"
+                  RowDefinitions="auto,auto,auto,auto,auto,auto,auto,auto,auto,auto"
+                  Margin="4">
+                <Label Grid.Row="0" Grid.Column="0" Margin="2">Object Serial</Label>
+                <TextBlock Grid.Row="0" Grid.Column="1" Margin="2"
+                           Text="{Binding ObjectSerial}" />
+
+                <Label Grid.Row="1" Grid.Column="0" Margin="2">Object Id</Label>
+                <TextBlock Grid.Row="1" Grid.Column="1" Margin="2"
+                           Text="{Binding ObjectId}" />
+
+                <Label Grid.Row="2" Grid.Column="0" Margin="2">Application Name</Label>
+                <TextBlock Grid.Row="2" Grid.Column="1" Margin="2"
+                           Text="{Binding ApplicationName}" />
+
+                <Label Grid.Row="3" Grid.Column="0" Margin="2">Process Id</Label>
+                <TextBlock Grid.Row="3" Grid.Column="1" Margin="2"
+                           Text="{Binding ProcessId}" />
+
+                <Label Grid.Row="4" Grid.Column="0" Margin="2">Group Id</Label>
+                <TextBlock Grid.Row="4" Grid.Column="1" Margin="2"
+                           Text="{Binding GroupId}" />
+
+                <Label Grid.Row="5" Grid.Column="0" Margin="2">User Id</Label>
+                <TextBlock Grid.Row="5" Grid.Column="1" Margin="2"
+                           Text="{Binding UserId}" />
+
+                <Label Grid.Row="6" Grid.Column="0" Margin="2">Socket</Label>
+                <TextBlock Grid.Row="6" Grid.Column="1" Margin="2"
+                           Text="{Binding Socket}" />
+
+                <Label Grid.Row="7" Grid.Column="0" Margin="2">Access</Label>
+                <TextBlock Grid.Row="7" Grid.Column="1" Margin="2"
+                           Text="{Binding Access}" />
+
+                <Label Grid.Row="8" Grid.Column="0" Margin="2">Client Access</Label>
+                <TextBlock Grid.Row="8" Grid.Column="1" Margin="2"
+                           Text="{Binding ClientAccess}" />
+
+                <Label Grid.Row="9" Grid.Column="0" Margin="2">Protocol</Label>
+                <TextBlock Grid.Row="9" Grid.Column="1" Margin="2"
+                           Text="{Binding Protocol}" />
+            </Grid>
+        </HeaderedContentControl>
+    </ScrollViewer>
+</UserControl>

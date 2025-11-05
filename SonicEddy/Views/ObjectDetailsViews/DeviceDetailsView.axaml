@@ -1,0 +1,155 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:objectDetailsViewModels="clr-namespace:SonicEddy.ViewModels.ObjectDetailsViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="SonicEddy.Views.ObjectDetailsViews.DeviceDetailsView"
+             x:DataType="objectDetailsViewModels:DeviceDetailsViewModel">
+    <ScrollViewer>
+        <StackPanel>
+            <HeaderedContentControl Header="{Binding Title}"
+                                    Margin="4">
+                <Grid ColumnDefinitions="*,3*"
+                      RowDefinitions="auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto"
+                      Margin="4">
+                    <Label Grid.Row="0" Grid.Column="0" Margin="2">Object Serial</Label>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Margin="2"
+                               Text="{Binding ObjectSerial}" />
+
+                    <Label Grid.Row="1" Grid.Column="0" Margin="2">Object Id</Label>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Margin="2"
+                               Text="{Binding ObjectId}" />
+
+                    <Label Grid.Row="2" Grid.Column="0" Margin="2">Device Class</Label>
+                    <TextBlock Grid.Row="2" Grid.Column="1" Margin="2"
+                               Text="{Binding DeviceClass}" />
+
+                    <Label Grid.Row="3" Grid.Column="0" Margin="2">Description</Label>
+                    <TextBlock Grid.Row="3" Grid.Column="1" Margin="2"
+                               Text="{Binding Description}" />
+
+                    <Label Grid.Row="4" Grid.Column="0" Margin="2">Form Factor</Label>
+                    <TextBlock Grid.Row="4" Grid.Column="1" Margin="2"
+                               Text="{Binding FormFactor}" />
+
+                    <Label Grid.Row="5" Grid.Column="0" Margin="2">Icon</Label>
+                    <TextBlock Grid.Row="5" Grid.Column="1" Margin="2"
+                               Text="{Binding Icon}" />
+
+                    <Label Grid.Row="6" Grid.Column="0" Margin="2">Icon Name</Label>
+                    <TextBlock Grid.Row="6" Grid.Column="1" Margin="2"
+                               Text="{Binding IconName}" />
+
+                    <Label Grid.Row="7" Grid.Column="0" Margin="2">Intended Roles</Label>
+                    <TextBlock Grid.Row="7" Grid.Column="1" Margin="2"
+                               Text="{Binding IntendedRoles}" />
+
+                    <Label Grid.Row="8" Grid.Column="0" Margin="2">Name</Label>
+                    <TextBlock Grid.Row="8" Grid.Column="1" Margin="2"
+                               Text="{Binding Name}" />
+
+                    <Label Grid.Row="9" Grid.Column="0" Margin="2">Nick</Label>
+                    <TextBlock Grid.Row="9" Grid.Column="1" Margin="2"
+                               Text="{Binding Nick}" />
+
+                    <Label Grid.Row="10" Grid.Column="0" Margin="2">Profile</Label>
+                    <TextBlock Grid.Row="10" Grid.Column="1" Margin="2"
+                               Text="{Binding Profile}" />
+
+                    <Label Grid.Row="11" Grid.Column="0" Margin="2">Profile Set</Label>
+                    <TextBlock Grid.Row="11" Grid.Column="1" Margin="2"
+                               Text="{Binding ProfileSet}" />
+
+                    <Label Grid.Row="12" Grid.Column="0" Margin="2">Serial</Label>
+                    <TextBlock Grid.Row="12" Grid.Column="1" Margin="2"
+                               Text="{Binding Serial}" />
+
+                    <Label Grid.Row="13" Grid.Column="0" Margin="2">Sub System</Label>
+                    <TextBlock Grid.Row="13" Grid.Column="1" Margin="2"
+                               Text="{Binding SubSystem}" />
+                </Grid>
+            </HeaderedContentControl>
+            <HeaderedContentControl Header="API - ACP"
+                                    Margin="4">
+                <Grid ColumnDefinitions="*,3*"
+                      RowDefinitions="auto,auto,auto,auto"
+                      Margin="4">
+                    <Label Grid.Row="0" Grid.Column="0" Margin="2">Auto Port</Label>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Margin="2"
+                               Text="{Binding AutoPort}" />
+
+                    <Label Grid.Row="1" Grid.Column="0" Margin="2">Auto Profile</Label>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Margin="2"
+                               Text="{Binding AutoProfile}" />
+
+                    <Label Grid.Row="2" Grid.Column="0" Margin="2">Pro Channels</Label>
+                    <TextBlock Grid.Row="2" Grid.Column="1" Margin="2"
+                               Text="{Binding ProChannels}" />
+
+                    <Label Grid.Row="3" Grid.Column="0" Margin="2">Probe Rate</Label>
+                    <TextBlock Grid.Row="3" Grid.Column="1" Margin="2"
+                               Text="{Binding ProbeRate}" />
+                </Grid>
+            </HeaderedContentControl>
+            <HeaderedContentControl Header="API - Alsa"
+                                    Margin="4">
+                <Grid ColumnDefinitions="*,3*"
+                      RowDefinitions="auto,auto,auto,auto,auto,auto"
+                      Margin="4">
+                    <Label Grid.Row="0" Grid.Column="0" Margin="2">Disable Mixer Path</Label>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Margin="2"
+                               Text="{Binding DisableMixerPath}" />
+
+                    <Label Grid.Row="1" Grid.Column="0" Margin="2">Ignore Db</Label>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Margin="2"
+                               Text="{Binding IgnoreDb}" />
+
+                    <Label Grid.Row="2" Grid.Column="0" Margin="2">Path</Label>
+                    <TextBlock Grid.Row="2" Grid.Column="1" Margin="2"
+                               Text="{Binding Path}" />
+
+                    <Label Grid.Row="3" Grid.Column="0" Margin="2">Soft Mixer</Label>
+                    <TextBlock Grid.Row="3" Grid.Column="1" Margin="2"
+                               Text="{Binding SoftMixer}" />
+
+                    <Label Grid.Row="4" Grid.Column="0" Margin="2">Split Enable</Label>
+                    <TextBlock Grid.Row="4" Grid.Column="1" Margin="2"
+                               Text="{Binding SplitEnable}" />
+
+                    <Label Grid.Row="5" Grid.Column="0" Margin="2">Use UCM</Label>
+                    <TextBlock Grid.Row="5" Grid.Column="1" Margin="2"
+                               Text="{Binding UseUcm}" />
+                </Grid>
+            </HeaderedContentControl>
+            <HeaderedContentControl Header="Product"
+                                    Margin="4">
+                <Grid ColumnDefinitions="*,3*"
+                      RowDefinitions="auto,auto"
+                      Margin="4">
+                    <Label Grid.Row="0" Grid.Column="0" Margin="2">Id</Label>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Margin="2"
+                               Text="{Binding ProductId}" />
+
+                    <Label Grid.Row="1" Grid.Column="0" Margin="2">Name</Label>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Margin="2"
+                               Text="{Binding ProductName}" />
+                </Grid>
+            </HeaderedContentControl>
+            <HeaderedContentControl Header="Vendor"
+                                    Margin="4">
+                <Grid ColumnDefinitions="*,3*"
+                      RowDefinitions="auto,auto"
+                      Margin="4">
+                    <Label Grid.Row="0" Grid.Column="0" Margin="2">Id</Label>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Margin="2"
+                               Text="{Binding VendorId}" />
+
+                    <Label Grid.Row="1" Grid.Column="0" Margin="2">Name</Label>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Margin="2"
+                               Text="{Binding VendorName}" />
+                </Grid>
+            </HeaderedContentControl>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

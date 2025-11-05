@@ -9,12 +9,17 @@ using Fr.Wireplumber;
 using Fr.Wireplumber.Model;
 using ReactiveUI;
 using SonicEddy.Models.ObjectBrowser;
+using SonicEddy.ViewModels.ObjectDetailsViewModels;
 
 namespace SonicEddy.ViewModels;
 
 public class ObjectBrowserViewModel : ViewModelBase, IActivatableViewModel
 {
     private readonly List<PipewireObject> _leftover = [];
+
+    private PipewireObject? _selectedObject;
+
+    private ObjectDetailsViewModelBase? _selectedObjectViewModel;
 
     public ObjectBrowserViewModel()
     {
@@ -24,6 +29,9 @@ public class ObjectBrowserViewModel : ViewModelBase, IActivatableViewModel
         ProcessDevices();
         ProcessNodes();
         ProcessPorts();
+
+        this.WhenAnyValue(vm => vm.SelectedObject)
+            .Subscribe(SetViewModelForSelectedObject);
 
         this.WhenActivated(disposables =>
         {
@@ -57,9 +65,60 @@ public class ObjectBrowserViewModel : ViewModelBase, IActivatableViewModel
         });
     }
 
-    public ObservableCollection<PipewireObject> Objects { get; set; }
+    public ObjectDetailsViewModelBase? SelectedObjectViewModel
+    {
+        get => _selectedObjectViewModel;
+        set => this.RaiseAndSetIfChanged(ref _selectedObjectViewModel, value);
+    }
 
+    public PipewireObject? SelectedObject
+    {
+        get => _selectedObject;
+        set => this.RaiseAndSetIfChanged(ref _selectedObject, value);
+    }
+
+    public ObservableCollection<PipewireObject> Objects { get; set; }
     public ViewModelActivator Activator { get; } = new();
+
+    private void SetViewModelForSelectedObject(PipewireObject? pipewireObject)
+    {
+        if (pipewireObject is null)
+        {
+            SelectedObjectViewModel = null;
+        }
+        else if (pipewireObject.Type == PipewireObjectType.Client)
+        {
+            var client = Wireplumber.Clients.FirstOrDefault(c =>
+                c.ObjectId == pipewireObject.ObjectId);
+            SelectedObjectViewModel = client != null
+                ? ClientDetailsViewModel.FromClient(client)
+                : null;
+        }
+        else if (pipewireObject.Type == PipewireObjectType.Device)
+        {
+            var device = Wireplumber.Devices.FirstOrDefault(d =>
+                d.ObjectId == pipewireObject.ObjectId);
+            SelectedObjectViewModel = device != null
+                ? DeviceDetailsViewModel.FromDevice(device)
+                : null;
+        }
+        else if (pipewireObject.Type == PipewireObjectType.Node)
+        {
+            var node = Wireplumber.Nodes.FirstOrDefault(n =>
+                n.ObjectId == pipewireObject.ObjectId);
+            SelectedObjectViewModel = node != null
+                ? NodeDetailsViewModel.FromNode(node)
+                : null;
+        }
+        else if (pipewireObject.Type == PipewireObjectType.Port)
+        {
+            var port = Wireplumber.Ports.FirstOrDefault(p =>
+                p.ObjectId == pipewireObject.ObjectId);
+            SelectedObjectViewModel = port != null
+                ? PortDetailsViewModel.FromPort(port)
+                : null;
+        }
+    }
 
     private void HandleClientAddedEvent(Client client)
     {

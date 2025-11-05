@@ -1,0 +1,411 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:objectDetailsViewModels="clr-namespace:SonicEddy.ViewModels.ObjectDetailsViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="SonicEddy.Views.ObjectDetailsViews.NodeDetailsView"
+             x:DataType="objectDetailsViewModels:NodeDetailsViewModel">
+    <ScrollViewer>
+        <StackPanel>
+            <HeaderedContentControl Header="{Binding Title}"
+                                    Margin="4">
+                <Grid ColumnDefinitions="*,3*"
+                      RowDefinitions="auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto"
+                      Margin="4">
+                    <Label Grid.Row="0" Grid.Column="0" Margin="2">Monitor Channel Volumes</Label>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Margin="2"
+                               Text="{Binding MonitorChannelVolumes}" />
+
+                    <Label Grid.Row="1" Grid.Column="0" Margin="2">Always Process</Label>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Margin="2"
+                               Text="{Binding AlwaysProcess}" />
+
+                    <Label Grid.Row="2" Grid.Column="0" Margin="2">Auto Connect</Label>
+                    <TextBlock Grid.Row="2" Grid.Column="1" Margin="2"
+                               Text="{Binding AutoConnect}" />
+
+                    <Label Grid.Row="3" Grid.Column="0" Margin="2">Description</Label>
+                    <TextBlock Grid.Row="3" Grid.Column="1" Margin="2"
+                               Text="{Binding Description}" />
+
+                    <Label Grid.Row="4" Grid.Column="0" Margin="2">Disabled</Label>
+                    <TextBlock Grid.Row="4" Grid.Column="1" Margin="2"
+                               Text="{Binding Disabled}" />
+
+                    <Label Grid.Row="5" Grid.Column="0" Margin="2">Do Not Reconnect</Label>
+                    <TextBlock Grid.Row="5" Grid.Column="1" Margin="2"
+                               Text="{Binding DoNotReconnect}" />
+
+                    <Label Grid.Row="6" Grid.Column="0" Margin="2">Exclusive</Label>
+                    <TextBlock Grid.Row="6" Grid.Column="1" Margin="2"
+                               Text="{Binding Exclusive}" />
+
+                    <Label Grid.Row="7" Grid.Column="0" Margin="2">Force Quantum</Label>
+                    <TextBlock Grid.Row="7" Grid.Column="1" Margin="2"
+                               Text="{Binding ForceQuantum}" />
+
+                    <Label Grid.Row="8" Grid.Column="0" Margin="2">Force Rate</Label>
+                    <TextBlock Grid.Row="8" Grid.Column="1" Margin="2"
+                               Text="{Binding ForceRate}" />
+
+                    <Label Grid.Row="9" Grid.Column="0" Margin="2">Link Group</Label>
+                    <TextBlock Grid.Row="9" Grid.Column="1" Margin="2"
+                               Text="{Binding LinkGroup}" />
+
+                    <Label Grid.Row="10" Grid.Column="0" Margin="2">Lock Quantum</Label>
+                    <TextBlock Grid.Row="10" Grid.Column="1" Margin="2"
+                               Text="{Binding LockQuantum}" />
+
+                    <Label Grid.Row="11" Grid.Column="0" Margin="2">Lock Rate</Label>
+                    <TextBlock Grid.Row="11" Grid.Column="1" Margin="2"
+                               Text="{Binding LockRate}" />
+
+                    <Label Grid.Row="12" Grid.Column="0" Margin="2">Name</Label>
+                    <TextBlock Grid.Row="12" Grid.Column="1" Margin="2"
+                               Text="{Binding Name}" />
+
+                    <Label Grid.Row="13" Grid.Column="0" Margin="2">Passive</Label>
+                    <TextBlock Grid.Row="13" Grid.Column="1" Margin="2"
+                               Text="{Binding Passive}" />
+
+                    <Label Grid.Row="15" Grid.Column="0" Margin="2">Pause on idle</Label>
+                    <TextBlock Grid.Row="15" Grid.Column="1" Margin="2"
+                               Text="{Binding PauseOnIdle}" />
+
+                    <Label Grid.Row="16" Grid.Column="0" Margin="2">Rate</Label>
+                    <TextBlock Grid.Row="16" Grid.Column="1" Margin="2"
+                               Text="{Binding Rate}" />
+
+                    <Label Grid.Row="17" Grid.Column="0" Margin="2">Suspend on idle</Label>
+                    <TextBlock Grid.Row="17" Grid.Column="1" Margin="2"
+                               Text="{Binding SuspendOnIdle}" />
+
+                    <Label Grid.Row="18" Grid.Column="0" Margin="2">Want Driver</Label>
+                    <TextBlock Grid.Row="18" Grid.Column="1" Margin="2"
+                               Text="{Binding WantDriver}" />
+
+                    <Label Grid.Row="19" Grid.Column="0" Margin="2">Priority Driver</Label>
+                    <TextBlock Grid.Row="19" Grid.Column="1" Margin="2"
+                               Text="{Binding PriorityDriver}" />
+
+                    <Label Grid.Row="20" Grid.Column="0" Margin="2">Do Not Remix Stream</Label>
+                    <TextBlock Grid.Row="20" Grid.Column="1" Margin="2"
+                               Text="{Binding DoNotRemixStream}" />
+
+                    <Label Grid.Row="21" Grid.Column="0" Margin="2">Target Object</Label>
+                    <TextBlock Grid.Row="21" Grid.Column="1" Margin="2"
+                               Text="{Binding TargetObject}" />
+
+                    <Label Grid.Row="22" Grid.Column="0" Margin="2">Linger</Label>
+                    <TextBlock Grid.Row="22" Grid.Column="1" Margin="2"
+                               Text="{Binding Linger}" />
+                </Grid>
+            </HeaderedContentControl>
+            <HeaderedContentControl Header="Alsa"
+                                    Margin="4">
+                <Grid ColumnDefinitions="*,3*"
+                      RowDefinitions="auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto"
+                      Margin="4">
+                    <Label Grid.Row="0" Grid.Column="0" Margin="2">Path</Label>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Margin="2"
+                               Text="{Binding AlsaPath}" />
+
+                    <Label Grid.Row="1" Grid.Column="0" Margin="2">Auto Link</Label>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Margin="2"
+                               Text="{Binding AlsaAutoLink}" />
+
+                    <Label Grid.Row="2" Grid.Column="0" Margin="2">Disable Batch</Label>
+                    <TextBlock Grid.Row="2" Grid.Column="1" Margin="2"
+                               Text="{Binding AlsaDisableBatch}" />
+
+                    <Label Grid.Row="3" Grid.Column="0" Margin="2">Disable Memory Map</Label>
+                    <TextBlock Grid.Row="3" Grid.Column="1" Margin="2"
+                               Text="{Binding AlsaDisableMemoryMap}" />
+
+                    <Label Grid.Row="4" Grid.Column="0" Margin="2">Disable TSched</Label>
+                    <TextBlock Grid.Row="4" Grid.Column="1" Margin="2"
+                               Text="{Binding AlsaDisableTSched}" />
+
+                    <Label Grid.Row="5" Grid.Column="0" Margin="2">Headroom</Label>
+                    <TextBlock Grid.Row="5" Grid.Column="1" Margin="2"
+                               Text="{Binding AlsaHeadroom}" />
+
+                    <Label Grid.Row="6" Grid.Column="0" Margin="2">Use HTimestamp</Label>
+                    <TextBlock Grid.Row="6" Grid.Column="1" Margin="2"
+                               Text="{Binding AlsaHTimestamp}" />
+
+                    <Label Grid.Row="7" Grid.Column="0" Margin="2">HTimestamp max errors</Label>
+                    <TextBlock Grid.Row="7" Grid.Column="1" Margin="2"
+                               Text="{Binding AlsaHTimestampMaxErrors}" />
+
+                    <Label Grid.Row="8" Grid.Column="0" Margin="2">Multi Rate</Label>
+                    <TextBlock Grid.Row="8" Grid.Column="1" Margin="2"
+                               Text="{Binding AlsaMultiRate}" />
+
+                    <Label Grid.Row="9" Grid.Column="0" Margin="2">Period Num</Label>
+                    <TextBlock Grid.Row="9" Grid.Column="1" Margin="2"
+                               Text="{Binding AlsaPeriodNum}" />
+
+                    <Label Grid.Row="10" Grid.Column="0" Margin="2">Period Size</Label>
+                    <TextBlock Grid.Row="10" Grid.Column="1" Margin="2"
+                               Text="{Binding AlsaPeriodSize}" />
+
+                    <Label Grid.Row="11" Grid.Column="0" Margin="2">Start Delay</Label>
+                    <TextBlock Grid.Row="11" Grid.Column="1" Margin="2"
+                               Text="{Binding AlsaStartDelay}" />
+
+                    <Label Grid.Row="12" Grid.Column="0" Margin="2">Use Channel Map</Label>
+                    <TextBlock Grid.Row="12" Grid.Column="1" Margin="2"
+                               Text="{Binding AlsaUseChannelMap}" />
+                </Grid>
+            </HeaderedContentControl>
+            <HeaderedContentControl Header="Audio"
+                                    Margin="4">
+                <Grid ColumnDefinitions="*,3*"
+                      RowDefinitions="auto,auto,auto,auto"
+                      Margin="4">
+                    <Label Grid.Row="0" Grid.Column="0" Margin="2">Allowed Rates</Label>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Margin="2"
+                               Text="{Binding AudioAllowedRates}" />
+
+                    <Label Grid.Row="1" Grid.Column="0" Margin="2">Channels</Label>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Margin="2"
+                               Text="{Binding AudioChannels}" />
+
+                    <Label Grid.Row="2" Grid.Column="0" Margin="2">Format</Label>
+                    <TextBlock Grid.Row="2" Grid.Column="1" Margin="2"
+                               Text="{Binding AudioFormat}" />
+
+                    <Label Grid.Row="3" Grid.Column="0" Margin="2">Rate</Label>
+                    <TextBlock Grid.Row="3" Grid.Column="1" Margin="2"
+                               Text="{Binding AudioRate}" />
+                </Grid>
+            </HeaderedContentControl>
+            <HeaderedContentControl Header="Channel Mix"
+                                    Margin="4">
+                <Grid ColumnDefinitions="*,3*"
+                      RowDefinitions="auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto"
+                      Margin="4">
+                    <Label Grid.Row="0" Grid.Column="0" Margin="2">Disabled</Label>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Margin="2"
+                               Text="{Binding ChannelMixDisable}" />
+
+                    <Label Grid.Row="1" Grid.Column="0" Margin="2">Front Channel Cut-Off</Label>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Margin="2"
+                               Text="{Binding ChannelMixFrontChannelCutOff}" />
+
+                    <Label Grid.Row="2" Grid.Column="0" Margin="2">Hilbert Taps</Label>
+                    <TextBlock Grid.Row="2" Grid.Column="1" Margin="2"
+                               Text="{Binding ChannelMixHilbertTaps}" />
+
+                    <Label Grid.Row="3" Grid.Column="0" Margin="2">Lock Volumes</Label>
+                    <TextBlock Grid.Row="4" Grid.Column="1" Margin="2"
+                               Text="{Binding ChannelMixLockVolumes}" />
+
+                    <Label Grid.Row="4" Grid.Column="0" Margin="2">Low Frequency Effects (LFE) Cuf-Off</Label>
+                    <TextBlock Grid.Row="4" Grid.Column="1" Margin="2"
+                               Text="{Binding ChannelMixLowFrequencyEffectsCutOff}" />
+
+                    <Label Grid.Row="5" Grid.Column="0" Margin="2">Maximum Volume</Label>
+                    <TextBlock Grid.Row="5" Grid.Column="1" Margin="2"
+                               Text="{Binding ChannelMixMaxVolume}" />
+
+                    <Label Grid.Row="6" Grid.Column="0" Margin="2">Minimum Volume</Label>
+                    <TextBlock Grid.Row="6" Grid.Column="1" Margin="2"
+                               Text="{Binding ChannelMixMinVolume}" />
+
+                    <Label Grid.Row="7" Grid.Column="0" Margin="2">Mix Low Frequency Effects</Label>
+                    <TextBlock Grid.Row="7" Grid.Column="1" Margin="2"
+                               Text="{Binding ChannelMixMixLowFrequencyEffects}" />
+
+                    <Label Grid.Row="8" Grid.Column="0" Margin="2">Normalize</Label>
+                    <TextBlock Grid.Row="8" Grid.Column="1" Margin="2"
+                               Text="{Binding ChannelMixNormalize}" />
+
+                    <Label Grid.Row="9" Grid.Column="0" Margin="2">Up Mix</Label>
+                    <TextBlock Grid.Row="9" Grid.Column="1" Margin="2"
+                               Text="{Binding ChannelMixUpMix}" />
+
+                    <Label Grid.Row="10" Grid.Column="0" Margin="2">Up Mix Method</Label>
+                    <TextBlock Grid.Row="10" Grid.Column="1" Margin="2"
+                               Text="{Binding ChannelMixUpMixMethod}" />
+                </Grid>
+            </HeaderedContentControl>
+            <HeaderedContentControl Header="Clock"
+                                    Margin="4">
+                <Grid ColumnDefinitions="*,3*"
+                      RowDefinitions="auto"
+                      Margin="4">
+                    <Label Grid.Row="0" Grid.Column="0" Margin="2">Name</Label>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Margin="2"
+                               Text="{Binding ClockName}" />
+                </Grid>
+            </HeaderedContentControl>
+            <HeaderedContentControl Header="Client"
+                                    Margin="4">
+                <Grid ColumnDefinitions="*,3*"
+                      RowDefinitions="auto"
+                      Margin="4">
+                    <Label Grid.Row="0" Grid.Column="0" Margin="2">Id</Label>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Margin="2"
+                               Text="{Binding ClientId}" />
+                </Grid>
+            </HeaderedContentControl>
+            <HeaderedContentControl Header="Debug"
+                                    Margin="4">
+                <Grid ColumnDefinitions="*,3*"
+                      RowDefinitions="auto"
+                      Margin="4">
+                    <Label Grid.Row="0" Grid.Column="0" Margin="2">Wave Path</Label>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Margin="2"
+                               Text="{Binding DebugWavePath}" />
+                </Grid>
+            </HeaderedContentControl>
+            <HeaderedContentControl Header="Device"
+                                    Margin="4">
+                <Grid ColumnDefinitions="*,3*"
+                      RowDefinitions="auto"
+                      Margin="4">
+                    <Label Grid.Row="0" Grid.Column="0" Margin="2">Id</Label>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Margin="2"
+                               Text="{Binding DeviceId}" />
+                </Grid>
+            </HeaderedContentControl>
+            <HeaderedContentControl Header="Dither"
+                                    Margin="4">
+                <Grid ColumnDefinitions="*,3*"
+                      RowDefinitions="auto,auto"
+                      Margin="4">
+                    <Label Grid.Row="0" Grid.Column="0" Margin="2">Method</Label>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Margin="2"
+                               Text="{Binding DitherMethod}" />
+
+                    <Label Grid.Row="1" Grid.Column="0" Margin="2">Noise</Label>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Margin="2"
+                               Text="{Binding DitherNoise}" />
+                </Grid>
+            </HeaderedContentControl>
+            <HeaderedContentControl Header="Internal Latency"
+                                    Margin="4">
+                <Grid ColumnDefinitions="*,3*"
+                      RowDefinitions="auto,auto"
+                      Margin="4">
+                    <Label Grid.Row="0" Grid.Column="0" Margin="2">Rate</Label>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Margin="2"
+                           Text="{Binding InternalLatencyRate}" />
+
+                    <Label Grid.Row="1" Grid.Column="0" Margin="2">Nanoseconds</Label>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Margin="2"
+                           Text="{Binding InternalLatencyNanoseconds}" />
+                </Grid>
+            </HeaderedContentControl>
+            <HeaderedContentControl Header="Media"
+                                    Margin="4">
+                <Grid ColumnDefinitions="*,3*"
+                      RowDefinitions="auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto"
+                      Margin="4">
+                    <Label Grid.Row="0" Grid.Column="0" Margin="2">Name</Label>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Margin="2"
+                           Text="{Binding MediaName}" />
+
+                    <Label Grid.Row="1" Grid.Column="0" Margin="2">Class</Label>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Margin="2"
+                           Text="{Binding MediaClass}" />
+
+                    <Label Grid.Row="2" Grid.Column="0" Margin="2">Format</Label>
+                    <TextBlock Grid.Row="2" Grid.Column="1" Margin="2"
+                           Text="{Binding MediaFormat}" />
+
+                    <Label Grid.Row="3" Grid.Column="0" Margin="2">Icon</Label>
+                    <TextBlock Grid.Row="3" Grid.Column="1" Margin="2"
+                           Text="{Binding MediaIcon}" />
+
+                    <Label Grid.Row="4" Grid.Column="0" Margin="2">Icon Name</Label>
+                    <TextBlock Grid.Row="4" Grid.Column="1" Margin="2"
+                           Text="{Binding MediaIconName}" />
+
+                    <Label Grid.Row="5" Grid.Column="0" Margin="2">Artist</Label>
+                    <TextBlock Grid.Row="5" Grid.Column="1" Margin="2"
+                           Text="{Binding MediaArtist}" />
+
+                    <Label Grid.Row="6" Grid.Column="0" Margin="2">Category</Label>
+                    <TextBlock Grid.Row="6" Grid.Column="1" Margin="2"
+                           Text="{Binding MediaCategory}" />
+
+                    <Label Grid.Row="7" Grid.Column="0" Margin="2">Comment</Label>
+                    <TextBlock Grid.Row="7" Grid.Column="1" Margin="2"
+                           Text="{Binding MediaComment}" />
+
+                    <Label Grid.Row="8" Grid.Column="0" Margin="2">Copyright</Label>
+                    <TextBlock Grid.Row="8" Grid.Column="1" Margin="2"
+                           Text="{Binding MediaCopyright}" />
+
+                    <Label Grid.Row="9" Grid.Column="0" Margin="2">Date</Label>
+                    <TextBlock Grid.Row="9" Grid.Column="1" Margin="2"
+                           Text="{Binding MediaDate}" />
+
+                    <Label Grid.Row="10" Grid.Column="0" Margin="2">Filename</Label>
+                    <TextBlock Grid.Row="10" Grid.Column="1" Margin="2"
+                           Text="{Binding MediaFilename}" />
+
+                    <Label Grid.Row="11" Grid.Column="0" Margin="2">Language</Label>
+                    <TextBlock Grid.Row="11" Grid.Column="1" Margin="2"
+                           Text="{Binding MediaLanguage}" />
+
+                    <Label Grid.Row="12" Grid.Column="0" Margin="2">Role</Label>
+                    <TextBlock Grid.Row="12" Grid.Column="1" Margin="2"
+                           Text="{Binding MediaRole}" />
+
+                    <Label Grid.Row="13" Grid.Column="0" Margin="2">Software</Label>
+                    <TextBlock Grid.Row="13" Grid.Column="1" Margin="2"
+                           Text="{Binding MediaSoftware}" />
+
+                    <Label Grid.Row="15" Grid.Column="0" Margin="2">Title</Label>
+                    <TextBlock Grid.Row="15" Grid.Column="1" Margin="2"
+                           Text="{Binding MediaTitle}" />
+
+                    <Label Grid.Row="16" Grid.Column="0" Margin="2">Type</Label>
+                    <TextBlock Grid.Row="16" Grid.Column="1" Margin="2"
+                           Text="{Binding MediaType}" />
+                </Grid>
+            </HeaderedContentControl>
+            <HeaderedContentControl Header="Resampling"
+                                    Margin="4">
+                <Grid ColumnDefinitions="*,3*"
+                      RowDefinitions="auto,auto,auto,auto"
+                      Margin="4">
+                    <Label Grid.Row="0" Grid.Column="0" Margin="2">Disable</Label>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Margin="2"
+                           Text="{Binding ResampleDisable}" />
+
+                    <Label Grid.Row="1" Grid.Column="0" Margin="2">Peaks</Label>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Margin="2"
+                           Text="{Binding ResamplePeaks}" />
+
+                    <Label Grid.Row="2" Grid.Column="0" Margin="2">Prefill</Label>
+                    <TextBlock Grid.Row="2" Grid.Column="1" Margin="2"
+                           Text="{Binding ResamplePrefill}" />
+
+                    <Label Grid.Row="3" Grid.Column="0" Margin="2">Quality</Label>
+                    <TextBlock Grid.Row="3" Grid.Column="1" Margin="2"
+                           Text="{Binding ResampleQuality}" />
+                </Grid>
+            </HeaderedContentControl>
+            <HeaderedContentControl Header="Loop"
+                                    Margin="4">
+                <Grid ColumnDefinitions="*,3*"
+                      RowDefinitions="auto,auto"
+                      Margin="4">
+                    <Label Grid.Row="0" Grid.Column="0" Margin="2">Name</Label>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Margin="2"
+                           Text="{Binding LoopName}" />
+
+                    <Label Grid.Row="1" Grid.Column="0" Margin="2">Class</Label>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Margin="2"
+                           Text="{Binding LoopClass}" />
+                </Grid>
+            </HeaderedContentControl>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

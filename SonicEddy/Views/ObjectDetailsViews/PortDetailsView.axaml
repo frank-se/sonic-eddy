@@ -1,0 +1,55 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:objectDetailsViewModels="clr-namespace:SonicEddy.ViewModels.ObjectDetailsViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="SonicEddy.Views.ObjectDetailsViews.PortDetailsView"
+             x:DataType="objectDetailsViewModels:PortDetailsViewModel">
+    <ScrollViewer>
+        <StackPanel>
+            <HeaderedContentControl Header="{Binding Title}"
+                                    Margin="4">
+                <Grid ColumnDefinitions="*,3*"
+                      RowDefinitions="auto,auto,auto,auto,auto,auto,auto,auto,auto"
+                      Margin="4">
+                    <Label Grid.Row="0" Grid.Column="0" Margin="2">Object Id</Label>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Margin="2"
+                               Text="{Binding ObjectId}" />
+
+                    <Label Grid.Row="1" Grid.Column="0" Margin="2">Object Serial</Label>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Margin="2"
+                               Text="{Binding ObjectSerial}" />
+
+                    <Label Grid.Row="2" Grid.Column="0" Margin="2">Port Id</Label>
+                    <TextBlock Grid.Row="2" Grid.Column="1" Margin="2"
+                               Text="{Binding PortId}" />
+
+                    <Label Grid.Row="3" Grid.Column="0" Margin="2">Format DSP</Label>
+                    <TextBlock Grid.Row="3" Grid.Column="1" Margin="2"
+                               Text="{Binding FormatDsp}" />
+
+                    <Label Grid.Row="4" Grid.Column="0" Margin="2">Name</Label>
+                    <TextBlock Grid.Row="4" Grid.Column="1" Margin="2"
+                               Text="{Binding Name}" />
+
+                    <Label Grid.Row="5" Grid.Column="0" Margin="2">Alias</Label>
+                    <TextBlock Grid.Row="5" Grid.Column="1" Margin="2"
+                               Text="{Binding Alias}" />
+
+                    <Label Grid.Row="6" Grid.Column="0" Margin="2">Group</Label>
+                    <TextBlock Grid.Row="6" Grid.Column="1" Margin="2"
+                               Text="{Binding Group}" />
+
+                    <Label Grid.Row="7" Grid.Column="0" Margin="2">Direction</Label>
+                    <TextBlock Grid.Row="7" Grid.Column="1" Margin="2"
+                               Text="{Binding Direction}" />
+
+                    <Label Grid.Row="8" Grid.Column="0" Margin="2">Node Id</Label>
+                    <TextBlock Grid.Row="8" Grid.Column="1" Margin="2"
+                               Text="{Binding NodeId}" />
+                </Grid>
+            </HeaderedContentControl>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

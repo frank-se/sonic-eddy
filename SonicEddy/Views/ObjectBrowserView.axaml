@@ -21,7 +21,9 @@
         <SplitView.Pane>
             <HeaderedContentControl Header="Objects"
                                     Margin="4">
-                <TreeView ItemsSource="{Binding Objects}">
+                <TreeView SelectionMode="Single"
+                          SelectedItem="{Binding SelectedObject}"
+                          ItemsSource="{Binding Objects}">
                     <TreeView.ItemTemplate>
                         <TreeDataTemplate ItemsSource="{Binding Children}">
                             <TextBlock Text="{Binding Name}" />
@@ -31,7 +33,6 @@
             </HeaderedContentControl>
         </SplitView.Pane>
 
-        <HeaderedContentControl Header="Details"
-                                Margin="4" />
+        <ContentControl Content="{Binding SelectedObjectViewModel}" />
     </SplitView>
 </UserControl>
