@@ -7,47 +7,57 @@
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="SonicEddy.Views.MixerView.MixerView"
              x:DataType="mixerViewModel:MixerViewModel">
-    <HeaderedContentControl Name="HeaderControl" Header="Mixer" Margin="4">
-        <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                      VerticalScrollBarVisibility="Disabled">
-            <ItemsControl ItemsSource="{Binding Streams}">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <StackPanel Orientation="Horizontal" />
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
+    <SplitView IsPaneOpen="True"
+               DisplayMode="Inline"
+               PanePlacement="Right"
+               OpenPaneLength="80">
+        <SplitView.Pane>
+            <HeaderedContentControl Header="Menu"
+                                    Margin="4" />
+        </SplitView.Pane>
 
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Border Width="100" Margin="4" BorderThickness="1"
-                                BorderBrush="{DynamicResource SystemAccentColorDark1}"
-                                Background="{DynamicResource SystemBaseLowColor}"
-                                VerticalAlignment="Stretch">
-                            <HeaderedContentControl Header="{Binding Name}"
-                                                    HorizontalAlignment="Center"
-                                                    Margin="4">
-                                <Grid RowDefinitions="*,Auto"
-                                      Margin="4">
-                                    <Slider Grid.Row="0"
-                                            Margin="4"
-                                            Orientation="Vertical"
-                                            HorizontalAlignment="Center"
-                                            Minimum="{Binding Minimum}"
-                                            Maximum="{Binding Maximum}"
-                                            Value="{Binding Volume}" />
-                                    <!-- ReSharper disable once Xaml.PossibleNullReferenceException -->
-                                    <ComboBox Grid.Row="1"
-                                              Margin="4,12, 4, 4"
-                                              ItemsSource="{Binding $parent[mixerViews:MixerView].((mixerViewModel:MixerViewModel)DataContext).TargetObjects}"
-                                              DisplayMemberBinding="{Binding Description}"
-                                              SelectedValue="{Binding TargetObject, FallbackValue=''}"
-                                              HorizontalAlignment="Center" />
-                                </Grid>
-                            </HeaderedContentControl>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ScrollViewer>
-    </HeaderedContentControl>
+        <HeaderedContentControl Name="HeaderControl" Header="Mixer" Margin="4">
+            <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Disabled">
+                <ItemsControl ItemsSource="{Binding Streams}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Width="100" Margin="4" BorderThickness="1"
+                                    BorderBrush="{DynamicResource SystemAccentColorDark1}"
+                                    Background="{DynamicResource SystemBaseLowColor}"
+                                    VerticalAlignment="Stretch">
+                                <HeaderedContentControl Header="{Binding Name}"
+                                        HorizontalAlignment="Center"
+                                        Margin="4">
+                                    <Grid RowDefinitions="*,Auto"
+                                          Margin="4">
+                                        <Slider Grid.Row="0"
+                                                Margin="4"
+                                                Orientation="Vertical"
+                                                HorizontalAlignment="Center"
+                                                Minimum="{Binding Minimum}"
+                                                Maximum="{Binding Maximum}"
+                                                Value="{Binding Volume}" />
+                                        <!-- ReSharper disable once Xaml.PossibleNullReferenceException -->
+                                        <ComboBox Grid.Row="1"
+                                                  Margin="4,12, 4, 4"
+                                                  ItemsSource="{Binding $parent[mixerViews:MixerView].((mixerViewModel:MixerViewModel)DataContext).TargetObjects}"
+                                                  DisplayMemberBinding="{Binding Description}"
+                                                  SelectedValue="{Binding TargetObject, FallbackValue=''}"
+                                                  HorizontalAlignment="Center" />
+                                    </Grid>
+                                </HeaderedContentControl>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </HeaderedContentControl>
+    </SplitView>
 </UserControl>
