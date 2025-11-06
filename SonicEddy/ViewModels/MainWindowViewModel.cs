@@ -6,9 +6,14 @@ public class MainWindowViewModel : ViewModelBase
 {
     private ViewModelBase? _currentPageViewModel;
 
-    private bool _mixerMenuItemSelected = true;
+    private bool _mixerMenuItemSelected;
     private bool _objectBrowserMenuItemSelected;
 
+    public MainWindowViewModel()
+    {
+        NavigateToMixerAction();
+    }
+    
     public ViewModelBase? CurrentPageViewModel
     {
         get => _currentPageViewModel;
@@ -33,7 +38,7 @@ public class MainWindowViewModel : ViewModelBase
     {
         MixerMenuItemSelected = true;
         ObjectBrowserMenuItemSelected = false;
-        CurrentPageViewModel = new MixerViewModel();
+        CurrentPageViewModel = new MixerViewModel.MixerViewModel();
     }
 
     public void NavigateToObjectBrowserAction()

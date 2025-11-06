@@ -1,7 +1,9 @@
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using SonicEddy.ViewModels;
+using SonicEddy.ViewModels.MixerViewModel;
 using SonicEddy.Views;
+using SonicEddy.Views.MixerView;
 
 namespace SonicEddy.Tools;
 
