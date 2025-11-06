@@ -2,7 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Reactive;
 using System.Reactive.Disposables;
+using System.Reactive.Linq;
+using System.Reactive.Subjects;
 using DynamicData;
 using ReactiveUI;
 
@@ -14,6 +17,7 @@ public class MixerViewModel : ViewModelBase, IDisposable, IActivatableViewModel
     private readonly SourceList<Stream> _streams = new();
 
     private readonly ReadOnlyObservableCollection<Stream> _streamsBindable;
+    private readonly Subject<Unit> _wasShutDown = new();
 
     public MixerViewModel()
     {
@@ -51,6 +55,7 @@ public class MixerViewModel : ViewModelBase, IDisposable, IActivatableViewModel
                 .AutoRefresh(stream => stream.TargetObject)
                 .WhenValueChanged<Stream, TargetObject?>(stream =>
                     stream.TargetObject, false)
+                .TakeUntil(_wasShutDown)
                 .Subscribe(TargetObjectChanged)
                 .DisposeWith(disposables);
         });
@@ -63,8 +68,9 @@ public class MixerViewModel : ViewModelBase, IDisposable, IActivatableViewModel
 
     public void Dispose()
     {
-        _streams.Dispose();
         _disposables.Dispose();
+        _streams.Dispose();
+        _wasShutDown.Dispose();
         GC.SuppressFinalize(this);
     }
 
@@ -75,5 +81,11 @@ public class MixerViewModel : ViewModelBase, IDisposable, IActivatableViewModel
         if (targetObject is not null)
             Console.WriteLine(
                 $"Target Object changed to {targetObject.Description}");
+    }
+
+    public void StopProcessing()
+    {
+        _wasShutDown.OnNext(Unit.Default);
+        _wasShutDown.OnCompleted();
     }
 }
