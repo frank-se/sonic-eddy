@@ -7,6 +7,7 @@ using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using DynamicData;
+using Fr.Wireplumber;
 using ReactiveUI;
 
 namespace SonicEddy.ViewModels.MixerViewModel;
@@ -21,18 +22,14 @@ public class MixerViewModel : ViewModelBase, IDisposable, IActivatableViewModel
 
     public MixerViewModel()
     {
-        TargetObjects =
-        [
-            new("alsa_card.pci-0000_0a_00.4", 1, "RME RayDAT_a5963e",
-                "DEV3"),
-            new("alsa_card.pci-0000_08_00.1", 2, "HDA ATI HDMI",
-                "HD Pro Webcam C920"),
-            new(
-                "alsa_card.usb-AKG_C44-USB_Microphone_AKG_C44-USB_Microphone-00",
-                3, "AKG C44-USB Microphone", "DEV2"),
-            new("alsa_card.pci-0000_0a_00.4", 4, "HD Pro Webcam C920",
-                "DEV1")
-        ];
+        TargetObjects = new()
+        {
+            Wireplumber.Nodes.Where(n =>
+                    n.Media.Class is "Audio/Sink" or "Stream/Input/Audio")
+                .Select(n => new TargetObject(n.Name ?? string.Empty,
+                    n.ObjectSerial, n.Media.Class ?? string.Empty,
+                    n.Description ?? string.Empty))
+        };
 
         var initialData = new List<Stream>
         {
@@ -63,7 +60,6 @@ public class MixerViewModel : ViewModelBase, IDisposable, IActivatableViewModel
 
     public ObservableCollection<TargetObject> TargetObjects { get; set; }
     public ReadOnlyObservableCollection<Stream> Streams => _streamsBindable;
-
     public ViewModelActivator Activator { get; } = new();
 
     public void Dispose()

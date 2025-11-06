@@ -8,7 +8,7 @@ public partial class MixerView : ReactiveUserControl<MixerViewModel>
     public MixerView()
     {
         InitializeComponent();
-        DetachedFromLogicalTree += (sender, args) =>
+        DetachedFromLogicalTree += (_, _) =>
             ViewModel?.StopProcessing();
     }
 }
