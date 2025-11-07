@@ -6,8 +6,10 @@ public class Stream(
     string name,
     ulong objectSerial,
     double volume,
+    string description,
     TargetObject? targetObject) : ReactiveObject
 {
+    private string _description = description;
     private string _name = name;
     private ulong _objectSerial = objectSerial;
     private TargetObject? _targetObject = targetObject;
@@ -17,6 +19,12 @@ public class Stream(
     {
         get => _name;
         set => this.RaiseAndSetIfChanged(ref _name, value);
+    }
+
+    public string Description
+    {
+        get => _description;
+        set => this.RaiseAndSetIfChanged(ref _description, value);
     }
 
     public ulong ObjectSerial

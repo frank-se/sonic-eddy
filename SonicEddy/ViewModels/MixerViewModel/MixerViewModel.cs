@@ -1,14 +1,18 @@
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reactive;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using DynamicData;
 using Fr.Wireplumber;
 using ReactiveUI;
+using SonicEddy.Views.MixerView;
 
 namespace SonicEddy.ViewModels.MixerViewModel;
 
@@ -30,16 +34,6 @@ public class MixerViewModel : ViewModelBase, IDisposable, IActivatableViewModel
                     n.ObjectSerial, n.Media.Class ?? string.Empty,
                     n.Description ?? string.Empty))
         };
-
-        var initialData = new List<Stream>
-        {
-            new("Firefox", 123, 2.0, TargetObjects.First()),
-            new("", 123, 2.0, TargetObjects.Skip(2)
-                .First()),
-            new("", 123, 2.0, null)
-        };
-
-        _streams.AddRange(initialData);
 
         _streams.Connect()
             .Bind(out _streamsBindable)
@@ -68,6 +62,28 @@ public class MixerViewModel : ViewModelBase, IDisposable, IActivatableViewModel
         _streams.Dispose();
         _wasShutDown.Dispose();
         GC.SuppressFinalize(this);
+    }
+
+    public async Task AddStream()
+    {
+        var dialogViewModel = new AddStreamDialogViewModel();
+        var dialog = new AddStreamDialog
+        {
+            DataContext = dialogViewModel
+        };
+        
+        await dialog.ShowDialog(GetMainWindow()!);
+        
+        if (dialogViewModel.DialogResult && dialogViewModel.SelectedStream != null)
+            _streams.Add(dialogViewModel.SelectedStream);
+    }
+    
+    private Window? GetMainWindow()
+    {
+        return Application.Current?.ApplicationLifetime is
+            IClassicDesktopStyleApplicationLifetime desktop
+            ? desktop.MainWindow
+            : null;
     }
 
     private void TargetObjectChanged(TargetObject? targetObject)

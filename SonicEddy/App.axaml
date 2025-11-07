@@ -11,4 +11,10 @@
     <Application.Styles>
         <FluentTheme />
     </Application.Styles>
+    
+    <Application.Resources>
+        <FontFamily x:Key="FluentIconsRegular">
+            avares://SonicEddy/Assets/Fonts/FluentSystemIcons-Regular.ttf#FluentSystemIcons-Regular
+        </FontFamily>
+    </Application.Resources>
 </Application>

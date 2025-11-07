@@ -10,10 +10,21 @@
     <SplitView IsPaneOpen="True"
                DisplayMode="Inline"
                PanePlacement="Right"
-               OpenPaneLength="80">
+               OpenPaneLength="NaN">
         <SplitView.Pane>
-            <HeaderedContentControl Header="Menu"
-                                    Margin="4" />
+            <HeaderedContentControl x:Name="IconButtonColumn"
+                                    Header="Menu"
+                                    Margin="4">
+                <StackPanel>
+                    <Button Content="&#xE005;"
+                            FontFamily="{StaticResource FluentIconsRegular}"
+                            FontSize="20"
+                            ToolTip.Tip="Add Stream ..."
+                            Padding="8"
+                            Command="{Binding AddStream}"
+                            Margin="4" />
+                </StackPanel>
+            </HeaderedContentControl>
         </SplitView.Pane>
 
         <HeaderedContentControl Name="HeaderControl" Header="Mixer" Margin="4">
