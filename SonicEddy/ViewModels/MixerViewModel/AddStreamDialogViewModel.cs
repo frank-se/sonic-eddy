@@ -14,13 +14,30 @@ public class AddStreamDialogViewModel : ViewModelBase
 
     public AddStreamDialogViewModel()
     {
-        AvailableStreams.AddRange(
+        var nodes =
             Wireplumber.Nodes.Where(n =>
                     n.Media.Class is "Stream/Output/Audio" or "Audio/Source")
-                .Select(n => new Stream(n.Name ?? string.Empty, n.ObjectSerial,
-                    1.0,
-                    n.Description ?? n.Name ?? string.Empty, null))
-        );
+                .ToList();
+
+        var props = nodes.Select(n =>
+            {
+                return Wireplumber.Props.FirstOrDefault(p =>
+                    p.ObjectSerial == n.ObjectSerial);
+            })
+            .ToList();
+
+        var streams = nodes.Zip(props)
+            .Select(pair =>
+            {
+                var (node, prop) = pair;
+                return new Stream(node.Name ?? string.Empty, node.ObjectSerial,
+                    prop?.Channels.FirstOrDefault()
+                        ?
+                        .Volume ?? 0,
+                    node.Description ?? node.Name ?? string.Empty, null);
+            });
+
+        AvailableStreams.AddRange(streams);
     }
 
     public ObservableCollection<Stream> AvailableStreams { get; set; } = [];
