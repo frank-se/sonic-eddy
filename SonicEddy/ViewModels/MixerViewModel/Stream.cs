@@ -7,14 +7,20 @@ public class Stream(
     ulong objectSerial,
     double volume,
     string description,
-    TargetObject? targetObject) : ReactiveObject
+    TargetObject? targetObject,
+    double pan,
+    bool stereo,
+    ulong objectId) : ReactiveObject
 {
     private string _description = description;
     private string _name = name;
     private ulong _objectSerial = objectSerial;
+    private double _pan = pan;
     private TargetObject? _targetObject = targetObject;
     private double _volume = volume;
 
+    public string DisplayName => $"{Name} ({ObjectId})";
+    
     public string Name
     {
         get => _name;
@@ -32,6 +38,8 @@ public class Stream(
         get => _objectSerial;
         set => this.RaiseAndSetIfChanged(ref _objectSerial, value);
     }
+    
+    public ulong ObjectId { get; } = objectId;
 
     public double Volume
     {
@@ -39,8 +47,16 @@ public class Stream(
         set => this.RaiseAndSetIfChanged(ref _volume, value);
     }
 
+    public double Pan
+    {
+        get => _pan;
+        set => this.RaiseAndSetIfChanged(ref _pan, value);
+    }
+
+    public bool IsStereo => stereo;
+
     public double Minimum => 0.0;
-    public double Maximum => 10.0;
+    public double Maximum => 1.5;
 
     public TargetObject? TargetObject
     {

@@ -10,8 +10,10 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using DynamicData;
+using DynamicData.Binding;
 using Fr.Wireplumber;
 using ReactiveUI;
+using SonicEddy.Audio;
 using SonicEddy.Views.MixerView;
 
 namespace SonicEddy.ViewModels.MixerViewModel;
@@ -44,10 +46,28 @@ public class MixerViewModel : ViewModelBase, IDisposable, IActivatableViewModel
         {
             _streams.Connect()
                 .AutoRefresh(stream => stream.TargetObject)
-                .WhenValueChanged<Stream, TargetObject?>(stream =>
+                .WhenPropertyChanged<Stream, TargetObject?>(stream =>
                     stream.TargetObject, false)
                 .TakeUntil(_wasShutDown)
                 .Subscribe(TargetObjectChanged)
+                .DisposeWith(disposables);
+
+            _streams.Connect()
+                .AutoRefresh(stream => stream.Volume)
+                .WhenPropertyChanged(stream => stream.Volume, false)
+                .Sample(TimeSpan.FromMilliseconds(100),
+                    RxApp.MainThreadScheduler)
+                .TakeUntil(_wasShutDown)
+                .Subscribe(VolumeChanged)
+                .DisposeWith(disposables);
+
+            _streams.Connect()
+                .AutoRefresh(stream => stream.Pan)
+                .WhenPropertyChanged(stream => stream.Pan, false)
+                .Sample(TimeSpan.FromMilliseconds(100),
+                    RxApp.MainThreadScheduler)
+                .TakeUntil(_wasShutDown)
+                .Subscribe(PanChanged)
                 .DisposeWith(disposables);
         });
     }
@@ -71,13 +91,14 @@ public class MixerViewModel : ViewModelBase, IDisposable, IActivatableViewModel
         {
             DataContext = dialogViewModel
         };
-        
+
         await dialog.ShowDialog(GetMainWindow()!);
-        
-        if (dialogViewModel.DialogResult && dialogViewModel.SelectedStream != null)
+
+        if (dialogViewModel.DialogResult &&
+            dialogViewModel.SelectedStream != null)
             _streams.Add(dialogViewModel.SelectedStream);
     }
-    
+
     private Window? GetMainWindow()
     {
         return Application.Current?.ApplicationLifetime is
@@ -86,8 +107,36 @@ public class MixerViewModel : ViewModelBase, IDisposable, IActivatableViewModel
             : null;
     }
 
-    private void TargetObjectChanged(TargetObject? targetObject)
+    private void PanChanged(PropertyValue<Stream, double> changedEvent)
     {
+        SetChannelVolumeFromStream(changedEvent);
+    }
+
+    private void VolumeChanged(PropertyValue<Stream, double> changedEvent)
+    {
+        SetChannelVolumeFromStream(changedEvent);
+    }
+
+    private static void SetChannelVolumeFromStream(
+        PropertyValue<Stream, double> changedEvent)
+    {
+        var volume = changedEvent.Value;
+        var pan = changedEvent.Sender.Pan;
+        var gains = Pan.GetGainsFromPanAndVolume(pan, volume);
+        var objectId = changedEvent.Sender.ObjectId;
+        Pipewire.SetChannelVolumeProps(objectId, [gains.Item1, gains.Item2]);
+    }
+
+    public void RemoveStream(Stream stream)
+    {
+        _streams.Remove(stream);
+    }
+    
+    private void TargetObjectChanged(
+        PropertyValue<Stream, TargetObject?> changedEvent)
+    {
+        var targetObject = changedEvent.Value;
+
         if (targetObject is null)
             Console.WriteLine("Target Object changed to null");
         if (targetObject is not null)

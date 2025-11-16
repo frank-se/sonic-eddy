@@ -16,7 +16,7 @@
                  ItemsSource="{Binding AvailableStreams}">
             <ListBox.ItemTemplate>
                 <DataTemplate>
-                    <TextBlock Text="{Binding Description}" />
+                    <TextBlock Text="{Binding DisplayName}" />
                 </DataTemplate>
             </ListBox.ItemTemplate>
         </ListBox>

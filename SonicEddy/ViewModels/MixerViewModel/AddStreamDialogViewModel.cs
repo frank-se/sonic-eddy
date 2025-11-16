@@ -5,6 +5,7 @@ using System.Reactive.Linq;
 using DynamicData;
 using Fr.Wireplumber;
 using ReactiveUI;
+using SonicEddy.Audio;
 
 namespace SonicEddy.ViewModels.MixerViewModel;
 
@@ -16,7 +17,7 @@ public class AddStreamDialogViewModel : ViewModelBase
     {
         var nodes =
             Wireplumber.Nodes.Where(n =>
-                    n.Media.Class is "Stream/Output/Audio" or "Audio/Source")
+                    n.Media.Class is "Stream/Output/Audio")
                 .ToList();
 
         var props = nodes.Select(n =>
@@ -30,11 +31,24 @@ public class AddStreamDialogViewModel : ViewModelBase
             .Select(pair =>
             {
                 var (node, prop) = pair;
+                var isStereo = prop?.Channels.Count == 2;
+
+                var pan = 0.0;
+                if (isStereo)
+                {
+                    var leftGain = prop!.Channels.First()
+                        .Volume;
+                    var rightGain = prop!.Channels.Last()
+                        .Volume;
+                    pan = Pan.GetPanFromGains(leftGain, rightGain);
+                }
+
                 return new Stream(node.Name ?? string.Empty, node.ObjectSerial,
                     prop?.Channels.FirstOrDefault()
                         ?
                         .Volume ?? 0,
-                    node.Description ?? node.Name ?? string.Empty, null);
+                    node.Description ?? node.Name ?? string.Empty, null, pan,
+                    isStereo, node.ObjectId);
             });
 
         AvailableStreams.AddRange(streams);

@@ -30,7 +30,8 @@
         <HeaderedContentControl Name="HeaderControl" Header="Mixer" Margin="4">
             <ScrollViewer HorizontalScrollBarVisibility="Auto"
                           VerticalScrollBarVisibility="Disabled">
-                <ItemsControl ItemsSource="{Binding Streams}">
+                <ItemsControl ItemsSource="{Binding Streams}"
+                              x:Name="MixerChannelsItemsControl">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <StackPanel Orientation="Horizontal" />
@@ -38,25 +39,55 @@
                     </ItemsControl.ItemsPanel>
 
                     <ItemsControl.ItemTemplate>
-                        <DataTemplate>
+                        <DataTemplate x:DataType="mixerViewModel:Stream">
                             <Border Width="100" Margin="4" BorderThickness="1"
                                     BorderBrush="{DynamicResource SystemAccentColorDark1}"
                                     Background="{DynamicResource SystemBaseLowColor}"
                                     VerticalAlignment="Stretch">
-                                <HeaderedContentControl Header="{Binding Name}"
-                                        HorizontalAlignment="Center"
-                                        Margin="4">
-                                    <Grid RowDefinitions="*,Auto"
+                                <HeaderedContentControl
+                                    Header="{Binding DisplayName}"
+                                    HorizontalAlignment="Center"
+                                    Margin="4">
+                                    <Grid RowDefinitions="Auto,*,Auto,Auto"
                                           Margin="4">
-                                        <Slider Grid.Row="0"
+                                        <Button Grid.Row="0" Content="...">
+                                            <!--
+                                            <Button.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem
+                                                        Header="Remove Channel"
+                                                        Command="{Binding ElementName=MixerChannelsItemsControl, Path=DataContext.RemoveStream}"
+                                                        CommandParameter="{Binding} "/>
+                                                </ContextMenu>
+                                            </Button.ContextMenu>
+                                            -->
+                                            <Button.Flyout>
+                                                <MenuFlyout
+                                                    Placement="BottomEdgeAlignedRight">
+                                                    <MenuItem
+                                                        Header="Remove Channel"
+                                                        Command="{Binding ElementName=MixerChannelsItemsControl, Path=DataContext.RemoveStream}"
+                                                        CommandParameter="{Binding} " />
+                                                </MenuFlyout>
+                                            </Button.Flyout>
+                                        </Button>
+                                        <Slider Grid.Row="1"
                                                 Margin="4"
                                                 Orientation="Vertical"
                                                 HorizontalAlignment="Center"
                                                 Minimum="{Binding Minimum}"
                                                 Maximum="{Binding Maximum}"
                                                 Value="{Binding Volume}" />
+                                        <Slider Grid.Row="2"
+                                                Margin="4"
+                                                Orientation="Horizontal"
+                                                HorizontalAlignment="Stretch"
+                                                Minimum="0.0"
+                                                Maximum="1.0"
+                                                IsVisible="{Binding IsStereo}"
+                                                Value="{Binding Pan}" />
                                         <!-- ReSharper disable once Xaml.PossibleNullReferenceException -->
-                                        <ComboBox Grid.Row="1"
+                                        <ComboBox Grid.Row="3"
                                                   Margin="4,12, 4, 4"
                                                   ItemsSource="{Binding $parent[mixerViews:MixerView].((mixerViewModel:MixerViewModel)DataContext).TargetObjects}"
                                                   DisplayMemberBinding="{Binding Description}"
