@@ -49,6 +49,7 @@
                             Command="{Binding NavigateToObjectBrowserAction}">
                         Object Browser
                     </Button>
+                    <Button></Button>
                 </StackPanel>
             </HeaderedContentControl>
         </SplitView.Pane>
