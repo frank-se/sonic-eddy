@@ -7,7 +7,7 @@ using Fr.Wireplumber;
 using ReactiveUI;
 using SonicEddy.Audio;
 
-namespace SonicEddy.ViewModels.MixerViewModel;
+namespace SonicEddy.ViewModels.MixerViewModels;
 
 public class AddStreamDialogViewModel : ViewModelBase
 {

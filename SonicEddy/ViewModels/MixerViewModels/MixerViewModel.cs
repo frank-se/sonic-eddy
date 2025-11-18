@@ -16,7 +16,7 @@ using ReactiveUI;
 using SonicEddy.Audio;
 using SonicEddy.Views.MixerView;
 
-namespace SonicEddy.ViewModels.MixerViewModel;
+namespace SonicEddy.ViewModels.MixerViewModels;
 
 public class MixerViewModel : ViewModelBase, IDisposable, IActivatableViewModel
 {

@@ -11,7 +11,7 @@ using ReactiveUI;
 using SonicEddy.Models.ObjectBrowser;
 using SonicEddy.ViewModels.ObjectDetailsViewModels;
 
-namespace SonicEddy.ViewModels;
+namespace SonicEddy.ViewModels.ObjectBrowserViewModels;
 
 public class ObjectBrowserViewModel : ViewModelBase, IActivatableViewModel
 {

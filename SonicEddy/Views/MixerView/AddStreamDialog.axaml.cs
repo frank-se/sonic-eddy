@@ -4,7 +4,7 @@ using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using Avalonia.Controls;
 using ReactiveUI;
-using SonicEddy.ViewModels.MixerViewModel;
+using SonicEddy.ViewModels.MixerViewModels;
 
 namespace SonicEddy.Views.MixerView;
 

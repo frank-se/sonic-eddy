@@ -1,4 +1,4 @@
-namespace SonicEddy.ViewModels.MixerViewModel;
+namespace SonicEddy.ViewModels.MixerViewModels;
 
 public class MixerChannel
 {

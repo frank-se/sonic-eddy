@@ -1,5 +1,5 @@
 using Avalonia.ReactiveUI;
-using SonicEddy.ViewModels.MixerViewModel;
+using SonicEddy.ViewModels.MixerViewModels;
 
 namespace SonicEddy.Views.MixerView;
 

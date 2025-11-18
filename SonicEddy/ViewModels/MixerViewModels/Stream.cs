@@ -1,6 +1,6 @@
 using ReactiveUI;
 
-namespace SonicEddy.ViewModels.MixerViewModel;
+namespace SonicEddy.ViewModels.MixerViewModels;
 
 public class Stream(
     string name,

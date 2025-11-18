@@ -2,11 +2,11 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:mixerViewModel="clr-namespace:SonicEddy.ViewModels.MixerViewModel"
              xmlns:mixerViews="clr-namespace:SonicEddy.Views.MixerView"
+             xmlns:mixerViewModels="clr-namespace:SonicEddy.ViewModels.MixerViewModels"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="SonicEddy.Views.MixerView.MixerView"
-             x:DataType="mixerViewModel:MixerViewModel">
+             x:DataType="mixerViewModels:MixerViewModel">
     <SplitView IsPaneOpen="True"
                DisplayMode="Inline"
                PanePlacement="Right"
@@ -39,7 +39,7 @@
                     </ItemsControl.ItemsPanel>
 
                     <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="mixerViewModel:Stream">
+                        <DataTemplate x:DataType="mixerViewModels:Stream">
                             <Border Width="100" Margin="4" BorderThickness="1"
                                     BorderBrush="{DynamicResource SystemAccentColorDark1}"
                                     Background="{DynamicResource SystemBaseLowColor}"
@@ -89,7 +89,7 @@
                                         <!-- ReSharper disable once Xaml.PossibleNullReferenceException -->
                                         <ComboBox Grid.Row="3"
                                                   Margin="4,12, 4, 4"
-                                                  ItemsSource="{Binding $parent[mixerViews:MixerView].((mixerViewModel:MixerViewModel)DataContext).TargetObjects}"
+                                                  ItemsSource="{Binding $parent[mixerViews:MixerView].((mixerViewModels:MixerViewModel)DataContext).TargetObjects}"
                                                   DisplayMemberBinding="{Binding Description}"
                                                   SelectedValue="{Binding TargetObject, FallbackValue=''}"
                                                   HorizontalAlignment="Center" />

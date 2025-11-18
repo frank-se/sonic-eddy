@@ -3,15 +3,16 @@
              xmlns:vm="using:SonicEddy.ViewModels"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:objectBrowserViewModels="clr-namespace:SonicEddy.ViewModels.ObjectBrowserViewModels"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="SonicEddy.Views.ObjectBrowserView"
-             x:DataType="vm:ObjectBrowserViewModel">
+             x:DataType="objectBrowserViewModels:ObjectBrowserViewModel">
 
     <Design.DataContext>
         <!-- This only sets the DataContext for the previewer in an IDE,
              the DataContext during runtime is automatically set by
              Avalonia UI when it creates the view. -->
-        <vm:ObjectBrowserViewModel />
+        <objectBrowserViewModels:ObjectBrowserViewModel />
     </Design.DataContext>
 
     <SplitView IsPaneOpen="True"
