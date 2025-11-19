@@ -14,20 +14,23 @@ using DynamicData.Binding;
 using Fr.Wireplumber;
 using ReactiveUI;
 using SonicEddy.Audio;
-using SonicEddy.Views.MixerView;
+using SonicEddy.Services.AppData;
+using SonicEddy.Views.MixerViews;
 
 namespace SonicEddy.ViewModels.MixerViewModels;
 
 public class MixerViewModel : ViewModelBase, IDisposable, IActivatableViewModel
 {
+    private readonly IAppDataService _appDataService;
     private readonly CompositeDisposable _disposables = new();
     private readonly SourceList<Stream> _streams = new();
 
     private readonly ReadOnlyObservableCollection<Stream> _streamsBindable;
     private readonly Subject<Unit> _wasShutDown = new();
 
-    public MixerViewModel()
+    public MixerViewModel(IAppDataService appDataService)
     {
+        _appDataService = appDataService;
         TargetObjects = new()
         {
             Wireplumber.Nodes.Where(n =>

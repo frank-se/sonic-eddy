@@ -1,7 +1,7 @@
 using Avalonia.ReactiveUI;
 using SonicEddy.ViewModels.MixerViewModels;
 
-namespace SonicEddy.Views.MixerView;
+namespace SonicEddy.Views.MixerViews;
 
 public partial class MixerView : ReactiveUserControl<MixerViewModel>
 {

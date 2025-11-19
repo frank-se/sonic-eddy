@@ -9,20 +9,23 @@ using Fr.Wireplumber;
 using Fr.Wireplumber.Model;
 using ReactiveUI;
 using SonicEddy.Models.ObjectBrowser;
+using SonicEddy.Services.AppData;
 using SonicEddy.ViewModels.ObjectDetailsViewModels;
 
 namespace SonicEddy.ViewModels.ObjectBrowserViewModels;
 
 public class ObjectBrowserViewModel : ViewModelBase, IActivatableViewModel
 {
+    private readonly IAppDataService _appDataService;
     private readonly List<PipewireObject> _leftover = [];
 
     private PipewireObject? _selectedObject;
 
     private ObjectDetailsViewModelBase? _selectedObjectViewModel;
 
-    public ObjectBrowserViewModel()
+    public ObjectBrowserViewModel(IAppDataService appDataService)
     {
+        _appDataService = appDataService;
         var clients = Wireplumber.Clients;
         Objects = new(clients.Select(PipewireObject.FromClient));
 

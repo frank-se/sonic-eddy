@@ -6,7 +6,7 @@ using Avalonia.Controls;
 using ReactiveUI;
 using SonicEddy.ViewModels.MixerViewModels;
 
-namespace SonicEddy.Views.MixerView;
+namespace SonicEddy.Views.MixerViews;
 
 public partial class AddStreamDialog : Window
 {

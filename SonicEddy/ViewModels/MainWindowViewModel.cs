@@ -2,6 +2,7 @@
 using SonicEddy.ViewModels.MixerViewModels;
 using SonicEddy.ViewModels.ObjectBrowserViewModels;
 using SonicEddy.ViewModels.ProAudioStreamsViewModels;
+using Splat;
 
 namespace SonicEddy.ViewModels;
 
@@ -50,7 +51,7 @@ public class MainWindowViewModel : ViewModelBase
         MixerMenuItemSelected = true;
         ObjectBrowserMenuItemSelected = false;
         ProAudioStreamsMenuItemSelected = false;
-        CurrentPageViewModel = new MixerViewModel();
+        CurrentPageViewModel = Locator.Current.GetService<MixerViewModel>();
     }
 
     public void NavigateToObjectBrowserAction()
@@ -58,7 +59,8 @@ public class MainWindowViewModel : ViewModelBase
         MixerMenuItemSelected = false;
         ObjectBrowserMenuItemSelected = true;
         ProAudioStreamsMenuItemSelected = false;
-        CurrentPageViewModel = new ObjectBrowserViewModel();
+        CurrentPageViewModel =
+            Locator.Current.GetService<ObjectBrowserViewModel>();
     }
 
     public void NavigateToProAudioStreamsAction()
@@ -66,6 +68,7 @@ public class MainWindowViewModel : ViewModelBase
         MixerMenuItemSelected = false;
         ObjectBrowserMenuItemSelected = false;
         ProAudioStreamsMenuItemSelected = true;
-        CurrentPageViewModel = new ProAudioStreamsViewModel();
+        CurrentPageViewModel =
+            Locator.Current.GetService<ProAudioStreamsViewModel>();
     }
 }

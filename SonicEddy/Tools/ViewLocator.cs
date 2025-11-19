@@ -4,7 +4,8 @@ using SonicEddy.ViewModels;
 using SonicEddy.ViewModels.MixerViewModels;
 using SonicEddy.ViewModels.ObjectBrowserViewModels;
 using SonicEddy.Views;
-using SonicEddy.Views.MixerView;
+using SonicEddy.Views.MixerViews;
+using ObjectBrowserView = SonicEddy.Views.ObjectBrowserViews.ObjectBrowserView;
 
 namespace SonicEddy.Tools;
 

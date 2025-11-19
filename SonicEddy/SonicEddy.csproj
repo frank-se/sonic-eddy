@@ -14,6 +14,7 @@
 
     <ItemGroup>
         <PackageReference Include="Avalonia" Version="11.3.8" />
+        <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.8" />
         <PackageReference Include="Avalonia.Desktop" Version="11.3.8" />
         <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.8" />
         <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.8" />
@@ -25,5 +26,12 @@
         <PackageReference Include="Avalonia.ReactiveUI" Version="11.3.8" />
         <PackageReference Include="FrWireplumber" Version="0.4.3" />
         <PackageReference Include="System.Reactive" Version="6.1.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Update="Views\ObjectBrowserViews\ObjectBrowserView.axaml.cs">
+        <DependentUpon>ObjectBrowserView.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
     </ItemGroup>
 </Project>

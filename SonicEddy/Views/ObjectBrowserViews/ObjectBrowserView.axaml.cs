@@ -1,6 +1,6 @@
 using Avalonia.Controls;
 
-namespace SonicEddy.Views;
+namespace SonicEddy.Views.ObjectBrowserViews;
 
 public partial class ObjectBrowserView : UserControl
 {

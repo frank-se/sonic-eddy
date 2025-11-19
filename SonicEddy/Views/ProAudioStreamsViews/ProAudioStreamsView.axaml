@@ -2,7 +2,62 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:dg="using:Avalonia.Controls"
+             xmlns:proAudioStreamsViewModels="clr-namespace:SonicEddy.ViewModels.ProAudioStreamsViewModels"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-             x:Class="SonicEddy.Views.ProAudioStreamsViews.ProAudioStreamsView">
-    Welcome to Avalonia!
+             x:Class="SonicEddy.Views.ProAudioStreamsViews.ProAudioStreamsView"
+             x:DataType="proAudioStreamsViewModels:ProAudioStreamsViewModel">
+    <SplitView IsPaneOpen="True"
+               DisplayMode="Inline"
+               PanePlacement="Right"
+               OpenPaneLength="NaN">
+        <SplitView.Pane>
+            <HeaderedContentControl x:Name="IconButtonColumn"
+                                    Header="Menu"
+                                    Margin="4">
+                <StackPanel>
+                    <Button Content="&#xE005;"
+                            FontFamily="{StaticResource FluentIconsRegular}"
+                            FontSize="20"
+                            ToolTip.Tip="Add Pro-Audio Stream ..."
+                            Padding="8"
+                            Margin="4" />
+                </StackPanel>
+            </HeaderedContentControl>
+        </SplitView.Pane>
+
+        <HeaderedContentControl Header="Pro Audio Streams" Margin="4">
+            <dg:DataGrid ItemsSource="{Binding ProAudioStreams}"
+                         AutoGenerateColumns="False"
+                         CanUserReorderColumns="True"
+                         CanUserResizeColumns="True"
+                         CanUserSortColumns="True"
+                         GridLinesVisibility="All"
+                         VerticalAlignment="Stretch"
+                         HorizontalAlignment="Stretch"
+                         SelectionMode="Single">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Name"
+                                        Binding="{Binding Name}"
+                                        IsReadOnly="True" />
+
+                    <DataGridTextColumn Header="Description"
+                                        Binding="{Binding Description}"
+                                        IsReadOnly="True" />
+
+                    <DataGridTextColumn Header="Source Target Object"
+                                        Binding="{Binding SourceTargetObject.NodeName}"
+                                        IsReadOnly="True" />
+
+                    <DataGridTextColumn Header="Left Port Id"
+                                        Binding="{Binding LeftPortId}"
+                                        IsReadOnly="True" />
+
+                    <DataGridTextColumn Header="Right Port Id"
+                                        Binding="{Binding RightPortId}"
+                                        IsReadOnly="True" />
+                </DataGrid.Columns>
+            </dg:DataGrid>
+        </HeaderedContentControl>
+    </SplitView>
 </UserControl>
