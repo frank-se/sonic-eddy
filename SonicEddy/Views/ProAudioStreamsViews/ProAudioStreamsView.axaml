@@ -21,7 +21,8 @@
                             FontSize="20"
                             ToolTip.Tip="Add Pro-Audio Stream ..."
                             Padding="8"
-                            Margin="4" />
+                            Margin="4"
+                            Command="{Binding AddStreamLoopback}" />
                 </StackPanel>
             </HeaderedContentControl>
         </SplitView.Pane>
@@ -46,7 +47,7 @@
                                         IsReadOnly="True" />
 
                     <DataGridTextColumn Header="Source Target Object"
-                                        Binding="{Binding SourceTargetObject.NodeName}"
+                                        Binding="{Binding SourceTargetObject.Description}"
                                         IsReadOnly="True" />
 
                     <DataGridTextColumn Header="Left Port Id"

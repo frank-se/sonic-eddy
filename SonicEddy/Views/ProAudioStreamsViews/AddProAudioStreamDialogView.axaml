@@ -1,0 +1,78 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:proAudioStreamsViewModels="clr-namespace:SonicEddy.ViewModels.ProAudioStreamsViewModels"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        Title="AddProAudioStreamView"
+        Width="400" Height="500"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        x:Class="SonicEddy.Views.ProAudioStreamsViews.AddProAudioStreamDialogView"
+        x:DataType="proAudioStreamsViewModels:AddProAudioStreamDialogViewModel">
+    <StackPanel>
+        <Grid ColumnDefinitions="Auto,*"
+              RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+            <Label Grid.Row="0"
+                   Grid.Column="0"
+                   Content="Source Device" />
+            <ComboBox Grid.Row="0"
+                      Grid.Column="1"
+                      ItemsSource="{Binding AvailableDeviceNodes}"
+                      SelectedItem="{Binding SelectedDeviceNode}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBox Text="{Binding Description}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+
+            <Label Grid.Row="1"
+                   Grid.Column="0"
+                   Content="Name"
+                   Target="{Binding ElementName=NameTextBox}" />
+            <TextBox Grid.Row="1"
+                     Grid.Column="1"
+                     Text="{Binding Name}"
+                     x:Name="NameTextBox" />
+
+            <Label Grid.Row="2"
+                   Grid.Column="0"
+                   Content="Description"
+                   Target="{Binding ElementName=DescriptionTextBox}" />
+            <TextBox Grid.Row="2"
+                     Grid.Column="1"
+                     Text="{Binding Description}"
+                     x:Name="DescriptionTextBox" />
+
+            <Label Grid.Row="3"
+                   Grid.Column="0"
+                   Content="Left Port"
+                   Target="{Binding ElementName=LeftPortTextBox}" />
+            <TextBox Grid.Row="3"
+                     Grid.Column="1"
+                     Text="{Binding LeftPortId}"
+                     x:Name="LeftPortTextBox" />
+
+            <Label Grid.Row="4"
+                   Grid.Column="0"
+                   Content="Right Port"
+                   Target="{Binding ElementName=RightPortTextBox}" />
+            <TextBox Grid.Row="4"
+                     Grid.Column="1"
+                     Text="{Binding RightPortId}"
+                     x:Name="RightPortTextBox" />
+        </Grid>
+
+        <StackPanel Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Spacing="8"
+                    Margin="4">
+            <Button Content="Cancel"
+                    Command="{Binding CancelAction}" />
+            <Button Content="Add Stream"
+                    Command="{Binding AddStreamLoopbackAction}"
+                    IsEnabled="{Binding IsButtonEnabled}" />
+        </StackPanel>
+    </StackPanel>
+</Window>

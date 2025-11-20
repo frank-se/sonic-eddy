@@ -15,6 +15,7 @@ using Fr.Wireplumber;
 using ReactiveUI;
 using SonicEddy.Audio;
 using SonicEddy.Services.AppData;
+using SonicEddy.Tools;
 using SonicEddy.Views.MixerViews;
 
 namespace SonicEddy.ViewModels.MixerViewModels;
@@ -95,19 +96,11 @@ public class MixerViewModel : ViewModelBase, IDisposable, IActivatableViewModel
             DataContext = dialogViewModel
         };
 
-        await dialog.ShowDialog(GetMainWindow()!);
+        await dialog.ShowDialog(WindowTools.GetMainWindow()!);
 
         if (dialogViewModel.DialogResult &&
             dialogViewModel.SelectedStream != null)
             _streams.Add(dialogViewModel.SelectedStream);
-    }
-
-    private Window? GetMainWindow()
-    {
-        return Application.Current?.ApplicationLifetime is
-            IClassicDesktopStyleApplicationLifetime desktop
-            ? desktop.MainWindow
-            : null;
     }
 
     private void PanChanged(PropertyValue<Stream, double> changedEvent)
@@ -134,7 +127,7 @@ public class MixerViewModel : ViewModelBase, IDisposable, IActivatableViewModel
     {
         _streams.Remove(stream);
     }
-    
+
     private void TargetObjectChanged(
         PropertyValue<Stream, TargetObject?> changedEvent)
     {

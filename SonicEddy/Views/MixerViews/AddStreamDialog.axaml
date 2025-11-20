@@ -7,7 +7,7 @@
         Title="Select the stream"
         Width="400" Height="500"
         WindowStartupLocation="CenterOwner"
-        CanResize="false"
+        CanResize="False"
         x:Class="SonicEddy.Views.MixerViews.AddStreamDialog"
         x:DataType="mixerViewModels:AddStreamDialogViewModel">
     <Grid RowDefinitions="*,Auto" Margin="8">
