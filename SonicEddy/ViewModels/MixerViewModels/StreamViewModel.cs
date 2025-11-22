@@ -1,8 +1,10 @@
+using System.Collections.ObjectModel;
+using System.Reactive;
 using ReactiveUI;
 
 namespace SonicEddy.ViewModels.MixerViewModels;
 
-public class Stream(
+public class StreamViewModel(
     string name,
     ulong objectSerial,
     double volume,
@@ -10,7 +12,9 @@ public class Stream(
     TargetObject? targetObject,
     double pan,
     bool stereo,
-    ulong objectId) : ReactiveObject
+    ulong objectId,
+    ObservableCollection<TargetObject> availableTargetObjects,
+    ReactiveCommand<StreamViewModel, Unit> removeStreamCommand) : ReactiveObject
 {
     private string _description = description;
     private string _name = name;
@@ -20,7 +24,7 @@ public class Stream(
     private double _volume = volume;
 
     public string DisplayName => $"{Name} ({ObjectId})";
-    
+
     public string Name
     {
         get => _name;
@@ -38,7 +42,7 @@ public class Stream(
         get => _objectSerial;
         set => this.RaiseAndSetIfChanged(ref _objectSerial, value);
     }
-    
+
     public ulong ObjectId { get; } = objectId;
 
     public double Volume
@@ -63,4 +67,21 @@ public class Stream(
         get => _targetObject;
         set => this.RaiseAndSetIfChanged(ref _targetObject, value);
     }
+
+    private Compressor? _compressor;
+
+    public Compressor? Compressor
+    {
+        get => _compressor;
+        set => this.RaiseAndSetIfChanged(ref _compressor, value);
+    }
+
+    public ObservableCollection<TargetObject> AvailableTargetObjects
+    {
+        get;
+        set;
+    } = availableTargetObjects;
+
+    public ReactiveCommand<StreamViewModel, Unit> RemoveStreamCommand { get; } =
+        removeStreamCommand;
 }

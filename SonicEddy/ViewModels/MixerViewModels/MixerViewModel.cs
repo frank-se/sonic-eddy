@@ -24,14 +24,17 @@ public class MixerViewModel : ViewModelBase, IDisposable, IActivatableViewModel
 {
     private readonly IAppDataService _appDataService;
     private readonly CompositeDisposable _disposables = new();
-    private readonly SourceList<Stream> _streams = new();
+    private readonly SourceList<StreamViewModel> _streams = new();
 
-    private readonly ReadOnlyObservableCollection<Stream> _streamsBindable;
+    private readonly ReadOnlyObservableCollection<StreamViewModel> _streamsBindable;
     private readonly Subject<Unit> _wasShutDown = new();
 
     public MixerViewModel(IAppDataService appDataService)
     {
         _appDataService = appDataService;
+        RemoveStreamCommand =
+            ReactiveCommand.Create<StreamViewModel>(RemoveStream);
+        
         TargetObjects = new()
         {
             Wireplumber.Nodes.Where(n =>
@@ -50,7 +53,7 @@ public class MixerViewModel : ViewModelBase, IDisposable, IActivatableViewModel
         {
             _streams.Connect()
                 .AutoRefresh(stream => stream.TargetObject)
-                .WhenPropertyChanged<Stream, TargetObject?>(stream =>
+                .WhenPropertyChanged<StreamViewModel, TargetObject?>(stream =>
                     stream.TargetObject, false)
                 .TakeUntil(_wasShutDown)
                 .Subscribe(TargetObjectChanged)
@@ -77,7 +80,7 @@ public class MixerViewModel : ViewModelBase, IDisposable, IActivatableViewModel
     }
 
     public ObservableCollection<TargetObject> TargetObjects { get; set; }
-    public ReadOnlyObservableCollection<Stream> Streams => _streamsBindable;
+    public ReadOnlyObservableCollection<StreamViewModel> Streams => _streamsBindable;
     public ViewModelActivator Activator { get; } = new();
 
     public void Dispose()
@@ -90,7 +93,7 @@ public class MixerViewModel : ViewModelBase, IDisposable, IActivatableViewModel
 
     public async Task AddStream()
     {
-        var dialogViewModel = new AddStreamDialogViewModel();
+        var dialogViewModel = new AddStreamDialogViewModel(TargetObjects, RemoveStreamCommand);
         var dialog = new AddStreamDialog
         {
             DataContext = dialogViewModel
@@ -103,18 +106,18 @@ public class MixerViewModel : ViewModelBase, IDisposable, IActivatableViewModel
             _streams.Add(dialogViewModel.SelectedStream);
     }
 
-    private void PanChanged(PropertyValue<Stream, double> changedEvent)
+    private void PanChanged(PropertyValue<StreamViewModel, double> changedEvent)
     {
         SetChannelVolumeFromStream(changedEvent);
     }
 
-    private void VolumeChanged(PropertyValue<Stream, double> changedEvent)
+    private void VolumeChanged(PropertyValue<StreamViewModel, double> changedEvent)
     {
         SetChannelVolumeFromStream(changedEvent);
     }
 
     private static void SetChannelVolumeFromStream(
-        PropertyValue<Stream, double> changedEvent)
+        PropertyValue<StreamViewModel, double> changedEvent)
     {
         var volume = changedEvent.Value;
         var pan = changedEvent.Sender.Pan;
@@ -123,13 +126,15 @@ public class MixerViewModel : ViewModelBase, IDisposable, IActivatableViewModel
         Pipewire.SetChannelVolumeProps(objectId, [gains.Item1, gains.Item2]);
     }
 
-    public void RemoveStream(Stream stream)
+    public ReactiveCommand<StreamViewModel, Unit> RemoveStreamCommand { get; }
+
+    private void RemoveStream(StreamViewModel streamViewModel)
     {
-        _streams.Remove(stream);
+        _streams.Remove(streamViewModel);
     }
 
     private void TargetObjectChanged(
-        PropertyValue<Stream, TargetObject?> changedEvent)
+        PropertyValue<StreamViewModel, TargetObject?> changedEvent)
     {
         var targetObject = changedEvent.Value;
 

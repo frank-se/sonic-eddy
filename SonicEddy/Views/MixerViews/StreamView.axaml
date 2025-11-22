@@ -1,0 +1,55 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:mixerViewModels="clr-namespace:SonicEddy.ViewModels.MixerViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="SonicEddy.Views.MixerViews.StreamView"
+             x:DataType="mixerViewModels:StreamViewModel">
+    <Border Width="100" Margin="4" BorderThickness="1"
+            BorderBrush="{DynamicResource SystemAccentColorDark1}"
+            Background="{DynamicResource SystemBaseLowColor}"
+            VerticalAlignment="Stretch">
+        <HeaderedContentControl
+            Header="{Binding DisplayName}"
+            HorizontalAlignment="Center"
+            Margin="4">
+            <Grid RowDefinitions="Auto,*,Auto,Auto"
+                  Margin="4">
+                <Button Grid.Row="0" Content="...">
+                    <Button.Flyout>
+                        <MenuFlyout
+                            Placement="BottomEdgeAlignedRight">
+                            <MenuItem
+                                Header="Remove Channel"
+                                Command="{Binding RemoveStreamCommand}"
+                                CommandParameter="{Binding} " />
+                        </MenuFlyout>
+                    </Button.Flyout>
+                </Button>
+                <Slider Grid.Row="1"
+                        Margin="4"
+                        Orientation="Vertical"
+                        HorizontalAlignment="Center"
+                        Minimum="{Binding Minimum}"
+                        Maximum="{Binding Maximum}"
+                        Value="{Binding Volume}" />
+                <Slider Grid.Row="2"
+                        Margin="4"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Stretch"
+                        Minimum="0.0"
+                        Maximum="1.0"
+                        IsVisible="{Binding IsStereo}"
+                        Value="{Binding Pan}" />
+                <!-- ReSharper disable once Xaml.PossibleNullReferenceException -->
+                <ComboBox Grid.Row="3"
+                          Margin="4,12, 4, 4"
+                          ItemsSource="{Binding AvailableTargetObjects}"
+                          DisplayMemberBinding="{Binding Description}"
+                          SelectedValue="{Binding TargetObject, FallbackValue=''}"
+                          HorizontalAlignment="Center" />
+            </Grid>
+        </HeaderedContentControl>
+    </Border>
+</UserControl>

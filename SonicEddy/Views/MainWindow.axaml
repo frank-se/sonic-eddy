@@ -45,16 +45,16 @@
                     <Button HorizontalAlignment="Stretch"
                             Padding="8"
                             Margin="4"
-                            Classes.selected="{Binding ObjectBrowserMenuItemSelected}"
-                            Command="{Binding NavigateToObjectBrowserAction}">
-                        Object Browser
+                            Classes.selected="{Binding ProAudioStreamsMenuItemSelected}"
+                            Command="{Binding NavigateToProAudioStreamsAction}">
+                        Pro Audio Streams
                     </Button>
                     <Button HorizontalAlignment="Stretch"
                             Padding="8"
                             Margin="4"
-                            Classes.selected="{Binding ProAudioStreamsMenuItemSelected}"
-                            Command="{Binding NavigateToProAudioStreamsAction}">
-                        Pro Audio Streams
+                            Classes.selected="{Binding ObjectBrowserMenuItemSelected}"
+                            Command="{Binding NavigateToObjectBrowserAction}">
+                        Object Browser
                     </Button>
                 </StackPanel>
             </HeaderedContentControl>

@@ -2,17 +2,25 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="SonicEddy.App"
              xmlns:local="using:SonicEddy"
+             xmlns:mixerViewModels="clr-namespace:SonicEddy.ViewModels.MixerViewModels"
+             xmlns:mixerViews="clr-namespace:SonicEddy.Views.MixerViews"
              RequestedThemeVariant="Default">
 
     <Application.DataTemplates>
         <local:ViewLocator />
+
+        <DataTemplate
+            DataType="{x:Type mixerViewModels:StreamViewModel}">
+            <mixerViews:StreamView />
+        </DataTemplate>
     </Application.DataTemplates>
 
     <Application.Styles>
         <FluentTheme />
-        <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
+        <StyleInclude
+            Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml" />
     </Application.Styles>
-    
+
     <Application.Resources>
         <FontFamily x:Key="FluentIconsRegular">
             avares://SonicEddy/Assets/Fonts/FluentSystemIcons-Regular.ttf#FluentSystemIcons-Regular

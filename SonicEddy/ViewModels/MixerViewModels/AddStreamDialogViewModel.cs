@@ -11,9 +11,11 @@ namespace SonicEddy.ViewModels.MixerViewModels;
 
 public class AddStreamDialogViewModel : ViewModelBase
 {
-    private Stream? _selectedStream;
+    private StreamViewModel? _selectedStream;
 
-    public AddStreamDialogViewModel()
+    public AddStreamDialogViewModel(
+        ObservableCollection<TargetObject> availableTargetObjects,
+        ReactiveCommand<StreamViewModel, Unit> removeStreamCommand)
     {
         var nodes =
             Wireplumber.Nodes.Where(n =>
@@ -43,22 +45,26 @@ public class AddStreamDialogViewModel : ViewModelBase
                     pan = Pan.GetPanFromGains(leftGain, rightGain);
                 }
 
-                return new Stream(node.Name ?? string.Empty, node.ObjectSerial,
+                return new StreamViewModel(node.Name ?? string.Empty,
+                    node.ObjectSerial,
                     prop?.Channels.FirstOrDefault()
                         ?
                         .Volume ?? 0,
                     node.Description ?? node.Name ?? string.Empty, null, pan,
-                    isStereo, node.ObjectId);
+                    isStereo, node.ObjectId, availableTargetObjects,
+                    removeStreamCommand);
             });
 
         AvailableStreams.AddRange(streams);
     }
 
-    public ObservableCollection<Stream> AvailableStreams { get; set; } = [];
+    public ObservableCollection<StreamViewModel>
+        AvailableStreams { get; set; } = [];
+
     public bool DialogResult { get; set; }
     public Interaction<Unit, Unit> Close { get; } = new();
 
-    public Stream? SelectedStream
+    public StreamViewModel? SelectedStream
     {
         get => _selectedStream;
         set => this.RaiseAndSetIfChanged(ref _selectedStream, value);
