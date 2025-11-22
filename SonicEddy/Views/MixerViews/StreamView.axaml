@@ -14,9 +14,10 @@
             Header="{Binding DisplayName}"
             HorizontalAlignment="Center"
             Margin="4">
-            <Grid RowDefinitions="Auto,*,Auto,Auto"
-                  Margin="4">
-                <Button Grid.Row="0" Content="...">
+            <DockPanel LastChildFill="True">
+                <Button Content="..."
+                        HorizontalAlignment="Stretch"
+                        DockPanel.Dock="Top">
                     <Button.Flyout>
                         <MenuFlyout
                             Placement="BottomEdgeAlignedRight">
@@ -27,29 +28,45 @@
                         </MenuFlyout>
                     </Button.Flyout>
                 </Button>
-                <Slider Grid.Row="1"
-                        Margin="4"
-                        Orientation="Vertical"
-                        HorizontalAlignment="Center"
-                        Minimum="{Binding Minimum}"
-                        Maximum="{Binding Maximum}"
-                        Value="{Binding Volume}" />
-                <Slider Grid.Row="2"
-                        Margin="4"
-                        Orientation="Horizontal"
-                        HorizontalAlignment="Stretch"
-                        Minimum="0.0"
-                        Maximum="1.0"
-                        IsVisible="{Binding IsStereo}"
-                        Value="{Binding Pan}" />
-                <!-- ReSharper disable once Xaml.PossibleNullReferenceException -->
-                <ComboBox Grid.Row="3"
-                          Margin="4,12, 4, 4"
-                          ItemsSource="{Binding AvailableTargetObjects}"
-                          DisplayMemberBinding="{Binding Description}"
-                          SelectedValue="{Binding TargetObject, FallbackValue=''}"
-                          HorizontalAlignment="Center" />
-            </Grid>
+
+                <HeaderedContentControl Header="Effects"
+                                        Margin="4">
+                    <ItemsControl ItemsSource="{Binding Effects}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                </HeaderedContentControl>
+
+                <Grid RowDefinitions="*,Auto,Auto"
+                      Margin="4"
+                      DockPanel.Dock="Top">
+                    <Slider Grid.Row="0"
+                            Margin="4"
+                            Orientation="Vertical"
+                            HorizontalAlignment="Center"
+                            Minimum="{Binding Minimum}"
+                            Maximum="{Binding Maximum}"
+                            Value="{Binding Volume}" />
+                    <Slider Grid.Row="1"
+                            Margin="4"
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Stretch"
+                            Minimum="0.0"
+                            Maximum="1.0"
+                            IsVisible="{Binding IsStereo}"
+                            Value="{Binding Pan}" />
+                    <!-- ReSharper disable once Xaml.PossibleNullReferenceException -->
+                    <ComboBox Grid.Row="2"
+                              Margin="4,12, 4, 4"
+                              ItemsSource="{Binding AvailableTargetObjects}"
+                              DisplayMemberBinding="{Binding Description}"
+                              SelectedValue="{Binding TargetObject, FallbackValue=''}"
+                              HorizontalAlignment="Center" />
+                </Grid>
+            </DockPanel>
         </HeaderedContentControl>
     </Border>
 </UserControl>

@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Reactive;
 using ReactiveUI;
+using SonicEddy.ViewModels.MixerViewModels.Effects;
 
 namespace SonicEddy.ViewModels.MixerViewModels;
 
@@ -25,6 +26,8 @@ public class StreamViewModel(
 
     public string DisplayName => $"{Name} ({ObjectId})";
 
+    public ObservableCollection<MixerEffectViewModelBase> Effects { get; } = [];
+    
     public string Name
     {
         get => _name;
@@ -66,14 +69,6 @@ public class StreamViewModel(
     {
         get => _targetObject;
         set => this.RaiseAndSetIfChanged(ref _targetObject, value);
-    }
-
-    private Compressor? _compressor;
-
-    public Compressor? Compressor
-    {
-        get => _compressor;
-        set => this.RaiseAndSetIfChanged(ref _compressor, value);
     }
 
     public ObservableCollection<TargetObject> AvailableTargetObjects
