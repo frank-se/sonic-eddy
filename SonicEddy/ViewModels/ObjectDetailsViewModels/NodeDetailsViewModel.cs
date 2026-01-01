@@ -1,4 +1,5 @@
 using Fr.Wireplumber.Model;
+using Fr.Wireplumber.Model.Objects;
 using ReactiveUI;
 
 namespace SonicEddy.ViewModels.ObjectDetailsViewModels;
@@ -132,10 +133,16 @@ public class NodeDetailsViewModel(
     public ulong ChannelMixFrontChannelCutOff => channelMixFrontChannelCutOff;
     public double ChannelMixHilbertTaps => channelMixHilbertTaps;
     public bool ChannelMixLockVolumes => channelMixLockVolumes;
-    public ulong ChannelMixLowFrequencyEffectsCutOff => channelMixLowFrequencyEffectsCutOff;
+
+    public ulong ChannelMixLowFrequencyEffectsCutOff =>
+        channelMixLowFrequencyEffectsCutOff;
+
     public double ChannelMixMaxVolume => channelMixMaxVolume;
     public double ChannelMixMinVolume => channelMixMinVolume;
-    public bool ChannelMixMixLowFrequencyEffects => channelMixMixLowFrequencyEffects;
+
+    public bool ChannelMixMixLowFrequencyEffects =>
+        channelMixMixLowFrequencyEffects;
+
     public bool ChannelMixNormalize => channelMixNormalize;
     public bool ChannelMixUpMix => channelMixUpMix;
     public string ChannelMixUpMixMethod => channelMixUpMixMethod;
@@ -169,7 +176,7 @@ public class NodeDetailsViewModel(
     public ulong ResampleQuality => resampleQuality;
     public string LoopName => loopName;
     public string LoopClass => loopClass;
-    
+
     public ViewModelActivator Activator { get; } = new();
 
     public static NodeDetailsViewModel FromNode(Node device)

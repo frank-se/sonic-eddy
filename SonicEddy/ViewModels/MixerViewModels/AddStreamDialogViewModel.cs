@@ -18,42 +18,34 @@ public class AddStreamDialogViewModel : ViewModelBase
         ReactiveCommand<StreamViewModel, Unit> removeStreamCommand)
     {
         var nodes =
-            Wireplumber.Nodes.Where(n =>
-                    n.Media.Class is "Stream/Output/Audio")
+            Wireplumber.NodeRegistry.Objects.Where(n =>
+                    n.Media.Class is "Stream/Output/Audio" &&
+                    n.Properties.IsCompleted)
                 .ToList();
 
-        var props = nodes.Select(n =>
+        var streams = nodes.Select(node =>
+        {
+            var isStereo = node.Properties.Result.Channels.Count == 2;
+
+            var pan = 0.0;
+            if (isStereo)
             {
-                return Wireplumber.Props.FirstOrDefault(p =>
-                    p.ObjectSerial == n.ObjectSerial);
-            })
-            .ToList();
+                var leftGain = node.Properties.Result.Channels.First()
+                    .Volume;
+                var rightGain = node.Properties.Result.Channels.Last()
+                    .Volume;
+                pan = Pan.GetPanFromGains(leftGain, rightGain);
+            }
 
-        var streams = nodes.Zip(props)
-            .Select(pair =>
-            {
-                var (node, prop) = pair;
-                var isStereo = prop?.Channels.Count == 2;
-
-                var pan = 0.0;
-                if (isStereo)
-                {
-                    var leftGain = prop!.Channels.First()
-                        .Volume;
-                    var rightGain = prop!.Channels.Last()
-                        .Volume;
-                    pan = Pan.GetPanFromGains(leftGain, rightGain);
-                }
-
-                return new StreamViewModel(node.Name ?? string.Empty,
-                    node.ObjectSerial,
-                    prop?.Channels.FirstOrDefault()
-                        ?
-                        .Volume ?? 0,
-                    node.Description ?? node.Name ?? string.Empty, null, pan,
-                    isStereo, node.ObjectId, availableTargetObjects,
-                    removeStreamCommand);
-            });
+            return new StreamViewModel(node.Name ?? string.Empty,
+                node.ObjectSerial,
+                node.Properties.Result.Channels.FirstOrDefault()
+                    ?
+                    .Volume ?? 0,
+                node.Description ?? node.Name ?? string.Empty, null, pan,
+                isStereo, node.ObjectId, availableTargetObjects,
+                removeStreamCommand);
+        });
 
         AvailableStreams.AddRange(streams);
     }

@@ -1,4 +1,5 @@
 using Fr.Wireplumber.Model;
+using Fr.Wireplumber.Model.Objects;
 using ReactiveUI;
 
 namespace SonicEddy.ViewModels.ObjectDetailsViewModels;
@@ -23,7 +24,7 @@ public class PortDetailsViewModel(
     public string Group => group;
     public string Direction => direction;
     public ulong NodeId => nodeId;
-    
+
     public ViewModelActivator Activator { get; } = new();
 
     public static PortDetailsViewModel FromPort(Port port)

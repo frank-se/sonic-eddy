@@ -6,7 +6,8 @@ using SonicEddy.ViewModels.MixerViewModels.Effects;
 
 namespace SonicEddy.Views.MixerViews.Effects;
 
-public partial class MixerCompressorView : ReactiveUserControl<MixerCompressorViewModel>
+public partial class
+    MixerCompressorView : ReactiveUserControl<MixerCompressorViewModel>
 {
     public MixerCompressorView()
     {

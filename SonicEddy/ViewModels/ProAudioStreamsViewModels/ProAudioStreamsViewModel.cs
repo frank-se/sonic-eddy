@@ -1,3 +1,4 @@
+using System;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using Fr.Wireplumber;
@@ -43,13 +44,8 @@ public class ProAudioStreamsViewModel : ViewModelBase
                 dialogViewModel.RightPortId
             ));
 
-            _ = Task.Run(() =>
-            {
-                Pipewire.LoadLoopbackModuleForProAudioStereoInput(
-                    selectedSourceNode.Name!, dialogViewModel.Name,
-                    dialogViewModel.Description, dialogViewModel.LeftPortId,
-                    dialogViewModel.RightPortId);
-            });
+            throw new NotImplementedException(
+                "Creating a loopback module is currently broken");
         }
     }
 }

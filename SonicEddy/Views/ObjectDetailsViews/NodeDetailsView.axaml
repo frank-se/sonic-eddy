@@ -293,11 +293,11 @@
                       Margin="4">
                     <Label Grid.Row="0" Grid.Column="0" Margin="2">Rate</Label>
                     <TextBlock Grid.Row="0" Grid.Column="1" Margin="2"
-                           Text="{Binding InternalLatencyRate}" />
+                               Text="{Binding InternalLatencyRate}" />
 
                     <Label Grid.Row="1" Grid.Column="0" Margin="2">Nanoseconds</Label>
                     <TextBlock Grid.Row="1" Grid.Column="1" Margin="2"
-                           Text="{Binding InternalLatencyNanoseconds}" />
+                               Text="{Binding InternalLatencyNanoseconds}" />
                 </Grid>
             </HeaderedContentControl>
             <HeaderedContentControl Header="Media"
@@ -307,67 +307,67 @@
                       Margin="4">
                     <Label Grid.Row="0" Grid.Column="0" Margin="2">Name</Label>
                     <TextBlock Grid.Row="0" Grid.Column="1" Margin="2"
-                           Text="{Binding MediaName}" />
+                               Text="{Binding MediaName}" />
 
                     <Label Grid.Row="1" Grid.Column="0" Margin="2">Class</Label>
                     <TextBlock Grid.Row="1" Grid.Column="1" Margin="2"
-                           Text="{Binding MediaClass}" />
+                               Text="{Binding MediaClass}" />
 
                     <Label Grid.Row="2" Grid.Column="0" Margin="2">Format</Label>
                     <TextBlock Grid.Row="2" Grid.Column="1" Margin="2"
-                           Text="{Binding MediaFormat}" />
+                               Text="{Binding MediaFormat}" />
 
                     <Label Grid.Row="3" Grid.Column="0" Margin="2">Icon</Label>
                     <TextBlock Grid.Row="3" Grid.Column="1" Margin="2"
-                           Text="{Binding MediaIcon}" />
+                               Text="{Binding MediaIcon}" />
 
                     <Label Grid.Row="4" Grid.Column="0" Margin="2">Icon Name</Label>
                     <TextBlock Grid.Row="4" Grid.Column="1" Margin="2"
-                           Text="{Binding MediaIconName}" />
+                               Text="{Binding MediaIconName}" />
 
                     <Label Grid.Row="5" Grid.Column="0" Margin="2">Artist</Label>
                     <TextBlock Grid.Row="5" Grid.Column="1" Margin="2"
-                           Text="{Binding MediaArtist}" />
+                               Text="{Binding MediaArtist}" />
 
                     <Label Grid.Row="6" Grid.Column="0" Margin="2">Category</Label>
                     <TextBlock Grid.Row="6" Grid.Column="1" Margin="2"
-                           Text="{Binding MediaCategory}" />
+                               Text="{Binding MediaCategory}" />
 
                     <Label Grid.Row="7" Grid.Column="0" Margin="2">Comment</Label>
                     <TextBlock Grid.Row="7" Grid.Column="1" Margin="2"
-                           Text="{Binding MediaComment}" />
+                               Text="{Binding MediaComment}" />
 
                     <Label Grid.Row="8" Grid.Column="0" Margin="2">Copyright</Label>
                     <TextBlock Grid.Row="8" Grid.Column="1" Margin="2"
-                           Text="{Binding MediaCopyright}" />
+                               Text="{Binding MediaCopyright}" />
 
                     <Label Grid.Row="9" Grid.Column="0" Margin="2">Date</Label>
                     <TextBlock Grid.Row="9" Grid.Column="1" Margin="2"
-                           Text="{Binding MediaDate}" />
+                               Text="{Binding MediaDate}" />
 
                     <Label Grid.Row="10" Grid.Column="0" Margin="2">Filename</Label>
                     <TextBlock Grid.Row="10" Grid.Column="1" Margin="2"
-                           Text="{Binding MediaFilename}" />
+                               Text="{Binding MediaFilename}" />
 
                     <Label Grid.Row="11" Grid.Column="0" Margin="2">Language</Label>
                     <TextBlock Grid.Row="11" Grid.Column="1" Margin="2"
-                           Text="{Binding MediaLanguage}" />
+                               Text="{Binding MediaLanguage}" />
 
                     <Label Grid.Row="12" Grid.Column="0" Margin="2">Role</Label>
                     <TextBlock Grid.Row="12" Grid.Column="1" Margin="2"
-                           Text="{Binding MediaRole}" />
+                               Text="{Binding MediaRole}" />
 
                     <Label Grid.Row="13" Grid.Column="0" Margin="2">Software</Label>
                     <TextBlock Grid.Row="13" Grid.Column="1" Margin="2"
-                           Text="{Binding MediaSoftware}" />
+                               Text="{Binding MediaSoftware}" />
 
                     <Label Grid.Row="15" Grid.Column="0" Margin="2">Title</Label>
                     <TextBlock Grid.Row="15" Grid.Column="1" Margin="2"
-                           Text="{Binding MediaTitle}" />
+                               Text="{Binding MediaTitle}" />
 
                     <Label Grid.Row="16" Grid.Column="0" Margin="2">Type</Label>
                     <TextBlock Grid.Row="16" Grid.Column="1" Margin="2"
-                           Text="{Binding MediaType}" />
+                               Text="{Binding MediaType}" />
                 </Grid>
             </HeaderedContentControl>
             <HeaderedContentControl Header="Resampling"
@@ -377,19 +377,19 @@
                       Margin="4">
                     <Label Grid.Row="0" Grid.Column="0" Margin="2">Disable</Label>
                     <TextBlock Grid.Row="0" Grid.Column="1" Margin="2"
-                           Text="{Binding ResampleDisable}" />
+                               Text="{Binding ResampleDisable}" />
 
                     <Label Grid.Row="1" Grid.Column="0" Margin="2">Peaks</Label>
                     <TextBlock Grid.Row="1" Grid.Column="1" Margin="2"
-                           Text="{Binding ResamplePeaks}" />
+                               Text="{Binding ResamplePeaks}" />
 
                     <Label Grid.Row="2" Grid.Column="0" Margin="2">Prefill</Label>
                     <TextBlock Grid.Row="2" Grid.Column="1" Margin="2"
-                           Text="{Binding ResamplePrefill}" />
+                               Text="{Binding ResamplePrefill}" />
 
                     <Label Grid.Row="3" Grid.Column="0" Margin="2">Quality</Label>
                     <TextBlock Grid.Row="3" Grid.Column="1" Margin="2"
-                           Text="{Binding ResampleQuality}" />
+                               Text="{Binding ResampleQuality}" />
                 </Grid>
             </HeaderedContentControl>
             <HeaderedContentControl Header="Loop"
@@ -399,11 +399,11 @@
                       Margin="4">
                     <Label Grid.Row="0" Grid.Column="0" Margin="2">Name</Label>
                     <TextBlock Grid.Row="0" Grid.Column="1" Margin="2"
-                           Text="{Binding LoopName}" />
+                               Text="{Binding LoopName}" />
 
                     <Label Grid.Row="1" Grid.Column="0" Margin="2">Class</Label>
                     <TextBlock Grid.Row="1" Grid.Column="1" Margin="2"
-                           Text="{Binding LoopClass}" />
+                               Text="{Binding LoopClass}" />
                 </Grid>
             </HeaderedContentControl>
         </StackPanel>

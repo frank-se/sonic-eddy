@@ -1,4 +1,5 @@
 using Fr.Wireplumber.Model;
+using Fr.Wireplumber.Model.Objects;
 using ReactiveUI;
 
 namespace SonicEddy.ViewModels.ObjectDetailsViewModels;
@@ -25,7 +26,7 @@ public class ClientDetailsViewModel(
     public string Access => access;
     public string ClientAccess => clientAccess;
     public string Protocol => protocol;
-    
+
     public ViewModelActivator Activator { get; } = new();
 
     public static ClientDetailsViewModel FromClient(Client client)

@@ -1,4 +1,5 @@
 using Fr.Wireplumber.Model;
+using Fr.Wireplumber.Model.Objects;
 using ReactiveUI;
 
 namespace SonicEddy.ViewModels.ObjectDetailsViewModels;

@@ -1,5 +1,5 @@
 using System.Collections.ObjectModel;
-using Fr.Wireplumber.Model;
+using Fr.Wireplumber.Model.Objects;
 
 namespace SonicEddy.Models.ObjectBrowser;
 
@@ -15,10 +15,10 @@ public enum PipewireObjectType
 public class PipewireObject
 {
     public required string Name { get; set; }
-    public required ulong ObjectSerial { get; set; }
-    public required ulong ObjectId { get; set; }
+    public required ulong ObjectSerial { get; init; }
+    public required ulong ObjectId { get; init; }
     public required ObservableCollection<PipewireObject> Children { get; set; }
-    public required PipewireObjectType Type { get; set; }
+    public required PipewireObjectType Type { get; init; }
 
     public static PipewireObject FromClient(Client client)
     {

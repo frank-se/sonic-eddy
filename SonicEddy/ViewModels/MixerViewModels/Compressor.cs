@@ -9,7 +9,7 @@ public class Compressor : ReactiveObject
     private PipewireFilterGraph _pipewireFilterGraph;
 
     public BoundParameter Threshold { get; }
-    
+
     public Compressor(PipewireFilterGraph pipewireFilterGraph)
     {
         _pipewireFilterGraph = pipewireFilterGraph;

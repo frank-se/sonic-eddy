@@ -27,7 +27,7 @@ public class StreamViewModel(
     public string DisplayName => $"{Name} ({ObjectId})";
 
     public ObservableCollection<MixerEffectViewModelBase> Effects { get; } = [];
-    
+
     public string Name
     {
         get => _name;
