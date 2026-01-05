@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using ReactiveUI;
 using SonicEddy.Services.AppData;
 using SonicEddy.ViewModels;
 using SonicEddy.ViewModels.MixerViewModels;
@@ -35,24 +36,7 @@ public class App : Application
     private static void RegisterDependencies()
     {
         Locator.CurrentMutable.Register<IAppDataService, AppDataService>();
-        Locator.CurrentMutable.Register(() =>
-        {
-            var appService = Locator.Current.GetService<IAppDataService>();
-            return new ObjectBrowserViewModel(appService!);
-        });
-
-        Locator.CurrentMutable.Register(() =>
-        {
-            var appService = Locator.Current.GetService<IAppDataService>();
-            return new ProAudioStreamsViewModel(appService!);
-        });
-
-        Locator.CurrentMutable.Register(() =>
-        {
-            var appService = Locator.Current.GetService<IAppDataService>();
-            return new MixerViewModel(appService!);
-        });
-
         Locator.CurrentMutable.Register(() => new MainWindowViewModel());
+        Locator.CurrentMutable.Register<IViewLocator>(() => new ViewLocator());
     }
 }

@@ -2,19 +2,24 @@ using System;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using Fr.Wireplumber;
+using ReactiveUI;
 using SonicEddy.Services.AppData;
 using SonicEddy.Tools;
 using SonicEddy.Views.ProAudioStreamsViews;
 
 namespace SonicEddy.ViewModels.ProAudioStreamsViewModels;
 
-public class ProAudioStreamsViewModel : ViewModelBase
+public class ProAudioStreamsViewModel : ViewModelBase, IActivatableViewModel,
+    IRoutableViewModel
 {
     private readonly IAppDataService _appDataService;
 
-    public ProAudioStreamsViewModel(IAppDataService appDataService)
+    public ProAudioStreamsViewModel(IAppDataService appDataService,
+        string? urlPathSegment, IScreen hostScreen)
     {
         _appDataService = appDataService;
+        UrlPathSegment = urlPathSegment;
+        HostScreen = hostScreen;
     }
 
     public ObservableCollection<ProAudioStreamLoopback>
@@ -48,4 +53,8 @@ public class ProAudioStreamsViewModel : ViewModelBase
                 "Creating a loopback module is currently broken");
         }
     }
+
+    public ViewModelActivator Activator { get; } = new();
+    public string? UrlPathSegment { get; }
+    public IScreen HostScreen { get; }
 }

@@ -1,0 +1,63 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:metadataViewModels="clr-namespace:SonicEddy.ViewModels.MetadataViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             Width="400" Height="500"
+             x:Class="SonicEddy.Views.MetadataViews.AddOrUpdateMetadataItemDialogView"
+             x:DataType="metadataViewModels:AddOrUpdateMetadataItemDialogViewModel">
+    <StackPanel>
+        <Grid ColumnDefinitions="Auto,*"
+              RowDefinitions="Auto,Auto,Auto,Auto">
+            <Label Grid.Row="0"
+                   Grid.Column="0"
+                   Content="Subject"
+                   Target="SubjectTextBox" />
+            <TextBox Grid.Row="0"
+                     Grid.Column="1"
+                     IsEnabled="{Binding IsAddMode}"
+                     Text="{Binding Subject}"
+                     x:Name="SubjectTextBox" />
+
+            <Label Grid.Row="1"
+                   Grid.Column="0"
+                   Content="Key"
+                   Target="KeyTextBox" />
+            <TextBox Grid.Row="1"
+                     Grid.Column="1"
+                     IsEnabled="{Binding IsAddMode}"
+                     Text="{Binding Key}"
+                     x:Name="KeyTextBox" />
+
+            <Label Grid.Row="2"
+                   Grid.Column="0"
+                   Content="Type"
+                   Target="TypeTextBox" />
+            <TextBox Grid.Row="2"
+                     Grid.Column="1"
+                     Text="{Binding Type}"
+                     x:Name="TypeTextBox" />
+
+            <Label Grid.Row="3"
+                   Grid.Column="0"
+                   Content="Value"
+                   Target="ValueTextBox" />
+            <TextBox Grid.Row="3"
+                     Grid.Column="1"
+                     Text="{Binding Value}"
+                     x:Name="ValueTextBox" />
+        </Grid>
+
+        <StackPanel Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Spacing="8"
+                    Margin="4">
+            <Button Content="Cancel"
+                    Command="{Binding CancelAction}" />
+            <Button Content="Add Metadata Item"
+                    Command="{Binding AddMetadataAction}"
+                    IsEnabled="{Binding IsButtonEnabled}" />
+        </StackPanel>
+    </StackPanel>
+</UserControl>

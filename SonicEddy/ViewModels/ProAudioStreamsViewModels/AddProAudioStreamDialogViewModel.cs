@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reactive;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
+using System.Threading.Tasks;
 using DynamicData;
 using Fr.Wireplumber;
 using Fr.Wireplumber.Model;
@@ -27,7 +28,7 @@ public class AddProAudioStreamDialogViewModel : ViewModelBase, IDisposable
     {
         var nodes = Wireplumber.DeviceRegistry.Objects.Select(device =>
                 Wireplumber.NodeRegistry.Objects.FirstOrDefault(n =>
-                    n.Device?.Id == device.ObjectId &&
+                    n.DeviceAssignment?.Id == device.ObjectId &&
                     n.Media.Class == "Audio/Source"))
             .OfType<Node>()
             .ToList();
@@ -104,13 +105,13 @@ public class AddProAudioStreamDialogViewModel : ViewModelBase, IDisposable
 
     public Interaction<Unit, Unit> Close { get; } = new();
 
-    public async void AddStreamLoopbackAction()
+    public async Task AddStreamLoopbackAction()
     {
         DialogResult = true;
         await Close.Handle(Unit.Default);
     }
 
-    public async void CancelAction()
+    public async Task CancelAction()
     {
         DialogResult = false;
         await Close.Handle(Unit.Default);

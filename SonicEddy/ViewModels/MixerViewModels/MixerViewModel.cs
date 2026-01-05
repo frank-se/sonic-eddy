@@ -20,7 +20,8 @@ using SonicEddy.Views.MixerViews;
 
 namespace SonicEddy.ViewModels.MixerViewModels;
 
-public class MixerViewModel : ViewModelBase, IDisposable, IActivatableViewModel
+public class MixerViewModel : ViewModelBase, IDisposable, IActivatableViewModel,
+    IRoutableViewModel
 {
     private readonly IAppDataService _appDataService;
     private readonly CompositeDisposable _disposables = new();
@@ -31,9 +32,12 @@ public class MixerViewModel : ViewModelBase, IDisposable, IActivatableViewModel
 
     private readonly Subject<Unit> _wasShutDown = new();
 
-    public MixerViewModel(IAppDataService appDataService)
+    public MixerViewModel(IAppDataService appDataService,
+        string? urlPathSegment, IScreen hostScreen)
     {
         _appDataService = appDataService;
+        UrlPathSegment = urlPathSegment;
+        HostScreen = hostScreen;
         RemoveStreamCommand =
             ReactiveCommand.Create<StreamViewModel>(RemoveStream);
 
@@ -160,4 +164,7 @@ public class MixerViewModel : ViewModelBase, IDisposable, IActivatableViewModel
         _wasShutDown.OnNext(Unit.Default);
         _wasShutDown.OnCompleted();
     }
+
+    public string? UrlPathSegment { get; }
+    public IScreen HostScreen { get; }
 }

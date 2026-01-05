@@ -1,0 +1,104 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:metadataViewModels="clr-namespace:SonicEddy.ViewModels.MetadataViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="SonicEddy.Views.MetadataViews.MetadataView"
+             x:DataType="metadataViewModels:MetadataViewModel"
+             x:Name="MainControl">
+    <SplitView IsPaneOpen="True"
+               DisplayMode="Inline"
+               PanePlacement="Right"
+               OpenPaneLength="200">
+        <SplitView.Pane>
+            <HeaderedContentControl x:Name="IconButtonColumn"
+                                    Header="Menu"
+                                    Margin="4">
+                <ItemsControl ItemsSource="{Binding MetadataCollections}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <!-- ReSharper disable once Xaml.PossibleNullReferenceException -->
+                            <Button HorizontalAlignment="Stretch"
+                                    Padding="8"
+                                    Margin="4"
+                                    Command="{Binding $parent[ItemsControl].((metadataViewModels:MetadataViewModel)DataContext).ChangeSelectedMetadata}"
+                                    CommandParameter="{Binding Name}"
+                                    Content="{Binding Name}" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </HeaderedContentControl>
+        </SplitView.Pane>
+
+        <HeaderedContentControl Header="Metadata Items" Margin="4">
+            <Grid RowDefinitions="Auto, *">
+                <Panel Grid.Row="0">
+                    <Button Content="&#xE005;"
+                            FontFamily="{StaticResource FluentIconsRegular}"
+                            FontSize="20"
+                            ToolTip.Tip="Add Metadata Item ..."
+                            Padding="8"
+                            Margin="4"
+                            Command="{Binding AddMetadataEntry}" />
+                </Panel>
+                <DataGrid Grid.Row="1"
+                          AutoGenerateColumns="False"
+                          CanUserReorderColumns="True"
+                          CanUserResizeColumns="True"
+                          CanUserSortColumns="True"
+                          GridLinesVisibility="All"
+                          VerticalAlignment="Stretch"
+                          HorizontalAlignment="Stretch"
+                          SelectionMode="Single"
+                          IsReadOnly="True"
+                          ItemsSource="{Binding MetadataEntries}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Subject"
+                                            Binding="{Binding Subject}"
+                                            IsReadOnly="True" />
+
+                        <DataGridTextColumn Header="Key"
+                                            Binding="{Binding Key}"
+                                            IsReadOnly="True" />
+
+                        <DataGridTextColumn Header="Type"
+                                            Binding="{Binding Type}"
+                                            IsReadOnly="True" />
+
+                        <DataGridTextColumn Header="Value"
+                                            Binding="{Binding Value}"
+                                            IsReadOnly="True" />
+
+                        <DataGridTemplateColumn Header="Actions ...">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button Content="&#xF3DD;"
+                                                FontFamily="{StaticResource FluentIconsRegular}"
+                                                FontSize="20"
+                                                ToolTip.Tip="Update Metadata Item ..."
+                                                Padding="8"
+                                                Margin="4"
+                                                Command="{Binding #MainControl.((metadataViewModels:MetadataViewModel)DataContext).UpdateMetadataEntry}"
+                                                CommandParameter="{Binding}" />
+
+                                        <Button Content="&#xE47D;"
+                                                FontFamily="{StaticResource FluentIconsRegular}"
+                                                FontSize="20"
+                                                ToolTip.Tip="Delete Metadata Item ..."
+                                                Padding="8"
+                                                Margin="4"
+                                                IsEnabled="True"
+                                                Command="{Binding #MainControl.((metadataViewModels:MetadataViewModel)DataContext).DeleteMetadataEntry}"
+                                                CommandParameter="{Binding}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </HeaderedContentControl>
+    </SplitView>
+</UserControl>

@@ -1,4 +1,6 @@
 ﻿using ReactiveUI;
+using SonicEddy.Services.AppData;
+using SonicEddy.ViewModels.MetadataViewModels;
 using SonicEddy.ViewModels.MixerViewModels;
 using SonicEddy.ViewModels.ObjectBrowserViewModels;
 using SonicEddy.ViewModels.ProAudioStreamsViewModels;
@@ -6,23 +8,18 @@ using Splat;
 
 namespace SonicEddy.ViewModels;
 
-public class MainWindowViewModel : ViewModelBase
+public class MainWindowViewModel : ViewModelBase, IScreen
 {
-    private ViewModelBase? _currentPageViewModel;
+    public RoutingState Router { get; } = new();
 
     private bool _mixerMenuItemSelected;
     private bool _objectBrowserMenuItemSelected;
     private bool _proAudioStreamsMenuItemSelected;
+    private bool _metadataMenuItemSelected;
 
     public MainWindowViewModel()
     {
         NavigateToMixerAction();
-    }
-
-    public ViewModelBase? CurrentPageViewModel
-    {
-        get => _currentPageViewModel;
-        set => this.RaiseAndSetIfChanged(ref _currentPageViewModel, value);
     }
 
     public bool ProAudioStreamsMenuItemSelected
@@ -46,12 +43,21 @@ public class MainWindowViewModel : ViewModelBase
             value);
     }
 
+    public bool MetadataMenuItemSelected
+    {
+        get => _metadataMenuItemSelected;
+        set => this.RaiseAndSetIfChanged(ref _metadataMenuItemSelected, value);
+    }
+
     public void NavigateToMixerAction()
     {
         MixerMenuItemSelected = true;
         ObjectBrowserMenuItemSelected = false;
         ProAudioStreamsMenuItemSelected = false;
-        CurrentPageViewModel = Locator.Current.GetService<MixerViewModel>();
+        MetadataMenuItemSelected = false;
+        var appDataService = Locator.Current.GetService<IAppDataService>();
+        Router.Navigate.Execute(new MixerViewModel(appDataService!, "mixer",
+            this));
     }
 
     public void NavigateToObjectBrowserAction()
@@ -59,8 +65,11 @@ public class MainWindowViewModel : ViewModelBase
         MixerMenuItemSelected = false;
         ObjectBrowserMenuItemSelected = true;
         ProAudioStreamsMenuItemSelected = false;
-        CurrentPageViewModel =
-            Locator.Current.GetService<ObjectBrowserViewModel>();
+        MetadataMenuItemSelected = false;
+        var appDataService = Locator.Current.GetService<IAppDataService>();
+        Router.Navigate.Execute(
+            new ObjectBrowserViewModel(appDataService!, "object-browser",
+                this));
     }
 
     public void NavigateToProAudioStreamsAction()
@@ -68,7 +77,20 @@ public class MainWindowViewModel : ViewModelBase
         MixerMenuItemSelected = false;
         ObjectBrowserMenuItemSelected = false;
         ProAudioStreamsMenuItemSelected = true;
-        CurrentPageViewModel =
-            Locator.Current.GetService<ProAudioStreamsViewModel>();
+        MetadataMenuItemSelected = false;
+        var appDataService = Locator.Current.GetService<IAppDataService>();
+        Router.Navigate.Execute(new ProAudioStreamsViewModel(appDataService!,
+            "pro-audio-streams", this));
+    }
+
+    public void NavigateToMetadataView()
+    {
+        MixerMenuItemSelected = false;
+        ObjectBrowserMenuItemSelected = false;
+        ProAudioStreamsMenuItemSelected = false;
+        MetadataMenuItemSelected = true;
+        var appDataService = Locator.Current.GetService<IAppDataService>();
+        Router.Navigate.Execute(new MetadataViewModel(appDataService!,
+            "metadata", this));
     }
 }

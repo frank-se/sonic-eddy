@@ -237,7 +237,7 @@ public class NodeDetailsViewModel(
             device.Clock.Name ?? string.Empty,
             device.Client?.Id,
             device.Debug.Path ?? string.Empty,
-            device.Device?.Id,
+            device.DeviceAssignment?.Id,
             device.Dither.Method ?? string.Empty,
             device.Dither.Noise,
             device.InternalLatency.Rate,

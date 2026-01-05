@@ -23,7 +23,7 @@
             <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
         </PackageReference>
         <PackageReference Include="Avalonia.ReactiveUI" Version="11.3.8"/>
-        <PackageReference Include="FrWireplumber" Version="0.7.0"/>
+        <PackageReference Include="FrWireplumber" Version="0.8.1"/>
         <PackageReference Include="System.Reactive" Version="6.1.0"/>
     </ItemGroup>
 

@@ -1,9 +1,11 @@
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reactive;
 using System.Reactive.Linq;
 using DynamicData;
 using Fr.Wireplumber;
+using Fr.Wireplumber.Model.Objects;
 using ReactiveUI;
 using SonicEddy.Audio;
 
@@ -17,11 +19,14 @@ public class AddStreamDialogViewModel : ViewModelBase
         ObservableCollection<TargetObject> availableTargetObjects,
         ReactiveCommand<StreamViewModel, Unit> removeStreamCommand)
     {
-        var nodes =
+        List<Node> nodes = [];
+        nodes.AddRange(
             Wireplumber.NodeRegistry.Objects.Where(n =>
-                    n.Media.Class is "Stream/Output/Audio" &&
-                    n.Properties.IsCompleted)
-                .ToList();
+                n.Media.Class is "Stream/Output/Audio" &&
+                n.Properties.IsCompleted));
+
+        nodes.AddRange(Wireplumber.NodeRegistry.Objects.Where(node =>
+            node.Media.Class is "Audio/Source"));
 
         var streams = nodes.Select(node =>
         {

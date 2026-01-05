@@ -6,7 +6,6 @@ using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using Avalonia.Threading;
 using Fr.Wireplumber;
-using Fr.Wireplumber.Model;
 using Fr.Wireplumber.Model.Objects;
 using ReactiveUI;
 using SonicEddy.Models.ObjectBrowser;
@@ -15,7 +14,8 @@ using SonicEddy.ViewModels.ObjectDetailsViewModels;
 
 namespace SonicEddy.ViewModels.ObjectBrowserViewModels;
 
-public class ObjectBrowserViewModel : ViewModelBase, IActivatableViewModel
+public class ObjectBrowserViewModel : ViewModelBase, IActivatableViewModel,
+    IRoutableViewModel
 {
     private readonly IAppDataService _appDataService;
     private readonly List<PipewireObject> _leftover = [];
@@ -24,9 +24,12 @@ public class ObjectBrowserViewModel : ViewModelBase, IActivatableViewModel
 
     private ObjectDetailsViewModelBase? _selectedObjectViewModel;
 
-    public ObjectBrowserViewModel(IAppDataService appDataService)
+    public ObjectBrowserViewModel(IAppDataService appDataService,
+        string? urlPathSegment, IScreen hostScreen)
     {
         _appDataService = appDataService;
+        UrlPathSegment = urlPathSegment;
+        HostScreen = hostScreen;
         var clients = Wireplumber.ClientRegistry.Objects;
         Objects = new(clients.Select(PipewireObject.FromClient));
 
@@ -190,7 +193,7 @@ public class ObjectBrowserViewModel : ViewModelBase, IActivatableViewModel
 
         var potentiallyChangedNodes = Wireplumber.NodeRegistry.Objects
             .Where(n =>
-                n.Device?.Id == device.ObjectId &&
+                n.DeviceAssignment?.Id == device.ObjectId &&
                 _leftover.Any(l => l.ObjectSerial == n.ObjectSerial))
             .ToList();
         _leftover.RemoveAll(l =>
@@ -210,11 +213,11 @@ public class ObjectBrowserViewModel : ViewModelBase, IActivatableViewModel
 
     private void AddNode(Node node)
     {
-        if (node.Client is null && node.Device is null)
+        if (node.Client is null && node.DeviceAssignment is null)
         {
             Objects.Add(PipewireObject.FromNode(node));
         }
-        else if (node.Device is null && node.Client != null)
+        else if (node.DeviceAssignment is null && node.Client != null)
         {
             var client =
                 Objects.FirstOrDefault(o => o.ObjectId == node.Client.Id);
@@ -226,7 +229,7 @@ public class ObjectBrowserViewModel : ViewModelBase, IActivatableViewModel
 
             client.Children.Add(PipewireObject.FromNode(node));
         }
-        else if (node.Device != null && node.Client != null)
+        else if (node.DeviceAssignment != null && node.Client != null)
         {
             var client =
                 Objects.FirstOrDefault(o => o.ObjectId == node.Client.Id);
@@ -238,7 +241,7 @@ public class ObjectBrowserViewModel : ViewModelBase, IActivatableViewModel
 
             var device =
                 client.Children.FirstOrDefault(d =>
-                    d.ObjectId == node.Device.Id);
+                    d.ObjectId == node.DeviceAssignment.Id);
             if (device is null)
             {
                 _leftover.Add(PipewireObject.FromNode(node));
@@ -274,14 +277,14 @@ public class ObjectBrowserViewModel : ViewModelBase, IActivatableViewModel
             nodes.FirstOrDefault(n => n.ObjectId == port.Node.Id);
         if (pipewireNode != null)
         {
-            if (pipewireNode.Device != null)
+            if (pipewireNode.DeviceAssignment != null)
             {
                 var client = Objects.FirstOrDefault(c =>
                     c.ObjectId == pipewireNode.Client!.Id);
                 if (client != null)
                 {
                     var device = client.Children.FirstOrDefault(d =>
-                        d.ObjectId == pipewireNode.Device.Id);
+                        d.ObjectId == pipewireNode.DeviceAssignment.Id);
                     if (device != null)
                     {
                         var node = device.Children.FirstOrDefault(n =>
@@ -357,11 +360,11 @@ public class ObjectBrowserViewModel : ViewModelBase, IActivatableViewModel
                     Objects.FirstOrDefault(c => c.ObjectId == node.Client.Id);
                 if (client != null)
                 {
-                    if (node.Device != null)
+                    if (node.DeviceAssignment != null)
                     {
                         var device =
                             client.Children.FirstOrDefault(d =>
-                                d.ObjectId == node.Device.Id);
+                                d.ObjectId == node.DeviceAssignment.Id);
                         if (device != null)
                             device.Children.Add(PipewireObject.FromNode(node));
                         else
@@ -392,4 +395,7 @@ public class ObjectBrowserViewModel : ViewModelBase, IActivatableViewModel
                 _leftover.Add(PipewireObject.FromDevice(device));
         }
     }
+
+    public string? UrlPathSegment { get; }
+    public IScreen HostScreen { get; }
 }
