@@ -1,0 +1,186 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:filterGraphBuilderViewModels="clr-namespace:SonicEddy.ViewModels.FilterGraphBuilderViewModels"
+             xmlns:controls="clr-namespace:SonicEddy.Controls"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="SonicEddy.Views.FilterGraphBuilderViews.FilterGraphBuilderView"
+             x:DataType="filterGraphBuilderViewModels:FilterGraphBuilderViewModel"
+             x:Name="MainControl">
+    <Grid RowDefinitions="Auto, *">
+        <StackPanel Orientation="Horizontal">
+            <Button Content="Save Graph"
+                    Margin="4"
+                    Padding="4" />
+        </StackPanel>
+        <SplitView Grid.Row="1" 
+                   IsPaneOpen="True"
+                   DisplayMode="Inline"
+                   OpenPaneLength="250"
+                   PanePlacement="Right">
+            <SplitView.Pane>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding AvailablePluginsByClass}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Expander VerticalAlignment="Top"
+                                          Header="{Binding Name}"
+                                          HorizontalAlignment="Stretch">
+                                    <StackPanel>
+                                        <ItemsControl ItemsSource="{Binding Plugins}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Button Content="{Binding Description.Name}"
+                                                            HorizontalAlignment="Stretch"
+                                                            Margin="4"
+                                                            Command="{Binding #MainControl.((filterGraphBuilderViewModels:FilterGraphBuilderViewModel)DataContext).AddPlugin}"
+                                                            CommandParameter="{Binding}" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Expander>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </SplitView.Pane>
+
+            <Grid>
+                <ItemsControl ItemsSource="{Binding Nodes}"
+                              x:CompileBindings="False">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <Canvas Background="DimGray"
+                                    PointerMoved="OnConnectionDragPointerMoved"
+                                    PointerReleased="OnConnectionDragPointerRelease"
+                                    Loaded="OnCanvasLoaded" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+
+                    <ItemsControl.Styles>
+                        <Style Selector="ContentPresenter"
+                               x:DataType="filterGraphBuilderViewModels:NodeBase">
+                            <Setter Property="Canvas.Left" Value="{Binding X}" />
+                            <Setter Property="Canvas.Top" Value="{Binding Y}" />
+                        </Style>
+                    </ItemsControl.Styles>
+
+                    <ItemsControl.DataTemplates>
+                        <DataTemplate DataType="{x:Type filterGraphBuilderViewModels:FilterChainInputsNode}">
+                            <StackPanel Background="BurlyWood">
+                                <TextBlock Text="{Binding Name}"
+                                           Foreground="Black"
+                                           Margin="4" />
+                                <StackPanel Orientation="Horizontal">
+                                    <ItemsControl ItemsSource="{Binding OutPorts}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid ColumnDefinitions="*,Auto">
+                                                    <Rectangle Grid.Column="1" Fill="Red"
+                                                               Loaded="OnPortLoaded"
+                                                               PointerPressed="OnOutPortPointerPressed"
+                                                               Margin="4"
+                                                               HorizontalAlignment="Left"
+                                                               Width="20"
+                                                               Height="20">
+                                                    </Rectangle>
+                                                    <TextBlock Grid.Column="0" Text="{Binding Name}"
+                                                               Margin="4"
+                                                               Foreground="Black" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </StackPanel>
+                        </DataTemplate>
+
+                        <DataTemplate DataType="{x:Type filterGraphBuilderViewModels:FilterChainOutputsNode}">
+                            <StackPanel Background="BurlyWood"
+                                        Loaded="OnOutputNodeLoaded">
+                                <TextBlock Text="{Binding Name}"
+                                           Foreground="Black"
+                                           Margin="4" />
+                                <StackPanel Orientation="Horizontal">
+                                    <ItemsControl ItemsSource="{Binding InPorts}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid ColumnDefinitions="*,Auto">
+                                                    <Rectangle Grid.Column="1" Fill="Green"
+                                                               Loaded="OnPortLoaded"
+                                                               Margin="4"
+                                                               HorizontalAlignment="Left"
+                                                               Width="20"
+                                                               Height="20">
+                                                    </Rectangle>
+                                                    <TextBlock Grid.Column="0" Text="{Binding Name}"
+                                                               Margin="4"
+                                                               Foreground="Black" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </StackPanel>
+                        </DataTemplate>
+
+                        <DataTemplate DataType="{x:Type filterGraphBuilderViewModels:Lv2PluginNode}">
+                            <StackPanel Background="AliceBlue">
+                                <TextBlock Text="{Binding Name}"
+                                           Foreground="Black"
+                                           Background="Goldenrod"
+                                           PointerPressed="OnNodeHeaderPointerPressed"
+                                           Padding="6"
+                                           Margin="4" />
+                                <StackPanel Orientation="Horizontal">
+                                    <ItemsControl ItemsSource="{Binding InPorts}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="filterGraphBuilderViewModels:Lv2PortNode">
+                                                <Grid ColumnDefinitions="Auto,Auto">
+                                                    <Rectangle Grid.Column="0" Fill="Green"
+                                                               Loaded="OnPortLoaded"
+                                                               Margin="4"
+                                                               HorizontalAlignment="Left"
+                                                               Width="20"
+                                                               Height="20">
+                                                    </Rectangle>
+                                                    <TextBlock Grid.Column="1" Text="{Binding Name}"
+                                                               Margin="4"
+                                                               Foreground="Black" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <ItemsControl ItemsSource="{Binding OutPorts}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid ColumnDefinitions="*,Auto">
+                                                    <Rectangle Grid.Column="1" Fill="Red"
+                                                               Loaded="OnPortLoaded"
+                                                               PointerPressed="OnOutPortPointerPressed"
+                                                               Margin="4"
+                                                               HorizontalAlignment="Left"
+                                                               Width="20"
+                                                               Height="20">
+                                                    </Rectangle>
+                                                    <TextBlock Grid.Column="0" Text="{Binding Name}"
+                                                               Margin="4"
+                                                               Foreground="Black" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.DataTemplates>
+                </ItemsControl>
+                <controls:FilterGraphBuilderConnectionLayer Connections="{Binding Connections}"
+                                                            Background="Transparent"
+                                                            IsHitTestVisible="False" />
+            </Grid>
+        </SplitView>
+    </Grid>
+</UserControl>

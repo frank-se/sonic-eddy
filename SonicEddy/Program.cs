@@ -1,7 +1,8 @@
 ﻿using System;
 using Avalonia;
-using Avalonia.ReactiveUI;
+using Fr.Lv2;
 using Fr.Wireplumber;
+using ReactiveUI.Avalonia;
 
 namespace SonicEddy;
 
@@ -14,11 +15,13 @@ internal sealed class Program
     public static void Main(string[] args)
     {
         Wireplumber.Start();
+        Lv2.Init();
 
         BuildAvaloniaApp()
             .StartWithClassicDesktopLifetime(args);
 
         Wireplumber.Stop();
+        Lv2.Destroy();
     }
 
     // Avalonia configuration, don't remove; also used by visual designer.

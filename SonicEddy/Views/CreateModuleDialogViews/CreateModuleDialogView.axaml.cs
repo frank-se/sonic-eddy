@@ -7,20 +7,20 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 using ReactiveUI;
-using SonicEddy.ViewModels.MetadataViewModels;
+using SonicEddy.ViewModels.CreateModuleDialogViewModels;
 
-namespace SonicEddy.Views.MetadataViews;
+namespace SonicEddy.Views.CreateModuleDialogView;
 
-public partial class AddOrUpdateMetadataItemDialogView : Window
+public partial class CreateModuleDialogView : Window
 {
     private readonly CompositeDisposable _disposables = new();
 
-    public AddOrUpdateMetadataItemDialogView()
+    public CreateModuleDialogView()
     {
         InitializeComponent();
 
         this.WhenAnyValue(x => x.DataContext)!
-            .OfType<AddOrUpdateMetadataItemDialogViewModel>()
+            .OfType<CreateModuleDialogViewModel>()
             .Take(1)
             .Subscribe(viewModel =>
             {

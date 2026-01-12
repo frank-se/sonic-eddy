@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:reactiveUi="http://reactiveui.net"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-        Width="800" Height="650"
+        Width="1200" Height="650"
         x:Class="SonicEddy.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/avalonia-logo.ico"
@@ -64,6 +64,20 @@
                             Classes.selected="{Binding MetadataMenuItemSelected}"
                             Command="{Binding NavigateToMetadataView}">
                         Metadata Items
+                    </Button>
+                    <Button HorizontalAlignment="Stretch"
+                            Padding="8"
+                            Margin="4"
+                            Classes.selected="{Binding ModuleManagerViewSelected}"
+                            Command="{Binding NavigateToModuleManagerView}">
+                        Module Manager
+                    </Button>
+                    <Button HorizontalAlignment="Stretch"
+                            Padding="8"
+                            Margin="4"
+                            Classes.selected="{Binding FilterGraphBuilderViewSelected}"
+                            Command="{Binding NavigateToFilterGraphBuilderView}">
+                        Filter Graph Builder
                     </Button>
                 </StackPanel>
             </HeaderedContentControl>

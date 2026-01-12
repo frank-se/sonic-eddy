@@ -23,14 +23,15 @@ public class AddStreamDialogViewModel : ViewModelBase
         nodes.AddRange(
             Wireplumber.NodeRegistry.Objects.Where(n =>
                 n.Media.Class is "Stream/Output/Audio" &&
-                n.Properties.IsCompleted));
+                n.Properties is { IsCompleted: true, Result: not null }));
 
         nodes.AddRange(Wireplumber.NodeRegistry.Objects.Where(node =>
-            node.Media.Class is "Audio/Source"));
+            node.Media.Class is "Audio/Source" && node.Properties is
+                { IsCompleted: true, Result: not null }));
 
         var streams = nodes.Select(node =>
         {
-            var isStereo = node.Properties.Result.Channels.Count == 2;
+            var isStereo = node.Properties.Result!.Channels.Count == 2;
 
             var pan = 0.0;
             if (isStereo)

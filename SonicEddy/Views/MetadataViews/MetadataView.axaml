@@ -12,8 +12,7 @@
                PanePlacement="Right"
                OpenPaneLength="200">
         <SplitView.Pane>
-            <HeaderedContentControl x:Name="IconButtonColumn"
-                                    Header="Menu"
+            <HeaderedContentControl Header="Menu"
                                     Margin="4">
                 <ItemsControl ItemsSource="{Binding MetadataCollections}">
                     <ItemsControl.ItemTemplate>
@@ -42,6 +41,7 @@
                             Margin="4"
                             Command="{Binding AddMetadataEntry}" />
                 </Panel>
+                
                 <DataGrid Grid.Row="1"
                           AutoGenerateColumns="False"
                           CanUserReorderColumns="True"

@@ -1,0 +1,81 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:createModuleDialogViewModels="clr-namespace:SonicEddy.ViewModels.CreateModuleDialogViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="SonicEddy.Views.CreateModuleDialogView.CreateModuleDialogView"
+             x:DataType="createModuleDialogViewModels:CreateModuleDialogViewModel">
+    <StackPanel>
+        <StackPanel Orientation="Vertical">
+            <Label Target="ModuleTypeComboBox"
+                   Content="Module Type" />
+            <ComboBox
+                x:Name="ModuleTypeComboBox"
+                ItemsSource="{Binding SupportedModules}"
+                DisplayMemberBinding="{Binding Name}"
+                SelectedItem="{Binding SelectedModuleType}" />
+        </StackPanel>
+
+        <HeaderedContentControl Header="Capture Node">
+
+        </HeaderedContentControl>
+
+        <HeaderedContentControl Header="Playback Node">
+
+        </HeaderedContentControl>
+
+        <HeaderedContentControl Header="Plugin Nodes">
+            <StackPanel>
+                <StackPanel Orientation="Vertical">
+                    <Button Content="&#xE005;"
+                            FontFamily="{StaticResource FluentIconsRegular}"
+                            FontSize="20"
+                            ToolTip.Tip="Add Plugin ..."
+                            Padding="8"
+                            Margin="4"
+                            Command="{Binding AddPluginNode}" />
+                </StackPanel>
+                <ItemsControl ItemsSource="{Binding Nodes}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid ColumnDefinitions="Auto,*"
+                                  RowDefinitions="Auto,Auto">
+                                <Label Grid.Row="0"
+                                       Grid.Column="1"
+                                       Target="PluginTextBox"
+                                       Content="Name" />
+                                <TextBox Grid.Row="0"
+                                         Grid.Column="1"
+                                         Text="{Binding Name}"
+                                         x:Name="PluginTextBox" />
+
+                                <Label Grid.Row="1"
+                                       Grid.Column="0"
+                                       Target="PluginComboBox"
+                                       Content="Plugin" />
+                                <ComboBox Grid.Row="1"
+                                          Grid.Column="1"
+                                          ItemsSource="{Binding AvailablePlugins}"
+                                          DisplayMemberBinding="{Binding Name}"
+                                          SelectedItem="{Binding SelectedPlugin}"
+                                          x:Name="PluginComboBox" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </HeaderedContentControl>
+
+        <StackPanel Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Spacing="8"
+                    Margin="4">
+            <Button Content="Cancel"
+                    Command="{Binding CancelAction}" />
+            <Button Content="Create Module"
+                    Command="{Binding AddModuleAction}"
+                    IsEnabled="{Binding IsButtonEnabled}" />
+        </StackPanel>
+    </StackPanel>
+</UserControl>

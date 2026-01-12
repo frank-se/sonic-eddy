@@ -3,6 +3,8 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:mixerViewModels="clr-namespace:SonicEddy.ViewModels.MixerViewModels"
+             xmlns:effects="clr-namespace:SonicEddy.ViewModels.MixerViewModels.Effects"
+             xmlns:effectControls="clr-namespace:SonicEddy.Views.MixerViews.Effects"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="SonicEddy.Views.MixerViews.StreamView"
              x:DataType="mixerViewModels:StreamViewModel">
@@ -30,18 +32,29 @@
                 </Button>
 
                 <HeaderedContentControl Header="Effects"
-                                        Margin="4">
+                                        Margin="4"
+                                        DockPanel.Dock="Top">
                     <ItemsControl ItemsSource="{Binding Effects}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <StackPanel Orientation="Horizontal" />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.DataTemplates>
+
+                            <DataTemplate DataType="effects:MixerCompressorViewModel">
+                                <effectControls:MixerCompressorView />
+                            </DataTemplate>
+
+                            <DataTemplate DataType="effects:MixerEqualizerViewModel">
+                                <effectControls:MixerEqualizerView />
+                            </DataTemplate>
+
+                            <DataTemplate DataType="effects:MixerSaturatorViewModel">
+                                <effectControls:MixerSaturatorView />
+                            </DataTemplate>
+                        </ItemsControl.DataTemplates>
                     </ItemsControl>
                 </HeaderedContentControl>
 
                 <Grid RowDefinitions="*,Auto,Auto"
                       Margin="4"
+                      Width="100"
                       DockPanel.Dock="Top">
                     <Slider Grid.Row="0"
                             Margin="4"

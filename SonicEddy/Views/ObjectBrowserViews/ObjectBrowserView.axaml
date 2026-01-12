@@ -8,13 +8,6 @@
              x:Class="SonicEddy.Views.ObjectBrowserViews.ObjectBrowserView"
              x:DataType="objectBrowserViewModels:ObjectBrowserViewModel">
 
-    <Design.DataContext>
-        <!-- This only sets the DataContext for the previewer in an IDE,
-             the DataContext during runtime is automatically set by
-             Avalonia UI when it creates the view. -->
-        <objectBrowserViewModels:ObjectBrowserViewModel />
-    </Design.DataContext>
-
     <SplitView IsPaneOpen="True"
                DisplayMode="Inline"
                OpenPaneLength="400"
