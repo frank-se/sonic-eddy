@@ -5,7 +5,7 @@ using ReactiveUI;
 using SonicEddy.Services.AppData;
 using SonicEddy.Tools;
 using SonicEddy.ViewModels.CreateModuleDialogViewModels;
-using SonicEddy.Views.CreateModuleDialogView;
+using SonicEddy.Views.CreateModuleDialogViews;
 
 namespace SonicEddy.ViewModels.ModuleViewModels;
 

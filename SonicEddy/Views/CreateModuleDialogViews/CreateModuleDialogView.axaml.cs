@@ -3,13 +3,11 @@ using System.Reactive;
 using System.Reactive.Disposables;
 using System.Reactive.Disposables.Fluent;
 using System.Reactive.Linq;
-using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Markup.Xaml;
 using ReactiveUI;
 using SonicEddy.ViewModels.CreateModuleDialogViewModels;
 
-namespace SonicEddy.Views.CreateModuleDialogView;
+namespace SonicEddy.Views.CreateModuleDialogViews;
 
 public partial class CreateModuleDialogView : Window
 {

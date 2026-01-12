@@ -4,7 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:createModuleDialogViewModels="clr-namespace:SonicEddy.ViewModels.CreateModuleDialogViewModels"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-             x:Class="SonicEddy.Views.CreateModuleDialogView.CreateModuleDialogView"
+             x:Class="SonicEddy.Views.CreateModuleDialogViews.CreateModuleDialogView"
              x:DataType="createModuleDialogViewModels:CreateModuleDialogViewModel">
     <StackPanel>
         <StackPanel Orientation="Vertical">
