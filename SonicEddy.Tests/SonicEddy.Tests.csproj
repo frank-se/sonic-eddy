@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SonicEddy.Contracts\SonicEddy.Contracts.csproj" />
+    <ProjectReference Include="..\SonicEddy\SonicEddy.csproj" />
   </ItemGroup>
 
   <!-- Binary test data -->

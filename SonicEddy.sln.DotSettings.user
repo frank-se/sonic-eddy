@@ -29,5 +29,7 @@
 	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=c072d1ac_002D0863_002D460c_002Dbf6b_002Daaf8d6bbc991/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="FilterGraphDeserialization" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;
   &lt;TestAncestor&gt;
     &lt;TestId&gt;xUnit::DE4C2FCF-0E3E-493F-8BF9-7BCE0F2D97BF::net10.0::SonicEddy.Tests.Serialization.BackwardsCompatibilityTests&lt;/TestId&gt;
+    &lt;TestId&gt;xUnit::DE4C2FCF-0E3E-493F-8BF9-7BCE0F2D97BF::net10.0::SonicEddy.Tests.AppDataService.ReadAndStoreFilterGraphTests.StoreAndReadFilterGraph&lt;/TestId&gt;
+    &lt;TestId&gt;xUnit::DE4C2FCF-0E3E-493F-8BF9-7BCE0F2D97BF::net10.0::SonicEddy.Tests.AppDataService.ReadAndStoreFilterGraphTests&lt;/TestId&gt;
   &lt;/TestAncestor&gt;
 &lt;/SessionState&gt;</s:String></wpf:ResourceDictionary>
