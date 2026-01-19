@@ -1,0 +1,167 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:moduleManagerViewModels="clr-namespace:SonicEddy.ViewModels.ModuleManagerViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="SonicEddy.Views.ModuleManagerViews.FilterChainModuleDetailsView"
+             x:DataType="moduleManagerViewModels:FilterChainModuleDetailsViewModel">
+    <HeaderedContentControl Header="Filter Chain Module"
+                            Margin="4">
+        <TabControl Margin="4">
+            <TabItem Header="Capture Node">
+                <HeaderedContentControl Margin="4"
+                                        Header="{Binding Name}">
+                    <Grid RowDefinitions="Auto,Auto,Auto,*"
+                          ColumnDefinitions="Auto,*"
+                          Margin="4">
+                        <Label Grid.Row="0"
+                               Grid.Column="0"
+                               Content="Object Serial"
+                               Target="CaptureNodeObjectSerial" />
+                        <TextBlock Grid.Row="0"
+                                   Grid.Column="1"
+                                   x:Name="CaptureNodeObjectSerial"
+                                   Margin="4"
+                                   Text="{Binding CaptureNode.ObjectSerial}" />
+
+                        <Label Grid.Row="1"
+                               Grid.Column="0"
+                               Content="Name" />
+                        <TextBlock Grid.Row="1"
+                                   Grid.Column="1"
+                                   x:Name="CaptureNodeName"
+                                   Margin="4"
+                                   Text="{Binding CaptureNode.Name}" />
+
+                        <Label Grid.Row="2"
+                               Grid.Column="0"
+                               Content="Description" />
+                        <TextBlock Grid.Row="2"
+                                   Grid.Column="1"
+                                   x:Name="CaptureNodeDescription"
+                                   Margin="4"
+                                   Text="{Binding CaptureNode.Description}" />
+
+                        <HeaderedContentControl Grid.Row="3"
+                                                Grid.Column="0"
+                                                Grid.ColumnSpan="2"
+                                                Header="Property Info"
+                                                Margin="4">
+                            <DataGrid AutoGenerateColumns="False"
+                                      CanUserReorderColumns="True"
+                                      CanUserResizeColumns="True"
+                                      CanUserSortColumns="True"
+                                      GridLinesVisibility="All"
+                                      VerticalAlignment="Stretch"
+                                      HorizontalAlignment="Stretch"
+                                      SelectionMode="Single"
+                                      IsReadOnly="True"
+                                      ItemsSource="{Binding CaptureNode.PropertyInfos}">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Name"
+                                                        Binding="{Binding Name}" />
+
+                                    <DataGridTextColumn Header="Type"
+                                                        Binding="{Binding Type}" />
+
+                                    <DataGridTextColumn Header="Default"
+                                                        Binding="{Binding Default}" />
+
+                                    <DataGridTextColumn Header="Minimum"
+                                                        Binding="{Binding Minimum}" />
+
+                                    <DataGridTextColumn Header="Maximum"
+                                                        Binding="{Binding Maximum}" />
+
+                                    <DataGridTextColumn Header="Step"
+                                                        Binding="{Binding Step}" />
+
+                                    <DataGridCheckBoxColumn Header="Is Parameter"
+                                                            Binding="{Binding IsParam}" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </HeaderedContentControl>
+                    </Grid>
+                </HeaderedContentControl>
+            </TabItem>
+
+            <TabItem Header="Playback Node">
+                <HeaderedContentControl Margin="4"
+                                        Header="{Binding Name}">
+                    <Grid RowDefinitions="Auto,Auto,Auto,*"
+                          ColumnDefinitions="Auto,*"
+                          Margin="4">
+                        <Label Grid.Row="0"
+                               Grid.Column="0"
+                               Content="Object Serial"
+                               Target="PlaybackNodeObjectSerial" />
+                        <TextBlock Grid.Row="0"
+                                   Grid.Column="1"
+                                   x:Name="PlaybackNodeObjectSerial"
+                                   Margin="4"
+                                   Text="{Binding PlaybackNode.ObjectSerial}" />
+
+                        <Label Grid.Row="1"
+                               Grid.Column="0"
+                               Content="Name" />
+                        <TextBlock Grid.Row="1"
+                                   Grid.Column="1"
+                                   x:Name="PlaybackNodeName"
+                                   Margin="4"
+                                   Text="{Binding PlaybackNode.Name}" />
+
+                        <Label Grid.Row="2"
+                               Grid.Column="0"
+                               Content="Description" />
+                        <TextBlock Grid.Row="2"
+                                   Grid.Column="1"
+                                   x:Name="PlaybackNodeDescription"
+                                   Margin="4"
+                                   Text="{Binding PlaybackNode.Description}" />
+
+                        <HeaderedContentControl Grid.Row="3"
+                                                Grid.Column="0"
+                                                Grid.ColumnSpan="2"
+                                                Header="Property Info"
+                                                Margin="4">
+                            <DataGrid AutoGenerateColumns="False"
+                                      CanUserReorderColumns="True"
+                                      CanUserResizeColumns="True"
+                                      CanUserSortColumns="True"
+                                      GridLinesVisibility="All"
+                                      VerticalAlignment="Stretch"
+                                      HorizontalAlignment="Stretch"
+                                      SelectionMode="Single"
+                                      IsReadOnly="True"
+                                      ItemsSource="{Binding PlaybackNode.PropertyInfos}">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Name"
+                                                        Binding="{Binding Name}" />
+
+                                    <DataGridTextColumn Header="Type"
+                                                        Binding="{Binding Type}" />
+
+                                    <DataGridTextColumn Header="Default"
+                                                        Binding="{Binding Default}" />
+
+                                    <DataGridTextColumn Header="Minimum"
+                                                        Binding="{Binding Minimum}" />
+
+                                    <DataGridTextColumn Header="Maximum"
+                                                        Binding="{Binding Maximum}" />
+
+                                    <DataGridTextColumn Header="Step"
+                                                        Binding="{Binding Step}" />
+
+                                    <DataGridCheckBoxColumn Header="Is Parameter"
+                                                            Binding="{Binding IsParam}" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </HeaderedContentControl>
+                    </Grid>
+                </HeaderedContentControl>
+            </TabItem>
+        </TabControl>
+    </HeaderedContentControl>
+</UserControl>

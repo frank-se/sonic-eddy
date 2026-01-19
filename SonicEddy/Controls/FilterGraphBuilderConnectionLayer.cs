@@ -7,6 +7,7 @@ using Avalonia.Controls.Shapes;
 using Avalonia.Input;
 using Avalonia.Media;
 using SonicEddy.ViewModels.FilterGraphBuilderViewModels;
+using SonicEddy.ViewModels.FilterGraphBuilderViewModels.Graph;
 
 namespace SonicEddy.Controls;
 

@@ -1,7 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Reactive;
 using ReactiveUI;
-using SonicEddy.ViewModels.MixerViewModels.Effects;
 
 namespace SonicEddy.ViewModels.MixerViewModels;
 
@@ -17,48 +16,39 @@ public class StreamViewModel(
     ObservableCollection<TargetObject> availableTargetObjects,
     ReactiveCommand<StreamViewModel, Unit> removeStreamCommand) : ReactiveObject
 {
-    private string _description = description;
-    private string _name = name;
-    private ulong _objectSerial = objectSerial;
-    private double _pan = pan;
-    private TargetObject? _targetObject = targetObject;
-    private double _volume = volume;
-
     public string DisplayName => $"{Name} ({ObjectId})";
-
-    public ObservableCollection<MixerEffectViewModelBase> Effects { get; } = [];
 
     public string Name
     {
-        get => _name;
-        set => this.RaiseAndSetIfChanged(ref _name, value);
-    }
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    } = name;
 
     public string Description
     {
-        get => _description;
-        set => this.RaiseAndSetIfChanged(ref _description, value);
-    }
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    } = description;
 
     public ulong ObjectSerial
     {
-        get => _objectSerial;
-        set => this.RaiseAndSetIfChanged(ref _objectSerial, value);
-    }
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    } = objectSerial;
 
     public ulong ObjectId { get; } = objectId;
 
     public double Volume
     {
-        get => _volume;
-        set => this.RaiseAndSetIfChanged(ref _volume, value);
-    }
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    } = volume;
 
     public double Pan
     {
-        get => _pan;
-        set => this.RaiseAndSetIfChanged(ref _pan, value);
-    }
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    } = pan;
 
     public bool IsStereo => stereo;
 
@@ -67,9 +57,9 @@ public class StreamViewModel(
 
     public TargetObject? TargetObject
     {
-        get => _targetObject;
-        set => this.RaiseAndSetIfChanged(ref _targetObject, value);
-    }
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    } = targetObject;
 
     public ObservableCollection<TargetObject> AvailableTargetObjects
     {

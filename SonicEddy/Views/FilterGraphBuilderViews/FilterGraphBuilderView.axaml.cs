@@ -11,6 +11,8 @@ using Avalonia.Media;
 using DynamicData;
 using ReactiveUI.Avalonia;
 using SonicEddy.ViewModels.FilterGraphBuilderViewModels;
+using SonicEddy.ViewModels.FilterGraphBuilderViewModels.Graph;
+using SonicEddy.ViewModels.FilterGraphBuilderViewModels.Graph.Graph;
 
 namespace SonicEddy.Views.FilterGraphBuilderViews;
 
@@ -28,7 +30,7 @@ public partial class
     {
         if (sender is StackPanel
             {
-                DataContext: FilterChainOutputsNode outputsNode
+                DataContext: OutputNodeViewModel outputsNode
             } panel && _canvas is not null)
         {
             outputsNode.X = _canvas.Bounds.Width - panel.Bounds.Width;
@@ -45,7 +47,7 @@ public partial class
 
     private void OnPortLoaded(object? sender, RoutedEventArgs eventArgs)
     {
-        if (sender is Rectangle { DataContext: PortNodeBase port } rectangle)
+        if (sender is Rectangle { DataContext: PortViewModelBase port } rectangle)
         {
             port.RectangleRef = new(rectangle);
         }
@@ -55,12 +57,12 @@ public partial class
         FilterGraphEditorDragDropState.None;
 
     private Point? _dragDropMoveLastPosition;
-    private NodeBase? _dragDropMoveNode;
+    private NodeViewModelBase? _dragDropMoveNode;
 
     private void OnNodeHeaderPointerPressed(object? sender,
         PointerPressedEventArgs eventArgs)
     {
-        if (sender is not TextBlock { DataContext: NodeBase node }) return;
+        if (sender is not TextBlock { DataContext: NodeViewModelBase node }) return;
 
         _dragDropState = FilterGraphEditorDragDropState.MoveNode;
         _dragDropMoveLastPosition = eventArgs.GetPosition(_canvas);
@@ -68,15 +70,15 @@ public partial class
     }
 
     private Line? _createConnectionPreviewLine;
-    private PortNodeBase? _createConnectionSourcePort;
-    private PortNodeBase? _createConnectionTargetPort;
+    private PortViewModelBase? _createConnectionSourcePort;
+    private PortViewModelBase? _createConnectionTargetPort;
 
     private void OnOutPortPointerPressed(object? sender,
         PointerPressedEventArgs eventArgs)
     {
         if (sender is not Rectangle
             {
-                DataContext: PortNodeBase port
+                DataContext: PortViewModelBase port
             } rectangle) return;
 
         _dragDropState = FilterGraphEditorDragDropState.CreateConnection;
@@ -189,7 +191,7 @@ public partial class
         _dragDropState = FilterGraphEditorDragDropState.None;
     }
 
-    private PortNodeBase? FindClosestInPort(Point position)
+    private PortViewModelBase? FindClosestInPort(Point position)
     {
         if (DataContext is not FilterGraphBuilderViewModel viewModel ||
             _canvas == null)

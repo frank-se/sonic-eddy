@@ -6,11 +6,13 @@ namespace SonicEddy.Contracts.FilterGraph;
 public record FilterGraphLv2Plugin(
     Guid Id,
     string Name,
-    [property: ProtoMember(1)] List<FilterGraphInputPort> InputPorts,
-    [property: ProtoMember(2)] List<FilterGraphOutputPort> OutputPorts)
+    [property: ProtoMember(1)] string Uri,
+    [property: ProtoMember(2)] List<FilterGraphLv2InputPort> InputPorts,
+    [property: ProtoMember(3)] List<FilterGraphLv2OutputPort> OutputPorts)
     : FilterGraphNodeBase(Id, Name)
 {
-    public FilterGraphLv2Plugin() : this(Guid.Empty, string.Empty, [], [])
+    public FilterGraphLv2Plugin() : this(Guid.Empty, string.Empty, string.Empty,
+        [], [])
     {
     }
 }

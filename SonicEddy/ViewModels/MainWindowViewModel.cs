@@ -1,9 +1,12 @@
-﻿using ReactiveUI;
+﻿using System.Threading.Tasks;
+using ReactiveUI;
 using SonicEddy.Services.AppData;
+using SonicEddy.ViewModels.CustomControlTesterViewModels;
 using SonicEddy.ViewModels.FilterGraphBuilderViewModels;
+using SonicEddy.ViewModels.FilterGraphManagerViewModels;
 using SonicEddy.ViewModels.MetadataViewModels;
 using SonicEddy.ViewModels.MixerViewModels;
-using SonicEddy.ViewModels.ModuleViewModels;
+using SonicEddy.ViewModels.ModuleManagerViewModels;
 using SonicEddy.ViewModels.ObjectBrowserViewModels;
 using SonicEddy.ViewModels.ProAudioStreamsViewModels;
 using Splat;
@@ -14,13 +17,6 @@ public class MainWindowViewModel : ViewModelBase, IScreen
 {
     public RoutingState Router { get; } = new();
 
-    private bool _mixerMenuItemSelected;
-    private bool _objectBrowserMenuItemSelected;
-    private bool _proAudioStreamsMenuItemSelected;
-    private bool _metadataMenuItemSelected;
-    private bool _moduleManagerViewSelected;
-    private bool _filterGraphBuilderViewSelected;
-
     public MainWindowViewModel()
     {
         NavigateToMixerAction();
@@ -28,42 +24,51 @@ public class MainWindowViewModel : ViewModelBase, IScreen
 
     public bool ProAudioStreamsMenuItemSelected
     {
-        get => _proAudioStreamsMenuItemSelected;
-        set => this.RaiseAndSetIfChanged(ref _proAudioStreamsMenuItemSelected,
-            value);
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
     public bool MixerMenuItemSelected
     {
-        get => _mixerMenuItemSelected;
-        set => _mixerMenuItemSelected =
-            this.RaiseAndSetIfChanged(ref _mixerMenuItemSelected, value);
+        get;
+        set => field =
+            this.RaiseAndSetIfChanged(ref field, value);
     }
 
     public bool ObjectBrowserMenuItemSelected
     {
-        get => _objectBrowserMenuItemSelected;
-        set => this.RaiseAndSetIfChanged(ref _objectBrowserMenuItemSelected,
-            value);
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
     public bool MetadataMenuItemSelected
     {
-        get => _metadataMenuItemSelected;
-        set => this.RaiseAndSetIfChanged(ref _metadataMenuItemSelected, value);
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
     public bool ModuleManagerViewSelected
     {
-        get => _moduleManagerViewSelected;
-        set => this.RaiseAndSetIfChanged(ref _moduleManagerViewSelected, value);
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
     public bool FilterGraphBuilderViewSelected
     {
-        get => _filterGraphBuilderViewSelected;
-        set => this.RaiseAndSetIfChanged(ref _filterGraphBuilderViewSelected,
-            value);
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
+    public bool FilterGraphManagerViewSelected
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
+    public bool CustomControlTesterViewSelected
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
     public void NavigateToMixerAction()
@@ -74,6 +79,8 @@ public class MainWindowViewModel : ViewModelBase, IScreen
         MetadataMenuItemSelected = false;
         ModuleManagerViewSelected = false;
         FilterGraphBuilderViewSelected = false;
+        FilterGraphManagerViewSelected = false;
+        CustomControlTesterViewSelected = false;
         var appDataService = Locator.Current.GetService<IAppDataService>();
         Router.Navigate.Execute(new MixerViewModel(appDataService!, "mixer",
             this));
@@ -87,6 +94,8 @@ public class MainWindowViewModel : ViewModelBase, IScreen
         MetadataMenuItemSelected = false;
         ModuleManagerViewSelected = false;
         FilterGraphBuilderViewSelected = false;
+        FilterGraphManagerViewSelected = false;
+        CustomControlTesterViewSelected = false;
         var appDataService = Locator.Current.GetService<IAppDataService>();
         Router.Navigate.Execute(
             new ObjectBrowserViewModel(appDataService!, "object-browser",
@@ -101,6 +110,8 @@ public class MainWindowViewModel : ViewModelBase, IScreen
         MetadataMenuItemSelected = false;
         ModuleManagerViewSelected = false;
         FilterGraphBuilderViewSelected = false;
+        FilterGraphManagerViewSelected = false;
+        CustomControlTesterViewSelected = false;
         var appDataService = Locator.Current.GetService<IAppDataService>();
         Router.Navigate.Execute(new ProAudioStreamsViewModel(appDataService!,
             "pro-audio-streams", this));
@@ -114,6 +125,8 @@ public class MainWindowViewModel : ViewModelBase, IScreen
         MetadataMenuItemSelected = true;
         ModuleManagerViewSelected = false;
         FilterGraphBuilderViewSelected = false;
+        FilterGraphManagerViewSelected = false;
+        CustomControlTesterViewSelected = false;
         var appDataService = Locator.Current.GetService<IAppDataService>();
         Router.Navigate.Execute(new MetadataViewModel(appDataService!,
             "metadata", this));
@@ -127,6 +140,8 @@ public class MainWindowViewModel : ViewModelBase, IScreen
         MetadataMenuItemSelected = false;
         ModuleManagerViewSelected = true;
         FilterGraphBuilderViewSelected = false;
+        FilterGraphManagerViewSelected = false;
+        CustomControlTesterViewSelected = false;
         var appDataService = Locator.Current.GetService<IAppDataService>();
         Router.Navigate.Execute(new ModuleManagerViewModel(appDataService!,
             "module-manager", this));
@@ -140,8 +155,41 @@ public class MainWindowViewModel : ViewModelBase, IScreen
         MetadataMenuItemSelected = false;
         ModuleManagerViewSelected = false;
         FilterGraphBuilderViewSelected = true;
+        FilterGraphManagerViewSelected = false;
+        CustomControlTesterViewSelected = false;
         var appDataService = Locator.Current.GetService<IAppDataService>();
         Router.Navigate.Execute(new FilterGraphBuilderViewModel(appDataService!,
+            "filter-graph-builder", this,
+            Task.Run(Fr.Lv2.Lv2.ClassDescriptions),
+            Task.Run(Fr.Lv2.Lv2.PluginDescriptions)));
+    }
+
+    public void NavigateToFilterGraphManagerView()
+    {
+        MixerMenuItemSelected = false;
+        ObjectBrowserMenuItemSelected = false;
+        ProAudioStreamsMenuItemSelected = false;
+        MetadataMenuItemSelected = false;
+        ModuleManagerViewSelected = false;
+        FilterGraphBuilderViewSelected = false;
+        FilterGraphManagerViewSelected = true;
+        CustomControlTesterViewSelected = false;
+        var appDataService = Locator.Current.GetService<IAppDataService>();
+        Router.Navigate.Execute(new FilterGraphManagerViewModel(appDataService!,
             "filter-graph-builder", this));
+    }
+
+    public void NavigateToCustomControlTesterView()
+    {
+        MixerMenuItemSelected = false;
+        ObjectBrowserMenuItemSelected = false;
+        ProAudioStreamsMenuItemSelected = false;
+        MetadataMenuItemSelected = false;
+        ModuleManagerViewSelected = false;
+        FilterGraphBuilderViewSelected = false;
+        FilterGraphManagerViewSelected = true;
+        CustomControlTesterViewSelected = false;
+        Router.Navigate.Execute(
+            new CustomControlTesterViewModel("control-tester", this));
     }
 }

@@ -9,5 +9,6 @@ public interface IAppDataService
 {
     Task<FilterGraph> GetFilterGraph(Guid id);
     Task CreateFilterGraph(FilterGraph filterGraph);
+    void DeleteFilterGraph(Guid id);
     Task<List<FilterGraph>> GetAllFilterGraphs();
 }

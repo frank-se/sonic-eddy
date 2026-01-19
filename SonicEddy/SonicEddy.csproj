@@ -14,16 +14,16 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Avalonia" Version="11.3.10" />
-        <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.10" />
-        <PackageReference Include="Avalonia.Desktop" Version="11.3.10" />
-        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.10" />
-        <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.10" />
-        <PackageReference Include="Avalonia.Diagnostics" Version="11.3.10">
+        <PackageReference Include="Avalonia" Version="11.3.11" />
+        <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.11" />
+        <PackageReference Include="Avalonia.Desktop" Version="11.3.11" />
+        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.11" />
+        <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.11" />
+        <PackageReference Include="Avalonia.Diagnostics" Version="11.3.11">
             <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
             <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
         </PackageReference>
-        <PackageReference Include="FrLv2" Version="0.0.3" />
+        <PackageReference Include="FrLv2" Version="0.0.4" />
         <PackageReference Include="FrWireplumber" Version="0.8.5" />
         <PackageReference Include="ReactiveUI.Avalonia" Version="11.3.8" />
         <PackageReference Include="System.Reactive" Version="6.1.0" />
@@ -33,6 +33,10 @@
         <Compile Update="Views\ObjectBrowserViews\ObjectBrowserView.axaml.cs">
             <DependentUpon>ObjectBrowserView.axaml</DependentUpon>
             <SubType>Code</SubType>
+        </Compile>
+        <Compile Update="Views\SaveFilterGraphDialogViews\SaveFilterGraphDialogView.axaml.cs">
+          <DependentUpon>SaveFilterGraphDialogView.axaml</DependentUpon>
+          <SubType>Code</SubType>
         </Compile>
     </ItemGroup>
 

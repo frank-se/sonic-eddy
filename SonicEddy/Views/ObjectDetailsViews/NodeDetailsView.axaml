@@ -406,6 +406,42 @@
                                Text="{Binding LoopClass}" />
                 </Grid>
             </HeaderedContentControl>
+            <HeaderedContentControl Header="Property Info"
+                                    Margin="4">
+                <DataGrid AutoGenerateColumns="False"
+                          CanUserReorderColumns="True"
+                          CanUserResizeColumns="True"
+                          CanUserSortColumns="True"
+                          GridLinesVisibility="All"
+                          VerticalAlignment="Stretch"
+                          HorizontalAlignment="Stretch"
+                          SelectionMode="Single"
+                          IsReadOnly="True"
+                          ItemsSource="{Binding PropertyInfos}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Name"
+                                            Binding="{Binding Name}" />
+
+                        <DataGridTextColumn Header="Type"
+                                            Binding="{Binding Type}" />
+
+                        <DataGridTextColumn Header="Default"
+                                            Binding="{Binding Default}" />
+
+                        <DataGridTextColumn Header="Minimum"
+                                            Binding="{Binding Minimum}" />
+
+                        <DataGridTextColumn Header="Maximum"
+                                            Binding="{Binding Maximum}" />
+
+                        <DataGridTextColumn Header="Step"
+                                            Binding="{Binding Step}" />
+
+                        <DataGridCheckBoxColumn Header="Is Parameter"
+                                                Binding="{Binding IsParam}" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </HeaderedContentControl>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

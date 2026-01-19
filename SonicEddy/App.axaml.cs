@@ -44,6 +44,8 @@ public class App : Application
                     Environment.SpecialFolder.LocalApplicationData),
                 "SonicEddy/FilterGraph");
 
+            Directory.CreateDirectory(filterGraphPath);
+            
             return new AppDataService(filterGraphPath);
         });
         Locator.CurrentMutable.Register(() => new MainWindowViewModel());

@@ -79,6 +79,20 @@
                             Command="{Binding NavigateToFilterGraphBuilderView}">
                         Filter Graph Builder
                     </Button>
+                    <Button HorizontalAlignment="Stretch"
+                            Padding="8"
+                            Margin="4"
+                            Classes.selected="{Binding FilterGraphManagerViewSelected}"
+                            Command="{Binding NavigateToFilterGraphManagerView}">
+                        Filter Graph Manager
+                    </Button>
+                    <Button HorizontalAlignment="Stretch"
+                            Padding="8"
+                            Margin="4"
+                            Classes.selected="{Binding CustomControlTesterViewSelected}"
+                            Command="{Binding NavigateToCustomControlTesterView}">
+                        Custom Control Tester
+                    </Button>
                 </StackPanel>
             </HeaderedContentControl>
         </SplitView.Pane>

@@ -4,6 +4,9 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:filterGraphBuilderViewModels="clr-namespace:SonicEddy.ViewModels.FilterGraphBuilderViewModels"
              xmlns:controls="clr-namespace:SonicEddy.Controls"
+             xmlns:graph="clr-namespace:SonicEddy.ViewModels.FilterGraphBuilderViewModels.Graph.Graph"
+             xmlns:lv2="clr-namespace:SonicEddy.ViewModels.FilterGraphBuilderViewModels.Graph.Lv2"
+             xmlns:filterGraphBuilderViewModels1="clr-namespace:SonicEddy.ViewModels.FilterGraphBuilderViewModels.Graph"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="SonicEddy.Views.FilterGraphBuilderViews.FilterGraphBuilderView"
              x:DataType="filterGraphBuilderViewModels:FilterGraphBuilderViewModel"
@@ -12,9 +15,10 @@
         <StackPanel Orientation="Horizontal">
             <Button Content="Save Graph"
                     Margin="4"
-                    Padding="4" />
+                    Padding="4"
+                    Command="{Binding SaveGraph}" />
         </StackPanel>
-        <SplitView Grid.Row="1" 
+        <SplitView Grid.Row="1"
                    IsPaneOpen="True"
                    DisplayMode="Inline"
                    OpenPaneLength="250"
@@ -61,14 +65,14 @@
 
                     <ItemsControl.Styles>
                         <Style Selector="ContentPresenter"
-                               x:DataType="filterGraphBuilderViewModels:NodeBase">
+                               x:DataType="filterGraphBuilderViewModels1:NodeViewModelBase">
                             <Setter Property="Canvas.Left" Value="{Binding X}" />
                             <Setter Property="Canvas.Top" Value="{Binding Y}" />
                         </Style>
                     </ItemsControl.Styles>
 
                     <ItemsControl.DataTemplates>
-                        <DataTemplate DataType="{x:Type filterGraphBuilderViewModels:FilterChainInputsNode}">
+                        <DataTemplate DataType="{x:Type graph:InputNodeViewModel}">
                             <StackPanel Background="BurlyWood">
                                 <TextBlock Text="{Binding Name}"
                                            Foreground="Black"
@@ -97,7 +101,7 @@
                             </StackPanel>
                         </DataTemplate>
 
-                        <DataTemplate DataType="{x:Type filterGraphBuilderViewModels:FilterChainOutputsNode}">
+                        <DataTemplate DataType="{x:Type graph:OutputNodeViewModel}">
                             <StackPanel Background="BurlyWood"
                                         Loaded="OnOutputNodeLoaded">
                                 <TextBlock Text="{Binding Name}"
@@ -126,7 +130,7 @@
                             </StackPanel>
                         </DataTemplate>
 
-                        <DataTemplate DataType="{x:Type filterGraphBuilderViewModels:Lv2PluginNode}">
+                        <DataTemplate DataType="{x:Type lv2:Lv2PluginNodeViewModel}">
                             <StackPanel Background="AliceBlue">
                                 <TextBlock Text="{Binding Name}"
                                            Foreground="Black"
@@ -137,7 +141,7 @@
                                 <StackPanel Orientation="Horizontal">
                                     <ItemsControl ItemsSource="{Binding InPorts}">
                                         <ItemsControl.ItemTemplate>
-                                            <DataTemplate x:DataType="filterGraphBuilderViewModels:Lv2PortNode">
+                                            <DataTemplate x:DataType="lv2:Lv2PortViewModel">
                                                 <Grid ColumnDefinitions="Auto,Auto">
                                                     <Rectangle Grid.Column="0" Fill="Green"
                                                                Loaded="OnPortLoaded"

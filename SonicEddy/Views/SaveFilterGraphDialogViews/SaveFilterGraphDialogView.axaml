@@ -1,0 +1,34 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:saveFilterGraphDialogViewModels="clr-namespace:SonicEddy.ViewModels.SaveFilterGraphDialogViewModels"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="SonicEddy.Views.SaveFilterGraphDialogViews.SaveFilterGraphDialogView"
+        x:DataType="saveFilterGraphDialogViewModels:SaveFilterGraphDialogViewModel"
+        Title="Save Filter Graph">
+    <StackPanel>
+        <Grid ColumnDefinitions="Auto,*"
+              RowDefinitions="Auto,*,Auto">
+            <Label Grid.Row="0"
+                   Grid.Column="0"
+                   Content="Name"
+                   Target="NameTextBox" />
+            <TextBox Grid.Row="0"
+                     Grid.Column="1"
+                     Text="{Binding Name}"
+                     x:Name="NameTextBox" />
+        </Grid>
+
+        <StackPanel Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Spacing="8"
+                    Margin="4">
+            <Button Content="Cancel"
+                    Command="{Binding Cancel}" />
+            <Button Content="Save"
+                    Command="{Binding FinishSave}"
+                    IsEnabled="{Binding IsButtonEnabled}" />
+        </StackPanel>
+    </StackPanel>
+</Window>

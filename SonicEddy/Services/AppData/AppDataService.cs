@@ -29,11 +29,18 @@ public class AppDataService(string filterGraphFolderPath) : IAppDataService
         file.Close();
     }
 
+    public void DeleteFilterGraph(Guid id)
+    {
+        var fileName = BuildFilename(id);
+        File.Delete(fileName);
+    }
+
     public async Task<List<FilterGraph>> GetAllFilterGraphs()
     {
         var results = new List<FilterGraph>();
         var files =
             Directory.EnumerateFiles(filterGraphFolderPath, "fc-*.grpc");
+
         foreach (var fileName in files)
         {
             var bytes = await File.ReadAllBytesAsync(fileName);

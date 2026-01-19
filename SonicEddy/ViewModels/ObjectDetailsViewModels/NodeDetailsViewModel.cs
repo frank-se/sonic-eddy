@@ -1,6 +1,9 @@
+using System.Collections.Generic;
+using System.Linq;
 using Fr.Wireplumber.Model;
 using Fr.Wireplumber.Model.Objects;
 using ReactiveUI;
+using SonicEddy.ViewModels.ModuleManagerViewModels;
 
 namespace SonicEddy.ViewModels.ObjectDetailsViewModels;
 
@@ -86,7 +89,8 @@ public class NodeDetailsViewModel(
     bool resamplePrefill,
     ulong resampleQuality,
     string loopName,
-    string loopClass)
+    string loopClass,
+    List<PropertyInfoViewModel> propertyInfos)
     : ObjectDetailsViewModelBase(objectId, objectSerial, "Node"),
         IActivatableViewModel
 {
@@ -177,10 +181,16 @@ public class NodeDetailsViewModel(
     public string LoopName => loopName;
     public string LoopClass => loopClass;
 
+    public List<PropertyInfoViewModel> PropertyInfos => propertyInfos;
+
     public ViewModelActivator Activator { get; } = new();
 
     public static NodeDetailsViewModel FromNode(Node device)
     {
+        var propertyInfos = device.PropertyInfos.IsCompleted
+            ? device.PropertyInfos.Result.PropertyInfos
+                .Select(PropertyInfoViewModel.FromPropertyInfo).ToList()
+            : [];
         return new(
             device.ObjectId,
             device.ObjectSerial,
@@ -263,7 +273,8 @@ public class NodeDetailsViewModel(
             device.Resample.Prefill,
             device.Resample.Quality,
             device.Loop.Name ?? string.Empty,
-            device.Loop.Class ?? string.Empty
+            device.Loop.Class ?? string.Empty,
+            propertyInfos
         );
     }
 }

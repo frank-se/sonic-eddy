@@ -4,6 +4,7 @@
              xmlns:local="using:SonicEddy"
              xmlns:mixerViewModels="clr-namespace:SonicEddy.ViewModels.MixerViewModels"
              xmlns:mixerViews="clr-namespace:SonicEddy.Views.MixerViews"
+             xmlns:converters="clr-namespace:Avalonia.Controls.Converters;assembly=Avalonia.Controls"
              RequestedThemeVariant="Default">
 
     <Application.DataTemplates>
@@ -25,5 +26,7 @@
         <FontFamily x:Key="FluentIconsRegular">
             avares://SonicEddy/Assets/Fonts/FluentSystemIcons-Regular.ttf#FluentSystemIcons-Regular
         </FontFamily>
+        
+        <converters:EnumToBoolConverter x:Key="EnumEquals" />
     </Application.Resources>
 </Application>

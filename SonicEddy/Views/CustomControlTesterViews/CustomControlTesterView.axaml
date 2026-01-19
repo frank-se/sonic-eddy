@@ -1,0 +1,22 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:controls="clr-namespace:SonicEddy.Controls"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="SonicEddy.Views.CustomControlTesterViews.CustomControlTesterView">
+    <HeaderedContentControl Header="Control Tester"
+                            Margin="4">
+        <Grid RowDefinitions="Auto,Auto"
+              ColumnDefinitions="*">
+            <controls:ValueSlider Grid.Row="0"
+                                  Minimum="-10"
+                                  Maximum="50"
+                                  Background="DimGray" />
+            <controls:ValueSlider Grid.Row="1"
+                                  Minimum="30"
+                                  Maximum="50"
+                                  Background="DimGray" />
+        </Grid>
+    </HeaderedContentControl>
+</UserControl>

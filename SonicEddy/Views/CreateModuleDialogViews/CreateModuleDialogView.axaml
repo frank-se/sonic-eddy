@@ -3,68 +3,192 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:createModuleDialogViewModels="clr-namespace:SonicEddy.ViewModels.CreateModuleDialogViewModels"
+             xmlns:converters="clr-namespace:Avalonia.Controls.Converters;assembly=Avalonia.Controls"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             Width="500" Height="850"
              x:Class="SonicEddy.Views.CreateModuleDialogViews.CreateModuleDialogView"
              x:DataType="createModuleDialogViewModels:CreateModuleDialogViewModel">
-    <StackPanel>
-        <StackPanel Orientation="Vertical">
-            <Label Target="ModuleTypeComboBox"
-                   Content="Module Type" />
-            <ComboBox
-                x:Name="ModuleTypeComboBox"
-                ItemsSource="{Binding SupportedModules}"
-                DisplayMemberBinding="{Binding Name}"
-                SelectedItem="{Binding SelectedModuleType}" />
+    <StackPanel Margin="4">
+        <StackPanel Orientation="Vertical"
+                    Margin="4">
+            <Grid RowDefinitions="Auto,Auto"
+                  ColumnDefinitions="Auto,*"
+                  Margin="4">
+                <Label Grid.Row="0"
+                       Grid.Column="0"
+                       Content="Name"
+                       Target="Name" />
+                <TextBox Grid.Row="0"
+                         Grid.Column="1"
+                         Text="{Binding Name}"
+                         x:Name="Name" />
+
+                <Label Grid.Row="1"
+                       Grid.Column="0"
+                       Target="ModuleTypeComboBox"
+                       Content="Module Type" />
+                <ComboBox Grid.Row="1"
+                          Grid.Column="1"
+                          x:Name="ModuleTypeComboBox"
+                          ItemsSource="{Binding SupportedModules}"
+                          DisplayMemberBinding="{Binding Name}"
+                          SelectedItem="{Binding SelectedModuleType}" />
+            </Grid>
         </StackPanel>
 
-        <HeaderedContentControl Header="Capture Node">
+        <HeaderedContentControl Header="Capture Node" Margin="4">
+            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+                  ColumnDefinitions="Auto,*"
+                  Margin="4">
 
+                <Label Grid.Row="0"
+                       Grid.Column="0"
+                       Target="CapturePropsName"
+                       Content="Name" />
+                <TextBox Grid.Row="0"
+                         Grid.Column="1"
+                         Margin="4"
+                         x:Name="CapturePropsName"
+                         Text="{Binding CaptureProps.Name}" />
+
+                <Label Grid.Row="1"
+                       Grid.Column="0"
+                       Target="CapturePropsDescription"
+                       Content="Description" />
+                <TextBox Grid.Row="1"
+                         Grid.Column="1"
+                         Margin="4"
+                         x:Name="CapturePropsDescription"
+                         Text="{Binding CaptureProps.Description}" />
+
+                <CheckBox Grid.Row="2"
+                          Grid.Column="1"
+                          Margin="4"
+                          Content="Auto Connect"
+                          IsChecked="{Binding CaptureProps.AutoConnect}" />
+
+                <CheckBox Grid.Row="3"
+                          Grid.Column="1"
+                          Margin="4"
+                          Content="Don't Fallback"
+                          IsChecked="{Binding CaptureProps.DontFallback}" />
+
+                <CheckBox Grid.Row="4"
+                          Grid.Column="1"
+                          Margin="4"
+                          Content="Linger"
+                          IsChecked="{Binding CaptureProps.Linger}" />
+
+                <Label Grid.Row="5"
+                       Grid.Column="0"
+                       Target="CapturePropsMediaClass"
+                       Content="Media Class" />
+                <TextBlock Grid.Row="5"
+                           Grid.Column="1"
+                           Margin="4"
+                           x:Name="CapturePropsMediaClass"
+                           Text="{Binding CaptureProps.MediaClass}" />
+
+                <Label Grid.Row="6"
+                       Grid.Column="0"
+                       Target="CapturePropsTargetObject"
+                       Content="Target Object" />
+                <ComboBox Grid.Row="6"
+                          Grid.Column="1"
+                          Margin="4"
+                          x:Name="CapturePropsTargetObject"
+                          SelectedItem="{Binding CaptureProps.TargetObject}"
+                          ItemsSource="{Binding CaptureProps.PossibleTargetObjects}"
+                          DisplayMemberBinding="{Binding Description}" />
+            </Grid>
         </HeaderedContentControl>
 
-        <HeaderedContentControl Header="Playback Node">
+        <HeaderedContentControl Header="Playback Node" Margin="4">
+            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+                  ColumnDefinitions="Auto,*"
+                  Margin="4">
 
+                <Label Grid.Row="0"
+                       Grid.Column="0"
+                       Target="PlaybackPropsName"
+                       Content="Name" />
+                <TextBox Grid.Row="0"
+                         Grid.Column="1"
+                         Margin="4"
+                         x:Name="PlaybackPropsName"
+                         Text="{Binding PlaybackProps.Name}" />
+
+                <Label Grid.Row="1"
+                       Grid.Column="0"
+                       Target="PlaybackPropsDescription"
+                       Content="Description" />
+                <TextBox Grid.Row="1"
+                         Grid.Column="1"
+                         Margin="4"
+                         x:Name="PlaybackPropsDescription"
+                         Text="{Binding PlaybackProps.Description}" />
+
+                <CheckBox Grid.Row="2"
+                          Grid.Column="1"
+                          Margin="4"
+                          Content="Auto Connect"
+                          IsChecked="{Binding PlaybackProps.AutoConnect}" />
+
+                <CheckBox Grid.Row="3"
+                          Grid.Column="1"
+                          Margin="4"
+                          Content="Don't Fallback"
+                          IsChecked="{Binding PlaybackProps.DontFallback}" />
+
+                <CheckBox Grid.Row="4"
+                          Grid.Column="1"
+                          Margin="4"
+                          Content="Linger"
+                          IsChecked="{Binding PlaybackProps.Linger}" />
+
+                <Label Grid.Row="5"
+                       Grid.Column="0"
+                       Target="PlaybackPropsMediaClass"
+                       Content="Media Class" />
+                <TextBlock Grid.Row="5"
+                           Grid.Column="1"
+                           Margin="4"
+                           x:Name="PlaybackPropsMediaClass"
+                           Text="{Binding PlaybackProps.MediaClass}" />
+
+                <Label Grid.Row="6"
+                       Grid.Column="0"
+                       Target="PlaybackPropsTargetObject"
+                       Content="Target Object" />
+                <ComboBox Grid.Row="6"
+                          Grid.Column="1"
+                          Margin="4"
+                          x:Name="PlaybackPropsTargetObject"
+                          SelectedItem="{Binding PlaybackProps.TargetObject}"
+                          ItemsSource="{Binding PlaybackProps.PossibleTargetObjects}"
+                          DisplayMemberBinding="{Binding Description}" />
+            </Grid>
         </HeaderedContentControl>
 
-        <HeaderedContentControl Header="Plugin Nodes">
-            <StackPanel>
-                <StackPanel Orientation="Vertical">
-                    <Button Content="&#xE005;"
-                            FontFamily="{StaticResource FluentIconsRegular}"
-                            FontSize="20"
-                            ToolTip.Tip="Add Plugin ..."
-                            Padding="8"
-                            Margin="4"
-                            Command="{Binding AddPluginNode}" />
-                </StackPanel>
-                <ItemsControl ItemsSource="{Binding Nodes}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Grid ColumnDefinitions="Auto,*"
-                                  RowDefinitions="Auto,Auto">
-                                <Label Grid.Row="0"
-                                       Grid.Column="1"
-                                       Target="PluginTextBox"
-                                       Content="Name" />
-                                <TextBox Grid.Row="0"
-                                         Grid.Column="1"
-                                         Text="{Binding Name}"
-                                         x:Name="PluginTextBox" />
-
-                                <Label Grid.Row="1"
-                                       Grid.Column="0"
-                                       Target="PluginComboBox"
-                                       Content="Plugin" />
-                                <ComboBox Grid.Row="1"
-                                          Grid.Column="1"
-                                          ItemsSource="{Binding AvailablePlugins}"
-                                          DisplayMemberBinding="{Binding Name}"
-                                          SelectedItem="{Binding SelectedPlugin}"
-                                          x:Name="PluginComboBox" />
-                            </Grid>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </StackPanel>
+        <HeaderedContentControl Header="Filter Chain Options"
+                                Margin="4"
+                                IsVisible="{Binding SelectedModuleType.Type,
+                                FallbackValue={x:Static createModuleDialogViewModels:ModuleTypeEnum.None},
+                                Converter={StaticResource EnumEquals},
+                                ConverterParameter={x:Static createModuleDialogViewModels:ModuleTypeEnum.FilterChain}}">
+            <Grid RowDefinitions="Auto"
+                  ColumnDefinitions="Auto,*"
+                  Margin="4">
+                <Label Grid.Row="0"
+                       Grid.Column="0"
+                       Content="Filter Graph" />
+                <ComboBox Grid.Row="0"
+                          Grid.Column="1"
+                          Margin="4"
+                          ItemsSource="{Binding FilterGraphs}"
+                          SelectedItem="{Binding SelectedFilterGraph}"
+                          DisplayMemberBinding="{Binding Name}" />
+            </Grid>
         </HeaderedContentControl>
 
         <StackPanel Orientation="Horizontal"

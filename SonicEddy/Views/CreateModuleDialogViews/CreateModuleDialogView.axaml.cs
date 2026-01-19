@@ -9,7 +9,7 @@ using SonicEddy.ViewModels.CreateModuleDialogViewModels;
 
 namespace SonicEddy.Views.CreateModuleDialogViews;
 
-public partial class CreateModuleDialogView : Window
+public partial class CreateModuleDialogView : Window, IDisposable
 {
     private readonly CompositeDisposable _disposables = new();
 
@@ -37,4 +37,6 @@ public partial class CreateModuleDialogView : Window
         _disposables.Dispose();
         base.OnClosed(e);
     }
+
+    public void Dispose() =>_disposables.Dispose();
 }
