@@ -9,11 +9,6 @@
 
     <Application.DataTemplates>
         <local:ViewLocator />
-
-        <DataTemplate
-            DataType="{x:Type mixerViewModels:StreamViewModel}">
-            <mixerViews:StreamView />
-        </DataTemplate>
     </Application.DataTemplates>
 
     <Application.Styles>

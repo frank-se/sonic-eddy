@@ -18,7 +18,7 @@ namespace SonicEddy.ViewModels.ModuleManagerViewModels;
 public class ModuleManagerViewModel : ViewModelBase, IRoutableViewModel,
     IActivatableViewModel, IDisposable
 {
-    private CompositeDisposable _disposable = new();
+    private readonly CompositeDisposable _disposables = new();
     public ObservableCollection<PipewireModule> Modules { get; } = [];
 
     public PipewireModule? SelectedModule
@@ -46,7 +46,7 @@ public class ModuleManagerViewModel : ViewModelBase, IRoutableViewModel,
 
         this.WhenAnyValue(x => x.SelectedModule)
             .Subscribe(_ => UpdateSelectedModuleViewModel())
-            .DisposeWith(_disposable);
+            .DisposeWith(_disposables);
     }
 
     private void UpdateSelectedModuleViewModel()
@@ -144,7 +144,7 @@ public class ModuleManagerViewModel : ViewModelBase, IRoutableViewModel,
 
     public void Dispose()
     {
-        _disposable.Dispose();
+        _disposables.Dispose();
         Activator.Dispose();
     }
 }

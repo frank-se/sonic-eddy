@@ -6,24 +6,29 @@ using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
-using Avalonia.Utilities;
 
 namespace SonicEddy.Controls;
 
-public class ValueSlider : Panel
+public class PanSlider : Panel
 {
-    static ValueSlider()
+    static PanSlider()
     {
-        AffectsArrange<ValueSlider>(ValueProperty);
+        AffectsArrange<PanSlider>(ValueProperty);
     }
 
-    private readonly Rectangle _valueRect;
+    private readonly Rectangle _leftValueRect;
+    private readonly Rectangle _rightValueRect;
 
-    public ValueSlider()
+    public PanSlider()
     {
-        _valueRect = new()
+        _leftValueRect = new()
         {
             Fill = Brushes.BlanchedAlmond,
+        };
+
+        _rightValueRect = new()
+        {
+            Fill = Brushes.Aquamarine,
         };
 
         var stackPanel = new StackPanel()
@@ -64,7 +69,8 @@ public class ValueSlider : Panel
             StringFormat = "F3"
         });
 
-        Children.Add(_valueRect);
+        Children.Add(_leftValueRect);
+        Children.Add(_rightValueRect);
         Children.Add(stackPanel);
 
         PointerPressed += OnPointerPressed;
@@ -75,7 +81,6 @@ public class ValueSlider : Panel
     protected override void OnInitialized()
     {
         base.OnInitialized();
-        CoerceValue(MinimumProperty);
         CoerceValue(MaximumProperty);
         CoerceValue(ValueProperty);
     }
@@ -84,42 +89,28 @@ public class ValueSlider : Panel
     {
         base.ArrangeOverride(finalSize);
 
-        if (IsVertical)
+        var halfWidth = Bounds.Width / 2;
+        if (Value >= 0)
         {
-            var valueRectHeight =
-                ((Value - Minimum) / (Maximum - Minimum)) * finalSize.Height;
-            var y = finalSize.Height - valueRectHeight;
-
-            var valueRectWidth = finalSize.Width;
-            
-            var rect = new Rect(0, y, valueRectWidth, valueRectHeight);
-
-            if (!IsInvalidRect(rect))
-                _valueRect.Arrange(rect);
+            var right = new Rect(halfWidth, 0, halfWidth * (Value / Maximum),
+                Bounds.Height);
+            var left = new Rect(halfWidth, 0, 0, 0);
+            _rightValueRect.Arrange(right);
+            _leftValueRect.Arrange(left);
         }
         else
         {
-            var valueRectWidth =
-                ((Value - Minimum) / (Maximum - Minimum)) * finalSize.Width;
-            var valueRectHeight = finalSize.Height;
+            var right = new Rect(halfWidth, 0, 0, Bounds.Height);
 
-            var rect = new Rect((new(valueRectWidth, valueRectHeight)));
+            var barLength = (-1 * Value / Maximum) * halfWidth;
+            var x = halfWidth - barLength;
+            var left = new Rect(x, 0, barLength, Bounds.Height);
             
-            if (!IsInvalidRect(rect))
-                _valueRect.Arrange(rect);
+            _rightValueRect.Arrange(right);
+            _leftValueRect.Arrange(left);
         }
 
         return finalSize;
-    }
-
-    private static bool IsInvalidRect(Rect rect)
-    {
-        return rect.Width < 0 || double.IsNaN(rect.Width) ||
-               double.IsInfinity(rect.Width) ||
-               rect.Height < 0 || double.IsNaN(rect.Height) ||
-               double.IsInfinity(rect.Height) ||
-               double.IsNaN(rect.X) || double.IsInfinity(rect.X) ||
-               double.IsNaN(rect.Y) || double.IsInfinity(rect.Y);
     }
 
     private bool _setValueOperation;
@@ -161,19 +152,8 @@ public class ValueSlider : Panel
         _lastPoint = position;
     }
 
-    public static readonly StyledProperty<bool> IsVerticalProperty =
-        AvaloniaProperty.Register<ValueSlider, bool>(
-            nameof(IsVertical),
-            defaultValue: false);
-
-    public bool IsVertical
-    {
-        get => GetValue(IsVerticalProperty);
-        set => SetValue(IsVerticalProperty, value);
-    }
-
     public static readonly StyledProperty<string> TextProperty =
-        AvaloniaProperty.Register<ValueSlider, string>(
+        AvaloniaProperty.Register<PanSlider, string>(
             nameof(Text),
             defaultValue: string.Empty);
 
@@ -184,7 +164,7 @@ public class ValueSlider : Panel
     }
 
     public static readonly StyledProperty<double> ValueProperty =
-        AvaloniaProperty.Register<ValueSlider, double>(
+        AvaloniaProperty.Register<PanSlider, double>(
             nameof(Value),
             defaultValue: 0.0,
             coerce: CoerceValue);
@@ -196,7 +176,9 @@ public class ValueSlider : Panel
     }
 
     public static readonly StyledProperty<double> MaximumProperty =
-        AvaloniaProperty.Register<ValueSlider, double>(nameof(Maximum));
+        AvaloniaProperty.Register<PanSlider, double>(
+            nameof(Maximum),
+            defaultValue: 1.0);
 
     public double Maximum
     {
@@ -204,37 +186,9 @@ public class ValueSlider : Panel
         set => SetValue(MaximumProperty, value);
     }
 
-    public static readonly StyledProperty<double> MinimumProperty =
-        AvaloniaProperty.Register<ValueSlider, double>(nameof(Minimum));
-
-    public double Minimum
-    {
-        get => GetValue(MinimumProperty);
-        set
-        {
-            if (Minimum > Value)
-            {
-                Value = Minimum;
-            }
-
-            SetValue(MinimumProperty, value);
-        }
-    }
-
-    public static readonly DirectProperty<ValueSlider, double>
-        SliderWidthProperty =
-            AvaloniaProperty.RegisterDirect<ValueSlider, double>(
-                nameof(SliderWidth), o => o.SliderWidth);
-
-    public double SliderWidth
-    {
-        get;
-        set => SetAndRaise(SliderWidthProperty, ref field, value);
-    }
-
     private static double CoerceValue(AvaloniaObject sender, double value)
     {
-        var control = (ValueSlider)sender;
-        return Math.Clamp(value, control.Minimum, control.Maximum);
+        var control = (PanSlider)sender;
+        return Math.Clamp(value, -control.Maximum, control.Maximum);
     }
 }

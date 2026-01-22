@@ -1,3 +1,6 @@
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Markup.Xaml;
 using ReactiveUI.Avalonia;
 using SonicEddy.ViewModels.MixerViewModels;
 
@@ -8,7 +11,5 @@ public partial class MixerView : ReactiveUserControl<MixerViewModel>
     public MixerView()
     {
         InitializeComponent();
-        DetachedFromLogicalTree += (_, _) =>
-            ViewModel?.StopProcessing();
     }
 }

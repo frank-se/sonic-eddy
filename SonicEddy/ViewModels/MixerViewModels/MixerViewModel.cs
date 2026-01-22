@@ -1,37 +1,16 @@
-using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
-using System.Reactive;
-using System.Reactive.Disposables;
-using System.Reactive.Disposables.Fluent;
-using System.Reactive.Linq;
-using System.Reactive.Subjects;
-using System.Threading.Tasks;
-using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Controls.ApplicationLifetimes;
-using DynamicData;
-using DynamicData.Binding;
-using Fr.Wireplumber;
 using ReactiveUI;
-using SonicEddy.Audio;
 using SonicEddy.Services.AppData;
-using SonicEddy.Tools;
-using SonicEddy.Views.MixerViews;
 
 namespace SonicEddy.ViewModels.MixerViewModels;
 
-public class MixerViewModel : ViewModelBase, IDisposable, IActivatableViewModel,
+public class MixerViewModel : ViewModelBase, IActivatableViewModel,
     IRoutableViewModel
 {
-    private readonly IAppDataService _appDataService;
-    private readonly CompositeDisposable _disposables = new();
-    private readonly SourceList<StreamViewModel> _streams = new();
+    public ObservableCollection<ChannelStripViewModel> Channels { get; } = [];
 
-    private readonly ReadOnlyObservableCollection<StreamViewModel>
-        _streamsBindable;
-
-    private readonly Subject<Unit> _wasShutDown = new();
+    private IAppDataService _appDataService;
 
     public MixerViewModel(IAppDataService appDataService,
         string? urlPathSegment, IScreen hostScreen)
@@ -39,133 +18,11 @@ public class MixerViewModel : ViewModelBase, IDisposable, IActivatableViewModel,
         _appDataService = appDataService;
         UrlPathSegment = urlPathSegment;
         HostScreen = hostScreen;
-        RemoveStreamCommand =
-            ReactiveCommand.Create<StreamViewModel>(RemoveStream);
-
-        TargetObjects = new()
-        {
-            Wireplumber.NodeRegistry.Objects.Where(n =>
-                    n.Media.Class is "Audio/Sink" or "Stream/Input/Audio")
-                .Select(n => new TargetObject(n.Name ?? string.Empty,
-                    n.ObjectSerial, n.Media.Class ?? string.Empty,
-                    n.Description ?? string.Empty))
-        };
-
-        _streams.Connect()
-            .Bind(out _streamsBindable)
-            .Subscribe()
-            .DisposeWith(_disposables);
-
-        this.WhenActivated(disposables =>
-        {
-            _streams.Connect()
-                .AutoRefresh(stream => stream.TargetObject)
-                .WhenPropertyChanged<StreamViewModel, TargetObject?>(stream =>
-                    stream.TargetObject, false)
-                .TakeUntil(_wasShutDown)
-                .Subscribe(TargetObjectChanged)
-                .DisposeWith(disposables);
-
-            _streams.Connect()
-                .AutoRefresh(stream => stream.Volume)
-                .WhenPropertyChanged(stream => stream.Volume, false)
-                .Sample(TimeSpan.FromMilliseconds(100),
-                    RxApp.MainThreadScheduler)
-                .TakeUntil(_wasShutDown)
-                .Subscribe(VolumeChanged)
-                .DisposeWith(disposables);
-
-            _streams.Connect()
-                .AutoRefresh(stream => stream.Pan)
-                .WhenPropertyChanged(stream => stream.Pan, false)
-                .Sample(TimeSpan.FromMilliseconds(100),
-                    RxApp.MainThreadScheduler)
-                .TakeUntil(_wasShutDown)
-                .Subscribe(PanChanged)
-                .DisposeWith(disposables);
-        });
-    }
-
-    public ObservableCollection<TargetObject> TargetObjects { get; set; }
-
-    public ReadOnlyObservableCollection<StreamViewModel> Streams =>
-        _streamsBindable;
-
-    public ViewModelActivator Activator { get; } = new();
-
-    public void Dispose()
-    {
-        _disposables.Dispose();
-        _streams.Dispose();
-        _wasShutDown.Dispose();
-        GC.SuppressFinalize(this);
-    }
-
-    public async Task AddStream()
-    {
-        var dialogViewModel =
-            new AddStreamDialogViewModel(TargetObjects, RemoveStreamCommand);
-        var dialog = new AddStreamDialog
-        {
-            DataContext = dialogViewModel
-        };
-
-        await dialog.ShowDialog(WindowTools.GetMainWindow()!);
-
-        if (dialogViewModel.DialogResult &&
-            dialogViewModel.SelectedStream != null)
-            _streams.Add(dialogViewModel.SelectedStream);
-    }
-
-    private void PanChanged(PropertyValue<StreamViewModel, double> changedEvent)
-    {
-        SetChannelVolumeFromStream(changedEvent);
-    }
-
-    private void VolumeChanged(
-        PropertyValue<StreamViewModel, double> changedEvent)
-    {
-        SetChannelVolumeFromStream(changedEvent);
-    }
-
-    private static void SetChannelVolumeFromStream(
-        PropertyValue<StreamViewModel, double> changedEvent)
-    {
-        var volume = changedEvent.Value;
-        var pan = changedEvent.Sender.Pan;
-        var gains = Pan.GetGainsFromPanAndVolume(pan, volume);
-        var objectId = changedEvent.Sender.ObjectId;
-        var node =
-            Wireplumber.NodeRegistry.GetByObjectSerial(changedEvent.Sender
-                .ObjectSerial);
-        node?.SetVolumes([gains.Item1, gains.Item2]);
-    }
-
-    public ReactiveCommand<StreamViewModel, Unit> RemoveStreamCommand { get; }
-
-    private void RemoveStream(StreamViewModel streamViewModel)
-    {
-        _streams.Remove(streamViewModel);
-    }
-
-    private void TargetObjectChanged(
-        PropertyValue<StreamViewModel, TargetObject?> changedEvent)
-    {
-        var targetObject = changedEvent.Value;
-
-        if (targetObject is null)
-            Console.WriteLine("Target Object changed to null");
-        if (targetObject is not null)
-            Console.WriteLine(
-                $"Target Object changed to {targetObject.Description}");
-    }
-
-    public void StopProcessing()
-    {
-        _wasShutDown.OnNext(Unit.Default);
-        _wasShutDown.OnCompleted();
+        
+        Channels.Add(new(appDataService, 1));
     }
 
     public string? UrlPathSegment { get; }
     public IScreen HostScreen { get; }
+    public ViewModelActivator Activator { get; } = new();
 }

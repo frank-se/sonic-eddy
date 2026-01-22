@@ -3,7 +3,8 @@ using ReactiveUI;
 
 namespace SonicEddy.ViewModels.MixerViewModels;
 
-public class FilterChainViewModel : ReactiveObject
+public class PluginViewModel : ReactiveObject
 {
+    public required string Name { get; init; }
     public required List<ParameterViewModel> Parameters { get; init; }
 }

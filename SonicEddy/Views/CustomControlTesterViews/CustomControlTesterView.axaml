@@ -7,15 +7,27 @@
              x:Class="SonicEddy.Views.CustomControlTesterViews.CustomControlTesterView">
     <HeaderedContentControl Header="Control Tester"
                             Margin="4">
-        <Grid RowDefinitions="Auto,Auto"
+        <Grid RowDefinitions="Auto,Auto,Auto,*"
               ColumnDefinitions="*">
             <controls:ValueSlider Grid.Row="0"
+                                  Text="Parameter 1"
                                   Minimum="-10"
                                   Maximum="50"
                                   Background="DimGray" />
             <controls:ValueSlider Grid.Row="1"
+                                  Text="Parameter 2"
                                   Minimum="30"
                                   Maximum="50"
+                                  Background="DimGray" />
+            <controls:PanSlider Grid.Row="2"
+                                Text="Pan"
+                                Maximum="50"
+                                Background="DimGray" />
+            <controls:ValueSlider Grid.Row="3"
+                                  Text="Volume"
+                                  Minimum="0"
+                                  Maximum="10"
+                                  IsVertical="True"
                                   Background="DimGray" />
         </Grid>
     </HeaderedContentControl>
