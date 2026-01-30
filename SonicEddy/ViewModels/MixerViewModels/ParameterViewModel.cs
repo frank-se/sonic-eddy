@@ -1,6 +1,8 @@
 using System;
 using System.Reactive.Disposables;
 using System.Reactive.Disposables.Fluent;
+using System.Reactive.Linq;
+using System.Runtime.CompilerServices;
 using Fr.Wireplumber.Model.Objects;
 using ReactiveUI;
 
@@ -22,13 +24,18 @@ public class ParameterViewModel : ReactiveObject, IDisposable
 
     private Node _captureNode;
 
-    public ParameterViewModel(Node captureNode)
+    public ParameterViewModel(Node captureNode, string fullName)
     {
         _captureNode = captureNode;
 
         this.WhenAnyValue(x => x.Value)
-            .Subscribe(_ =>
+            .Skip(2)
+            .Subscribe(value =>
             {
+                if (fullName is not null)
+                {
+                    _captureNode.SetParam(fullName, value);
+                }
             })
             .DisposeWith(_disposables);
     }

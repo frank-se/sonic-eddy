@@ -187,7 +187,8 @@ public class ValueSlider : Panel
         AvaloniaProperty.Register<ValueSlider, double>(
             nameof(Value),
             defaultValue: 0.0,
-            coerce: CoerceValue);
+            coerce: CoerceValue,
+            defaultBindingMode: BindingMode.TwoWay);
 
     public double Value
     {

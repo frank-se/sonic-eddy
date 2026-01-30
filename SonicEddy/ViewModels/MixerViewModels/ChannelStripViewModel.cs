@@ -112,7 +112,8 @@ public class ChannelStripViewModel : ReactiveObject
                 {
                     Parameter = value,
                     Name = parameter.Key.Split(":")[1],
-                    PluginName = parameter.Key.Split(":")[0]
+                    PluginName = parameter.Key.Split(":")[0],
+                    FullName = parameter.Key
                 };
             }
         }
@@ -136,7 +137,7 @@ public class ChannelStripViewModel : ReactiveObject
         {
             Name = g.Key,
             Parameters = g.Select(p =>
-                new ParameterViewModel(filterChain.CaptureNode)
+                new ParameterViewModel(filterChain.CaptureNode, p.FullName)
                 {
                     Name = p.Name,
                     Maximum = p.Range!.Maximum,
@@ -158,6 +159,7 @@ public class ChannelStripViewModel : ReactiveObject
         public required string Name;
         public required string PluginName;
         public FloatRange? Range;
+        public required string FullName;
     }
 
     private readonly IAppDataService _appDataService;
