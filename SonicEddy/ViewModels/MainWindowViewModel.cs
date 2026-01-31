@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using ReactiveUI;
 using SonicEddy.Services.AppData;
+using SonicEddy.Services.Wireplumber;
 using SonicEddy.ViewModels.CustomControlTesterViewModels;
 using SonicEddy.ViewModels.FilterGraphBuilderViewModels;
 using SonicEddy.ViewModels.FilterGraphManagerViewModels;
@@ -83,7 +84,7 @@ public class MainWindowViewModel : ViewModelBase, IScreen
         CustomControlTesterViewSelected = false;
         var appDataService = Locator.Current.GetService<IAppDataService>();
         Router.Navigate.Execute(new MixerViewModel(appDataService!, "mixer",
-            this));
+            this, new WireplumberService()));
     }
 
     public void NavigateToObjectBrowserAction()

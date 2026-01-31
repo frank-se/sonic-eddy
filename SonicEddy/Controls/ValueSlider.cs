@@ -94,7 +94,7 @@ public class ValueSlider : Panel
             
             var rect = new Rect(0, y, valueRectWidth, valueRectHeight);
 
-            if (!IsInvalidRect(rect))
+            if (!rect.IsInvalidRect())
                 _valueRect.Arrange(rect);
         }
         else
@@ -105,21 +105,11 @@ public class ValueSlider : Panel
 
             var rect = new Rect((new(valueRectWidth, valueRectHeight)));
             
-            if (!IsInvalidRect(rect))
+            if (!rect.IsInvalidRect())
                 _valueRect.Arrange(rect);
         }
 
         return finalSize;
-    }
-
-    private static bool IsInvalidRect(Rect rect)
-    {
-        return rect.Width < 0 || double.IsNaN(rect.Width) ||
-               double.IsInfinity(rect.Width) ||
-               rect.Height < 0 || double.IsNaN(rect.Height) ||
-               double.IsInfinity(rect.Height) ||
-               double.IsNaN(rect.X) || double.IsInfinity(rect.X) ||
-               double.IsNaN(rect.Y) || double.IsInfinity(rect.Y);
     }
 
     private bool _setValueOperation;

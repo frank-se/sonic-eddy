@@ -65,8 +65,6 @@ public class AddFilterChainViewModel : ViewModelBase, IDisposable
         await Close.Handle(Unit.Default);
     }
 
-    public void Dispose() => _disposables.Dispose();
-
     public bool DialogResult;
 
     public bool IsButtonEnabled
@@ -74,4 +72,6 @@ public class AddFilterChainViewModel : ViewModelBase, IDisposable
         get;
         set => this.RaiseAndSetIfChanged(ref field, value);
     }
+
+    public void Dispose() => _disposables.Dispose();
 }

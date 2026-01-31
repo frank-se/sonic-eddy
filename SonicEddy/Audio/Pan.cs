@@ -4,24 +4,24 @@ namespace SonicEddy.Audio;
 
 public static class Pan
 {
-    public static double GetPanFromGains(double leftGain, double rightGain)
+    public static (double Pan, double Volume) GetPanAndVolumeFromGains(
+        double leftGain,
+        double rightGain)
     {
-        var normalizationFactor = Math.Sqrt(
-            leftGain * leftGain +
-            rightGain * rightGain);
-
-        var normalizedLeft = leftGain / normalizationFactor;
-        var normalizedRight = rightGain / normalizationFactor;
-
-        var angleRadians = Math.Atan2(normalizedRight, normalizedLeft);
-
-        return 2.0 / Math.PI * angleRadians;
+        var volume = Math.Sqrt(leftGain * leftGain + rightGain * rightGain);
+        var pan = Math.Atan2(rightGain, leftGain) / (Math.PI / 2.0);
+        return new()
+        {
+            Pan = pan * 2 - 1,
+            Volume = volume
+        };
     }
 
-    public static Tuple<double, double> GetGainsFromPanAndVolume(double pan,
-        double volume)
+    public static double[] GetGainsFromPanAndVolume(double pan, double volume)
     {
-        var angle = Math.PI / 2.0 * pan;
-        return new(Math.Cos(angle) * volume, Math.Sin(angle) * volume);
+        var angle = (pan + 1.0) * (Math.PI / 4.0);
+        var left = Math.Cos(angle);
+        var right = Math.Sin(angle);
+        return [volume * left, volume * right];
     }
 }

@@ -10,57 +10,26 @@
              x:DataType="mixerViewModels:MixerViewModel">
     <HeaderedContentControl Header="Mixer"
                             Margin="4">
-        <ItemsControl ItemsSource="{Binding Channels}">
-            <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <StackPanel Orientation="Horizontal"
-                                Margin="4" />
-                </ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
+        <Grid RowDefinitions="Auto,*">
+            <StackPanel Orientation="Horizontal" Margin="4">
+                <Button Content="Add Channel"
+                        Command="{Binding AddChannel}"/>
+            </StackPanel>
+            <ItemsControl Grid.Row="1" ItemsSource="{Binding Channels}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal"
+                                    Margin="4" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
 
-            <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                    <Grid RowDefinitions="Auto,300,*,Auto"
-                          Margin="4">
-                        <Button Grid.Row="0"
-                                Margin="4"
-                                HorizontalAlignment="Stretch"
-                                Content="Filters"
-                                Command="{Binding SetFilterChain}" />
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <mixerViews:ChannelStripView />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
 
-                        <ItemsControl Grid.Row="1"
-                                      ItemsSource="{Binding Plugins}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <StackPanel Margin="4"
-                                                Height="300"
-                                                Orientation="Horizontal" />
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <mixerViews:PluginView />
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                        <controls:ValueSlider Grid.Row="2"
-                                              Margin="4"
-                                              Maximum="10"
-                                              IsVertical="True"
-                                              Text="Volume"
-                                              Background="DimGray"
-                                              Value="{Binding Volume}" />
-
-                        <controls:PanSlider Grid.Row="3"
-                                            Margin="4"
-                                            Maximum="1"
-                                            Text="Pan"
-                                            Background="DimGray"
-                                            Value="{Binding Pan}" />
-                    </Grid>
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </ItemsControl>
+        </Grid>
     </HeaderedContentControl>
 </UserControl>

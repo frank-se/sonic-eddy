@@ -106,8 +106,11 @@ public class PanSlider : Panel
             var x = halfWidth - barLength;
             var left = new Rect(x, 0, barLength, Bounds.Height);
             
-            _rightValueRect.Arrange(right);
-            _leftValueRect.Arrange(left);
+            if (!right.IsInvalidRect())
+                _rightValueRect.Arrange(right);
+            
+            if (!left.IsInvalidRect())
+                _leftValueRect.Arrange(left);
         }
 
         return finalSize;
@@ -167,7 +170,8 @@ public class PanSlider : Panel
         AvaloniaProperty.Register<PanSlider, double>(
             nameof(Value),
             defaultValue: 0.0,
-            coerce: CoerceValue);
+            coerce: CoerceValue,
+            defaultBindingMode: BindingMode.TwoWay);
 
     public double Value
     {

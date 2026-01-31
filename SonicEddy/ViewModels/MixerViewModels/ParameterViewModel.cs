@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Reactive.Disposables;
 using System.Reactive.Disposables.Fluent;
 using System.Reactive.Linq;
-using System.Runtime.CompilerServices;
 using Fr.Wireplumber.Model.Objects;
 using Fr.Wireplumber.Model.Params;
 using ReactiveUI;
@@ -52,10 +51,8 @@ public class ParameterViewModel : ReactiveObject, IDisposable
                 if (Math.Abs(_knownValue - parameter.Value) > 0.0002)
                 {
                     _knownValue = parameter.Value;
-                    Console.WriteLine($"Update known value {parameter.Name}: {parameter.Value}");
                     if (Math.Abs(Value - parameter.Value) > 0.0002)
                     {
-                        Console.WriteLine($"Update value {parameter.Name}: {parameter.Value}");
                         Value = parameter.Value;
                     }
                 }

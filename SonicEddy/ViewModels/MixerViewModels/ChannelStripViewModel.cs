@@ -1,11 +1,17 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Reactive.Disposables;
+using System.Reactive.Disposables.Fluent;
+using System.Reactive.Linq;
 using System.Threading.Tasks;
 using DynamicData;
 using Fr.Wireplumber.Model.Config.FilterChain;
+using Fr.Wireplumber.Model.Objects;
 using Fr.Wireplumber.Model.Params;
 using Fr.Wireplumber.Model.PropInfo;
+using Fr.Wireplumber.Model.Props;
 using Fr.Wireplumber.Modules.Models;
 using ReactiveUI;
 using SonicEddy.Conversions;
@@ -15,28 +21,55 @@ using SonicEddy.Views.MixerViews;
 
 namespace SonicEddy.ViewModels.MixerViewModels;
 
-public class ChannelStripViewModel : ReactiveObject
+/// <summary>
+/// The channel strip view model controls a channel strip. A channel strip has
+/// two possible setups, the first is:
+///
+/// <list type="bullet">
+/// <item>
+/// A playback node, the source for the channel strip, connected to
+/// </item>
+/// <item>
+/// A loopback module, which provides the volume controls for the channel strip
+/// </item>
+/// </list>
+///
+/// The other option adds a filter chain in the signal path:
+/// <list type="bullet">
+/// <item>
+/// A playback node, the source for the channel strip, connected to
+/// </item>
+/// <item>
+/// A filter chain module, providing processing for the channel, connected to
+/// </item>
+/// <item>
+/// A loopback module, which provides the volume controls for the channel strip
+/// </item>
+/// </list>
+/// </summary>
+public class ChannelStripViewModel : ReactiveObject, IDisposable
 {
+    private readonly CompositeDisposable _disposables = new();
+
+    public Node PlaybackNode { get; }
+
+    public required ulong ObjectSerial { get; init; }
+
+    public PanAndVolumeViewModel PanAndVolumeViewModel { get; }
+
+    private readonly LoopbackModule _loopbackModule;
+
     public ChannelStripViewModel(IAppDataService appDataService,
-        ulong channelId)
+        ulong channelId, Node playbackNode, LoopbackModule loopbackModule)
     {
+        _loopbackModule = loopbackModule;
         _appDataService = appDataService;
-        _channelId = channelId;
+        ChannelId = channelId;
+        PlaybackNode = playbackNode;
+        PanAndVolumeViewModel = new(loopbackModule);
     }
 
-    private readonly ulong _channelId;
-
-    public float Volume
-    {
-        get;
-        set => this.RaiseAndSetIfChanged(ref field, value);
-    } = 1.0f;
-
-    public float Pan
-    {
-        get;
-        set => this.RaiseAndSetIfChanged(ref field, value);
-    } = 0.0f;
+    public readonly ulong ChannelId;
 
     public ObservableCollection<PluginViewModel> Plugins { get; } = [];
 
@@ -59,27 +92,28 @@ public class ChannelStripViewModel : ReactiveObject
             {
                 CaptureProps = new()
                 {
-                    Name = $"mixer-fc-{_channelId}-capture",
+                    Name = $"mixer-fc-{ChannelId}-capture",
                     Description =
-                        $"Capture Node for Mixer Filter Channel {_channelId}",
+                        $"Capture Node for Mixer Filter Channel {ChannelId}",
                     Linger = true,
                     AutoConnect = true,
                     DontFallback = true,
                     Passive = false,
-                    TargetObject = null,
+                    TargetObject = PlaybackNode.ObjectSerial.ToString(),
                     MediaClass = "Stream/Input/Audio",
                     AudioPosition = ["FL", "FR"]
                 },
                 PlaybackProps = new()
                 {
-                    Name = $"mixer-fc-{_channelId}-playback",
+                    Name = $"mixer-fc-{ChannelId}-playback",
                     Description =
-                        $"Playback Node for Mixer Filter Channel {_channelId}",
+                        $"Playback Node for Mixer Filter Channel {ChannelId}",
                     Linger = true,
                     AutoConnect = true,
                     DontFallback = true,
                     Passive = false,
-                    TargetObject = null,
+                    TargetObject = _loopbackModule.CaptureNode.ObjectSerial
+                        .ToString(),
                     MediaClass = "Stream/Output/Audio",
                     AudioPosition = ["FL", "FR"]
                 },
@@ -90,8 +124,11 @@ public class ChannelStripViewModel : ReactiveObject
             _filterChain =
                 await Fr.Wireplumber.Wireplumber.ModuleFactory
                     .CreateFilterChainAsync(
-                        $"mixer-fc-{_channelId}", filterChainConfig);
+                        $"mixer-fc-{ChannelId}", filterChainConfig);
 
+            _loopbackModule.CaptureNode.OverrideTargetObject(
+                _filterChain.PlaybackNode.ObjectSerial.ToString());
+            
             await AddPluginsFromFilterChain(_filterChain);
         }
     }
@@ -163,4 +200,10 @@ public class ChannelStripViewModel : ReactiveObject
     }
 
     private readonly IAppDataService _appDataService;
+
+    public void Dispose()
+    {
+        _disposables.Dispose();
+        GC.SuppressFinalize(this);
+    }
 }

@@ -9,16 +9,16 @@ using SonicEddy.ViewModels.MixerViewModels;
 
 namespace SonicEddy.Views.MixerViews;
 
-public partial class AddFilterChainView : Window, IDisposable
+public partial class AddMixerChannelView : Window, IDisposable
 {
     private readonly CompositeDisposable _disposables = new();
 
-    public AddFilterChainView()
+    public AddMixerChannelView()
     {
         InitializeComponent();
 
         this.WhenAnyValue(x => x.DataContext)!
-            .OfType<AddFilterChainViewModel>()
+            .OfType<AddMixerChannelViewModel>()
             .Take(1)
             .Subscribe(viewModel =>
             {

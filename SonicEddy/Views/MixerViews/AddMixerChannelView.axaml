@@ -1,0 +1,43 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:mixerViewModels="clr-namespace:SonicEddy.ViewModels.MixerViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="SonicEddy.Views.MixerViews.AddMixerChannelView"
+             x:DataType="mixerViewModels:AddMixerChannelViewModel">
+    <HeaderedContentControl Margin="4"
+                            Header="Add Channel">
+        <Grid RowDefinitions="*,Auto">
+            <DataGrid Grid.Row="0"
+                      AutoGenerateColumns="False"
+                      CanUserReorderColumns="True"
+                      CanUserResizeColumns="True"
+                      CanUserSortColumns="True"
+                      GridLinesVisibility="All"
+                      VerticalAlignment="Stretch"
+                      HorizontalAlignment="Stretch"
+                      SelectionMode="Single"
+                      IsReadOnly="True"
+                      ItemsSource="{Binding AvailableNodes}"
+                      SelectedItem="{Binding SelectedNode}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Name"
+                                        Binding="{Binding Description}"
+                                        IsReadOnly="True" />
+                </DataGrid.Columns>
+            </DataGrid>
+            <StackPanel Grid.Row="1"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        Spacing="8"
+                        Margin="4">
+                <Button Content="Cancel"
+                        Command="{Binding CancelAction}" />
+                <Button Content="Create Module"
+                        Command="{Binding AddModuleAction}"
+                        IsEnabled="{Binding IsButtonEnabled}" />
+            </StackPanel>
+        </Grid>
+    </HeaderedContentControl>
+</UserControl>
