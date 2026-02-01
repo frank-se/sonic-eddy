@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using SonicEddy.Contracts.FilterGraph;
+using SonicEddy.Contracts.Mixers;
 
 namespace SonicEddy.Services.AppData;
 
@@ -11,4 +12,8 @@ public interface IAppDataService
     Task CreateFilterGraph(FilterGraph filterGraph);
     void DeleteFilterGraph(Guid id);
     Task<List<FilterGraph>> GetAllFilterGraphs();
+    Task<List<Mixer>> GetAllMixers();
+    Task<Mixer> GetMixer(Guid id);
+    Task CreateMixer(Mixer mixer);
+    void DeleteMixer(Guid id);
 }

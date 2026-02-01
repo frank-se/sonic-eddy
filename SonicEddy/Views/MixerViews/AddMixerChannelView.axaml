@@ -8,8 +8,15 @@
              x:DataType="mixerViewModels:AddMixerChannelViewModel">
     <HeaderedContentControl Margin="4"
                             Header="Add Channel">
-        <Grid RowDefinitions="*,Auto">
-            <DataGrid Grid.Row="0"
+        <Grid RowDefinitions="Auto,*,Auto">
+            <StackPanel Grid.Row="0"
+                        Orientation="Horizontal">
+                <Label Target="NameTextBox"
+                       Content="Name" />
+                <TextBox Text="{Binding Name}"
+                         Name="NameTextBox" />
+            </StackPanel>
+            <DataGrid Grid.Row="1"
                       AutoGenerateColumns="False"
                       CanUserReorderColumns="True"
                       CanUserResizeColumns="True"
@@ -27,7 +34,7 @@
                                         IsReadOnly="True" />
                 </DataGrid.Columns>
             </DataGrid>
-            <StackPanel Grid.Row="1"
+            <StackPanel Grid.Row="2"
                         Orientation="Horizontal"
                         HorizontalAlignment="Right"
                         Spacing="8"

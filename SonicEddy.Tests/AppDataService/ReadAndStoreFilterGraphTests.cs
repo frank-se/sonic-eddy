@@ -15,7 +15,7 @@ public class ReadAndStoreFilterGraphTests
     public ReadAndStoreFilterGraphTests()
     {
         Directory.CreateDirectory(TestFileFolder);
-        _appDataService = new Services.AppData.AppDataService(TestFileFolder);
+        _appDataService = new Services.AppData.AppDataService(TestFileFolder, TestFileFolder);
     }
 
     [Fact]

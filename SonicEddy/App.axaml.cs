@@ -5,6 +5,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using ReactiveUI;
 using SonicEddy.Services.AppData;
+using SonicEddy.Services.MixerData;
 using SonicEddy.ViewModels;
 using SonicEddy.ViewModels.MixerViewModels;
 using SonicEddy.ViewModels.ObjectBrowserViewModels;
@@ -37,17 +38,27 @@ public class App : Application
 
     private static void RegisterDependencies()
     {
-        Locator.CurrentMutable.Register<IAppDataService>(() =>
-        {
-            var filterGraphPath = Path.Combine(
-                Environment.GetFolderPath(
-                    Environment.SpecialFolder.LocalApplicationData),
-                "SonicEddy/FilterGraph");
+        var filterGraphPath = Path.Combine(
+            Environment.GetFolderPath(
+                Environment.SpecialFolder.LocalApplicationData),
+            "SonicEddy/FilterGraph");
 
-            Directory.CreateDirectory(filterGraphPath);
-            
-            return new AppDataService(filterGraphPath);
-        });
+        Directory.CreateDirectory(filterGraphPath);
+        
+        var mixerPath = Path.Combine(
+            Environment.GetFolderPath(
+                Environment.SpecialFolder.LocalApplicationData),
+            "SonicEddy/Mixer");
+
+        Directory.CreateDirectory(mixerPath);
+
+        var appDataService = new AppDataService(filterGraphPath, mixerPath);
+
+        Locator.CurrentMutable.Register<IAppDataService>(() => appDataService);
+
+        var mixerService = new MixerService(appDataService);
+        Locator.CurrentMutable.Register<IMixerService>(() => mixerService);
+
         Locator.CurrentMutable.Register(() => new MainWindowViewModel());
         Locator.CurrentMutable.Register<IViewLocator>(() => new ViewLocator());
     }

@@ -26,6 +26,12 @@ public class AddMixerChannelViewModel : ViewModelBase, IDisposable
         set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
+    public string Name
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    } = string.Empty;
+
     public AddMixerChannelViewModel(
         IWireplumberService wireplumberService,
         List<ulong> alreadyUsedNodeSerials)
@@ -40,7 +46,7 @@ public class AddMixerChannelViewModel : ViewModelBase, IDisposable
 
     private void Validate()
     {
-        IsButtonEnabled = SelectedNode != null;
+        IsButtonEnabled = SelectedNode != null && Name != string.Empty;
     }
 
     private void GetAvailableNodes(List<ulong> alreadyUsedNodeSerials)

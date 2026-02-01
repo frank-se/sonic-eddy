@@ -3,7 +3,6 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:mixerViewModels="clr-namespace:SonicEddy.ViewModels.MixerViewModels"
-             xmlns:controls="clr-namespace:SonicEddy.Controls"
              xmlns:mixerViews="clr-namespace:SonicEddy.Views.MixerViews"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="SonicEddy.Views.MixerViews.MixerView"
@@ -13,8 +12,11 @@
         <Grid RowDefinitions="Auto,*">
             <StackPanel Orientation="Horizontal" Margin="4">
                 <Button Content="Add Channel"
-                        Command="{Binding AddChannel}"/>
+                        Command="{Binding AddChannel}" />
+                <Button Content="Save"
+                        Command="{Binding SaveMixer}" />
             </StackPanel>
+            
             <ItemsControl Grid.Row="1" ItemsSource="{Binding Channels}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>

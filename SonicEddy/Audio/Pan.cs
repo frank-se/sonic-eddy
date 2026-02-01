@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 
 namespace SonicEddy.Audio;
 
@@ -24,4 +25,13 @@ public static class Pan
         var right = Math.Sin(angle);
         return [volume * left, volume * right];
     }
+
+    private static readonly double Boost = Math.Sqrt(2);
+
+    public static double[] BoostToExternal(this double[] internalGains) =>
+        internalGains.Select(g => g * Boost).ToArray();
+
+
+    public static double[] AttenuateFromExternal(this double[] externalGains) =>
+        externalGains.Select(g => g / Boost).ToArray();
 }

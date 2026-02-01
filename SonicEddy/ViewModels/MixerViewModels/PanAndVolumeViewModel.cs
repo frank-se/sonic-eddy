@@ -6,6 +6,7 @@ using System.Reactive.Linq;
 using Fr.Wireplumber.Model.Props;
 using Fr.Wireplumber.Modules.Models;
 using ReactiveUI;
+using SonicEddy.Audio;
 
 namespace SonicEddy.ViewModels.MixerViewModels;
 
@@ -54,13 +55,7 @@ public class PanAndVolumeViewModel : ReactiveObject, IDisposable
         var rawGains =
             Audio.Pan.GetGainsFromPanAndVolume(Pan, Volume);
 
-        var boost = Math.Sqrt(2);
-
-        double[] newGains = (rawGains[0], rawGains[1]) switch
-        {
-            (0.0, 0.0) => [0.0, 0.0],
-            _ => [rawGains[0] * boost, rawGains[1] * boost]
-        };
+        var newGains = rawGains.BoostToExternal();
 
         if (Math.Abs(newGains[0] - currentGains[0]) > Tolerance ||
             Math.Abs(newGains[1] - currentGains[1]) > Tolerance)
@@ -73,14 +68,15 @@ public class PanAndVolumeViewModel : ReactiveObject, IDisposable
     {
         if (properties is null) return;
 
-        var rawGains = properties.Channels.Select(c => c.Volume).ToArray();
+        var rawGains = properties.Channels.Select(c => (double)c.Volume)
+            .ToArray();
         if (rawGains.Length != 2) return;
 
-        var boost = Math.Sqrt(2);
+        var internalGains = rawGains.AttenuateFromExternal();
 
         var newPanAndVolume =
-            Audio.Pan.GetPanAndVolumeFromGains(rawGains[0] / boost,
-                rawGains[1] / boost);
+            Audio.Pan.GetPanAndVolumeFromGains(internalGains[0],
+                internalGains[1]);
 
         _updateFromModel = true;
         Volume = (float)newPanAndVolume.Volume;

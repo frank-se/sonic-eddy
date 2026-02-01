@@ -4,50 +4,39 @@ using System.IO;
 using System.Threading.Tasks;
 using ProtoBuf;
 using SonicEddy.Contracts.FilterGraph;
+using SonicEddy.Contracts.Mixers;
 
 namespace SonicEddy.Services.AppData;
 
-public class AppDataService(string filterGraphFolderPath) : IAppDataService
+public class AppDataService(
+    string filterGraphFolderPath,
+    string mixerFolderPath) : IAppDataService
 {
-    private string BuildFilename(Guid id) => Path.Combine(filterGraphFolderPath,
-        $"fc-{id}.grpc");
+    private readonly AppDataServiceBase<FilterGraph>
+        _filterGraphAppDataService =
+            new(filterGraphFolderPath, "fc");
 
-    public async Task<FilterGraph> GetFilterGraph(Guid id)
-    {
-        var fileName = BuildFilename(id);
-        var bytes = await File.ReadAllBytesAsync(fileName);
-        using var memoryStream = new MemoryStream(bytes);
-        return Serializer.Deserialize<FilterGraph>(memoryStream);
-    }
+    private readonly AppDataServiceBase<Mixer>
+        _mixerAppDataService = new(mixerFolderPath, "mix");
 
-    public async Task CreateFilterGraph(FilterGraph filterGraph)
-    {
-        var fileName = BuildFilename(filterGraph.Id);
-        var file = File.Create(fileName);
-        Serializer.Serialize(file, filterGraph);
-        await file.FlushAsync();
-        file.Close();
-    }
+    public Task<FilterGraph> GetFilterGraph(Guid id) =>
+        _filterGraphAppDataService.Get(id);
 
-    public void DeleteFilterGraph(Guid id)
-    {
-        var fileName = BuildFilename(id);
-        File.Delete(fileName);
-    }
+    public Task CreateFilterGraph(FilterGraph filterGraph) =>
+        _filterGraphAppDataService.Create(filterGraph.Id, filterGraph);
 
-    public async Task<List<FilterGraph>> GetAllFilterGraphs()
-    {
-        var results = new List<FilterGraph>();
-        var files =
-            Directory.EnumerateFiles(filterGraphFolderPath, "fc-*.grpc");
+    public void DeleteFilterGraph(Guid id) =>
+        _filterGraphAppDataService.Delete(id);
 
-        foreach (var fileName in files)
-        {
-            var bytes = await File.ReadAllBytesAsync(fileName);
-            using var memoryStream = new MemoryStream(bytes);
-            results.Add(Serializer.Deserialize<FilterGraph>(memoryStream));
-        }
+    public Task<List<FilterGraph>> GetAllFilterGraphs() =>
+        _filterGraphAppDataService.GetAll();
 
-        return results;
-    }
+    public Task<List<Mixer>> GetAllMixers() => _mixerAppDataService.GetAll();
+
+    public Task<Mixer> GetMixer(Guid id) => _mixerAppDataService.Get(id);
+
+    public Task CreateMixer(Mixer mixer) =>
+        _mixerAppDataService.Create(mixer.Id, mixer);
+
+    public void DeleteMixer(Guid id) => _mixerAppDataService.Delete(id);
 }

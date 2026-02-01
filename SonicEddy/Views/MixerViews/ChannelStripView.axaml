@@ -8,7 +8,7 @@
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:DataType="mixerViewModels:ChannelStripViewModel"
              x:Class="SonicEddy.Views.MixerViews.ChannelStripView">
-    <Grid RowDefinitions="Auto,300,*,Auto"
+    <Grid RowDefinitions="Auto,300,*"
           Margin="4">
         <Button Grid.Row="0"
                 Margin="4"
@@ -35,9 +35,5 @@
 
         <mixerViews:PanAndVolumeView Grid.Row="2"
                                      DataContext="{Binding PanAndVolumeViewModel}" />
-
-        <TextBlock Grid.Row="3"
-                   Text="{Binding ObjectSerial}">
-        </TextBlock>
     </Grid>
 </UserControl>

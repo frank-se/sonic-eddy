@@ -1,0 +1,47 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:mixerManagerViewModels="clr-namespace:SonicEddy.ViewModels.MixerManagerViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="SonicEddy.Views.MixerManagerViews.MixerManagerView"
+             x:DataType="mixerManagerViewModels:MixerManagerViewModel"
+             x:Name="MainControl">
+    <HeaderedContentControl Header="Mixers"
+                            Margin="4">
+        <DataGrid ItemsSource="{Binding Mixers}">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Name"
+                                    Binding="{Binding Name}"
+                                    IsReadOnly="True" />
+
+                <DataGridTemplateColumn Header="Actions ...">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <Button Content="&#xF3DD;"
+                                        FontFamily="{StaticResource FluentIconsRegular}"
+                                        FontSize="20"
+                                        ToolTip.Tip="Activate Mixer"
+                                        Padding="8"
+                                        Margin="4"
+                                        Command="{Binding #MainControl.((mixerManagerViewModels:MixerManagerViewModel)DataContext).Activate}"
+                                        CommandParameter="{Binding}" />
+
+                                <Button Content="&#xE47D;"
+                                        FontFamily="{StaticResource FluentIconsRegular}"
+                                        FontSize="20"
+                                        ToolTip.Tip="Delete Mixer ..."
+                                        Padding="8"
+                                        Margin="4"
+                                        IsEnabled="True"
+                                        Command="{Binding #MainControl.((mixerManagerViewModels:MixerManagerViewModel)DataContext).Delete}"
+                                        CommandParameter="{Binding}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+    </HeaderedContentControl>
+</UserControl>

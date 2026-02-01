@@ -16,6 +16,7 @@ using Fr.Wireplumber.Modules.Models;
 using ReactiveUI;
 using SonicEddy.Conversions;
 using SonicEddy.Services.AppData;
+using SonicEddy.Services.MixerData;
 using SonicEddy.Tools;
 using SonicEddy.Views.MixerViews;
 
@@ -53,20 +54,26 @@ public class ChannelStripViewModel : ReactiveObject, IDisposable
 
     public Node PlaybackNode { get; }
 
-    public required ulong ObjectSerial { get; init; }
-
     public PanAndVolumeViewModel PanAndVolumeViewModel { get; }
 
     private readonly LoopbackModule _loopbackModule;
 
+    private readonly IMixerService _mixerService;
+
     public ChannelStripViewModel(IAppDataService appDataService,
-        ulong channelId, Node playbackNode, LoopbackModule loopbackModule)
+        ulong channelId, Node playbackNode, FilterChain? filterChain,
+        LoopbackModule loopbackModule, IMixerService mixerService)
     {
         _loopbackModule = loopbackModule;
         _appDataService = appDataService;
         ChannelId = channelId;
         PlaybackNode = playbackNode;
         PanAndVolumeViewModel = new(loopbackModule);
+        _mixerService = mixerService;
+        
+        if (filterChain is null) return;
+        _filterChain = filterChain;
+        _ = Task.Run(async () => await AddPluginsFromFilterChain(_filterChain));
     }
 
     public readonly ulong ChannelId;
@@ -88,48 +95,12 @@ public class ChannelStripViewModel : ReactiveObject, IDisposable
         if (dialogViewModel is
             { DialogResult: true, SelectedFilterGraph: not null })
         {
-            var filterChainConfig = new FilterChainModuleConfig()
-            {
-                CaptureProps = new()
-                {
-                    Name = $"mixer-fc-{ChannelId}-capture",
-                    Description =
-                        $"Capture Node for Mixer Filter Channel {ChannelId}",
-                    Linger = true,
-                    AutoConnect = true,
-                    DontFallback = true,
-                    Passive = false,
-                    TargetObject = PlaybackNode.ObjectSerial.ToString(),
-                    MediaClass = "Stream/Input/Audio",
-                    AudioPosition = ["FL", "FR"]
-                },
-                PlaybackProps = new()
-                {
-                    Name = $"mixer-fc-{ChannelId}-playback",
-                    Description =
-                        $"Playback Node for Mixer Filter Channel {ChannelId}",
-                    Linger = true,
-                    AutoConnect = true,
-                    DontFallback = true,
-                    Passive = false,
-                    TargetObject = _loopbackModule.CaptureNode.ObjectSerial
-                        .ToString(),
-                    MediaClass = "Stream/Output/Audio",
-                    AudioPosition = ["FL", "FR"]
-                },
-                FilterGraph = dialogViewModel.SelectedFilterGraph
-                    .ToFilterGraphConfig()
-            };
-
-            _filterChain =
-                await Fr.Wireplumber.Wireplumber.ModuleFactory
-                    .CreateFilterChainAsync(
-                        $"mixer-fc-{ChannelId}", filterChainConfig);
-
-            _loopbackModule.CaptureNode.OverrideTargetObject(
-                _filterChain.PlaybackNode.ObjectSerial.ToString());
+            var channelStrip = await _mixerService.AddFilterToChannelStrip(ChannelId,
+                dialogViewModel.SelectedFilterGraph);
+            _filterChain = channelStrip.FilterModule;
             
-            await AddPluginsFromFilterChain(_filterChain);
+            if (_filterChain is not null)
+                await AddPluginsFromFilterChain(_filterChain);
         }
     }
 
