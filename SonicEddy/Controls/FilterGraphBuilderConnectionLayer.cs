@@ -23,7 +23,7 @@ public class FilterGraphBuilderConnectionLayer : Canvas
             AvaloniaProperty
                 .Register<FilterGraphBuilderConnectionLayer,
                     ObservableCollection<PortConnection>?>(nameof(Connections));
-    
+
     public ObservableCollection<PortConnection>? Connections
     {
         get => GetValue(ConnectionsProperty);
@@ -42,8 +42,8 @@ public class FilterGraphBuilderConnectionLayer : Canvas
             _collectionSubscription?.Dispose();
             _collectionSubscription = null;
             if (change.NewValue is not ObservableCollection<PortConnection>
-                
                 newConnections) return;
+            
             _collectionSubscription =
                 newConnections.WeakSubscribe((s, e) => UpdateConnections());
 

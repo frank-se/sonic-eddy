@@ -100,6 +100,13 @@
                             Command="{Binding NavigateToCustomControlTesterView}">
                         Custom Control Tester
                     </Button>
+                    <Button HorizontalAlignment="Stretch"
+                            Padding="8"
+                            Margin="4"
+                            Classes.selected="{Binding GraphControlTesterViewSelected}"
+                            Command="{Binding NavigateToGraphControlTesterView}">
+                        Graph Control Tester
+                    </Button>
                 </StackPanel>
             </HeaderedContentControl>
         </SplitView.Pane>

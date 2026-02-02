@@ -52,7 +52,7 @@
             </SplitView.Pane>
 
             <Grid>
-                <ItemsControl ItemsSource="{Binding Nodes}"
+                <ItemsControl ItemsSource="{Binding GraphNodes}"
                               x:CompileBindings="False">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
