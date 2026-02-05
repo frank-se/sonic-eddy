@@ -16,10 +16,7 @@ public class FilterGraphLv2PluginViewModelMappingTests
 
         Assert.NotNull(pluginDescription);
 
-        var pluginNode = new Lv2PluginNodeViewModel(pluginDescription!)
-        {
-            Name = "My Node"
-        };
+        var pluginNode = new Lv2PluginNodeViewModel(pluginDescription!);
 
         var id = Guid.NewGuid();
         var result = pluginNode.ToGrpc(id);

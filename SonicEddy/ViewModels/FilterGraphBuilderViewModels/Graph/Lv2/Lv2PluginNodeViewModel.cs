@@ -3,24 +3,20 @@ using Fr.Lv2.Model;
 
 namespace SonicEddy.ViewModels.FilterGraphBuilderViewModels.Graph.Lv2;
 
-public class Lv2PluginNodeViewModel : NodeViewModelBase
-{
-    public Lv2PluginNodeViewModel(PluginDescription plugin) : base()
-    {
-        Plugin = plugin;
-        InPorts = plugin.Ports
+public class Lv2PluginNodeViewModel(PluginDescription plugin)
+    : NodeViewModelBase(plugin.Name,
+        new(plugin.Ports
             .Where(p => p.Classes.Contains(InputPortUri) &&
                         p.Classes.Contains(AudioPortUri))
-            .Select(p => new Lv2PortViewModel(p, this))
+            .Select(p => new Lv2PortViewModel(p))
             .OfType<PortViewModelBase>()
-            .ToList();
-        OutPorts = plugin.Ports.Where(p => p.Classes.Contains(OutputPortUri) &&
-                                           p.Classes.Contains(AudioPortUri))
-            .Select(p => new Lv2PortViewModel(p, this))
+            .ToList()), new(plugin.Ports.Where(p =>
+                p.Classes.Contains(OutputPortUri) &&
+                p.Classes.Contains(AudioPortUri))
+            .Select(p => new Lv2PortViewModel(p))
             .OfType<PortViewModelBase>()
-            .ToList();
-    }
-
+            .ToList()))
+{
     private const string OutputPortUri =
         "http://lv2plug.in/ns/lv2core#OutputPort";
 
@@ -30,5 +26,5 @@ public class Lv2PluginNodeViewModel : NodeViewModelBase
     private const string
         AudioPortUri = "http://lv2plug.in/ns/lv2core#AudioPort";
 
-    public PluginDescription Plugin { get; }
+    public PluginDescription Plugin { get; } = plugin;
 }

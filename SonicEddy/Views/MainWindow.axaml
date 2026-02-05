@@ -107,6 +107,13 @@
                             Command="{Binding NavigateToGraphControlTesterView}">
                         Graph Control Tester
                     </Button>
+                    <Button HorizontalAlignment="Stretch"
+                            Padding="8"
+                            Margin="4"
+                            Classes.selected="{Binding MidiConnectionEditorViewSelected}"
+                            Command="{Binding NavigateToMidiConnectionEditorView}">
+                        Midi Connections
+                    </Button>
                 </StackPanel>
             </HeaderedContentControl>
         </SplitView.Pane>

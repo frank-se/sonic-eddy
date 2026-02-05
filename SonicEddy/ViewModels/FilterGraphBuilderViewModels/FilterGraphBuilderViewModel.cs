@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using DynamicData;
 using Fr.Lv2.Model;
 using ReactiveUI;
+using SonicEddy.Controls.GraphEditorControl;
 using SonicEddy.Services.AppData;
 using SonicEddy.Tools;
 using SonicEddy.ViewModels.FilterGraphBuilderViewModels.Graph;
@@ -29,71 +30,55 @@ public class FilterGraphBuilderViewModel : ViewModelBase, IActivatableViewModel,
         UrlPathSegment = urlPathSegment;
         HostScreen = hostScreen;
 
-        Nodes = [_inputNodeViewModel, _outputNodeViewModel];
-
         _ = Task.Run(() =>
             BuildPluginClasses(pluginClasses, pluginDescriptions));
     }
 
-    private string _name = string.Empty;
-
     public string Name
     {
-        get => _name;
-        set => this.RaiseAndSetIfChanged(ref _name, value);
-    }
-
-    private Guid _id = Guid.NewGuid();
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    } = string.Empty;
 
     public Guid Id
     {
-        get => _id;
-        set => this.RaiseAndSetIfChanged(ref _id, value);
-    }
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    } = Guid.NewGuid();
 
-    public ObservableCollection<PortConnection> Connections { get; } = [];
+    public ObservableCollection<GraphEdge> Connections { get; } = [];
 
-    private readonly InputNodeViewModel _inputNodeViewModel =
-        new InputNodeViewModel()
-        {
-            Id = Guid.NewGuid(),
-            Name = "Input",
-            X = 0, Y = 0
-        };
+    public InputNodeViewModel InputNodeViewModel
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    } = new()
+    {
+        Id = Guid.NewGuid(),
+    };
 
-    private readonly OutputNodeViewModel _outputNodeViewModel =
-        new OutputNodeViewModel()
-        {
-            Id = Guid.NewGuid(),
-            Name = "Output",
-            X = 400, Y = 0
-        };
+    public OutputNodeViewModel OutputNodeViewModel
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    } = new()
+    {
+        Id = Guid.NewGuid(),
+    };
 
-    public ObservableCollection<NodeViewModelBase> Nodes { get; }
+    public ObservableCollection<GraphNode> Nodes { get; } = [];
 
     public ObservableCollection<Lv2PluginClass>
         AvailablePluginsByClass { get; } = [];
 
-    private double _currentX = 100;
-    private double _currentY = 10;
-
     public void AddPlugin(AvailableLv2Plugin plugin)
     {
-        Nodes.Add(new Lv2PluginNodeViewModel(plugin.Description)
-        {
-            X = _currentX, Y = _currentY, Name = plugin.Description.Name
-        });
-
-        _currentX += 200;
+        Nodes.Add(new Lv2PluginNodeViewModel(plugin.Description));
     }
-
-    public void Connect(PortViewModelBase outPort, PortViewModelBase inPort) =>
-        Connections.Add(new(outPort, inPort));
 
     private async Task BuildPluginClasses(
         Task<List<ClassDescription>> classDescriptionTask,
-        Task<List<PluginDescription>> pluginDescriptionTask
-    )
+        Task<List<PluginDescription>> pluginDescriptionTask)
     {
         var classDescriptions = await classDescriptionTask;
         var classes = classDescriptions.ToDictionary(x => x.Uri,
@@ -125,8 +110,16 @@ public class FilterGraphBuilderViewModel : ViewModelBase, IActivatableViewModel,
         if (dialogViewModel.DialogResult)
         {
             Name = dialogViewModel.Name;
-            var filterGraph = this.ToGrpc();
-            await _appDataService.CreateFilterGraph(filterGraph);
+
+            try
+            {
+                var filterGraph = this.ToGrpc();
+                await _appDataService.CreateFilterGraph(filterGraph);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Couldn't save filter graph {e.Message}");
+            }
         }
     }
 

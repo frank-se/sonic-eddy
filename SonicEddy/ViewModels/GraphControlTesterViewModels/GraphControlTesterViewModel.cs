@@ -7,7 +7,30 @@ namespace SonicEddy.ViewModels.GraphControlTesterViewModels;
 public class GraphControlTesterViewModel : ViewModelBase,
     IActivatableViewModel, IRoutableViewModel
 {
-    public ObservableCollection<IGraphNode> Nodes { get; }
+    public GraphNode Inputs { get; } = new GraphNode(
+        "Inputs",
+        [],
+        [
+            new("in_1"),
+            new("in_2"),
+            new("in_3"),
+            new("in_4"),
+            new("in_5"),
+        ]);
+
+    public GraphNode Outputs { get; } = new GraphNode(
+        "Outputs",
+        [
+            new("out_1"),
+            new("out_2"),
+            new("out_3"),
+            new("out_4"),
+            new("out_5"),
+            new("out_6"),
+        ],
+        []);
+
+    public ObservableCollection<GraphNode> Nodes { get; }
 
     public GraphControlTesterViewModel(string? urlPathSegment,
         IScreen hostScreen)
@@ -17,24 +40,26 @@ public class GraphControlTesterViewModel : ViewModelBase,
 
         Nodes =
         [
-            new TestNodeViewModel(
+            new GraphNode(
+                "Node 1",
                 [
-                    new TestPortViewModel("in_1"),
-                    new TestPortViewModel("in_2"),
+                    new GraphPort("in_1"),
+                    new GraphPort("in_2"),
                 ],
                 [
-                    new TestPortViewModel("out_1"),
-                    new TestPortViewModel("out_2")
-                ], "Name", null),
-            new TestNodeViewModel(
+                    new GraphPort("out_1"),
+                    new GraphPort("out_2")
+                ]),
+            new GraphNode(
+                "Node 1",
                 [
-                    new TestPortViewModel("in_1"),
-                    new TestPortViewModel("in_2"),
+                    new GraphPort("in_1"),
+                    new GraphPort("in_2"),
                 ],
                 [
-                    new TestPortViewModel("out_1"),
-                    new TestPortViewModel("out_2")
-                ], "Name 2", null),
+                    new GraphPort("out_1"),
+                    new GraphPort("out_2")
+                ]),
         ];
     }
 

@@ -9,6 +9,7 @@ using SonicEddy.ViewModels.FilterGraphBuilderViewModels;
 using SonicEddy.ViewModels.FilterGraphManagerViewModels;
 using SonicEddy.ViewModels.GraphControlTesterViewModels;
 using SonicEddy.ViewModels.MetadataViewModels;
+using SonicEddy.ViewModels.MidiConnectionEditorViewModels;
 using SonicEddy.ViewModels.MixerManagerViewModels;
 using SonicEddy.ViewModels.MixerViewModels;
 using SonicEddy.ViewModels.ModuleManagerViewModels;
@@ -88,6 +89,12 @@ public class MainWindowViewModel : ViewModelBase, IScreen
         set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
+    public bool MidiConnectionEditorViewSelected
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
     public void NavigateToMixerAction()
     {
         MixerMenuItemSelected = true;
@@ -100,6 +107,7 @@ public class MainWindowViewModel : ViewModelBase, IScreen
         CustomControlTesterViewSelected = false;
         MixerManagerViewSelected = false;
         GraphControlTesterViewSelected = false;
+        MidiConnectionEditorViewSelected = false;
         var appDataService = Locator.Current.GetService<IAppDataService>();
         var mixerService = Locator.Current.GetService<IMixerService>();
         Router.Navigate.Execute(new MixerViewModel(appDataService!, "mixer",
@@ -118,6 +126,7 @@ public class MainWindowViewModel : ViewModelBase, IScreen
         CustomControlTesterViewSelected = false;
         MixerManagerViewSelected = false;
         GraphControlTesterViewSelected = false;
+        MidiConnectionEditorViewSelected = false;
         var appDataService = Locator.Current.GetService<IAppDataService>();
         Router.Navigate.Execute(
             new ObjectBrowserViewModel(appDataService!, "object-browser",
@@ -136,6 +145,7 @@ public class MainWindowViewModel : ViewModelBase, IScreen
         CustomControlTesterViewSelected = false;
         MixerManagerViewSelected = false;
         GraphControlTesterViewSelected = false;
+        MidiConnectionEditorViewSelected = false;
         var appDataService = Locator.Current.GetService<IAppDataService>();
         Router.Navigate.Execute(new ProAudioStreamsViewModel(appDataService!,
             "pro-audio-streams", this));
@@ -153,6 +163,7 @@ public class MainWindowViewModel : ViewModelBase, IScreen
         CustomControlTesterViewSelected = false;
         MixerManagerViewSelected = false;
         GraphControlTesterViewSelected = false;
+        MidiConnectionEditorViewSelected = false;
         var appDataService = Locator.Current.GetService<IAppDataService>();
         Router.Navigate.Execute(new MetadataViewModel(appDataService!,
             "metadata", this));
@@ -170,6 +181,7 @@ public class MainWindowViewModel : ViewModelBase, IScreen
         CustomControlTesterViewSelected = false;
         MixerManagerViewSelected = false;
         GraphControlTesterViewSelected = false;
+        MidiConnectionEditorViewSelected = false;
         var appDataService = Locator.Current.GetService<IAppDataService>();
         Router.Navigate.Execute(new ModuleManagerViewModel(appDataService!,
             "module-manager", this));
@@ -187,6 +199,7 @@ public class MainWindowViewModel : ViewModelBase, IScreen
         CustomControlTesterViewSelected = false;
         MixerManagerViewSelected = false;
         GraphControlTesterViewSelected = false;
+        MidiConnectionEditorViewSelected = false;
         var appDataService = Locator.Current.GetService<IAppDataService>();
         Router.Navigate.Execute(new FilterGraphBuilderViewModel(appDataService!,
             "filter-graph-builder", this,
@@ -206,6 +219,7 @@ public class MainWindowViewModel : ViewModelBase, IScreen
         CustomControlTesterViewSelected = false;
         MixerManagerViewSelected = false;
         GraphControlTesterViewSelected = false;
+        MidiConnectionEditorViewSelected = false;
         var appDataService = Locator.Current.GetService<IAppDataService>();
         Router.Navigate.Execute(new FilterGraphManagerViewModel(appDataService!,
             "filter-graph-builder", this));
@@ -223,6 +237,7 @@ public class MainWindowViewModel : ViewModelBase, IScreen
         CustomControlTesterViewSelected = false;
         MixerManagerViewSelected = false;
         GraphControlTesterViewSelected = false;
+        MidiConnectionEditorViewSelected = false;
         Router.Navigate.Execute(
             new CustomControlTesterViewModel("control-tester", this));
     }
@@ -239,6 +254,7 @@ public class MainWindowViewModel : ViewModelBase, IScreen
         CustomControlTesterViewSelected = false;
         MixerManagerViewSelected = true;
         GraphControlTesterViewSelected = false;
+        MidiConnectionEditorViewSelected = false;
         var mixerService = Locator.Current.GetService<IMixerService>();
         Router.Navigate.Execute(new MixerManagerViewModel("mixer-manager",
             this, mixerService!));
@@ -256,7 +272,28 @@ public class MainWindowViewModel : ViewModelBase, IScreen
         CustomControlTesterViewSelected = false;
         MixerManagerViewSelected = false;
         GraphControlTesterViewSelected = true;
+        MidiConnectionEditorViewSelected = false;
         Router.Navigate.Execute(
             new GraphControlTesterViewModel("graph-tester", this));
+    }
+
+    public void NavigateToMidiConnectionEditorView()
+    {
+        MixerMenuItemSelected = false;
+        ObjectBrowserMenuItemSelected = false;
+        ProAudioStreamsMenuItemSelected = false;
+        MetadataMenuItemSelected = false;
+        ModuleManagerViewSelected = false;
+        FilterGraphBuilderViewSelected = false;
+        FilterGraphManagerViewSelected = false;
+        CustomControlTesterViewSelected = false;
+        MixerManagerViewSelected = false;
+        GraphControlTesterViewSelected = false;
+        MidiConnectionEditorViewSelected = true;
+        var wireplumberService =
+            Locator.Current.GetService<IWireplumberService>();
+        var ports = wireplumberService.GetMidiPorts();
+        Router.Navigate.Execute(
+            new MidiConnectionEditorViewModel(ports, "graph-tester", this));
     }
 }

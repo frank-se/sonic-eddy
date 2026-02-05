@@ -1,44 +1,24 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
 using ReactiveUI;
+using SonicEddy.Controls.GraphEditorControl;
 
 namespace SonicEddy.ViewModels.FilterGraphBuilderViewModels.Graph;
 
-public abstract class NodeViewModelBase
-    : ReactiveObject
+public abstract class NodeViewModelBase(
+    string name,
+    ReadOnlyCollection<PortViewModelBase> inPorts,
+    ReadOnlyCollection<PortViewModelBase> outPorts) : GraphNode(name,
+    new(inPorts.OfType<GraphPort>().ToList()),
+    new(outPorts.OfType<GraphPort>().ToList()))
 {
-    private Guid _id = Guid.NewGuid();
-
     public Guid Id
     {
-        get => _id;
-        set => this.RaiseAndSetIfChanged(ref _id, value);
-    }
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    } = Guid.NewGuid();
 
     private string _name = string.Empty;
-
-    public string Name
-    {
-        get => _name;
-        set => this.RaiseAndSetIfChanged(ref _name, value);
-    }
-
-    private double _x;
-
-    public double X
-    {
-        get => _x;
-        set => this.RaiseAndSetIfChanged(ref _x, value);
-    }
-
-    private double _y;
-
-    public double Y
-    {
-        get => _y;
-        set => this.RaiseAndSetIfChanged(ref _y, value);
-    }
-
-    public List<PortViewModelBase> InPorts { get; init; } = [];
-    public List<PortViewModelBase> OutPorts { get; init; } = [];
 }

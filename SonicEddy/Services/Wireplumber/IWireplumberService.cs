@@ -9,4 +9,5 @@ public interface IWireplumberService
     List<Node> GetTargetObjectsForCaptureNode();
     List<Node> GetTargetObjectsForPlaybackNode();
     List<Node> GetPlaybackNodes();
+    List<Port> GetMidiPorts();
 }

@@ -6,6 +6,7 @@ using Avalonia.Markup.Xaml;
 using ReactiveUI;
 using SonicEddy.Services.AppData;
 using SonicEddy.Services.MixerData;
+using SonicEddy.Services.Wireplumber;
 using SonicEddy.ViewModels;
 using SonicEddy.ViewModels.MixerViewModels;
 using SonicEddy.ViewModels.ObjectBrowserViewModels;
@@ -44,7 +45,7 @@ public class App : Application
             "SonicEddy/FilterGraph");
 
         Directory.CreateDirectory(filterGraphPath);
-        
+
         var mixerPath = Path.Combine(
             Environment.GetFolderPath(
                 Environment.SpecialFolder.LocalApplicationData),
@@ -58,6 +59,10 @@ public class App : Application
 
         var mixerService = new MixerService(appDataService);
         Locator.CurrentMutable.Register<IMixerService>(() => mixerService);
+
+        var wireplumberService = new WireplumberService();
+        Locator.CurrentMutable.Register<IWireplumberService>(() =>
+            wireplumberService);
 
         Locator.CurrentMutable.Register(() => new MainWindowViewModel());
         Locator.CurrentMutable.Register<IViewLocator>(() => new ViewLocator());

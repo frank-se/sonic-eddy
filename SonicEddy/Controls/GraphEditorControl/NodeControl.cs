@@ -1,22 +1,26 @@
 using System;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Shapes;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
-using Avalonia.Remote.Protocol.Input;
 
 namespace SonicEddy.Controls.GraphEditorControl;
 
 public class NodeControl : StackPanel, IDisposable
 {
+    private readonly GraphEditor _editor;
     private readonly TextBlock _nameTextBlock;
+    private readonly GraphNode _node;
 
     private static double _nextX = 20.0;
     private static double _nextY = 20.0;
-    
-    public NodeControl(IGraphNode node) : base()
+
+    public NodeControl(GraphNode node, GraphEditor editor)
     {
+        _editor = editor;
+        _node = node;
         Orientation = Orientation.Vertical;
         _nameTextBlock = new()
         {
@@ -62,30 +66,24 @@ public class NodeControl : StackPanel, IDisposable
 
         foreach (var inPort in node.InPorts)
         {
-            var button = new Button()
-            {
-                Content = inPort.Name,
-                Background = Brushes.DarkGray,
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-                Margin = new(4)
-            };
+            var control = new PortControl(PortType.In, PortTextSide.Right,
+                inPort, _editor);
 
-            inPortStackPanel.Children.Add(button);
-            inPort.Control = button;
+            inPortStackPanel.Children.Add(control);
+
+            editor.SetControl(inPort, control);
+            GraphEditor.SetPort(control, inPort);
         }
 
         foreach (var outPort in node.OutPorts)
         {
-            var button = new Button()
-            {
-                Content = outPort.Name,
-                Background = Brushes.DarkGray,
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-                Margin = new(4)
-            };
+            var control = new PortControl(PortType.Out, PortTextSide.Left,
+                outPort, _editor);
 
-            outPortStackPanel.Children.Add(button);
-            outPort.Control = button;
+            outPortStackPanel.Children.Add(control);
+
+            editor.SetControl(outPort, control);
+            GraphEditor.SetPort(control, outPort);
         }
 
         portStackPanel.Children.Add(inPortStackPanel);
@@ -120,6 +118,7 @@ public class NodeControl : StackPanel, IDisposable
             {
                 Canvas.SetLeft(this, x - diffX);
                 Canvas.SetTop(this, y - diffY);
+                _editor.UpdateConnectionsForNodeMove(_node);
             });
         }
     }

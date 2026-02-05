@@ -9,8 +9,10 @@
              x:DataType="graphControlTesterViewModels:GraphControlTesterViewModel">
     <HeaderedContentControl Header="Graph"
                             Margin="4">
-        <graphEditorControl:GraphEditor 
-            Background="DarkSlateGray"
-            GraphNodes="{Binding Nodes}" />
+        <graphEditorControl:GraphEditor
+            Background="Indigo"
+            GraphNodes="{Binding Nodes}"
+            GraphInputs="{Binding Inputs}"
+            GraphOutputs="{Binding Outputs}" />
     </HeaderedContentControl>
 </UserControl>

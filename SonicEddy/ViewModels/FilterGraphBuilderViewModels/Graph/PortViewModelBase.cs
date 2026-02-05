@@ -3,12 +3,12 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Shapes;
 using ReactiveUI;
+using SonicEddy.Controls.GraphEditorControl;
 
 namespace SonicEddy.ViewModels.FilterGraphBuilderViewModels.Graph;
 
 public abstract class PortViewModelBase(
-    string name,
-    NodeViewModelBase nodeViewModel) : ReactiveObject
+    string name) : GraphPort(name)
 {
     private Guid _id = Guid.NewGuid();
 
@@ -17,9 +17,6 @@ public abstract class PortViewModelBase(
         get => _id;
         set => this.RaiseAndSetIfChanged(ref _id, value);
     }
-
-    public string Name { get; init; } = name;
-    public NodeViewModelBase NodeViewModel { get; init; } = nodeViewModel;
 
     public WeakReference<Rectangle>? RectangleRef { get; set; }
 

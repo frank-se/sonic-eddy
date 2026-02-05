@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using SonicEddy.Contracts.FilterGraph;
+using SonicEddy.Controls.GraphEditorControl;
 using SonicEddy.ViewModels.FilterGraphBuilderViewModels.Graph.Graph;
 using SonicEddy.ViewModels.FilterGraphBuilderViewModels.Graph.Lv2;
 
@@ -31,7 +32,7 @@ public static class StorageConversionExtensions
         Guid id)
     {
         var ports =
-            viewModel.InPorts.Select(p =>
+            viewModel.InPorts.OfType<PortViewModelBase>().Select(p =>
                     new FilterGraphOutputInputPort(p.Id, p.Name))
                 .ToList();
         return new(id, ports);
@@ -41,7 +42,7 @@ public static class StorageConversionExtensions
         Guid id)
     {
         var ports =
-            viewModel.OutPorts.Select(p =>
+            viewModel.OutPorts.OfType<PortViewModelBase>().Select(p =>
                     new FilterGraphInputOutputPort(p.Id, p.Name))
                 .ToList();
         return new(id, ports);
@@ -50,30 +51,18 @@ public static class StorageConversionExtensions
     public static FilterGraph ToGrpc(this FilterGraphBuilderViewModel viewModel)
     {
         var nodes = viewModel.Nodes.Select(BaseToGrpc).ToList();
+        nodes.Add(viewModel.InputNodeViewModel.BaseToGrpc());
+        nodes.Add(viewModel.OutputNodeViewModel.BaseToGrpc());
 
         var edges = new List<FilterGraphEdge>();
 
-        foreach (var (sourcePort, targetPort) in viewModel.Connections)
+        foreach (var edge in viewModel.Connections)
         {
-            var sourceNodeIndex =
-                viewModel.Nodes.IndexOf(sourcePort.NodeViewModel);
+            if (edge.Source is not PortViewModelBase source ||
+                edge.Target is not PortViewModelBase target)
+                throw new ArgumentException("Wrong port type");
 
-            var sourcePortIndex =
-                sourcePort.NodeViewModel.OutPorts.IndexOf(sourcePort);
-
-            var sourcePortId =
-                IdOutputPortByIndex(nodes[sourceNodeIndex], sourcePortIndex);
-
-            var targetNodeIndex =
-                viewModel.Nodes.IndexOf(targetPort.NodeViewModel);
-
-            var targetPortIndex =
-                targetPort.NodeViewModel.InPorts.IndexOf(targetPort);
-
-            var targetPortId =
-                IdInputPortByIndex(nodes[targetNodeIndex], targetPortIndex);
-
-            edges.Add(new(sourcePortId, targetPortId));
+            edges.Add(new(source.Id, target.Id));
         }
 
         return new(viewModel.Id, viewModel.Name, nodes, edges);
@@ -98,7 +87,7 @@ public static class StorageConversionExtensions
         };
 
     private static FilterGraphNodeBase
-        BaseToGrpc(this NodeViewModelBase viewModel) =>
+        BaseToGrpc(this GraphNode viewModel) =>
         viewModel switch
         {
             InputNodeViewModel n => n.ToGrpc(n.Id),

@@ -7,6 +7,7 @@
              xmlns:graph="clr-namespace:SonicEddy.ViewModels.FilterGraphBuilderViewModels.Graph.Graph"
              xmlns:lv2="clr-namespace:SonicEddy.ViewModels.FilterGraphBuilderViewModels.Graph.Lv2"
              xmlns:filterGraphBuilderViewModels1="clr-namespace:SonicEddy.ViewModels.FilterGraphBuilderViewModels.Graph"
+             xmlns:graphEditorControl="clr-namespace:SonicEddy.Controls.GraphEditorControl"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="SonicEddy.Views.FilterGraphBuilderViews.FilterGraphBuilderView"
              x:DataType="filterGraphBuilderViewModels:FilterGraphBuilderViewModel"
@@ -51,140 +52,12 @@
                 </ScrollViewer>
             </SplitView.Pane>
 
-            <Grid>
-                <ItemsControl ItemsSource="{Binding GraphNodes}"
-                              x:CompileBindings="False">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <Canvas Background="DimGray"
-                                    PointerMoved="OnConnectionDragPointerMoved"
-                                    PointerReleased="OnConnectionDragPointerRelease"
-                                    Loaded="OnCanvasLoaded" />
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-
-                    <ItemsControl.Styles>
-                        <Style Selector="ContentPresenter"
-                               x:DataType="filterGraphBuilderViewModels1:NodeViewModelBase">
-                            <Setter Property="Canvas.Left" Value="{Binding X}" />
-                            <Setter Property="Canvas.Top" Value="{Binding Y}" />
-                        </Style>
-                    </ItemsControl.Styles>
-
-                    <ItemsControl.DataTemplates>
-                        <DataTemplate DataType="{x:Type graph:InputNodeViewModel}">
-                            <StackPanel Background="BurlyWood">
-                                <TextBlock Text="{Binding Name}"
-                                           Foreground="Black"
-                                           Margin="4" />
-                                <StackPanel Orientation="Horizontal">
-                                    <ItemsControl ItemsSource="{Binding OutPorts}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Grid ColumnDefinitions="*,Auto">
-                                                    <Rectangle Grid.Column="1" Fill="Red"
-                                                               Loaded="OnPortLoaded"
-                                                               PointerPressed="OnOutPortPointerPressed"
-                                                               Margin="4"
-                                                               HorizontalAlignment="Left"
-                                                               Width="20"
-                                                               Height="20">
-                                                    </Rectangle>
-                                                    <TextBlock Grid.Column="0" Text="{Binding Name}"
-                                                               Margin="4"
-                                                               Foreground="Black" />
-                                                </Grid>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </StackPanel>
-                            </StackPanel>
-                        </DataTemplate>
-
-                        <DataTemplate DataType="{x:Type graph:OutputNodeViewModel}">
-                            <StackPanel Background="BurlyWood"
-                                        Loaded="OnOutputNodeLoaded">
-                                <TextBlock Text="{Binding Name}"
-                                           Foreground="Black"
-                                           Margin="4" />
-                                <StackPanel Orientation="Horizontal">
-                                    <ItemsControl ItemsSource="{Binding InPorts}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Grid ColumnDefinitions="*,Auto">
-                                                    <Rectangle Grid.Column="1" Fill="Green"
-                                                               Loaded="OnPortLoaded"
-                                                               Margin="4"
-                                                               HorizontalAlignment="Left"
-                                                               Width="20"
-                                                               Height="20">
-                                                    </Rectangle>
-                                                    <TextBlock Grid.Column="0" Text="{Binding Name}"
-                                                               Margin="4"
-                                                               Foreground="Black" />
-                                                </Grid>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </StackPanel>
-                            </StackPanel>
-                        </DataTemplate>
-
-                        <DataTemplate DataType="{x:Type lv2:Lv2PluginNodeViewModel}">
-                            <StackPanel Background="AliceBlue">
-                                <TextBlock Text="{Binding Name}"
-                                           Foreground="Black"
-                                           Background="Goldenrod"
-                                           PointerPressed="OnNodeHeaderPointerPressed"
-                                           Padding="6"
-                                           Margin="4" />
-                                <StackPanel Orientation="Horizontal">
-                                    <ItemsControl ItemsSource="{Binding InPorts}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate x:DataType="lv2:Lv2PortViewModel">
-                                                <Grid ColumnDefinitions="Auto,Auto">
-                                                    <Rectangle Grid.Column="0" Fill="Green"
-                                                               Loaded="OnPortLoaded"
-                                                               Margin="4"
-                                                               HorizontalAlignment="Left"
-                                                               Width="20"
-                                                               Height="20">
-                                                    </Rectangle>
-                                                    <TextBlock Grid.Column="1" Text="{Binding Name}"
-                                                               Margin="4"
-                                                               Foreground="Black" />
-                                                </Grid>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                    <ItemsControl ItemsSource="{Binding OutPorts}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Grid ColumnDefinitions="*,Auto">
-                                                    <Rectangle Grid.Column="1" Fill="Red"
-                                                               Loaded="OnPortLoaded"
-                                                               PointerPressed="OnOutPortPointerPressed"
-                                                               Margin="4"
-                                                               HorizontalAlignment="Left"
-                                                               Width="20"
-                                                               Height="20">
-                                                    </Rectangle>
-                                                    <TextBlock Grid.Column="0" Text="{Binding Name}"
-                                                               Margin="4"
-                                                               Foreground="Black" />
-                                                </Grid>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </StackPanel>
-                            </StackPanel>
-                        </DataTemplate>
-                    </ItemsControl.DataTemplates>
-                </ItemsControl>
-                <controls:FilterGraphBuilderConnectionLayer Connections="{Binding Connections}"
-                                                            Background="Transparent"
-                                                            IsHitTestVisible="False" />
-            </Grid>
+            <graphEditorControl:GraphEditor
+                Background="SlateBlue"
+                GraphInputs="{Binding InputNodeViewModel}"
+                GraphOutputs="{Binding OutputNodeViewModel}"
+                GraphNodes="{Binding Nodes}"
+                GraphEdges="{Binding Connections}" />
         </SplitView>
     </Grid>
 </UserControl>

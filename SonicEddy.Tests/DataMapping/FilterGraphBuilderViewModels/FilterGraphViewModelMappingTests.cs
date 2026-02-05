@@ -33,21 +33,16 @@ public class FilterGraphViewModelMappingTests
                 Id = Guid.NewGuid()
             };
 
-        viewModel.Nodes.Add(new Lv2PluginNodeViewModel(pluginDescription)
-        {
-            Name = "My Test Plugin"
-        });
+        viewModel.Nodes.Add(new Lv2PluginNodeViewModel(pluginDescription));
 
-        viewModel.Nodes.Add(new Lv2PluginNodeViewModel(pluginDescription)
-        {
-            Name = "My Second Test Plugin"
-        });
+        viewModel.Nodes.Add(new Lv2PluginNodeViewModel(pluginDescription));
 
         var sourceInputNode = viewModel.Nodes[0];
         var sourceOutputNode = viewModel.Nodes[1];
         var sourceFirstNode = viewModel.Nodes[2] as Lv2PluginNodeViewModel;
         var sourceSecondNode = viewModel.Nodes[3] as Lv2PluginNodeViewModel;
 
+        /*
         viewModel.Connections.Add(new(sourceInputNode.OutPorts[0],
             sourceFirstNode!.InPorts[0]));
         viewModel.Connections.Add(new(sourceInputNode.OutPorts[1],
@@ -62,7 +57,7 @@ public class FilterGraphViewModelMappingTests
             sourceOutputNode.InPorts[0]));
         viewModel.Connections.Add(new(sourceSecondNode.OutPorts[1],
             sourceOutputNode.InPorts[1]));
-
+        */
         // Method under test
         var result = viewModel.ToGrpc();
 
@@ -75,12 +70,15 @@ public class FilterGraphViewModelMappingTests
         var targetInputNode = result.Nodes[0];
         Assert.IsType<FilterGraphInput>(targetInputNode);
         Assert.Equal(sourceInputNode.Name, targetInputNode.Name);
-        Assert.Equal(sourceInputNode.Id, targetInputNode.Id);
+        Assert.Fail();
+        //Assert.Equal(sourceInputNode.Id, targetInputNode.Id);
 
         var targetOutputNode = result.Nodes[1];
         Assert.IsType<FilterGraphOutput>(targetOutputNode);
         Assert.Equal(sourceOutputNode.Name, targetOutputNode.Name);
-        Assert.Equal(sourceOutputNode.Id, targetOutputNode.Id);
+        
+        Assert.Fail();
+        //Assert.Equal(sourceOutputNode.Id, targetOutputNode.Id);
 
         var targetFirstNode = result.Nodes[2];
         Assert.IsType<FilterGraphLv2Plugin>(targetFirstNode);
