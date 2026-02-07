@@ -5,4 +5,5 @@ namespace SonicEddy.ViewModels.MidiConnectionEditorViewModels.Graph;
 
 public class MidiPortViewModel(Port port) : GraphPort(port.Alias!)
 {
+    public Port Port { get; } = port;
 }
