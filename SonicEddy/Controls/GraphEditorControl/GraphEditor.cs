@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Linq;
+using System.Windows.Input;
 using Avalonia;
 using Avalonia.Collections;
 using Avalonia.Controls;
@@ -50,7 +51,27 @@ public class GraphEditor : Canvas, IDisposable
         set => SetValue(GraphNodesProperty, value);
     }
 
+    public static readonly StyledProperty<ICommand?> CreateEdgeCommandProperty =
+        AvaloniaProperty.Register<GraphEditor, ICommand?>(
+            nameof(CreateEdgeCommand));
+
+    public ICommand? CreateEdgeCommand
+    {
+        get => GetValue(CreateEdgeCommandProperty);
+        set => SetValue(CreateEdgeCommandProperty, value);
+    }
+
     private IDisposable? _nodesCollectionChangeSubscription;
+
+    public static readonly StyledProperty<ICommand?> DeleteEdgeCommandProperty =
+        AvaloniaProperty.Register<GraphEditor, ICommand?>(
+            nameof(DeleteEdgeCommand));
+
+    public ICommand? DeleteEdgeCommand
+    {
+        get => GetValue(DeleteEdgeCommandProperty);
+        set => SetValue(DeleteEdgeCommandProperty, value);
+    }
 
     public static readonly StyledProperty<ObservableCollection<GraphEdge>?>
         GraphEdgesProperty =
@@ -216,26 +237,6 @@ public class GraphEditor : Canvas, IDisposable
     {
         var control = new EdgeControl(edge, this);
         Children.Add(control);
-        /*
-        var sourceControl = GetControl(edge.Source);
-        var targetControl = GetControl(edge.Target);
-        if (sourceControl is null || targetControl is null) return;
-        if (sourceControl is PortControl s && targetControl is PortControl t)
-        {
-            var start = s.GetConnectionCenterPoint(this);
-            var end = t.GetConnectionCenterPoint(this);
-            var line = new Line()
-            {
-                Stroke = Brushes.Black,
-                StrokeThickness = 2,
-                StartPoint = start,
-                EndPoint = end,
-                Cursor = new(StandardCursorType.Hand)
-            };
-            Children.Add(line);
-            SetControl(edge, line);
-        }
-        */
     }
 
     public void UpdateConnectionsForNodeMove(GraphNode node)
@@ -325,8 +326,12 @@ public class GraphEditor : Canvas, IDisposable
         {
             var position = eventArgs.GetPosition(this);
             var selectedPort = FindSelectedPort(position);
-            if (selectedPort is not null && _sourcePort is not null)
+            if (selectedPort is not null && _sourcePort is not null &&
+                CreateEdgeCommand is null)
                 GraphEdges?.Add(new("edge", _sourcePort, selectedPort));
+            else if (selectedPort is not null && _sourcePort is not null &&
+                     CreateEdgeCommand is not null)
+                CreateEdgeCommand.Execute((_sourcePort!, selectedPort!));
             _mouseState = GraphMouseState.None;
             _sourcePort = null;
         }
@@ -383,7 +388,8 @@ public class GraphEditor : Canvas, IDisposable
         }
     }
 
-    private readonly Dictionary<GraphElementBase, Control> _elementToControlMap = [];
+    private readonly Dictionary<GraphElementBase, Control>
+        _elementToControlMap = [];
 
     public void SetControl(GraphElementBase element, Control control)
     {
@@ -392,7 +398,7 @@ public class GraphEditor : Canvas, IDisposable
 
     public Control? GetControl(GraphElementBase element) =>
         _elementToControlMap.GetValueOrDefault(element);
-    
+
     public void Dispose()
     {
         _nodesCollectionChangeSubscription?.Dispose();

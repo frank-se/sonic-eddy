@@ -12,6 +12,7 @@
         <graphEditorControl:GraphEditor GraphInputs="{Binding InputPorts}"
                                         GraphOutputs="{Binding OutputPorts}"
                                         GraphEdges="{Binding Connections}"
+                                        CreateEdgeCommand="{Binding CreateEdgeCommand}"
                                         Background="SlateBlue" />
     </HeaderedContentControl>
 </UserControl>

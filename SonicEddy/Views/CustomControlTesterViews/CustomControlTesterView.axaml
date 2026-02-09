@@ -3,11 +3,14 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:controls="clr-namespace:SonicEddy.Controls"
+             xmlns:mixerControls="clr-namespace:SonicEddy.Controls.MixerControls"
+             xmlns:customControlTesterViewModels="clr-namespace:SonicEddy.ViewModels.CustomControlTesterViewModels"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:DataType="customControlTesterViewModels:CustomControlTesterViewModel"
              x:Class="SonicEddy.Views.CustomControlTesterViews.CustomControlTesterView">
     <HeaderedContentControl Header="Control Tester"
                             Margin="4">
-        <Grid RowDefinitions="Auto,Auto,Auto,*"
+        <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*"
               ColumnDefinitions="*">
             <controls:ValueSlider Grid.Row="0"
                                   Text="Parameter 1"
@@ -29,6 +32,12 @@
                                   Maximum="10"
                                   IsVertical="True"
                                   Background="DimGray" />
+            <mixerControls:ChannelHeader Grid.Row="4"
+                                         Text="Channel 1"
+                                         DeleteCommand="{Binding DeleteButtonAction}"
+                                         DeleteCommandParameter="Test"
+                                         SelectCommand="{Binding SwitchSelectedChannelState}"
+                                         IsSelected="{Binding IsSelected}"/>
         </Grid>
     </HeaderedContentControl>
 </UserControl>

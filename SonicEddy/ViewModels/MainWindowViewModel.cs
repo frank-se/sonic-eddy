@@ -233,8 +233,8 @@ public class MainWindowViewModel : ViewModelBase, IScreen
         MetadataMenuItemSelected = false;
         ModuleManagerViewSelected = false;
         FilterGraphBuilderViewSelected = false;
-        FilterGraphManagerViewSelected = true;
-        CustomControlTesterViewSelected = false;
+        FilterGraphManagerViewSelected = false;
+        CustomControlTesterViewSelected = true;
         MixerManagerViewSelected = false;
         GraphControlTesterViewSelected = false;
         MidiConnectionEditorViewSelected = false;

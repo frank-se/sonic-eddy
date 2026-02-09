@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Windows.Input;
 using Fr.Wireplumber.Model.Objects;
 using ReactiveUI;
 using SonicEddy.Controls.GraphEditorControl;
@@ -65,6 +66,22 @@ public class MidiConnectionEditorViewModel : ViewModelBase,
         });
     }
 
+    public MidiInputPortsViewModel InputPorts { get; }
+
+    public MidiOutputPortsViewModel OutputPorts { get; }
+
+    public ObservableCollection<GraphEdge> Connections { get; } = [];
+
+    public ICommand CreateEdgeCommand { get; } =
+        ReactiveCommand.Create<(GraphPort, GraphPort)>(edge =>
+        {
+            if (edge.Item1 is not MidiPortViewModel outPort ||
+                edge.Item2 is not MidiPortViewModel inPort) return;
+
+            Fr.Wireplumber.Wireplumber.LinkFactory.CreateLink(outPort.Port,
+                inPort.Port);
+        });
+
     private void OnLinkDeleted(Link link)
     {
         var toDelete = Connections.FirstOrDefault(c =>
@@ -83,12 +100,6 @@ public class MidiConnectionEditorViewModel : ViewModelBase,
             Connections.Remove(toDelete);
         });
     }
-
-    public MidiInputPortsViewModel InputPorts { get; }
-
-    public MidiOutputPortsViewModel OutputPorts { get; }
-
-    public ObservableCollection<GraphEdge> Connections { get; } = [];
 
     public ViewModelActivator Activator { get; } = new();
     public string? UrlPathSegment { get; }
