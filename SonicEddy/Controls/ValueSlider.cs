@@ -37,7 +37,8 @@ public class ValueSlider : Panel
             Foreground = Brushes.Black,
             TextAlignment = TextAlignment.Center,
             HorizontalAlignment = HorizontalAlignment.Stretch,
-            VerticalAlignment = VerticalAlignment.Stretch
+            VerticalAlignment = VerticalAlignment.Stretch,
+            TextTrimming = new TextTrailingTrimming(".", false)
         };
 
         var value = new TextBlock()
@@ -61,7 +62,7 @@ public class ValueSlider : Panel
         {
             Source = this,
             Mode = BindingMode.OneWay,
-            StringFormat = "F3"
+            StringFormat = "F2"
         });
 
         Children.Add(_valueRect);

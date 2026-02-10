@@ -71,7 +71,7 @@ public class ChannelHeader : Grid
         {
             Foreground = FontBrush,
             [!ContentControl.ContentProperty] = this[!TextProperty],
-            FontSize = 24,
+            FontSize = 14,
             HorizontalContentAlignment = HorizontalAlignment.Center,
             VerticalContentAlignment = VerticalAlignment.Center,
             HorizontalAlignment = HorizontalAlignment.Stretch,

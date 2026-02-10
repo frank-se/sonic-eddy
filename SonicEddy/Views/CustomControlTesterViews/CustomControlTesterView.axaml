@@ -10,7 +10,7 @@
              x:Class="SonicEddy.Views.CustomControlTesterViews.CustomControlTesterView">
     <HeaderedContentControl Header="Control Tester"
                             Margin="4">
-        <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*"
+        <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,300,*"
               ColumnDefinitions="*">
             <controls:ValueSlider Grid.Row="0"
                                   Text="Parameter 1"
@@ -37,7 +37,18 @@
                                          DeleteCommand="{Binding DeleteButtonAction}"
                                          DeleteCommandParameter="Test"
                                          SelectCommand="{Binding SwitchSelectedChannelState}"
-                                         IsSelected="{Binding IsSelected}"/>
+                                         IsSelected="{Binding IsSelected}" />
+            <mixerControls:FilterSectionHeader Grid.Row="5"
+                                               DeleteCommand="{Binding FilterSectionDeleteAction}"
+                                               DeleteCommandParameter="Delete"
+                                               AddCommand="{Binding FilterSectionAddAction}"
+                                               AddCommandParameter="Add"
+                                               HasFilter="{Binding HasFilter}" />
+            <mixerControls:ParameterSection Grid.Row="6"
+                                            Text="Compressor"
+                                            Parameters="{Binding Parameters}" />
+            <mixerControls:SendSection Grid.Row="7" />
+            <mixerControls:PanAndVolumeSection Grid.Row="8" />
         </Grid>
     </HeaderedContentControl>
 </UserControl>

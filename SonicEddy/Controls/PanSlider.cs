@@ -28,7 +28,7 @@ public class PanSlider : Panel
 
         _rightValueRect = new()
         {
-            Fill = Brushes.Aquamarine,
+            Fill = Brushes.BlanchedAlmond,
         };
 
         var stackPanel = new StackPanel()
@@ -66,7 +66,7 @@ public class PanSlider : Panel
         {
             Source = this,
             Mode = BindingMode.OneWay,
-            StringFormat = "F3"
+            StringFormat = "F2"
         });
 
         Children.Add(_leftValueRect);
