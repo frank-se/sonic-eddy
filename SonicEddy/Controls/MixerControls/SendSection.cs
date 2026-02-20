@@ -1,9 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Data;
-using Avalonia.Layout;
 using Avalonia.Media;
-using Avalonia.VisualTree;
 
 namespace SonicEddy.Controls.MixerControls;
 
@@ -11,7 +9,9 @@ public class SendSection : Grid
 {
     public static readonly StyledProperty<float> Send1TrimProperty =
         AvaloniaProperty
-            .Register<PanAndVolumeSection, float>(nameof(Send1Trim));
+            .Register<SendSection, float>(
+                nameof(Send1Trim),
+                defaultBindingMode: BindingMode.TwoWay);
 
     public float Send1Trim
     {
@@ -21,7 +21,9 @@ public class SendSection : Grid
 
     public static readonly StyledProperty<float> Send2TrimProperty =
         AvaloniaProperty
-            .Register<PanAndVolumeSection, float>(nameof(Send2Trim));
+            .Register<SendSection, float>(
+                nameof(Send2Trim),
+                defaultBindingMode: BindingMode.TwoWay);
 
     public float Send2Trim
     {
@@ -31,7 +33,9 @@ public class SendSection : Grid
 
     public static readonly StyledProperty<float> Send3TrimProperty =
         AvaloniaProperty
-            .Register<PanAndVolumeSection, float>(nameof(Send3Trim));
+            .Register<SendSection, float>(
+                nameof(Send3Trim),
+                defaultBindingMode: BindingMode.TwoWay);
 
     public float Send3Trim
     {
@@ -41,7 +45,9 @@ public class SendSection : Grid
 
     public static readonly StyledProperty<float> Send4TrimProperty =
         AvaloniaProperty
-            .Register<PanAndVolumeSection, float>(nameof(Send4Trim));
+            .Register<SendSection, float>(
+                nameof(Send4Trim),
+                defaultBindingMode: BindingMode.TwoWay);
 
     public float Send4Trim
     {
@@ -49,35 +55,25 @@ public class SendSection : Grid
         set => SetValue(Send4TrimProperty, value);
     }
 
-    private readonly Button _headerButton;
-    private readonly ValueSlider[] _sliders;
-
     public SendSection()
     {
         ColumnDefinitions = ColumnDefinitions.Parse("*,*");
-        RowDefinitions = RowDefinitions.Parse("40,40,40");
+        RowDefinitions = RowDefinitions.Parse("20,40,40");
 
-        _headerButton = new()
+        var header = new TextBlock()
         {
-            Foreground = Brushes.White,
-            Content = "Sends",
-            FontSize = 14,
-            HorizontalContentAlignment = HorizontalAlignment.Center,
-            VerticalContentAlignment = VerticalAlignment.Center,
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            VerticalAlignment = VerticalAlignment.Stretch,
-            BorderThickness = new(0),
-            CornerRadius = new CornerRadius(0),
-            Background = Brushes.Black,
+            FontSize = 12,
+            Text = "Sends",
+            Margin = new Thickness(6)
         };
 
-        SetRow(_headerButton, 0);
-        SetColumn(_headerButton, 0);
-        SetColumnSpan(_headerButton, 2);
+        SetRow(header, 0);
+        SetColumn(header, 0);
+        SetColumnSpan(header, 2);
 
-        Children.Add(_headerButton);
+        Children.Add(header);
 
-        _sliders =
+        ValueSlider[] sliders =
         [
             new()
             {
@@ -113,42 +109,42 @@ public class SendSection : Grid
             },
         ];
 
-        SetRow(_sliders[0], 1);
-        SetColumn(_sliders[0], 0);
+        SetRow(sliders[0], 1);
+        SetColumn(sliders[0], 0);
 
-        SetRow(_sliders[1], 1);
-        SetColumn(_sliders[1], 1);
+        SetRow(sliders[1], 1);
+        SetColumn(sliders[1], 1);
 
-        SetRow(_sliders[2], 2);
-        SetColumn(_sliders[2], 0);
+        SetRow(sliders[2], 2);
+        SetColumn(sliders[2], 0);
 
-        SetRow(_sliders[3], 2);
-        SetColumn(_sliders[3], 1);
+        SetRow(sliders[3], 2);
+        SetColumn(sliders[3], 1);
 
-        _sliders[0].Bind(ValueSlider.ValueProperty, new Binding()
+        sliders[0].Bind(ValueSlider.ValueProperty, new Binding("Send1Trim")
         {
-            Source = Send1Trim,
+            Source = this,
             Mode = BindingMode.TwoWay
         });
 
-        _sliders[1].Bind(ValueSlider.ValueProperty, new Binding()
+        sliders[1].Bind(ValueSlider.ValueProperty, new Binding("Send2Trim")
         {
-            Source = Send2Trim,
+            Source = this,
             Mode = BindingMode.TwoWay
         });
 
-        _sliders[2].Bind(ValueSlider.ValueProperty, new Binding()
+        sliders[2].Bind(ValueSlider.ValueProperty, new Binding("Send3Trim")
         {
-            Source = Send3Trim,
+            Source = this,
             Mode = BindingMode.TwoWay
         });
 
-        _sliders[3].Bind(ValueSlider.ValueProperty, new Binding()
+        sliders[3].Bind(ValueSlider.ValueProperty, new Binding("Send4Trim")
         {
-            Source = Send4Trim,
+            Source = this,
             Mode = BindingMode.TwoWay
         });
-        
-        Children.AddRange(_sliders);
+
+        Children.AddRange(sliders);
     }
 }

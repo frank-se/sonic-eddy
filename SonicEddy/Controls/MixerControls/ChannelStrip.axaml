@@ -1,0 +1,67 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:mixerControls="clr-namespace:SonicEddy.Controls.MixerControls"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="SonicEddy.Controls.MixerControls.ChannelStrip">
+    
+    <Panel Background="MidnightBlue">
+        <Grid ColumnDefinitions="120"
+              RowDefinitions="Auto,Auto,112,Auto,100,100,100,*,Auto"
+              Margin="2">
+
+            <mixerControls:ChannelHeader Grid.Row="0"
+                                         Text="{Binding $parent[mixerControls:ChannelStrip].Text}"
+                                         DeleteCommand="{Binding $parent[mixerControls:ChannelStrip].DeleteCommand}"
+                                         DeleteCommandParameter="{Binding $parent[mixerControls:ChannelStrip].DeleteCommandParameter}"
+                                         IsSelected="{Binding $parent[mixerControls:ChannelStrip].IsSelected}"
+                                         SelectCommand="{Binding $parent[mixerControls:ChannelStrip].SelectCommand}"
+                                         SelectCommandParameter="{Binding $parent[mixerControls:ChannelStrip].SelectCommandParameter}" />
+
+            <mixerControls:RoutingComboBox Grid.Row="1"
+                                           Text="Audio From"
+                                           SelectedRoutingTarget="{Binding $parent[mixerControls:ChannelStrip].SelectedAudioFromRoutingTarget}"
+                                           RoutingTargets="{Binding $parent[mixerControls:ChannelStrip].AudioFromRoutingTargets}" />
+
+            <mixerControls:SendSection Grid.Row="2"
+                                       Margin="4,4,4,8"
+                                       Send1Trim="{Binding $parent[mixerControls:ChannelStrip].Send1Trim}"
+                                       Send2Trim="{Binding $parent[mixerControls:ChannelStrip].Send2Trim}"
+                                       Send3Trim="{Binding $parent[mixerControls:ChannelStrip].Send3Trim}"
+                                       Send4Trim="{Binding $parent[mixerControls:ChannelStrip].Send4Trim}" />
+
+            <mixerControls:FilterSectionHeader Grid.Row="3"
+                                               HasFilter="{Binding $parent[mixerControls:ChannelStrip].HasFilter}"
+                                               AddCommand="{Binding $parent[mixerControls:ChannelStrip].AddFilterCommand}"
+                                               AddCommandParameter="{Binding $parent[mixerControls:ChannelStrip].AddFilterCommandParameter}"
+                                               DeleteCommand="{Binding $parent[mixerControls:ChannelStrip].DeleteFilterCommand}"
+                                               DeleteCommandParameter="{Binding $parent[mixerControls:ChannelStrip].DeleteFilterCommandParameter}" />
+
+            <mixerControls:ParameterSection Grid.Row="4"
+                                            Margin="4"
+                                            Parameters="{Binding $parent[mixerControls:ChannelStrip].FirstPluginParameters}"
+                                            Text="{Binding $parent[mixerControls:ChannelStrip].FirstPluginText}" />
+
+            <mixerControls:ParameterSection Grid.Row="5"
+                                            Margin="4"
+                                            Parameters="{Binding $parent[mixerControls:ChannelStrip].SecondPluginParameters}"
+                                            Text="{Binding $parent[mixerControls:ChannelStrip].SecondPluginText}" />
+
+            <mixerControls:ParameterSection Grid.Row="6"
+                                            Margin="4"
+                                            Parameters="{Binding $parent[mixerControls:ChannelStrip].ThirdPluginParameters}"
+                                            Text="{Binding $parent[mixerControls:ChannelStrip].ThirdPluginText}" />
+
+            <mixerControls:PanAndVolumeSection Grid.Row="7"
+                                               Volume="{Binding $parent[mixerControls:ChannelStrip].Volume}"
+                                               Pan="{Binding $parent[mixerControls:ChannelStrip].Pan}" />
+
+            <mixerControls:RoutingComboBox Grid.Row="8"
+                                           Text="Audio To"
+                                           SelectedRoutingTarget="{Binding $parent[mixerControls:ChannelStrip].SelectedAudioToRoutingTarget}"
+                                           RoutingTargets="{Binding $parent[mixerControls:ChannelStrip].AudioToRoutingTargets}" />
+        </Grid>
+    </Panel>
+    
+</UserControl>

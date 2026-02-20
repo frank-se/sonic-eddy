@@ -1,0 +1,125 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Reactive.Disposables;
+using System.Reactive.Disposables.Fluent;
+using System.Windows.Input;
+using Fr.Wireplumber.Modules.Models;
+using ReactiveUI;
+using SonicEddy.Controls.MixerControls;
+
+namespace SonicEddy.ViewModels.MixerViewModelsV2;
+
+public class ReturnChannelViewModel : ReactiveObject, IReturnChannel,
+    IDisposable
+{
+    private CompositeDisposable? _disposable = new();
+
+    private readonly LoopbackModule _inputLoopback;
+    private readonly LoopbackModule _outbackLoopback;
+
+    public ReturnChannelViewModel(string text, ICommand selectChannelCommand,
+        LoopbackModule inputLoopback, LoopbackModule outbackLoopback,
+        FilterChain? filterChain, List<InputChannelViewModel> routingTargets)
+    {
+        Text = text;
+        SelectChannelCommand = selectChannelCommand;
+        _inputLoopback = inputLoopback;
+        _outbackLoopback = outbackLoopback;
+
+        this.WhenAnyValue(x => x.FilterChain)
+            .Subscribe(chain =>
+            {
+                if (chain is null)
+                {
+                    HasFilter = false;
+                    Parameters = [];
+                    return;
+                }
+
+                // ReSharper disable once MergeIntoPattern
+                // DO NOT CHANGE TO PATTERN
+                // OTHERWISE ACCESS TO RESULT MIGHT BE BLOCKING!
+                if (!chain.CaptureNode.Params.IsCompleted ||
+                    chain.CaptureNode.Params.Result is null ||
+                    !chain.CaptureNode.PropertyInfos.IsCompleted)
+                    return;
+
+                Parameters = ConversionHelper.GetCollectionFromFilterChainParams(
+                        chain.CaptureNode.Params.Result,
+                        chain.CaptureNode.PropertyInfos.Result,
+                        chain.CaptureNode);
+
+                HasFilter = true;
+            })
+            .DisposeWith(_disposable!);
+
+        PanAndVolume = new PanAndVolumeViewModel(outbackLoopback.PlaybackNode);
+
+        FilterChain = filterChain;
+
+        RoutingTargets = new(routingTargets);
+    }
+
+    public FilterChain? FilterChain
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
+    public string Text { get; }
+
+    public bool IsSelected
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
+    public List<ParameterCollection>? Parameters
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
+    public bool HasFilter
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
+    public IPanAndVolume PanAndVolume { get; }
+
+    public ICommand SelectChannelCommand { get; set; }
+
+    public ObservableCollection<IRoutingTarget> RoutingTargets { get; }
+
+    public IRoutingTarget? SelectedRoutingTarget
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
+    public void OnSelectChannel() =>
+        SelectChannelCommand.Execute(this);
+
+    public void OnAddFilter(IOutputChannel channel)
+    {
+        throw new System.NotImplementedException();
+    }
+
+    public void OnDeleteFilter(IOutputChannel channel)
+    {
+        throw new System.NotImplementedException();
+    }
+
+    public void Dispose()
+    {
+        if (PanAndVolume is PanAndVolumeViewModel panAndVolume)
+            panAndVolume.Dispose();
+
+        _disposable?.Dispose();
+        _disposable = null;
+
+        GC.SuppressFinalize(this);
+    }
+}

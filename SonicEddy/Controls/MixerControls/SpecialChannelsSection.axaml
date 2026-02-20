@@ -1,0 +1,95 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:mixerControls="clr-namespace:SonicEddy.Controls.MixerControls"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="SonicEddy.Controls.MixerControls.SpecialChannelsSection">
+
+    <UserControl.Styles>
+        <Style Selector="TabItem">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Margin" Value="4" />
+        </Style>
+    </UserControl.Styles>
+
+    <TabControl>
+        <TabItem Header="Outputs">
+            <ItemsControl ItemsSource="{Binding $parent[mixerControls:SpecialChannelsSection].OutputChannels}">
+
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="4" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="mixerControls:IOutputChannel">
+                        <mixerControls:OutputChannelStrip Text="{Binding Text}"
+                                                          IsSelected="{Binding IsSelected}"
+                                                          Volume="{Binding PanAndVolume.Volume}"
+                                                          Pan="{Binding PanAndVolume.Pan}"
+                                                          SelectCommand="{Binding OnSelectChannel}"
+                                                          SelectCommandParameter="{Binding}" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+
+            </ItemsControl>
+        </TabItem>
+        <TabItem Header="Returns">
+            <ItemsControl ItemsSource="{Binding $parent[mixerControls:SpecialChannelsSection].ReturnChannels}">
+
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="4" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="mixerControls:IReturnChannel">
+                        <mixerControls:ReturnChannelStrip Text="{Binding Text}"
+                                                          IsSelected="{Binding IsSelected}"
+                                                          HasFilter="{Binding HasFilter}"
+                                                          Volume="{Binding PanAndVolume.Volume}"
+                                                          Pan="{Binding PanAndVolume.Pan}"
+                                                          AudioToRoutingTargets="{Binding RoutingTargets}"
+                                                          SelectedAudioToRoutingTarget="{Binding SelectedRoutingTarget}"
+                                                          SelectCommand="{Binding OnSelectChannel}"
+                                                          SelectCommandParameter="{Binding}"
+                                                          AddFilterCommand="{Binding OnAddFilter}"
+                                                          AddFilterCommandParameter="{Binding}"
+                                                          DeleteFilterCommand="{Binding OnDeleteFilter}"
+                                                          DeleteFilterCommandParameter="{Binding}" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+
+            </ItemsControl>
+        </TabItem>
+        <TabItem Header="Inputs">
+            <ItemsControl ItemsSource="{Binding $parent[mixerControls:SpecialChannelsSection].InputChannels}">
+
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="4" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="mixerControls:IInputChannel">
+                        <mixerControls:InputChannelStrip Text="{Binding Text}"
+                                                         IsSelected="{Binding IsSelected}"
+                                                         Volume="{Binding PanAndVolume.Volume}"
+                                                         Pan="{Binding PanAndVolume.Pan}"
+                                                         SelectCommand="{Binding OnSelectChannel}"
+                                                         SelectCommandParameter="{Binding}" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+
+            </ItemsControl>
+
+        </TabItem>
+    </TabControl>
+</UserControl>

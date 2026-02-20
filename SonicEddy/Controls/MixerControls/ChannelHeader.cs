@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
@@ -17,6 +18,17 @@ public class ChannelHeader : Grid
         set => SetValue(IsSelectedProperty, value);
     }
 
+    public static readonly StyledProperty<bool> IsDeleteButtonVisibleProperty =
+        AvaloniaProperty.Register<ChannelHeader, bool>(
+            nameof(IsDeleteButtonVisible),
+            defaultValue: true);
+
+    public bool IsDeleteButtonVisible
+    {
+        get => GetValue(IsDeleteButtonVisibleProperty);
+        set => SetValue(IsDeleteButtonVisibleProperty, value);
+    }
+
     public static readonly StyledProperty<ICommand?> SelectCommandProperty =
         AvaloniaProperty.Register<ChannelHeader, ICommand?>(
             nameof(SelectCommand));
@@ -25,6 +37,17 @@ public class ChannelHeader : Grid
     {
         get => GetValue(SelectCommandProperty);
         set => SetValue(SelectCommandProperty, value);
+    }
+
+    public static readonly StyledProperty<object?>
+        SelectCommandParameterProperty =
+            AvaloniaProperty.Register<ChannelHeader, object?>(
+                nameof(SelectCommandParameter));
+
+    public object? SelectCommandParameter
+    {
+        get => GetValue(SelectCommandParameterProperty);
+        set => SetValue(SelectCommandParameterProperty, value);
     }
 
     public static readonly StyledProperty<ICommand?> DeleteCommandProperty =
@@ -59,13 +82,13 @@ public class ChannelHeader : Grid
         set => SetValue(TextProperty, value);
     }
 
-    private Button _headerButton;
-    private Button _button;
+    private readonly Button _headerButton;
+    private readonly Button _deleteButton;
 
     public ChannelHeader()
     {
-        ColumnDefinitions = ColumnDefinitions.Parse("*, 40");
-        RowDefinitions = RowDefinitions.Parse("40");
+        ColumnDefinitions = ColumnDefinitions.Parse("*, 30");
+        RowDefinitions = RowDefinitions.Parse("30");
 
         _headerButton = new()
         {
@@ -88,27 +111,28 @@ public class ChannelHeader : Grid
         var font = new FontFamily(
             "avares://SonicEddy/Assets/Fonts/FluentSystemIcons-Regular.ttf#FluentSystemIcons-Regular");
 
-        _button = new()
+        _deleteButton = new()
         {
             Content = "\uF367",
             [!Button.CommandProperty] = this[!DeleteCommandProperty],
             [!Button.CommandParameterProperty] =
                 this[!DeleteCommandParameterProperty],
             FontFamily = font,
-            FontSize = 24,
+            FontSize = 16,
             HorizontalContentAlignment = HorizontalAlignment.Center,
             VerticalContentAlignment = VerticalAlignment.Center,
             HorizontalAlignment = HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Stretch,
             BorderThickness = new(0),
-            CornerRadius = new CornerRadius(0)
+            CornerRadius = new CornerRadius(0),
+            IsVisible = IsDeleteButtonVisible
         };
 
         Children.Add(_headerButton);
-        Children.Add(_button);
+        Children.Add(_deleteButton);
 
-        SetRow(_button, 0);
-        SetColumn(_button, 1);
+        SetRow(_deleteButton, 0);
+        SetColumn(_deleteButton, 1);
 
         UpdateSelectedVisuals(IsSelected);
     }

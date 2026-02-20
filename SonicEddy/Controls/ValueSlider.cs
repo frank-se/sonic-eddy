@@ -23,7 +23,7 @@ public class ValueSlider : Panel
     {
         _valueRect = new()
         {
-            Fill = Brushes.BlanchedAlmond,
+            Fill = Brushes.DarkKhaki,
         };
 
         var stackPanel = new StackPanel()

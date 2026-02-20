@@ -4,8 +4,8 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:reactiveUi="http://reactiveui.net"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-        Width="1200" Height="650"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+        Width="1200" Height="1000"
         x:Class="SonicEddy.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/avalonia-logo.ico"
@@ -113,6 +113,13 @@
                             Classes.selected="{Binding MidiConnectionEditorViewSelected}"
                             Command="{Binding NavigateToMidiConnectionEditorView}">
                         Midi Connections
+                    </Button>
+                    <Button HorizontalAlignment="Stretch"
+                            Padding="8"
+                            Margin="4"
+                            Classes.selected="{Binding MixerViewV2ViewSelected}"
+                            Command="{Binding NavigateToMixerV2View}">
+                        MIXER
                     </Button>
                 </StackPanel>
             </HeaderedContentControl>

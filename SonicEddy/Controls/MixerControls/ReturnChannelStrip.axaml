@@ -1,0 +1,40 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:mixerControls="clr-namespace:SonicEddy.Controls.MixerControls"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="SonicEddy.Controls.MixerControls.ReturnChannelStrip">
+
+    <Panel Background="BlueViolet">
+        <Grid ColumnDefinitions="100"
+              RowDefinitions="Auto,Auto,*,Auto"
+              Margin="2">
+
+            <mixerControls:ChannelHeader Grid.Row="0"
+                                         Text="{Binding $parent[mixerControls:ReturnChannelStrip].Text}"
+                                         IsSelected="{Binding $parent[mixerControls:ReturnChannelStrip].IsSelected}"
+                                         SelectCommand="{Binding $parent[mixerControls:ReturnChannelStrip].SelectCommand}"
+                                         SelectCommandParameter="{Binding $parent[mixerControls:ReturnChannelStrip].SelectCommandParameter}"
+                                         IsDeleteButtonVisible="False" />
+
+            <mixerControls:FilterSectionHeader Grid.Row="1"
+                                               HasFilter="{Binding $parent[mixerControls:ChannelStrip].HasFilter}"
+                                               AddCommand="{Binding $parent[mixerControls:ChannelStrip].AddFilterCommand}"
+                                               AddCommandParameter="{Binding $parent[mixerControls:ChannelStrip].AddFilterCommandParameter}"
+                                               DeleteCommand="{Binding $parent[mixerControls:ChannelStrip].DeleteFilterCommand}"
+                                               DeleteCommandParameter="{Binding $parent[mixerControls:ChannelStrip].DeleteFilterCommandParameter}" />
+
+            <mixerControls:PanAndVolumeSection Grid.Row="2"
+                                               Volume="{Binding $parent[mixerControls:ChannelStrip].Volume}"
+                                               Pan="{Binding $parent[mixerControls:ChannelStrip].Pan}" />
+
+            <mixerControls:RoutingComboBox Grid.Row="3"
+                                           Text="Audio To"
+                                           SelectedRoutingTarget="{Binding $parent[mixerControls:ChannelStrip].SelectedAudioToRoutingTarget}"
+                                           RoutingTargets="{Binding $parent[mixerControls:ChannelStrip].AudioToRoutingTargets}" />
+
+        </Grid>
+    </Panel>
+
+</UserControl>

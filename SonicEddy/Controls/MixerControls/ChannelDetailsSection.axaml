@@ -1,0 +1,35 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:mixerControls="clr-namespace:SonicEddy.Controls.MixerControls"
+             xmlns:mixerViewsV2="clr-namespace:SonicEddy.Views.MixerViewsV2"
+             xmlns:mixerViewModelsV2="clr-namespace:SonicEddy.ViewModels.MixerViewModelsV2"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="SonicEddy.Controls.MixerControls.ChannelDetailsSection">
+
+    <UserControl.Styles>
+        <Style Selector="TabItem">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Margin" Value="4" />
+        </Style>
+    </UserControl.Styles>
+
+    <TabControl TabStripPlacement="Bottom"
+                x:Name="PART_TabControl">
+        <TabItem Header="Plugins">
+            <mixerControls:ParametersEditor
+                NumberOfColumns="{Binding $parent[mixerControls:ChannelDetailsSection].NumberOfColumns}"
+                NumberOfRows="{Binding $parent[mixerControls:ChannelDetailsSection].NumberOfRows}"
+                ParameterCollections="{Binding $parent[mixerControls:ChannelDetailsSection].ParameterCollections}" />
+        </TabItem>
+        <TabItem Header="Details">
+            <ScrollViewer>
+                <Grid ColumnDefinitions="*,*">
+                    <StackPanel Grid.Column="0" x:Name="PART_DetailsLeftColumn" />
+                    <StackPanel Grid.Column="1" x:Name="PART_DetailsRightColumn" />
+                </Grid>
+            </ScrollViewer>
+        </TabItem>
+    </TabControl>
+</UserControl>

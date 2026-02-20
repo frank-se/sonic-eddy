@@ -22,32 +22,6 @@ using SonicEddy.Views.MixerViews;
 
 namespace SonicEddy.ViewModels.MixerViewModels;
 
-/// <summary>
-/// The channel strip view model controls a channel strip. A channel strip has
-/// two possible setups, the first is:
-///
-/// <list type="bullet">
-/// <item>
-/// A playback node, the source for the channel strip, connected to
-/// </item>
-/// <item>
-/// A loopback module, which provides the volume controls for the channel strip
-/// </item>
-/// </list>
-///
-/// The other option adds a filter chain in the signal path:
-/// <list type="bullet">
-/// <item>
-/// A playback node, the source for the channel strip, connected to
-/// </item>
-/// <item>
-/// A filter chain module, providing processing for the channel, connected to
-/// </item>
-/// <item>
-/// A loopback module, which provides the volume controls for the channel strip
-/// </item>
-/// </list>
-/// </summary>
 public class ChannelStripViewModel : ReactiveObject, IDisposable
 {
     private readonly CompositeDisposable _disposables = new();

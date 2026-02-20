@@ -6,6 +6,7 @@ using Avalonia.Markup.Xaml;
 using ReactiveUI;
 using SonicEddy.Services.AppData;
 using SonicEddy.Services.MixerData;
+using SonicEddy.Services.MixerViewModels;
 using SonicEddy.Services.Wireplumber;
 using SonicEddy.ViewModels;
 using SonicEddy.ViewModels.MixerViewModels;
@@ -63,6 +64,17 @@ public class App : Application
         var wireplumberService = new WireplumberService();
         Locator.CurrentMutable.Register<IWireplumberService>(() =>
             wireplumberService);
+
+        var mixerServiceV2 =
+            new Services.MixerServiceV2.MixerService(appDataService,
+                wireplumberService);
+        Locator.CurrentMutable
+            .Register<Services.MixerServiceV2.IMixerService>(() =>
+                mixerServiceV2);
+
+        var mixerViewModelService = new MixerViewModelService();
+        Locator.CurrentMutable.Register<IMixerViewModelService>(() =>
+            mixerViewModelService);
 
         Locator.CurrentMutable.Register(() => new MainWindowViewModel());
         Locator.CurrentMutable.Register<IViewLocator>(() => new ViewLocator());

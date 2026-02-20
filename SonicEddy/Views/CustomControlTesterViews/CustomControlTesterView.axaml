@@ -10,45 +10,101 @@
              x:Class="SonicEddy.Views.CustomControlTesterViews.CustomControlTesterView">
     <HeaderedContentControl Header="Control Tester"
                             Margin="4">
-        <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,300,*"
-              ColumnDefinitions="*">
+        <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,300,Auto,Auto,*"
+              ColumnDefinitions="*,*,*,Auto,Auto">
+
             <controls:ValueSlider Grid.Row="0"
+                                  Grid.Column="0"
                                   Text="Parameter 1"
                                   Minimum="-10"
                                   Maximum="50"
                                   Background="DimGray" />
+
             <controls:ValueSlider Grid.Row="1"
+                                  Grid.Column="0"
                                   Text="Parameter 2"
                                   Minimum="30"
                                   Maximum="50"
                                   Background="DimGray" />
+
             <controls:PanSlider Grid.Row="2"
+                                Grid.Column="0"
                                 Text="Pan"
                                 Maximum="50"
                                 Background="DimGray" />
+
             <controls:ValueSlider Grid.Row="3"
+                                  Grid.Column="0"
                                   Text="Volume"
                                   Minimum="0"
                                   Maximum="10"
                                   IsVertical="True"
                                   Background="DimGray" />
+
             <mixerControls:ChannelHeader Grid.Row="4"
+                                         Grid.Column="0"
                                          Text="Channel 1"
                                          DeleteCommand="{Binding DeleteButtonAction}"
                                          DeleteCommandParameter="Test"
                                          SelectCommand="{Binding SwitchSelectedChannelState}"
                                          IsSelected="{Binding IsSelected}" />
+
             <mixerControls:FilterSectionHeader Grid.Row="5"
+                                               Grid.Column="0"
                                                DeleteCommand="{Binding FilterSectionDeleteAction}"
                                                DeleteCommandParameter="Delete"
                                                AddCommand="{Binding FilterSectionAddAction}"
                                                AddCommandParameter="Add"
                                                HasFilter="{Binding HasFilter}" />
+
             <mixerControls:ParameterSection Grid.Row="6"
+                                            Grid.Column="0"
                                             Text="Compressor"
                                             Parameters="{Binding Parameters}" />
-            <mixerControls:SendSection Grid.Row="7" />
-            <mixerControls:PanAndVolumeSection Grid.Row="8" />
+
+            <mixerControls:SendSection Grid.Row="7"
+                                       Grid.Column="0" />
+
+            <mixerControls:PanAndVolumeSection Grid.Row="8"
+                                               Grid.Column="0" />
+
+            <mixerControls:RoutingComboBox Grid.Row="9"
+                                           Grid.Column="0"
+                                           Text="{Binding ComboBoxName}"
+                                           RoutingTargets="{Binding RoutingTargets}" />
+
+            <mixerControls:PluginPagesSelector Grid.Row="10"
+                                               Grid.Column="0"
+                                               PluginPagesCounts="{Binding PageCounts}"
+                                               SelectedPage="{Binding SelectedPage}" />
+
+            <mixerControls:ParameterGrid Grid.Row="0"
+                                         Grid.Column="1"
+                                         Grid.RowSpan="11"
+                                         NumberOfColumns="6"
+                                         NumberOfRows="12"
+                                         Background="MidnightBlue"
+                                         Text="{Binding ParameterGridText}"
+                                         Parameters="{Binding Parameters}" />
+
+            <mixerControls:ParametersEditor Grid.Row="0"
+                                            Grid.Column="2"
+                                            Grid.RowSpan="11"
+                                            Background="DarkSlateBlue"
+                                            NumberOfColumns="3"
+                                            NumberOfRows="2"
+                                            ParameterCollections="{Binding ParameterCollections}" />
+
+            <mixerControls:ReturnChannelStrip Grid.Row="0"
+                                              Grid.Column="3"
+                                              Grid.RowSpan="8"
+                                              Text="Channel 1" />
+
+            <mixerControls:ChannelStrip Grid.Row="0"
+                                        Grid.Column="4"
+                                        Grid.RowSpan="11"
+                                        Text="Channel 1" />
+
         </Grid>
     </HeaderedContentControl>
 </UserControl>

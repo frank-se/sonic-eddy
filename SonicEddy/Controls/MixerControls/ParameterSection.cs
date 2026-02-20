@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Linq;
 using Avalonia;
+using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Data;
 using Avalonia.Layout;
@@ -26,7 +27,7 @@ public class ParameterSection : Grid
     }
 
     public static readonly StyledProperty<string> TextProperty =
-        AvaloniaProperty.Register<ChannelHeader, string>(
+        AvaloniaProperty.Register<ParameterSection, string>(
             nameof(Text),
             defaultValue: string.Empty);
 
@@ -36,33 +37,25 @@ public class ParameterSection : Grid
         set => SetValue(TextProperty, value);
     }
 
-    private readonly Button _headerButton;
     private readonly ValueSlider[] _sliders;
 
     public ParameterSection()
     {
         ColumnDefinitions = ColumnDefinitions.Parse("*,*");
-        RowDefinitions = RowDefinitions.Parse("40,40,40");
+        RowDefinitions = RowDefinitions.Parse("20,40,40");
 
-        _headerButton = new()
+        var header = new TextBlock()
         {
-            Foreground = Brushes.White,
-            [!ContentControl.ContentProperty] = this[!TextProperty],
-            FontSize = 14,
-            HorizontalContentAlignment = HorizontalAlignment.Center,
-            VerticalContentAlignment = VerticalAlignment.Center,
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            VerticalAlignment = VerticalAlignment.Stretch,
-            BorderThickness = new(0),
-            CornerRadius = new CornerRadius(0),
-            Background = Brushes.Black,
+            FontSize = 10,
+            [!TextBlock.TextProperty] = this[!TextProperty],
+            Margin = new Thickness(6)
         };
 
-        SetRow(_headerButton, 0);
-        SetColumn(_headerButton, 0);
-        SetColumnSpan(_headerButton, 2);
+        SetRow(header, 0);
+        SetColumn(header, 0);
+        SetColumnSpan(header, 2);
 
-        Children.Add(_headerButton);
+        Children.Add(header);
 
         _sliders =
         [
@@ -122,6 +115,9 @@ public class ParameterSection : Grid
             if (change.NewValue is not ObservableCollection<IParameter>
                 parameters) return;
 
+            _parametersCollectionChangeSubscription =
+                parameters.WeakSubscribe(OnPropertiesCollectionChanged);
+
             UpdateAllSliderBindings(parameters);
         }
     }
@@ -179,7 +175,8 @@ public class ParameterSection : Grid
 
     private void UpdateAllSliderBindings()
     {
-        UpdateAllSliderBindings(Parameters);
+        if (Parameters is not null)
+            UpdateAllSliderBindings(Parameters);
     }
 
     private void OnPropertiesCollectionChanged(object? sender,

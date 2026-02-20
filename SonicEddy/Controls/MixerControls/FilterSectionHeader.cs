@@ -10,7 +10,7 @@ namespace SonicEddy.Controls.MixerControls;
 public class FilterSectionHeader : Grid
 {
     public static readonly StyledProperty<bool> HasFilterProperty =
-        AvaloniaProperty.Register<ChannelHeader, bool>(nameof(HasFilter));
+        AvaloniaProperty.Register<FilterSectionHeader, bool>(nameof(HasFilter));
 
     public bool HasFilter
     {
@@ -19,7 +19,7 @@ public class FilterSectionHeader : Grid
     }
 
     public static readonly StyledProperty<ICommand?> AddCommandProperty =
-        AvaloniaProperty.Register<ChannelHeader, ICommand?>(
+        AvaloniaProperty.Register<FilterSectionHeader, ICommand?>(
             nameof(AddCommand));
 
     public ICommand? AddCommand
@@ -30,7 +30,7 @@ public class FilterSectionHeader : Grid
 
     public static readonly StyledProperty<object?>
         AddCommandParameterProperty =
-            AvaloniaProperty.Register<ChannelHeader, object?>(
+            AvaloniaProperty.Register<FilterSectionHeader, object?>(
                 nameof(AddCommandParameter));
 
     public object? AddCommandParameter
@@ -40,7 +40,7 @@ public class FilterSectionHeader : Grid
     }
 
     public static readonly StyledProperty<ICommand?> DeleteCommandProperty =
-        AvaloniaProperty.Register<ChannelHeader, ICommand?>(
+        AvaloniaProperty.Register<FilterSectionHeader, ICommand?>(
             nameof(DeleteCommand));
 
     public ICommand? DeleteCommand
@@ -51,7 +51,7 @@ public class FilterSectionHeader : Grid
 
     public static readonly StyledProperty<object?>
         DeleteCommandParameterProperty =
-            AvaloniaProperty.Register<ChannelHeader, object?>(
+            AvaloniaProperty.Register<FilterSectionHeader, object?>(
                 nameof(DeleteCommandParameter));
 
     public object? DeleteCommandParameter
@@ -60,45 +60,35 @@ public class FilterSectionHeader : Grid
         set => SetValue(DeleteCommandParameterProperty, value);
     }
 
-    private Button _addButton;
-    private Button _deleteButton;
-    private Button _headerButton;
-
     public FilterSectionHeader()
     {
-        ColumnDefinitions = ColumnDefinitions.Parse("*, 40");
-        RowDefinitions = RowDefinitions.Parse("40");
+        ColumnDefinitions = ColumnDefinitions.Parse("*, 30");
+        RowDefinitions = RowDefinitions.Parse("30");
 
-        _headerButton = new()
+        var header = new TextBlock()
         {
-            Foreground = Brushes.White,
-            Content = "Filter",
-            FontSize = 14,
-            HorizontalContentAlignment = HorizontalAlignment.Center,
-            VerticalContentAlignment = VerticalAlignment.Center,
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            VerticalAlignment = VerticalAlignment.Stretch,
-            BorderThickness = new(0),
-            CornerRadius = new CornerRadius(0),
-            Background = Brushes.Black,
+            FontSize = 12,
+            Text = "Filter",
+            Margin = new Thickness(6)
         };
 
-        SetRow(_headerButton, 0);
-        SetColumn(_headerButton, 0);
+        SetRow(header, 0);
+        SetColumn(header, 0);
+        SetColumnSpan(header, 2);
 
-        Children.Add(_headerButton);
+        Children.Add(header);
         
         var font = new FontFamily(
             "avares://SonicEddy/Assets/Fonts/FluentSystemIcons-Regular.ttf#FluentSystemIcons-Regular");
 
-        _deleteButton = new()
+        Button deleteButton = new()
         {
             Content = "\uF367",
             [!Button.CommandProperty] = this[!DeleteCommandProperty],
             [!Button.CommandParameterProperty] =
                 this[!DeleteCommandParameterProperty],
             FontFamily = font,
-            FontSize = 24,
+            FontSize = 16,
             HorizontalContentAlignment = HorizontalAlignment.Center,
             VerticalContentAlignment = VerticalAlignment.Center,
             HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -108,19 +98,19 @@ public class FilterSectionHeader : Grid
             [!Button.IsVisibleProperty] = this[!HasFilterProperty]
         };
 
-        SetRow(_deleteButton, 0);
-        SetColumn(_deleteButton, 1);
+        SetRow(deleteButton, 0);
+        SetColumn(deleteButton, 1);
         
-        Children.Add(_deleteButton);
+        Children.Add(deleteButton);
 
-        _addButton = new()
+        Button addButton = new()
         {
             Content = "\uF107",
             [!Button.CommandProperty] = this[!AddCommandProperty],
             [!Button.CommandParameterProperty] =
                 this[!AddCommandParameterProperty],
             FontFamily = font,
-            FontSize = 24,
+            FontSize = 16,
             HorizontalContentAlignment = HorizontalAlignment.Center,
             VerticalContentAlignment = VerticalAlignment.Center,
             HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -129,8 +119,8 @@ public class FilterSectionHeader : Grid
             CornerRadius = new CornerRadius(0),
         };
 
-        SetRow(_addButton, 0);
-        SetColumn(_addButton, 1);
+        SetRow(addButton, 0);
+        SetColumn(addButton, 1);
 
         var binding = new Binding("HasFilter")
         {
@@ -138,8 +128,8 @@ public class FilterSectionHeader : Grid
             Path = "!HasFilter"
         };
 
-        _addButton.Bind(Button.IsVisibleProperty, binding);
+        addButton.Bind(Button.IsVisibleProperty, binding);
         
-        Children.Add(_addButton);
+        Children.Add(addButton);
     }
 }

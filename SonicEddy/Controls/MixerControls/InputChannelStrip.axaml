@@ -1,0 +1,28 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:mixerControls="clr-namespace:SonicEddy.Controls.MixerControls"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="SonicEddy.Controls.MixerControls.InputChannelStrip">
+    
+    <Panel Background="DarkGreen">
+        <Grid ColumnDefinitions="100"
+              RowDefinitions="Auto,*"
+              Margin="2">
+
+            <mixerControls:ChannelHeader Grid.Row="0"
+                                         Text="{Binding $parent[mixerControls:InputChannelStrip].Text}"
+                                         IsSelected="{Binding $parent[mixerControls:InputChannelStrip].IsSelected}"
+                                         SelectCommand="{Binding $parent[mixerControls:InputChannelStrip].SelectCommand}"
+                                         SelectCommandParameter="{Binding $parent[mixerControls:InputChannelStrip].SelectCommandParameter}"
+                                         IsDeleteButtonVisible="False" />
+
+            <mixerControls:PanAndVolumeSection Grid.Row="1"
+                                               Volume="{Binding $parent[mixerControls:InputChannelStrip].Volume}"
+                                               Pan="{Binding $parent[mixerControls:InputChannelStrip].Pan}" />
+            
+        </Grid>
+    </Panel>
+    
+</UserControl>
