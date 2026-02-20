@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Threading.Tasks;
 using Fr.Wireplumber.Model.Objects;
 using Fr.Wireplumber.Modules.Models;
 
@@ -43,6 +44,6 @@ public interface IChannelStrip : IChannel
     public IRoutingTarget? SelectedAudioToRoutingTarget { get; set; }
 
     public void DeleteAction();
-    public void AddFilterAction();
+    public Task AddFilterAction();
     public void DeleteFilterAction();
 }

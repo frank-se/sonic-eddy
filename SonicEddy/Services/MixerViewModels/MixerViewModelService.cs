@@ -2,13 +2,20 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Input;
 using ReactiveUI;
+using SonicEddy.Services.AppData;
 using SonicEddy.Services.MixerServiceV2;
 using SonicEddy.ViewModels.MixerViewModelsV2;
 
 namespace SonicEddy.Services.MixerViewModels;
 
-public class MixerViewModelService : IMixerViewModelService
+public class MixerViewModelService(
+    IAppDataService appDataService,
+    IMixerService mixerService)
+    : IMixerViewModelService
 {
+    private readonly IAppDataService _appDataService = appDataService;
+    private readonly IMixerService _mixerService = mixerService;
+
     public MixerViewModel ConvertMixerToViewModel(Mixer mixer,
         string? urlSegment, IScreen hostScreen)
     {
@@ -50,7 +57,7 @@ public class MixerViewModelService : IMixerViewModelService
             channel.SendLoopbacks, channel.FilterChain, audioFromRoutingTargets,
             audioToRoutingTargets,
             audioToRoutingTargets.First(c => c.IsMaster),
-            channel);
+            channel, _appDataService, _mixerService);
 
     private ReturnChannelViewModel ConvertReturnChannel(ReturnChannel channel,
         ICommand selectChannelCommand,

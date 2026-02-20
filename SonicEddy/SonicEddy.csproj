@@ -44,6 +44,10 @@
           <DependentUpon>ChannelDetailsSection.axaml</DependentUpon>
           <SubType>Code</SubType>
         </Compile>
+        <Compile Update="Views\MixerViewsV2\AddFilterChainView.axaml.cs">
+          <DependentUpon>AddFilterChainView.axaml</DependentUpon>
+          <SubType>Code</SubType>
+        </Compile>
     </ItemGroup>
 
     <ItemGroup>

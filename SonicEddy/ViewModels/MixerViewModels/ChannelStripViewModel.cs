@@ -19,6 +19,7 @@ using SonicEddy.Services.AppData;
 using SonicEddy.Services.MixerData;
 using SonicEddy.Tools;
 using SonicEddy.Views.MixerViews;
+using AddFilterChainView = SonicEddy.Views.MixerViewsV2.AddFilterChainView;
 
 namespace SonicEddy.ViewModels.MixerViewModels;
 

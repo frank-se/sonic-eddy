@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Fr.Wireplumber.Model.Config.FilterChain;
 using Fr.Wireplumber.Model.Objects;
 using SonicEddy.Contracts.FilterGraph;
+using SonicEddy.Conversions;
 using SonicEddy.Services.AppData;
 using SonicEddy.Services.Wireplumber;
 
@@ -25,10 +27,73 @@ public class MixerService(
         return CurrentMixer;
     }
 
-    public Task<ChannelStrip> AddFilterToChannelStrip(ulong channelId,
+    public async Task<ChannelStrip> AddFilterToChannelStrip(ulong channelId,
         FilterGraph filterGraph)
     {
-        throw new NotImplementedException();
+        var channel =
+            CurrentMixer.Channels.First(c => c.ChannelId == channelId);
+
+        var filterChainConfig = new FilterChainModuleConfig()
+        {
+            CaptureProps = new()
+            {
+                Name = $"mixer-fc-{channelId}-capture",
+                Description =
+                    $"Capture Node for Mixer Filter Channel {channelId}",
+                Linger = true,
+                AutoConnect = true,
+                DontFallback = true,
+                Passive = false,
+                TargetObject = channel.InputLoopback.PlaybackNode.ObjectSerial
+                    .ToString(),
+                MediaClass = "Stream/Input/Audio",
+                AudioPosition = ["FL", "FR"]
+            },
+            PlaybackProps = new()
+            {
+                Name = $"mixer-fc-{channelId}-playback",
+                Description =
+                    $"Playback Node for Mixer Filter Channel {channelId}",
+                Linger = true,
+                AutoConnect = true,
+                DontFallback = true,
+                Passive = false,
+                TargetObject = channel.OutputLoopback.CaptureNode.ObjectSerial
+                    .ToString(),
+                MediaClass = "Stream/Output/Audio",
+                AudioPosition = ["FL", "FR"]
+            },
+            FilterGraph = filterGraph.ToFilterGraphConfig()
+        };
+
+        var filterChain =
+            await Fr.Wireplumber.Wireplumber.ModuleFactory
+                .CreateFilterChainAsync(
+                    $"mixer-fc-{channelId}", filterChainConfig);
+
+        channel.OutputLoopback.CaptureNode.OverrideTargetObject(
+            filterChain.PlaybackNode.ObjectSerial.ToString());
+
+        foreach (var send in channel.SendLoopbacks)
+        {
+            send.CaptureNode.OverrideTargetObject(filterChain.PlaybackNode
+                .ObjectSerial.ToString());
+        }
+
+        var newChannel = channel with
+        {
+            FilterChain = filterChain
+        };
+
+        var newList = CurrentMixer.Channels.Select(c =>
+            c.ChannelId == channelId ? newChannel : c).ToList();
+
+        CurrentMixer = CurrentMixer with
+        {
+            Channels = newList
+        };
+
+        return newChannel;
     }
 
     public Task<Guid> PersistCurrentMixer()

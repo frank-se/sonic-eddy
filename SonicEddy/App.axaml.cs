@@ -72,7 +72,8 @@ public class App : Application
             .Register<Services.MixerServiceV2.IMixerService>(() =>
                 mixerServiceV2);
 
-        var mixerViewModelService = new MixerViewModelService();
+        var mixerViewModelService =
+            new MixerViewModelService(appDataService, mixerServiceV2);
         Locator.CurrentMutable.Register<IMixerViewModelService>(() =>
             mixerViewModelService);
 

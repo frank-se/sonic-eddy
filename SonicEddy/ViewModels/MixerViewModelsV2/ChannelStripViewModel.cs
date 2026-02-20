@@ -4,12 +4,17 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reactive.Disposables;
 using System.Reactive.Disposables.Fluent;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using DynamicData;
 using Fr.Wireplumber.Model.Props;
 using Fr.Wireplumber.Modules.Models;
 using ReactiveUI;
 using SonicEddy.Controls.MixerControls;
+using SonicEddy.Services.AppData;
+using SonicEddy.Services.MixerServiceV2;
+using SonicEddy.Tools;
+using SonicEddy.Views.MixerViewsV2;
 using ChannelStrip = SonicEddy.Services.MixerServiceV2.ChannelStrip;
 
 namespace SonicEddy.ViewModels.MixerViewModelsV2;
@@ -21,6 +26,8 @@ public class ChannelStripViewModel : ViewModelBase, IChannelStrip, IDisposable
     private readonly LoopbackModule _inputLoopback;
     private readonly LoopbackModule _outputLoopback;
     private readonly List<LoopbackModule> _sendLoopbacks;
+    private readonly IAppDataService _appDataService;
+    private readonly IMixerService _mixerService;
 
     public ChannelStripViewModel(ulong channelId, string text,
         ICommand selectChannelCommand, LoopbackModule inputLoopback,
@@ -29,7 +36,8 @@ public class ChannelStripViewModel : ViewModelBase, IChannelStrip, IDisposable
         List<InputChannelViewModel> audioFromRoutingTargets,
         List<OutputChannelViewModel> audioToRoutingTargets,
         OutputChannelViewModel selectedAudioToRoutingTarget,
-        ChannelStrip channelStrip)
+        ChannelStrip channelStrip, IAppDataService appDataService,
+        IMixerService mixerService)
     {
         SelectChannelCommand = selectChannelCommand;
         _inputLoopback = inputLoopback;
@@ -143,6 +151,8 @@ public class ChannelStripViewModel : ViewModelBase, IChannelStrip, IDisposable
 
         SelectedAudioToRoutingTarget = selectedAudioToRoutingTarget;
         ChannelStrip = channelStrip;
+        _appDataService = appDataService;
+        _mixerService = mixerService;
     }
 
     private void OnSend1PropertiesChanged(Properties? properties)
@@ -275,8 +285,24 @@ public class ChannelStripViewModel : ViewModelBase, IChannelStrip, IDisposable
         set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
-    public void AddFilterAction()
+    public async Task AddFilterAction()
     {
+        var dialogViewModel = new AddFilterChainViewModel(_appDataService);
+        var dialog = new AddFilterChainView()
+        {
+            DataContext = dialogViewModel
+        };
+
+        await dialog.ShowDialog(WindowTools.GetMainWindow()!);
+
+        if (dialogViewModel is
+            { DialogResult: true, SelectedFilterGraph: not null })
+        {
+            var channelStrip = await _mixerService.AddFilterToChannelStrip(
+                ChannelId,
+                dialogViewModel.SelectedFilterGraph);
+            FilterChain = channelStrip.FilterChain;
+        }
     }
 
     public void DeleteFilterAction()
