@@ -1,0 +1,63 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:graphEditorControl="clr-namespace:SonicEddy.Controls.GraphEditorControl"
+        xmlns:filterGraphBuilderViewModels="clr-namespace:SonicEddy.ViewModels.FilterGraphBuilderViewModels"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="SonicEddy.Views.FilterGraphBuilderViews.FilterGraphBuilderWindow"
+        x:DataType="filterGraphBuilderViewModels:FilterGraphBuilderViewModel"
+        x:Name="MainControl" Width="1200" Height="1000"
+        Title="Filter Graph Builder">
+
+    <DockPanel>
+
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="_File">
+                <MenuItem Header="Save ..." Command="{Binding SaveGraph}" />
+            </MenuItem>
+        </Menu>
+
+        <SplitView IsPaneOpen="True"
+                   DisplayMode="Inline"
+                   OpenPaneLength="250"
+                   PanePlacement="Right">
+            <SplitView.Pane>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding AvailablePluginsByClass}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Expander VerticalAlignment="Top"
+                                          Header="{Binding Name}"
+                                          HorizontalAlignment="Stretch">
+                                    <StackPanel>
+                                        <ItemsControl ItemsSource="{Binding Plugins}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Button Content="{Binding Description.Name}"
+                                                            HorizontalAlignment="Stretch"
+                                                            Margin="4"
+                                                            Command="{Binding #MainControl.((filterGraphBuilderViewModels:FilterGraphBuilderViewModel)DataContext).AddPlugin}"
+                                                            CommandParameter="{Binding}" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Expander>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </SplitView.Pane>
+
+            <graphEditorControl:GraphEditor
+                Background="SlateBlue"
+                GraphInputs="{Binding InputNodeViewModel}"
+                GraphOutputs="{Binding OutputNodeViewModel}"
+                GraphNodes="{Binding Nodes}"
+                GraphEdges="{Binding Connections}" />
+        </SplitView>
+
+    </DockPanel>
+
+</Window>

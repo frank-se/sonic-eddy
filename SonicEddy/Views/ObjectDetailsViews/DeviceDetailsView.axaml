@@ -10,7 +10,7 @@
         <StackPanel>
             <HeaderedContentControl Header="{Binding Title}"
                                     Margin="4">
-                <Grid ColumnDefinitions="*,3*"
+                <Grid ColumnDefinitions="*,*"
                       RowDefinitions="auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto"
                       Margin="4">
                     <Label Grid.Row="0" Grid.Column="0" Margin="2">Object Serial</Label>

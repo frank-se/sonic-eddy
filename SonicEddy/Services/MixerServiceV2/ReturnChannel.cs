@@ -6,5 +6,4 @@ public record ReturnChannel(
     string Name,
     LoopbackModule InputLoopback,
     FilterChain? FilterChain,
-    LoopbackModule OutputLoopback,
-    OutputChannel TargetObject);
+    LoopbackModule OutputLoopback);

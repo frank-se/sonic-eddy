@@ -40,7 +40,8 @@ public class RoutingComboBox : Grid
     public static readonly StyledProperty<IRoutingTarget?>
         SelectedRoutingTargetProperty =
             AvaloniaProperty.Register<RoutingComboBox, IRoutingTarget?>(
-                nameof(SelectedRoutingTarget));
+                nameof(SelectedRoutingTarget),
+                defaultBindingMode: BindingMode.TwoWay);
 
     public IRoutingTarget? SelectedRoutingTarget
     {

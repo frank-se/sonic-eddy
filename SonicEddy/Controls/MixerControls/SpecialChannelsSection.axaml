@@ -54,8 +54,6 @@
                                                           HasFilter="{Binding HasFilter}"
                                                           Volume="{Binding PanAndVolume.Volume}"
                                                           Pan="{Binding PanAndVolume.Pan}"
-                                                          AudioToRoutingTargets="{Binding RoutingTargets}"
-                                                          SelectedAudioToRoutingTarget="{Binding SelectedRoutingTarget}"
                                                           SelectCommand="{Binding OnSelectChannel}"
                                                           SelectCommandParameter="{Binding}"
                                                           AddFilterCommand="{Binding OnAddFilter}"

@@ -68,11 +68,6 @@
             <mixerControls:PanAndVolumeSection Grid.Row="8"
                                                Grid.Column="0" />
 
-            <mixerControls:RoutingComboBox Grid.Row="9"
-                                           Grid.Column="0"
-                                           Text="{Binding ComboBoxName}"
-                                           RoutingTargets="{Binding RoutingTargets}" />
-
             <mixerControls:PluginPagesSelector Grid.Row="10"
                                                Grid.Column="0"
                                                PluginPagesCounts="{Binding PageCounts}"

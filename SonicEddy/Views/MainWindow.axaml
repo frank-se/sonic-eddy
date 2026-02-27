@@ -30,100 +30,101 @@
         </Style>
     </Window.Styles>
 
-    <SplitView IsPaneOpen="True"
-               DisplayMode="Inline"
-               OpenPaneLength="200">
-        <SplitView.Pane>
-            <HeaderedContentControl Header="Menu"
-                                    Margin="4">
-                <StackPanel>
+    <DockPanel>
+
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="_File">
+                <MenuItem Header="_New" />
+                <MenuItem Header="_Load ..." />
+                <MenuItem Header="_Save" />
+                <MenuItem Header="Save As ..." />
+                <Separator />
+                <MenuItem Header="Preferences ..."
+                          Command="{Binding ShowPreferencesWindow}" />
+            </MenuItem>
+
+            <MenuItem Header="_Mixer">
+                <MenuItem Header="Add Channel ..." />
+            </MenuItem>
+
+            <MenuItem Header="Tools">
+                <MenuItem Header="Filter Graphs ..."
+                          Command="{Binding ShowFilterGraphManagerWindow}" />
+                <MenuItem Header="Modules ..."
+                          Command="{Binding ShowModuleManagerWindow}" />
+                <MenuItem Header="Metadata ..."
+                          Command="{Binding ShowMetadataBrowserWindow}" />
+                <MenuItem Header="Objects ..."
+                          Command="{Binding ShowObjectBrowserWindow}" />
+                <MenuItem Header="Virtual Inputs ..."
+                          Command="{Binding ShowVirtualInputsWindow}" />
+                <MenuItem Header="Virtual Outputs ..." />
+            </MenuItem>
+        </Menu>
+
+        <SplitView IsPaneOpen="True"
+                   DisplayMode="Inline"
+                   OpenPaneLength="120">
+            <SplitView.Pane>
+                <StackPanel Background="Black">
                     <Button HorizontalAlignment="Stretch"
                             Padding="8"
                             Margin="4"
-                            Classes.selected="{Binding MixerMenuItemSelected}"
-                            Command="{Binding NavigateToMixerAction}">
-                        Mixer
-                    </Button>
-                    <Button HorizontalAlignment="Stretch"
-                            Padding="8"
-                            Margin="4"
-                            Classes.selected="{Binding ProAudioStreamsMenuItemSelected}"
-                            Command="{Binding NavigateToProAudioStreamsAction}">
-                        Pro Audio Streams
-                    </Button>
-                    <Button HorizontalAlignment="Stretch"
-                            Padding="8"
-                            Margin="4"
-                            Classes.selected="{Binding ObjectBrowserMenuItemSelected}"
-                            Command="{Binding NavigateToObjectBrowserAction}">
-                        Object Browser
-                    </Button>
-                    <Button HorizontalAlignment="Stretch"
-                            Padding="8"
-                            Margin="4"
-                            Classes.selected="{Binding MetadataMenuItemSelected}"
-                            Command="{Binding NavigateToMetadataView}">
-                        Metadata Items
-                    </Button>
-                    <Button HorizontalAlignment="Stretch"
-                            Padding="8"
-                            Margin="4"
-                            Classes.selected="{Binding ModuleManagerViewSelected}"
-                            Command="{Binding NavigateToModuleManagerView}">
-                        Module Manager
-                    </Button>
-                    <Button HorizontalAlignment="Stretch"
-                            Padding="8"
-                            Margin="4"
-                            Classes.selected="{Binding FilterGraphBuilderViewSelected}"
-                            Command="{Binding NavigateToFilterGraphBuilderView}">
-                        Filter Graph Builder
-                    </Button>
-                    <Button HorizontalAlignment="Stretch"
-                            Padding="8"
-                            Margin="4"
-                            Classes.selected="{Binding FilterGraphManagerViewSelected}"
-                            Command="{Binding NavigateToFilterGraphManagerView}">
-                        Filter Graph Manager
-                    </Button>
-                    <Button HorizontalAlignment="Stretch"
-                            Padding="8"
-                            Margin="4"
-                            Classes.selected="{Binding MixerManagerViewSelected}"
-                            Command="{Binding NavigateToMixerManagerAction}">
-                        Mixer Manager
-                    </Button>
-                    <Button HorizontalAlignment="Stretch"
-                            Padding="8"
-                            Margin="4"
-                            Classes.selected="{Binding CustomControlTesterViewSelected}"
-                            Command="{Binding NavigateToCustomControlTesterView}">
-                        Custom Control Tester
-                    </Button>
-                    <Button HorizontalAlignment="Stretch"
-                            Padding="8"
-                            Margin="4"
-                            Classes.selected="{Binding GraphControlTesterViewSelected}"
-                            Command="{Binding NavigateToGraphControlTesterView}">
-                        Graph Control Tester
+                            Classes.selected="{Binding MixerViewV2ViewSelected}"
+                            Command="{Binding NavigateToMixerV2View}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xF6FB;"
+                                       FontFamily="{StaticResource FluentIconsRegular}"
+                                       FontSize="24"
+                                       Margin="4" />
+
+                            <TextBlock Text="MIX"
+                                       FontSize="20"
+                                       Margin="4" />
+                        </StackPanel>
                     </Button>
                     <Button HorizontalAlignment="Stretch"
                             Padding="8"
                             Margin="4"
                             Classes.selected="{Binding MidiConnectionEditorViewSelected}"
                             Command="{Binding NavigateToMidiConnectionEditorView}">
-                        Midi Connections
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xF35C;"
+                                       FontFamily="{StaticResource FluentIconsRegular}"
+                                       FontSize="24"
+                                       Margin="4" />
+
+                            <TextBlock Text="MIDI"
+                                       FontSize="20"
+                                       Margin="4" />
+                        </StackPanel>
                     </Button>
-                    <Button HorizontalAlignment="Stretch"
-                            Padding="8"
-                            Margin="4"
-                            Classes.selected="{Binding MixerViewV2ViewSelected}"
-                            Command="{Binding NavigateToMixerV2View}">
-                        MIXER
-                    </Button>
+                    <!--
+                        <Button HorizontalAlignment="Stretch"
+                                Padding="8"
+                                Margin="4"
+                                Classes.selected="{Binding MixerManagerViewSelected}"
+                                Command="{Binding NavigateToMixerManagerAction}">
+                            Mixer Manager
+                        </Button>
+                        <Button HorizontalAlignment="Stretch"
+                                Padding="8"
+                                Margin="4"
+                                Classes.selected="{Binding CustomControlTesterViewSelected}"
+                                Command="{Binding NavigateToCustomControlTesterView}">
+                            Custom Control Tester
+                        </Button>
+                        <Button HorizontalAlignment="Stretch"
+                                Padding="8"
+                                Margin="4"
+                                Classes.selected="{Binding GraphControlTesterViewSelected}"
+                                Command="{Binding NavigateToGraphControlTesterView}">
+                            Graph Control Tester
+                        </Button>
+                        -->
                 </StackPanel>
-            </HeaderedContentControl>
-        </SplitView.Pane>
-        <reactiveUi:RoutedViewHost Router="{Binding Router}" />
-    </SplitView>
+            </SplitView.Pane>
+            <reactiveUi:RoutedViewHost Router="{Binding Router}" />
+        </SplitView>
+    </DockPanel>
 </Window>

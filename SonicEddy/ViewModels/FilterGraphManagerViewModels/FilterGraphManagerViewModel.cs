@@ -2,15 +2,21 @@ using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia.Controls;
 using DynamicData;
 using ReactiveUI;
 using SonicEddy.Services.AppData;
+using SonicEddy.ViewModels.FilterGraphBuilderViewModels;
+using SonicEddy.Views.FilterGraphBuilderViews;
+using Splat;
 
 namespace SonicEddy.ViewModels.FilterGraphManagerViewModels;
 
 public class FilterGraphManagerViewModel : ViewModelBase, IRoutableViewModel,
     IActivatableViewModel
 {
+    private Window? _filterGraphBuilder;
+
     public FilterGraphManagerViewModel(IAppDataService appDataService,
         string? urlPathSegment, IScreen hostScreen)
     {
@@ -47,6 +53,25 @@ public class FilterGraphManagerViewModel : ViewModelBase, IRoutableViewModel,
     {
         _appDataService.DeleteFilterGraph(id);
         _ = Task.Run(LoadFilterGraphs);
+    }
+
+    public void ShowFilterGraphBuilderWindow()
+    {
+        if (_filterGraphBuilder is not null &&
+            _filterGraphBuilder.IsVisible) return;
+
+        var appDataService = Locator.Current.GetService<IAppDataService>();
+
+        var viewModel = new FilterGraphBuilderViewModel(appDataService!,
+            Task.Run(Fr.Lv2.Lv2.ClassDescriptions),
+            Task.Run(Fr.Lv2.Lv2.PluginDescriptions));
+
+        _filterGraphBuilder = new FilterGraphBuilderWindow()
+        {
+            DataContext = viewModel
+        };
+
+        _filterGraphBuilder.Show();
     }
 
     private readonly IAppDataService _appDataService;

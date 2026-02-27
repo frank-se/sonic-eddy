@@ -16,60 +16,136 @@
 
         <SplitView.Pane>
             <Grid RowDefinitions="*,400">
-                <mixerControls:SpecialChannelsSection Grid.Row="0"
-                                                      Grid.Column="0"
-                                                      InputChannels="{Binding InputChannels}"
-                                                      OutputChannels="{Binding OutputChannels}"
-                                                      ReturnChannels="{Binding ReturnChannels}" />
+                <ScrollViewer Grid.Row="0"
+                              Grid.Column="0"
+                              HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Disabled">
+
+                    <mixerControls:SpecialChannelsSection InputChannels="{Binding InputChannels}"
+                                                          OutputChannels="{Binding OutputChannels}"
+                                                          ReturnChannels="{Binding ReturnChannels}" />
+                </ScrollViewer>
 
                 <mixerControls:ChannelDetailsSection Grid.Row="1"
-                                                    Grid.Column="0"
-                                                    NumberOfColumns="4"
-                                                    NumberOfRows="6"
-                                                    Margin="0,6,0,0"
-                                                    ParameterCollections="{Binding SelectedChannelParameters}"
-                                                    SelectedChannel="{Binding SelectedChannel}"/>
+                                                     Grid.Column="0"
+                                                     NumberOfColumns="4"
+                                                     NumberOfRows="6"
+                                                     Margin="0,6,0,0"
+                                                     ParameterCollections="{Binding SelectedChannelParameters}"
+                                                     SelectedChannel="{Binding SelectedChannel}" />
             </Grid>
         </SplitView.Pane>
 
-        <ItemsControl ItemsSource="{Binding ChannelStrips}">
+        <StackPanel Orientation="Horizontal">
+            <ItemsControl ItemsSource="{Binding ChannelStrips}">
 
-            <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <StackPanel Orientation="Horizontal"
-                                Spacing="4" />
-                </ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="4" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
 
-            <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                    <mixerControls:ChannelStrip Text="{Binding Text}"
-                                                IsSelected="{Binding IsSelected}"
-                                                SelectCommand="{Binding OnSelectChannel}"
-                                                DeleteCommand="{Binding DeleteAction}"
-                                                AudioFromRoutingTargets="{Binding AudioFromRoutingTargets}"
-                                                SelectedAudioFromRoutingTarget="{Binding SelectedAudioFromRoutingTarget}"
-                                                Send1Trim="{Binding Send1Trim}"
-                                                Send2Trim="{Binding Send2Trim}"
-                                                Send3Trim="{Binding Send3Trim}"
-                                                Send4Trim="{Binding Send4Trim}"
-                                                HasFilter="{Binding HasFilter}"
-                                                AddFilterCommand="{Binding AddFilterAction}"
-                                                DeleteFilterCommand="{Binding DeleteFilterAction}"
-                                                FirstPluginParameters="{Binding FirstPluginParameters}"
-                                                FirstPluginText="{Binding FirstPluginText}"
-                                                SecondPluginParameters="{Binding SecondPluginParameters}"
-                                                SecondPluginText="{Binding SecondPluginText}"
-                                                ThirdPluginParameters="{Binding ThirdPluginParameters}"
-                                                ThirdPluginText="{Binding ThirdPluginText}"
-                                                Volume="{Binding PanAndVolume.Volume}"
-                                                Pan="{Binding PanAndVolume.Pan}"
-                                                AudioToRoutingTargets="{Binding AudioToRoutingTargets}"
-                                                SelectedAudioToRoutingTarget="{Binding SelectedAudioToRoutingTarget}" />
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <mixerControls:ChannelStrip Text="{Binding Text}"
+                                                    IsSelected="{Binding IsSelected}"
+                                                    SelectCommand="{Binding OnSelectChannel}"
+                                                    DeleteCommand="{Binding DeleteAction}"
+                                                    AudioFromRoutingTargets="{Binding AudioFromRoutingTargets}"
+                                                    SelectedAudioFromRoutingTarget="{Binding SelectedAudioFromRoutingTarget}"
+                                                    Send1Trim="{Binding Send1Trim}"
+                                                    Send2Trim="{Binding Send2Trim}"
+                                                    Send3Trim="{Binding Send3Trim}"
+                                                    Send4Trim="{Binding Send4Trim}"
+                                                    HasFilter="{Binding HasFilter}"
+                                                    AddFilterCommand="{Binding AddFilterAction}"
+                                                    DeleteFilterCommand="{Binding DeleteFilterAction}"
+                                                    FirstPluginParameters="{Binding FirstPluginParameters}"
+                                                    FirstPluginText="{Binding FirstPluginText}"
+                                                    SecondPluginParameters="{Binding SecondPluginParameters}"
+                                                    SecondPluginText="{Binding SecondPluginText}"
+                                                    ThirdPluginParameters="{Binding ThirdPluginParameters}"
+                                                    ThirdPluginText="{Binding ThirdPluginText}"
+                                                    Volume="{Binding PanAndVolume.Volume}"
+                                                    Pan="{Binding PanAndVolume.Pan}"
+                                                    AudioToRoutingTargets="{Binding AudioToRoutingTargets}"
+                                                    SelectedAudioToRoutingTarget="{Binding SelectedAudioToRoutingTarget}" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
 
-        </ItemsControl>
+            </ItemsControl>
 
+            <ItemsControl ItemsSource="{Binding GroupChannels}"
+                          Margin="8,0,0,0">
+
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="4" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <mixerControls:GroupChannelStrip Text="{Binding Text}"
+                                                         IsSelected="{Binding IsSelected}"
+                                                         SelectCommand="{Binding OnSelectChannel}"
+                                                         Send1Trim="{Binding Send1Trim}"
+                                                         Send2Trim="{Binding Send2Trim}"
+                                                         Send3Trim="{Binding Send3Trim}"
+                                                         Send4Trim="{Binding Send4Trim}"
+                                                         HasFilter="{Binding HasFilter}"
+                                                         AddFilterCommand="{Binding AddFilterAction}"
+                                                         DeleteFilterCommand="{Binding DeleteFilterAction}"
+                                                         FirstPluginParameters="{Binding FirstPluginParameters}"
+                                                         FirstPluginText="{Binding FirstPluginText}"
+                                                         SecondPluginParameters="{Binding SecondPluginParameters}"
+                                                         SecondPluginText="{Binding SecondPluginText}"
+                                                         ThirdPluginParameters="{Binding ThirdPluginParameters}"
+                                                         ThirdPluginText="{Binding ThirdPluginText}"
+                                                         Volume="{Binding PanAndVolume.Volume}"
+                                                         Pan="{Binding PanAndVolume.Pan}"
+                                                         AudioToRoutingTargets="{Binding AudioToRoutingTargets}"
+                                                         SelectedAudioToRoutingTarget="{Binding SelectedAudioToRoutingTarget}" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+
+            </ItemsControl>
+
+            <ItemsControl ItemsSource="{Binding MasterChannels}"
+                          Margin="8,0,0,0">
+
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="4" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <mixerControls:MasterChannelStrip Text="{Binding Text}"
+                                                          IsSelected="{Binding IsSelected}"
+                                                          SelectCommand="{Binding OnSelectChannel}"
+                                                          HasFilter="{Binding HasFilter}"
+                                                          AddFilterCommand="{Binding AddFilterAction}"
+                                                          DeleteFilterCommand="{Binding DeleteFilterAction}"
+                                                          FirstPluginParameters="{Binding FirstPluginParameters}"
+                                                          FirstPluginText="{Binding FirstPluginText}"
+                                                          SecondPluginParameters="{Binding SecondPluginParameters}"
+                                                          SecondPluginText="{Binding SecondPluginText}"
+                                                          ThirdPluginParameters="{Binding ThirdPluginParameters}"
+                                                          ThirdPluginText="{Binding ThirdPluginText}"
+                                                          Volume="{Binding PanAndVolume.Volume}"
+                                                          Pan="{Binding PanAndVolume.Pan}"
+                                                          AudioToRoutingTargets="{Binding AudioToRoutingTargets}"
+                                                          SelectedAudioToRoutingTarget="{Binding SelectedAudioToRoutingTarget}" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+
+            </ItemsControl>
+
+        </StackPanel>
     </SplitView>
 </UserControl>

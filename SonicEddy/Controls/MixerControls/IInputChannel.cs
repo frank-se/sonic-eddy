@@ -4,4 +4,5 @@ namespace SonicEddy.Controls.MixerControls;
 
 public interface IInputChannel : IChannel
 {
+    public ulong PlaybackNodeObjectSerial { get; }
 }

@@ -18,7 +18,6 @@ namespace SonicEddy.ViewModels.ProAudioStreamsViewModels;
 public class AddProAudioStreamDialogViewModel : ViewModelBase, IDisposable
 {
     private readonly CompositeDisposable _disposables = new();
-    private string _name = string.Empty;
     private string _description = string.Empty;
     private ulong _leftPortId;
     private ulong _rightPortId;
@@ -61,9 +60,9 @@ public class AddProAudioStreamDialogViewModel : ViewModelBase, IDisposable
 
     public string Name
     {
-        get => _name;
-        set => this.RaiseAndSetIfChanged(ref _name, value);
-    }
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    } = string.Empty;
 
     public string Description
     {

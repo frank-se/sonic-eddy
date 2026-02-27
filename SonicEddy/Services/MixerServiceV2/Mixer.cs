@@ -4,6 +4,8 @@ namespace SonicEddy.Services.MixerServiceV2;
 
 public record Mixer(
     string Name,
+    MasterChannel MasterChannel,
+    List<GroupChannel> GroupChannels,
     List<ChannelStrip> Channels,
     List<ReturnChannel> SendReturns,
     List<InputChannel> Inputs,

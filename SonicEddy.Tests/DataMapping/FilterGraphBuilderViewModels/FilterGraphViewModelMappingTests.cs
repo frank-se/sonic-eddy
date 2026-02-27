@@ -25,8 +25,8 @@ public class FilterGraphViewModelMappingTests
         var screen = Substitute.For<IScreen>();
 
         var viewModel =
-            new FilterGraphBuilderViewModel(appDataService, string.Empty,
-                screen, Task.FromResult<List<ClassDescription>>([]),
+            new FilterGraphBuilderViewModel(appDataService,
+                Task.FromResult<List<ClassDescription>>([]),
                 Task.FromResult<List<PluginDescription>>([]))
             {
                 Name = "My Filter Graph",
@@ -76,7 +76,7 @@ public class FilterGraphViewModelMappingTests
         var targetOutputNode = result.Nodes[1];
         Assert.IsType<FilterGraphOutput>(targetOutputNode);
         Assert.Equal(sourceOutputNode.Name, targetOutputNode.Name);
-        
+
         Assert.Fail();
         //Assert.Equal(sourceOutputNode.Id, targetOutputNode.Id);
 

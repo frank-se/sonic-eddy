@@ -1,348 +1,345 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
-using Fr.Wireplumber.Model.Config.FilterChain;
 using Fr.Wireplumber.Model.Objects;
 using SonicEddy.Contracts.FilterGraph;
-using SonicEddy.Conversions;
 using SonicEddy.Services.AppData;
+using SonicEddy.Services.Preferences;
 using SonicEddy.Services.Wireplumber;
 
 namespace SonicEddy.Services.MixerServiceV2;
 
-public class MixerService(
-    IAppDataService appDataService,
-    IWireplumberService wireplumberService) : IMixerService
+public class MixerService : IMixerService, IDisposable
 {
-    private const int InitialChannelCount = 1;
-    private const int SendChannelCount = 1;
-    private string? _masterOutputName;
+    private readonly IWireplumberService _wireplumberService;
+    private readonly IPreferenceService _preferenceService;
+    private readonly MixerEditor _editor;
+
+    public MixerService(IAppDataService appDataService,
+        IWireplumberService wireplumberService,
+        IPreferenceService preferenceService)
+    {
+        _wireplumberService = wireplumberService;
+        _preferenceService = preferenceService;
+        _editor = new(wireplumberService);
+
+        _wireplumberService.NodeAdded += OnNodeAdded;
+        _wireplumberService.NodeDeleted += OnNodeDeleted;
+    }
 
     public Mixer? CurrentMixer { get; private set; }
 
+    private readonly Lock _isModifyingLock = new Lock();
+    private bool _isModifyingMixer;
+
+    private List<ulong> _myNodeIds = [];
+
+    private readonly SemaphoreSlim _externalChange = new(1, 1);
+    private readonly SemaphoreSlim _internalChange = new(1, 1);
+
     public async Task<Mixer> NewCurrentMixer(string name)
     {
-        CurrentMixer = await Create();
+        if (_preferenceService.Preferences is null)
+            await _preferenceService.Load();
+        
+        await _externalChange.WaitAsync();
+
+        try
+        {
+            lock (_isModifyingLock)
+            {
+                _isModifyingMixer = true;
+            }
+
+            await _internalChange.WaitAsync();
+
+            try
+            {
+                CurrentMixer = await _editor.Create(_preferenceService.Preferences?.DefaultMasterOutputName);
+
+                List<IEnumerable<ulong>> ids =
+                [
+                    CurrentMixer.Channels
+                        .Select(c => c.FilterChain?.CaptureNode.ObjectSerial)
+                        .OfType<ulong>(),
+                    CurrentMixer.Channels
+                        .Select(c => c.FilterChain?.PlaybackNode.ObjectSerial)
+                        .OfType<ulong>(),
+                    CurrentMixer.Channels
+                        .Select(c => c.InputLoopback.CaptureNode.ObjectSerial),
+                    CurrentMixer.Channels
+                        .Select(c => c.InputLoopback.PlaybackNode.ObjectSerial),
+                    CurrentMixer.Channels
+                        .Select(c => c.OutputLoopback.CaptureNode.ObjectSerial),
+                    CurrentMixer.Channels
+                        .Select(c =>
+                            c.OutputLoopback.PlaybackNode.ObjectSerial),
+                    CurrentMixer.Channels
+                        .SelectMany(c =>
+                            c.SendLoopbacks.Select(s =>
+                                s.CaptureNode.ObjectSerial)),
+                    CurrentMixer.Channels
+                        .SelectMany(c =>
+                            c.SendLoopbacks.Select(s =>
+                                s.PlaybackNode.ObjectSerial)),
+                    CurrentMixer.SendReturns
+                        .Select(r => r.FilterChain?.CaptureNode.ObjectSerial)
+                        .OfType<ulong>(),
+                    CurrentMixer.SendReturns
+                        .Select(r => r.FilterChain?.PlaybackNode.ObjectSerial)
+                        .OfType<ulong>(),
+                    CurrentMixer.SendReturns
+                        .Select(r => r.InputLoopback.CaptureNode.ObjectSerial),
+                    CurrentMixer.SendReturns
+                        .Select(r => r.InputLoopback.PlaybackNode.ObjectSerial),
+                    CurrentMixer.SendReturns
+                        .Select(r => r.OutputLoopback.CaptureNode.ObjectSerial),
+                    CurrentMixer.SendReturns
+                        .Select(r =>
+                            r.OutputLoopback.PlaybackNode.ObjectSerial),
+                    CurrentMixer.GroupChannels
+                        .Select(c => c.FilterChain?.CaptureNode.ObjectSerial)
+                        .OfType<ulong>(),
+                    CurrentMixer.GroupChannels
+                        .Select(c => c.FilterChain?.PlaybackNode.ObjectSerial)
+                        .OfType<ulong>(),
+                    CurrentMixer.GroupChannels
+                        .Select(c => c.InputLoopback.CaptureNode.ObjectSerial),
+                    CurrentMixer.GroupChannels
+                        .Select(c => c.InputLoopback.PlaybackNode.ObjectSerial),
+                    CurrentMixer.GroupChannels
+                        .Select(c => c.OutputLoopback.CaptureNode.ObjectSerial),
+                    CurrentMixer.GroupChannels
+                        .Select(c =>
+                            c.OutputLoopback.PlaybackNode.ObjectSerial),
+                    CurrentMixer.GroupChannels
+                        .SelectMany(c =>
+                            c.SendLoopbacks.Select(s =>
+                                s.CaptureNode.ObjectSerial)),
+                    CurrentMixer.GroupChannels
+                        .SelectMany(c =>
+                            c.SendLoopbacks.Select(s =>
+                                s.PlaybackNode.ObjectSerial)),
+                    [
+                        CurrentMixer.MasterChannel.FilterChain?.CaptureNode
+                            .ObjectSerial ?? 0ul
+                    ],
+                    [
+                        CurrentMixer.MasterChannel.FilterChain?.PlaybackNode
+                            .ObjectSerial ?? 0ul
+                    ],
+                    [
+                        CurrentMixer.MasterChannel.InputLoopback.CaptureNode
+                            .ObjectSerial
+                    ],
+                    [
+                        CurrentMixer.MasterChannel.InputLoopback.PlaybackNode
+                            .ObjectSerial
+                    ],
+                    [
+                        CurrentMixer.MasterChannel.OutputLoopback.CaptureNode
+                            .ObjectSerial
+                    ],
+                    [
+                        CurrentMixer.MasterChannel.OutputLoopback.PlaybackNode
+                            .ObjectSerial
+                    ],
+                ];
+
+                _myNodeIds = ids.SelectMany(i => i).ToList();
+            }
+            finally
+            {
+                _internalChange.Release();
+            }
+
+            lock (_isModifyingLock)
+            {
+                _isModifyingMixer = false;
+            }
+
+            await FinishPendingAddNodeEvents();
+        }
+        finally
+        {
+            _externalChange.Release();
+        }
+
         return CurrentMixer;
+    }
+
+    public async Task<Mixer?> GetAndLock()
+    {
+        if (CurrentMixer is null) return null;
+
+        await _externalChange.WaitAsync();
+
+        lock (_isModifyingLock)
+        {
+            _isModifyingMixer = true;
+        }
+
+        await _internalChange.WaitAsync();
+        return CurrentMixer;
+    }
+
+    public async Task Unlock()
+    {
+        _internalChange.Release();
+
+        lock (_isModifyingLock)
+        {
+            _isModifyingMixer = false;
+        }
+
+        try
+        {
+            await FinishPendingAddNodeEvents();
+        }
+        finally
+        {
+            _externalChange.Release();
+        }
     }
 
     public async Task<ChannelStrip> AddFilterToChannelStrip(ulong channelId,
         FilterGraph filterGraph)
     {
-        var channel =
-            CurrentMixer.Channels.First(c => c.ChannelId == channelId);
+        await _externalChange.WaitAsync();
 
-        var filterChainConfig = new FilterChainModuleConfig()
+        try
         {
-            CaptureProps = new()
+            lock (_isModifyingLock)
             {
-                Name = $"mixer-fc-{channelId}-capture",
-                Description =
-                    $"Capture Node for Mixer Filter Channel {channelId}",
-                Linger = true,
-                AutoConnect = true,
-                DontFallback = true,
-                Passive = false,
-                TargetObject = channel.InputLoopback.PlaybackNode.ObjectSerial
-                    .ToString(),
-                MediaClass = "Stream/Input/Audio",
-                AudioPosition = ["FL", "FR"]
-            },
-            PlaybackProps = new()
+                _isModifyingMixer = true;
+            }
+
+            if (CurrentMixer is null)
+                throw new InvalidOperationException("CurrentMixer is null");
+
+            await _internalChange.WaitAsync();
+
+            try
             {
-                Name = $"mixer-fc-{channelId}-playback",
-                Description =
-                    $"Playback Node for Mixer Filter Channel {channelId}",
-                Linger = true,
-                AutoConnect = true,
-                DontFallback = true,
-                Passive = false,
-                TargetObject = channel.OutputLoopback.CaptureNode.ObjectSerial
-                    .ToString(),
-                MediaClass = "Stream/Output/Audio",
-                AudioPosition = ["FL", "FR"]
-            },
-            FilterGraph = filterGraph.ToFilterGraphConfig()
-        };
+                CurrentMixer = await _editor.AddFilterToChannelStrip(
+                    CurrentMixer,
+                    channelId,
+                    filterGraph);
 
-        var filterChain =
-            await Fr.Wireplumber.Wireplumber.ModuleFactory
-                .CreateFilterChainAsync(
-                    $"mixer-fc-{channelId}", filterChainConfig);
+                var modifiedChannel =
+                    CurrentMixer.Channels.First(c => c.ChannelId == channelId);
 
-        channel.OutputLoopback.CaptureNode.OverrideTargetObject(
-            filterChain.PlaybackNode.ObjectSerial.ToString());
+                List<ulong?> ids =
+                [
+                    modifiedChannel.FilterChain?.CaptureNode.ObjectSerial,
+                    modifiedChannel.FilterChain?.PlaybackNode.ObjectSerial,
+                ];
 
-        foreach (var send in channel.SendLoopbacks)
+                _myNodeIds.AddRange(ids.OfType<ulong>());
+            }
+            finally
+            {
+                _internalChange.Release();
+            }
+
+            lock (_isModifyingLock)
+            {
+                _isModifyingMixer = false;
+            }
+
+            await FinishPendingAddNodeEvents();
+        }
+        finally
         {
-            send.CaptureNode.OverrideTargetObject(filterChain.PlaybackNode
-                .ObjectSerial.ToString());
+            _externalChange.Release();
         }
 
-        var newChannel = channel with
+        return CurrentMixer.Channels.First(c => c.ChannelId == channelId);
+    }
+
+    public event Action<List<InputChannel>>? InputsChanged;
+    public event Action<List<OutputChannel>>? OutputsChanged;
+
+    private readonly Queue<Node> _pendingAddedNodes = [];
+
+    private void OnNodeAdded(Node node)
+    {
+        lock (_isModifyingLock)
         {
-            FilterChain = filterChain
-        };
-
-        var newList = CurrentMixer.Channels.Select(c =>
-            c.ChannelId == channelId ? newChannel : c).ToList();
-
-        CurrentMixer = CurrentMixer with
-        {
-            Channels = newList
-        };
-
-        return newChannel;
-    }
-
-    public Task<Guid> PersistCurrentMixer()
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<Mixer> RestoreMixer(Guid id)
-    {
-        throw new NotImplementedException();
-    }
-
-    public void DeleteMixer(Guid id)
-    {
-        throw new NotImplementedException();
-    }
-
-    private async Task<Mixer> Create()
-    {
-        var outputChannels = CreateOutputChannels();
-
-        if (_masterOutputName is null)
-            outputChannels.First().IsMaster = true;
-
-        var inputChannels = CreateInputChannels();
-
-        var master = outputChannels.First(c => c.IsMaster);
-
-        var returns = await CreateReturnChannels(master);
-
-        var channels = await CreateChannels(returns, master);
-
-        return new Mixer(
-            "Mixer",
-            channels,
-            returns,
-            inputChannels,
-            outputChannels);
-    }
-
-    private const string CaptureNodeMediaClass = "Stream/Input/Audio";
-    private const string PlaybackNodeMediaClass = "Stream/Output/Audio";
-    private static readonly List<string> StereoAudioPosition = ["FL", "FR"];
-
-    private List<OutputChannel> CreateOutputChannels()
-    {
-        var captureNodes = wireplumberService.GetCaptureNodes();
-        return captureNodes.Select(CreateOutputChannel).ToList();
-    }
-
-    private static OutputChannel CreateOutputChannel(Node captureNode) =>
-        new OutputChannel(captureNode.Name ?? "Unknown", captureNode);
-
-    private List<InputChannel> CreateInputChannels()
-    {
-        var playbackNodes = wireplumberService.GetPlaybackNodes();
-        return playbackNodes.Select(CreateInputChannel).ToList();
-    }
-
-    private static InputChannel CreateInputChannel(Node playbackNode) =>
-        new InputChannel(playbackNode.Name ?? "Unknown", playbackNode);
-
-    private async Task<List<ReturnChannel>> CreateReturnChannels(
-        OutputChannel master) =>
-        (await Task.WhenAll(
-            Enumerable.Range(1, SendChannelCount)
-                .Select(i => CreateReturnChannel(i, master))))
-        .ToList();
-
-    private async Task<ReturnChannel> CreateReturnChannel(int sendId,
-        OutputChannel master)
-    {
-        var inputLoopback = await wireplumberService.CreateLoopbackModule(
-            $"return-input-loopback-{sendId}", new()
+            if (_isModifyingMixer)
             {
-                CaptureProps = new()
-                {
-                    Linger = true,
-                    Name = $"return-{sendId}-input-loopback-capture",
-                    Description = $"return-{sendId}-input-loopback-capture",
-                    MediaClass = CaptureNodeMediaClass,
-                    AutoConnect = false
-                },
-                PlaybackProps = new()
-                {
-                    Linger = true,
-                    Name = $"return-{sendId}-input-loopback-playback",
-                    Description =
-                        $"return-{sendId}-input-loopback-playback",
-                    AudioPosition = StereoAudioPosition,
-                    MediaClass = PlaybackNodeMediaClass,
-                    AutoConnect = false,
-                    DontFallback = true,
-                }
-            });
-
-        var outputLoopback = await wireplumberService.CreateLoopbackModule(
-            $"return-output-loopback-{sendId}", new()
-            {
-                CaptureProps = new()
-                {
-                    Linger = true,
-                    Name = $"return-{sendId}-output-loopback-capture",
-                    Description =
-                        $"return-{sendId}-output-loopback-capture",
-                    MediaClass = CaptureNodeMediaClass,
-                    TargetObject =
-                        inputLoopback.PlaybackNode.ObjectSerial.ToString(),
-                    AutoConnect = true,
-                    DontFallback = true
-                },
-                PlaybackProps = new()
-                {
-                    Linger = true,
-                    Name = $"return-{sendId}-output-loopback-playback",
-                    Description =
-                        $"return-{sendId}-output-loopback-playback",
-                    AudioPosition = StereoAudioPosition,
-                    MediaClass = PlaybackNodeMediaClass,
-                    AutoConnect = true,
-                    DontFallback = true,
-                    TargetObject = master.CaptureNode.ObjectSerial.ToString()
-                }
-            });
-
-        return new(
-            $"Return {sendId}",
-            inputLoopback,
-            null,
-            outputLoopback,
-            master);
-    }
-
-    private async Task<List<ChannelStrip>> CreateChannels(
-        List<ReturnChannel> returnChannels, OutputChannel master)
-    {
-        var channelIds = Enumerable.Range(1, InitialChannelCount);
-        var channels = new List<ChannelStrip>();
-        foreach (var channelId in channelIds)
-        {
-            var strip = await CreateChannelStrip(
-                $"Channel {channelId}",
-                (ulong)channelId,
-                returnChannels, master);
-            channels.Add(strip);
+                _pendingAddedNodes.Enqueue(node);
+                return;
+            }
         }
 
-        return channels;
+        _ = ProcessNodeAddedEvent(node);
     }
 
-    private async Task<ChannelStrip> CreateChannelStrip(
-        string name, ulong channelId, List<ReturnChannel> returnChannels,
-        OutputChannel master)
+    private async Task FinishPendingAddNodeEvents()
     {
-        var inputLoopback = await wireplumberService.CreateLoopbackModule(
-            $"input-loopback-{channelId}", new()
+        Queue<Node> toProcess;
+        lock (_isModifyingLock)
+        {
+            toProcess = new(_pendingAddedNodes);
+            _pendingAddedNodes.Clear();
+        }
+
+        while (toProcess.Count > 0)
+        {
+            var e = toProcess.Dequeue();
+            await ProcessNodeAddedEvent(e);
+        }
+    }
+
+    private async Task ProcessNodeAddedEvent(Node node)
+    {
+        await _internalChange.WaitAsync();
+
+        var inputsChanged = false;
+        var outputsChanged = false;
+
+        try
+        {
+            if (CurrentMixer is not null &&
+                !_myNodeIds.Contains(node.ObjectSerial))
             {
-                CaptureProps = new()
+                if (_wireplumberService.IsPlaybackNode(node))
                 {
-                    Linger = true,
-                    Name = $"channel-{channelId}-input-loopback-capture",
-                    Description = $"channel-{channelId}-input-loopback-capture",
-                    MediaClass = CaptureNodeMediaClass,
-                    DontFallback = true,
-                    TargetObject = 0.ToString()
-                },
-                PlaybackProps = new()
-                {
-                    Linger = true,
-                    Name = $"channel-{channelId}-input-loopback-playback",
-                    Description =
-                        $"channel-{channelId}-input-loopback-playback",
-                    AudioPosition = StereoAudioPosition,
-                    MediaClass = PlaybackNodeMediaClass,
-                    DontFallback = true,
-                    AutoConnect = false
+                    var input = new InputChannel(node.Description ?? "Unknown",
+                        node);
+                    CurrentMixer.Inputs.Add(input);
+                    inputsChanged = true;
                 }
-            });
-
-        var outputLoopback = await wireplumberService.CreateLoopbackModule(
-            $"output-loopback-{channelId}", new()
-            {
-                CaptureProps = new()
+                else if (_wireplumberService.IsCaptureNode(node))
                 {
-                    Linger = true,
-                    Name = $"channel-{channelId}-output-loopback-capture",
-                    Description =
-                        $"channel-{channelId}-output-loopback-capture",
-                    DontFallback = true,
-                    MediaClass = CaptureNodeMediaClass,
-                    TargetObject =
-                        inputLoopback.PlaybackNode.ObjectSerial.ToString(),
-                },
-                PlaybackProps = new()
-                {
-                    Linger = true,
-                    Name = $"channel-{channelId}-output-loopback-playback",
-                    Description =
-                        $"channel-{channelId}-output-loopback-playback",
-                    AudioPosition = StereoAudioPosition,
-                    MediaClass = PlaybackNodeMediaClass,
-                    DontFallback = true,
-                    AutoConnect = true,
-                    TargetObject = master.CaptureNode.ObjectSerial.ToString()
+                    var output =
+                        new OutputChannel(node.Description ?? "Unknown", node);
+                    CurrentMixer.Outputs.Add(output);
+                    outputsChanged = true;
                 }
-            });
+            }
+        }
+        finally
+        {
+            _internalChange.Release();
+        }
 
-        var sendLoopbacks = await Task.WhenAll(Enumerable
-            .Range(1, SendChannelCount)
-            .Select(i =>
-                wireplumberService.CreateLoopbackModule(
-                    $"send-loopback-{channelId}-send-{i}", new()
-                    {
-                        CaptureProps = new()
-                        {
-                            Linger = true,
-                            Name =
-                                $"channel-{channelId}-send-{i}-loopback-capture",
-                            Description =
-                                $"channel-{channelId}-send-{i}-loopback-capture",
-                            MediaClass = CaptureNodeMediaClass,
-                            TargetObject =
-                                inputLoopback.PlaybackNode.ObjectSerial
-                                    .ToString(),
-                            DontFallback = true,
-                        },
-                        PlaybackProps = new()
-                        {
-                            Linger = true,
-                            Name =
-                                $"channel-{channelId}-send-{i}-loopback-playback",
-                            Description =
-                                $"channel-{channelId}-send-{i}-loopback-playback",
-                            AudioPosition = StereoAudioPosition,
-                            MediaClass = PlaybackNodeMediaClass,
-                            TargetObject = returnChannels[i - 1].InputLoopback
-                                .CaptureNode.ObjectSerial.ToString(),
-                            DontFallback = true,
-                        }
-                    })));
+        if (inputsChanged) InputsChanged?.Invoke(CurrentMixer!.Inputs);
+        if (outputsChanged) OutputsChanged?.Invoke(CurrentMixer!.Outputs);
+    }
 
-        return new(
-            name,
-            channelId,
-            inputLoopback,
-            null,
-            outputLoopback,
-            sendLoopbacks.ToList(),
-            null,
-            null);
+    private void OnNodeDeleted(Node node)
+    {
+    }
+
+    public void Dispose()
+    {
+        _wireplumberService.NodeAdded -= OnNodeAdded;
+        _wireplumberService.NodeDeleted -= OnNodeDeleted;
+        
+        GC.SuppressFinalize(this);
     }
 }

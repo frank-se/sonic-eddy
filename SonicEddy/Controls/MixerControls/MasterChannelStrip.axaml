@@ -1,0 +1,55 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:mixerControls="clr-namespace:SonicEddy.Controls.MixerControls"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="SonicEddy.Controls.MixerControls.MasterChannelStrip">
+    
+    <Panel Background="DarkRed">
+        <Grid ColumnDefinitions="120"
+              RowDefinitions="Auto,Auto,100,100,100,*,Auto"
+              Margin="2">
+
+            <mixerControls:ChannelHeader Grid.Row="0"
+                                         Text="{Binding $parent[mixerControls:MasterChannelStrip].Text}"
+                                         DeleteCommand="{Binding $parent[mixerControls:MasterChannelStrip].DeleteCommand}"
+                                         DeleteCommandParameter="{Binding $parent[mixerControls:MasterChannelStrip].DeleteCommandParameter}"
+                                         IsSelected="{Binding $parent[mixerControls:MasterChannelStrip].IsSelected}"
+                                         SelectCommand="{Binding $parent[mixerControls:MasterChannelStrip].SelectCommand}"
+                                         SelectCommandParameter="{Binding $parent[mixerControls:MasterChannelStrip].SelectCommandParameter}" />
+
+            <mixerControls:FilterSectionHeader Grid.Row="1"
+                                               HasFilter="{Binding $parent[mixerControls:MasterChannelStrip].HasFilter}"
+                                               AddCommand="{Binding $parent[mixerControls:MasterChannelStrip].AddFilterCommand}"
+                                               AddCommandParameter="{Binding $parent[mixerControls:MasterChannelStrip].AddFilterCommandParameter}"
+                                               DeleteCommand="{Binding $parent[mixerControls:MasterChannelStrip].DeleteFilterCommand}"
+                                               DeleteCommandParameter="{Binding $parent[mixerControls:MasterChannelStrip].DeleteFilterCommandParameter}" />
+
+            <mixerControls:ParameterSection Grid.Row="2"
+                                            Margin="4"
+                                            Parameters="{Binding $parent[mixerControls:MasterChannelStrip].FirstPluginParameters}"
+                                            Text="{Binding $parent[mixerControls:MasterChannelStrip].FirstPluginText}" />
+
+            <mixerControls:ParameterSection Grid.Row="3"
+                                            Margin="4"
+                                            Parameters="{Binding $parent[mixerControls:MasterChannelStrip].SecondPluginParameters}"
+                                            Text="{Binding $parent[mixerControls:MasterChannelStrip].SecondPluginText}" />
+
+            <mixerControls:ParameterSection Grid.Row="4"
+                                            Margin="4"
+                                            Parameters="{Binding $parent[mixerControls:MasterChannelStrip].ThirdPluginParameters}"
+                                            Text="{Binding $parent[mixerControls:MasterChannelStrip].ThirdPluginText}" />
+
+            <mixerControls:PanAndVolumeSection Grid.Row="5"
+                                               Volume="{Binding $parent[mixerControls:MasterChannelStrip].Volume}"
+                                               Pan="{Binding $parent[mixerControls:MasterChannelStrip].Pan}" />
+
+            <mixerControls:RoutingComboBox Grid.Row="6"
+                                           Text="Audio To"
+                                           SelectedRoutingTarget="{Binding $parent[mixerControls:MasterChannelStrip].SelectedAudioToRoutingTarget}"
+                                           RoutingTargets="{Binding $parent[mixerControls:MasterChannelStrip].AudioToRoutingTargets}" />
+        </Grid>
+    </Panel>
+    
+</UserControl>

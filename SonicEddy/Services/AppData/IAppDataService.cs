@@ -16,4 +16,9 @@ public interface IAppDataService
     Task<Mixer> GetMixer(Guid id);
     Task CreateMixer(Mixer mixer);
     void DeleteMixer(Guid id);
+
+    Task StorePreferences(
+        Contracts.ApplicationPreferences.Preferences preferences);
+
+    Task<Contracts.ApplicationPreferences.Preferences?> LoadPreferences();
 }

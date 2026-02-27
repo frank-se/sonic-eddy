@@ -10,11 +10,12 @@ namespace SonicEddy.ViewModels.MixerViewModelsV2;
 public class OutputChannelViewModel(
     string text,
     ICommand selectChannelCommand,
-    Node captureNode,
-    bool isMaster)
+    Node captureNode)
     : ReactiveObject, IOutputChannel,
         IDisposable, IRoutingTarget
 {
+    public IChannel Channel => this;
+
     public IPanAndVolume PanAndVolume { get; } =
         new PanAndVolumeViewModel(captureNode);
 
@@ -27,12 +28,6 @@ public class OutputChannelViewModel(
         get;
         set => this.RaiseAndSetIfChanged(ref field, value);
     }
-
-    public bool IsMaster
-    {
-        get;
-        set => this.RaiseAndSetIfChanged(ref field, value);
-    } = isMaster;
 
     public List<ParameterCollection>? Parameters => [];
 
@@ -48,4 +43,6 @@ public class OutputChannelViewModel(
 
         GC.SuppressFinalize(this);
     }
+
+    public ulong CaptureNodeObjectSerial => captureNode.ObjectSerial;
 }

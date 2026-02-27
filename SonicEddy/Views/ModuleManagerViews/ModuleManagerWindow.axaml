@@ -1,0 +1,54 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:moduleViewModels="clr-namespace:SonicEddy.ViewModels.ModuleManagerViewModels"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="SonicEddy.Views.ModuleManagerViews.ModuleManagerWindow"
+        x:Name="MainControl" Width="800" Height="1000"
+        x:DataType="moduleViewModels:ModuleManagerViewModel"
+        Title="Module Manager">
+    
+    <SplitView IsPaneOpen="True"
+               DisplayMode="Inline"
+               PanePlacement="Right"
+               OpenPaneLength="200">
+        <SplitView.Pane>
+            <HeaderedContentControl Header="Active Modules"
+                                    Margin="4">
+                <Grid RowDefinitions="Auto,*">
+                    <Panel Grid.Row="0">
+                        <Button Content="&#xE005;"
+                                FontFamily="{StaticResource FluentIconsRegular}"
+                                FontSize="20"
+                                ToolTip.Tip="Create Module ..."
+                                Padding="8"
+                                Margin="4"
+                                Command="{Binding CreateModule}" />
+                    </Panel>
+
+                    <ItemsControl Grid.Row="1"
+                                  ItemsSource="{Binding Modules}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button HorizontalAlignment="Stretch"
+                                        Padding="8"
+                                        Margin="4"
+                                        Content="{Binding Name}"
+                                        Command="{Binding #MainControl.((moduleViewModels:ModuleManagerViewModel)DataContext).SetSelectedModule}"
+                                        CommandParameter="{Binding}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Grid>
+            </HeaderedContentControl>
+        </SplitView.Pane>
+
+        <HeaderedContentControl Header="Module Details"
+                                Margin="4">
+            <ContentControl Grid.Row="1"
+                            Content="{Binding SelectedModuleViewModel}" />
+        </HeaderedContentControl>
+    </SplitView>
+    
+</Window>

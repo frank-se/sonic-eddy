@@ -18,17 +18,13 @@ using SonicEddy.Views.SaveFilterGraphDialogViews;
 
 namespace SonicEddy.ViewModels.FilterGraphBuilderViewModels;
 
-public class FilterGraphBuilderViewModel : ViewModelBase, IActivatableViewModel,
-    IRoutableViewModel
+public class FilterGraphBuilderViewModel : ViewModelBase, IActivatableViewModel
 {
     public FilterGraphBuilderViewModel(IAppDataService appDataService,
-        string? urlPathSegment, IScreen hostScreen,
         Task<List<ClassDescription>> pluginClasses,
         Task<List<PluginDescription>> pluginDescriptions)
     {
         _appDataService = appDataService;
-        UrlPathSegment = urlPathSegment;
-        HostScreen = hostScreen;
 
         _ = Task.Run(() =>
             BuildPluginClasses(pluginClasses, pluginDescriptions));

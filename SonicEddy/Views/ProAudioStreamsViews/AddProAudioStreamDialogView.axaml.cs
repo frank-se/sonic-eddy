@@ -9,7 +9,7 @@ using SonicEddy.ViewModels.ProAudioStreamsViewModels;
 
 namespace SonicEddy.Views.ProAudioStreamsViews;
 
-public partial class AddProAudioStreamDialogView : Window
+public partial class AddProAudioStreamDialogView : Window, IDisposable
 {
     private readonly CompositeDisposable _disposables = new();
 
@@ -36,5 +36,10 @@ public partial class AddProAudioStreamDialogView : Window
     {
         _disposables.Dispose();
         base.OnClosed(e);
+    }
+
+    public void Dispose()
+    {
+        _disposables.Dispose();
     }
 }

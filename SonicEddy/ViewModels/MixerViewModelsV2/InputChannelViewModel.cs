@@ -13,6 +13,8 @@ public class InputChannelViewModel(
     Node playbackNode)
     : ReactiveObject, IInputChannel, IDisposable, IRoutingTarget
 {
+    public IChannel Channel => this;
+
     public IPanAndVolume PanAndVolume { get; } =
         new PanAndVolumeViewModel(playbackNode);
 
@@ -42,4 +44,6 @@ public class InputChannelViewModel(
     }
 
     public string Name { get; } = text;
+
+    public ulong PlaybackNodeObjectSerial => _playbackNode.ObjectSerial;
 }

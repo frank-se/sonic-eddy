@@ -58,16 +58,6 @@ public class CustomControlTesterViewModel : ViewModelBase,
         },
     ];
 
-    public ObservableCollection<IRoutingTarget> RoutingTargets { get; } =
-    [
-        new TestRoutingTarget() { Name = "Target 1" },
-        new TestRoutingTarget() { Name = "Target 2" },
-        new TestRoutingTarget() { Name = "Target 3" },
-        new TestRoutingTarget() { Name = "Target 4" },
-        new TestRoutingTarget() { Name = "Target 5" },
-        new TestRoutingTarget() { Name = "Target 6" },
-    ];
-
     public string ComboBoxName { get; } = "Route to";
 
     public bool IsSelected

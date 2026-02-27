@@ -10,7 +10,8 @@ namespace SonicEddy.Services.AppData;
 
 public class AppDataService(
     string filterGraphFolderPath,
-    string mixerFolderPath) : IAppDataService
+    string mixerFolderPath,
+    string preferencesFolderPath) : IAppDataService
 {
     private readonly AppDataServiceBase<FilterGraph>
         _filterGraphAppDataService =
@@ -39,4 +40,27 @@ public class AppDataService(
         _mixerAppDataService.Create(mixer.Id, mixer);
 
     public void DeleteMixer(Guid id) => _mixerAppDataService.Delete(id);
+
+    public async Task StorePreferences(
+        Contracts.ApplicationPreferences.Preferences preferences)
+    {
+        var filePath = Path.Combine(preferencesFolderPath, "preferences.grpc");
+        var file = File.Create(filePath);
+        Serializer.Serialize(file, preferences);
+        await file.FlushAsync();
+        file.Close();
+    }
+
+    public async Task<Contracts.ApplicationPreferences.Preferences?>
+        LoadPreferences()
+    {
+        var filePath = Path.Combine(preferencesFolderPath, "preferences.grpc");
+        if (!File.Exists(filePath)) return null;
+
+        var bytes = await File.ReadAllBytesAsync(filePath);
+        using var memoryStream = new MemoryStream(bytes);
+        return Serializer
+            .Deserialize<Contracts.ApplicationPreferences.Preferences>(
+                memoryStream);
+    }
 }

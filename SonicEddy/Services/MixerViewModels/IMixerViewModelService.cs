@@ -1,11 +1,32 @@
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Threading.Tasks;
+using System.Windows.Input;
 using ReactiveUI;
+using SonicEddy.Controls.MixerControls;
 using SonicEddy.Services.MixerServiceV2;
 using SonicEddy.ViewModels.MixerViewModelsV2;
+using ChannelStrip = SonicEddy.Services.MixerServiceV2.ChannelStrip;
 
 namespace SonicEddy.Services.MixerViewModels;
 
 public interface IMixerViewModelService
 {
-    MixerViewModel ConvertMixerToViewModel(Mixer mixer,
-        string? urlSegment, IScreen hostScreen);
+    Task<MixerViewModel?> ConvertCurrentMixerToViewModel(
+        string? urlSegment,
+        IScreen hostScreen);
+
+    InputChannelViewModel ConvertInputChannel(
+        InputChannel channel,
+        ICommand selectChannelCommand);
+
+    OutputChannelViewModel ConvertOutputChannel(
+        OutputChannel channel,
+        ICommand selectChannelCommand);
+
+    ChannelStripViewModel ConvertChannelStrip(ChannelStrip channel,
+        ICommand selectedChannelCommand,
+        ObservableCollection<IRoutingTarget> audioFromRoutingTargets,
+        ObservableCollection<IRoutingTarget> audioToRoutingTargets,
+        MasterChannelViewModel masterChannel);
 }

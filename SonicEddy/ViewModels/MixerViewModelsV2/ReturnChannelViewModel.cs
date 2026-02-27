@@ -20,7 +20,7 @@ public class ReturnChannelViewModel : ReactiveObject, IReturnChannel,
 
     public ReturnChannelViewModel(string text, ICommand selectChannelCommand,
         LoopbackModule inputLoopback, LoopbackModule outbackLoopback,
-        FilterChain? filterChain, List<InputChannelViewModel> routingTargets)
+        FilterChain? filterChain)
     {
         Text = text;
         SelectChannelCommand = selectChannelCommand;
@@ -45,7 +45,8 @@ public class ReturnChannelViewModel : ReactiveObject, IReturnChannel,
                     !chain.CaptureNode.PropertyInfos.IsCompleted)
                     return;
 
-                Parameters = ConversionHelper.GetCollectionFromFilterChainParams(
+                Parameters =
+                    ConversionHelper.GetCollectionFromFilterChainParams(
                         chain.CaptureNode.Params.Result,
                         chain.CaptureNode.PropertyInfos.Result,
                         chain.CaptureNode);
@@ -57,8 +58,6 @@ public class ReturnChannelViewModel : ReactiveObject, IReturnChannel,
         PanAndVolume = new PanAndVolumeViewModel(outbackLoopback.PlaybackNode);
 
         FilterChain = filterChain;
-
-        RoutingTargets = new(routingTargets);
     }
 
     public FilterChain? FilterChain
@@ -90,14 +89,6 @@ public class ReturnChannelViewModel : ReactiveObject, IReturnChannel,
     public IPanAndVolume PanAndVolume { get; }
 
     public ICommand SelectChannelCommand { get; set; }
-
-    public ObservableCollection<IRoutingTarget> RoutingTargets { get; }
-
-    public IRoutingTarget? SelectedRoutingTarget
-    {
-        get;
-        set => this.RaiseAndSetIfChanged(ref field, value);
-    }
 
     public void OnSelectChannel() =>
         SelectChannelCommand.Execute(this);

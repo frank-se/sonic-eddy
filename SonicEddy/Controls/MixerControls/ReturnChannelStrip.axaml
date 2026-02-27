@@ -8,7 +8,7 @@
 
     <Panel Background="BlueViolet">
         <Grid ColumnDefinitions="100"
-              RowDefinitions="Auto,Auto,*,Auto"
+              RowDefinitions="Auto,Auto,*"
               Margin="2">
 
             <mixerControls:ChannelHeader Grid.Row="0"
@@ -28,11 +28,6 @@
             <mixerControls:PanAndVolumeSection Grid.Row="2"
                                                Volume="{Binding $parent[mixerControls:ChannelStrip].Volume}"
                                                Pan="{Binding $parent[mixerControls:ChannelStrip].Pan}" />
-
-            <mixerControls:RoutingComboBox Grid.Row="3"
-                                           Text="Audio To"
-                                           SelectedRoutingTarget="{Binding $parent[mixerControls:ChannelStrip].SelectedAudioToRoutingTarget}"
-                                           RoutingTargets="{Binding $parent[mixerControls:ChannelStrip].AudioToRoutingTargets}" />
 
         </Grid>
     </Panel>

@@ -91,7 +91,8 @@ public partial class ChannelStrip : UserControl
     public static readonly StyledProperty<IRoutingTarget?>
         SelectedAudioFromRoutingTargetProperty =
             AvaloniaProperty.Register<ChannelStrip, IRoutingTarget?>(
-                nameof(SelectedAudioFromRoutingTarget));
+                nameof(SelectedAudioFromRoutingTarget),
+                defaultBindingMode: BindingMode.TwoWay);
 
     public IRoutingTarget? SelectedAudioFromRoutingTarget
     {
@@ -331,7 +332,8 @@ public partial class ChannelStrip : UserControl
     public static readonly StyledProperty<IRoutingTarget?>
         SelectedAudioToRoutingTargetProperty =
             AvaloniaProperty.Register<ChannelStrip, IRoutingTarget?>(
-                nameof(SelectedAudioToRoutingTarget));
+                nameof(SelectedAudioToRoutingTarget),
+                defaultBindingMode: BindingMode.TwoWay);
 
     public IRoutingTarget? SelectedAudioToRoutingTarget
     {

@@ -1,7 +1,5 @@
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
-using Fr.Wireplumber.Model.Objects;
-using Fr.Wireplumber.Modules.Models;
 
 namespace SonicEddy.Controls.MixerControls;
 
