@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Reflection;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
@@ -101,7 +102,8 @@ public class App : Application
         Locator.CurrentMutable.Register<IMixerViewModelService>(() =>
             mixerViewModelService);
 
+        Locator.CurrentMutable.RegisterViewsForViewModels(Assembly.GetExecutingAssembly());
+        
         Locator.CurrentMutable.Register(() => new MainWindowViewModel());
-        Locator.CurrentMutable.Register<IViewLocator>(() => new ViewLocator());
     }
 }
