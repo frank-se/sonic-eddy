@@ -7,6 +7,7 @@ using System.Windows.Input;
 using Fr.Wireplumber.Modules.Models;
 using ReactiveUI;
 using SonicEddy.Controls.MixerControls;
+using SonicEddy.Services.Monitoring;
 
 namespace SonicEddy.ViewModels.MixerViewModelsV2;
 
@@ -20,7 +21,7 @@ public class ReturnChannelViewModel : ReactiveObject, IReturnChannel,
 
     public ReturnChannelViewModel(string text, ICommand selectChannelCommand,
         LoopbackModule inputLoopback, LoopbackModule outbackLoopback,
-        FilterChain? filterChain)
+        FilterChain? filterChain, IMonitoringService monitoringService)
     {
         Text = text;
         SelectChannelCommand = selectChannelCommand;
@@ -55,7 +56,8 @@ public class ReturnChannelViewModel : ReactiveObject, IReturnChannel,
             })
             .DisposeWith(_disposable!);
 
-        PanAndVolume = new PanAndVolumeViewModel(outbackLoopback.PlaybackNode);
+        PanAndVolume = new PanAndVolumeViewModel(outbackLoopback.PlaybackNode,
+            monitoringService);
 
         FilterChain = filterChain;
     }

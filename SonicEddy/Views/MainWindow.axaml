@@ -99,6 +99,13 @@
                                        Margin="4" />
                         </StackPanel>
                     </Button>
+                    <Button HorizontalAlignment="Stretch"
+                            Padding="8"
+                            Margin="4"
+                            Classes.selected="{Binding CustomControlTesterViewSelected}"
+                            Command="{Binding NavigateToCustomControlTesterView}">
+                        Custom Control Tester
+                    </Button>
                     <!--
                         <Button HorizontalAlignment="Stretch"
                                 Padding="8"
@@ -106,13 +113,6 @@
                                 Classes.selected="{Binding MixerManagerViewSelected}"
                                 Command="{Binding NavigateToMixerManagerAction}">
                             Mixer Manager
-                        </Button>
-                        <Button HorizontalAlignment="Stretch"
-                                Padding="8"
-                                Margin="4"
-                                Classes.selected="{Binding CustomControlTesterViewSelected}"
-                                Command="{Binding NavigateToCustomControlTesterView}">
-                            Custom Control Tester
                         </Button>
                         <Button HorizontalAlignment="Stretch"
                                 Padding="8"

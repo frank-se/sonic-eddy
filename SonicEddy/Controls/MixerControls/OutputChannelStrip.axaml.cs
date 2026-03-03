@@ -49,7 +49,7 @@ public partial class OutputChannelStrip : UserControl
         get => GetValue(SelectCommandParameterProperty);
         set => SetValue(SelectCommandParameterProperty, value);
     }
-    
+
     /*
      * Volume section
      */
@@ -70,7 +70,47 @@ public partial class OutputChannelStrip : UserControl
         get => GetValue(PanProperty);
         set => SetValue(PanProperty, value);
     }
-    
+
+    public static readonly StyledProperty<float> LeftAverageProperty =
+        AvaloniaProperty.Register<OutputChannelStrip, float>(
+            nameof(LeftAverage));
+
+    public float LeftAverage
+    {
+        get => GetValue(LeftAverageProperty);
+        set => SetValue(LeftAverageProperty, value);
+    }
+
+    public static readonly StyledProperty<float> RightAverageProperty =
+        AvaloniaProperty.Register<OutputChannelStrip, float>(
+            nameof(RightAverage));
+
+    public float RightAverage
+    {
+        get => GetValue(RightAverageProperty);
+        set => SetValue(RightAverageProperty, value);
+    }
+
+    public static readonly StyledProperty<float> LeftPeakProperty =
+        AvaloniaProperty.Register<OutputChannelStrip, float>(
+            nameof(LeftPeak));
+
+    public float LeftPeak
+    {
+        get => GetValue(LeftPeakProperty);
+        set => SetValue(LeftPeakProperty, value);
+    }
+
+    public static readonly StyledProperty<float> RightPeakProperty =
+        AvaloniaProperty.Register<OutputChannelStrip, float>(
+            nameof(RightPeak));
+
+    public float RightPeak
+    {
+        get => GetValue(RightPeakProperty);
+        set => SetValue(RightPeakProperty, value);
+    }
+
     public OutputChannelStrip()
     {
         InitializeComponent();

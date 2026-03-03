@@ -3,10 +3,12 @@ using System.IO;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Fr.Pw.Monitoring;
 using ReactiveUI;
 using SonicEddy.Services.AppData;
 using SonicEddy.Services.MixerData;
 using SonicEddy.Services.MixerViewModels;
+using SonicEddy.Services.Monitoring;
 using SonicEddy.Services.Preferences;
 using SonicEddy.Services.VirtualInputs;
 using SonicEddy.Services.Wireplumber;
@@ -81,6 +83,10 @@ public class App : Application
         Locator.CurrentMutable.Register<IVirtualInputService>(() =>
             virtualInputService);
 
+        var monitoringService = new MonitoringService(FrPwMonitoring.Monitor);
+        Locator.CurrentMutable.Register<IMonitoringService>(() =>
+            monitoringService);
+
         var mixerServiceV2 =
             new Services.MixerServiceV2.MixerService(appDataService,
                 wireplumberService, preferencesService);
@@ -90,7 +96,8 @@ public class App : Application
                 mixerServiceV2);
 
         var mixerViewModelService =
-            new MixerViewModelService(appDataService, mixerServiceV2);
+            new MixerViewModelService(appDataService, mixerServiceV2,
+                monitoringService);
         Locator.CurrentMutable.Register<IMixerViewModelService>(() =>
             mixerViewModelService);
 

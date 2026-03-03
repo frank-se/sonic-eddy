@@ -12,6 +12,7 @@ using ReactiveUI;
 using SonicEddy.Controls.MixerControls;
 using SonicEddy.Services.AppData;
 using SonicEddy.Services.MixerServiceV2;
+using SonicEddy.Services.Monitoring;
 using SonicEddy.Tools;
 using SonicEddy.Views.MixerViewsV2;
 using ChannelStrip = SonicEddy.Services.MixerServiceV2.ChannelStrip;
@@ -30,7 +31,8 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
         ObservableCollection<IRoutingTarget> audioToRoutingTargets,
         IRoutingTarget? selectedAudioToRoutingTarget,
         IAppDataService appDataService,
-        IMixerService mixerService)
+        IMixerService mixerService,
+        IMonitoringService monitoringService)
     {
         AudioToRoutingTargets = audioToRoutingTargets;
         SelectChannelCommand = selectChannelCommand;
@@ -44,7 +46,8 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
         MixerService = mixerService;
 
         PanAndVolume =
-            new PanAndVolumeViewModel(OutputLoopback.PlaybackNode);
+            new PanAndVolumeViewModel(OutputLoopback.PlaybackNode,
+                monitoringService);
 
         this.WhenAnyValue(x => x.SelectedAudioToRoutingTarget)
             .Subscribe(routingTarget =>

@@ -290,7 +290,7 @@ public partial class ChannelStrip : UserControl
     }
 
     /*
-     * Volume section
+     * Volume and pan section
      */
     public static readonly StyledProperty<double> VolumeProperty =
         AvaloniaProperty.Register<ChannelStrip, double>(
@@ -312,6 +312,46 @@ public partial class ChannelStrip : UserControl
     {
         get => GetValue(PanProperty);
         set => SetValue(PanProperty, value);
+    }
+
+    public static readonly StyledProperty<float> LeftAverageProperty =
+        AvaloniaProperty.Register<ChannelStrip, float>(
+            nameof(LeftAverage));
+
+    public float LeftAverage
+    {
+        get => GetValue(LeftAverageProperty);
+        set => SetValue(LeftAverageProperty, value);
+    }
+
+    public static readonly StyledProperty<float> RightAverageProperty =
+        AvaloniaProperty.Register<ChannelStrip, float>(
+            nameof(RightAverage));
+
+    public float RightAverage
+    {
+        get => GetValue(RightAverageProperty);
+        set => SetValue(RightAverageProperty, value);
+    }
+
+    public static readonly StyledProperty<float> LeftPeakProperty =
+        AvaloniaProperty.Register<ChannelStrip, float>(
+            nameof(LeftPeak));
+
+    public float LeftPeak
+    {
+        get => GetValue(LeftPeakProperty);
+        set => SetValue(LeftPeakProperty, value);
+    }
+
+    public static readonly StyledProperty<float> RightPeakProperty =
+        AvaloniaProperty.Register<ChannelStrip, float>(
+            nameof(RightPeak));
+
+    public float RightPeak
+    {
+        get => GetValue(RightPeakProperty);
+        set => SetValue(RightPeakProperty, value);
     }
 
     /*

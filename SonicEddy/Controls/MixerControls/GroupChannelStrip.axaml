@@ -5,7 +5,7 @@
              xmlns:mixerControls="clr-namespace:SonicEddy.Controls.MixerControls"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="SonicEddy.Controls.MixerControls.GroupChannelStrip">
-    
+
     <Panel Background="Indigo">
         <Grid ColumnDefinitions="120"
               RowDefinitions="Auto,112,Auto,100,100,100,*,Auto"
@@ -48,9 +48,13 @@
                                             Parameters="{Binding $parent[mixerControls:GroupChannelStrip].ThirdPluginParameters}"
                                             Text="{Binding $parent[mixerControls:GroupChannelStrip].ThirdPluginText}" />
 
-            <mixerControls:PanAndVolumeSection Grid.Row="6"
-                                               Volume="{Binding $parent[mixerControls:GroupChannelStrip].Volume}"
-                                               Pan="{Binding $parent[mixerControls:GroupChannelStrip].Pan}" />
+            <mixerControls:PanAndVolumeSectionWithMonitor Grid.Row="6"
+                                                          LeftAverage="{Binding $parent[mixerControls:GroupChannelStrip].LeftAverage}"
+                                                          RightAverage="{Binding $parent[mixerControls:GroupChannelStrip].RightAverage}"
+                                                          LeftPeak="{Binding $parent[mixerControls:GroupChannelStrip].LeftPeak}"
+                                                          RightPeak="{Binding $parent[mixerControls:GroupChannelStrip].RightPeak}"
+                                                          Volume="{Binding $parent[mixerControls:GroupChannelStrip].Volume}"
+                                                          Pan="{Binding $parent[mixerControls:GroupChannelStrip].Pan}" />
 
             <mixerControls:RoutingComboBox Grid.Row="7"
                                            Text="Audio To"
@@ -58,5 +62,5 @@
                                            RoutingTargets="{Binding $parent[mixerControls:GroupChannelStrip].AudioToRoutingTargets}" />
         </Grid>
     </Panel>
-    
+
 </UserControl>

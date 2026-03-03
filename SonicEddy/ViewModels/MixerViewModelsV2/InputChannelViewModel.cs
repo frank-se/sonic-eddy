@@ -4,19 +4,20 @@ using System.Windows.Input;
 using Fr.Wireplumber.Model.Objects;
 using ReactiveUI;
 using SonicEddy.Controls.MixerControls;
+using SonicEddy.Services.Monitoring;
 
 namespace SonicEddy.ViewModels.MixerViewModelsV2;
 
 public class InputChannelViewModel(
     string text,
     ICommand selectChannelCommand,
-    Node playbackNode)
+    Node playbackNode, IMonitoringService monitoringService)
     : ReactiveObject, IInputChannel, IDisposable, IRoutingTarget
 {
     public IChannel Channel => this;
 
     public IPanAndVolume PanAndVolume { get; } =
-        new PanAndVolumeViewModel(playbackNode);
+        new PanAndVolumeViewModel(playbackNode, monitoringService);
 
     private readonly Node _playbackNode = playbackNode;
 

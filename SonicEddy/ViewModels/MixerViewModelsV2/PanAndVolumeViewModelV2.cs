@@ -11,20 +11,20 @@ using SonicEddy.Services.Monitoring;
 
 namespace SonicEddy.ViewModels.MixerViewModelsV2;
 
-public class PanAndVolumeViewModel : ReactiveObject, IPanAndVolume, IDisposable
+public class PanAndVolumeViewModelV2 : ReactiveObject, IPanAndVolume, IDisposable
 {
     private readonly CompositeDisposable _disposable = new();
 
     private readonly IMonitoringService _monitoringService;
 
-    public PanAndVolumeViewModel(Node node,
+    public PanAndVolumeViewModelV2(Node node,
         IMonitoringService monitoringService)
     {
         _node = node;
         _monitoringService = monitoringService;
         
-        //_monitoringService.StartMonitoring(node);
-        //_monitoringService.Updated += OnMonitoringUpdate;
+        _monitoringService.StartMonitoring(node);
+        _monitoringService.Updated += OnMonitoringUpdate;
 
         // ReSharper disable once MergeIntoPattern
         // DO NOT CHANGE TO PATTERN
@@ -133,7 +133,7 @@ public class PanAndVolumeViewModel : ReactiveObject, IPanAndVolume, IDisposable
     {
         _node?.PropertiesChanged -= OnPropertiesChanged;
         _monitoringService.StopMonitoring(_node);
-        //_monitoringService.Updated -= OnMonitoringUpdate;
+        _monitoringService.Updated -= OnMonitoringUpdate;
         _disposable.Dispose();
     }
 }

@@ -8,6 +8,7 @@ using ReactiveUI;
 using SonicEddy.Controls.MixerControls;
 using SonicEddy.Services.AppData;
 using SonicEddy.Services.MixerServiceV2;
+using SonicEddy.Services.Monitoring;
 using ChannelStrip = SonicEddy.Services.MixerServiceV2.ChannelStrip;
 
 namespace SonicEddy.ViewModels.MixerViewModelsV2;
@@ -23,10 +24,11 @@ public class ChannelStripViewModel : ChannelWithSendsViewModelBase,
         ObservableCollection<IRoutingTarget> audioToRoutingTargets,
         IRoutingTarget? selectedAudioToRoutingTarget,
         ChannelStrip channelStrip, IAppDataService appDataService,
-        IMixerService mixerService) : base(channelId, text,
+        IMixerService mixerService,
+        IMonitoringService monitoringService) : base(channelId, text,
         selectChannelCommand, inputLoopback, outputLoopback, sendLoopbacks,
         filterChain, audioToRoutingTargets, selectedAudioToRoutingTarget,
-        appDataService, mixerService)
+        appDataService, mixerService, monitoringService)
     {
         AudioFromRoutingTargets = audioFromRoutingTargets;
         SelectedAudioToRoutingTarget = selectedAudioToRoutingTarget;
@@ -35,7 +37,8 @@ public class ChannelStripViewModel : ChannelWithSendsViewModelBase,
         this.WhenAnyValue(x => x.SelectedAudioFromRoutingTarget)
             .Subscribe(routingTarget =>
             {
-                if (routingTarget?.Channel is not InputChannelViewModel channel) return;
+                if (routingTarget?.Channel is not InputChannelViewModel channel)
+                    return;
                 ChannelStrip.InputLoopback.CaptureNode.OverrideTargetObject(
                     channel.PlaybackNodeObjectSerial.ToString());
             })

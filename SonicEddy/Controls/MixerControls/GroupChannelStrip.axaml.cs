@@ -12,7 +12,7 @@ public partial class GroupChannelStrip : UserControl
      * Channel header
      */
     public static readonly StyledProperty<string> TextProperty =
-        AvaloniaProperty.Register<ChannelStrip, string>(
+        AvaloniaProperty.Register<GroupChannelStrip, string>(
             nameof(Text),
             defaultValue: string.Empty);
 
@@ -23,7 +23,7 @@ public partial class GroupChannelStrip : UserControl
     }
 
     public static readonly StyledProperty<bool> IsSelectedProperty =
-        AvaloniaProperty.Register<ChannelStrip, bool>(nameof(IsSelected));
+        AvaloniaProperty.Register<GroupChannelStrip, bool>(nameof(IsSelected));
 
     public bool IsSelected
     {
@@ -32,7 +32,7 @@ public partial class GroupChannelStrip : UserControl
     }
 
     public static readonly StyledProperty<ICommand?> SelectCommandProperty =
-        AvaloniaProperty.Register<ChannelStrip, ICommand?>(
+        AvaloniaProperty.Register<GroupChannelStrip, ICommand?>(
             nameof(SelectCommand));
 
     public ICommand? SelectCommand
@@ -43,7 +43,7 @@ public partial class GroupChannelStrip : UserControl
 
     public static readonly StyledProperty<object?>
         SelectCommandParameterProperty =
-            AvaloniaProperty.Register<ChannelStrip, object?>(
+            AvaloniaProperty.Register<GroupChannelStrip, object?>(
                 nameof(SelectCommandParameter));
 
     public object? SelectCommandParameter
@@ -53,7 +53,7 @@ public partial class GroupChannelStrip : UserControl
     }
 
     public static readonly StyledProperty<ICommand?> DeleteCommandProperty =
-        AvaloniaProperty.Register<ChannelStrip, ICommand?>(
+        AvaloniaProperty.Register<GroupChannelStrip, ICommand?>(
             nameof(DeleteCommand));
 
     public ICommand? DeleteCommand
@@ -64,7 +64,7 @@ public partial class GroupChannelStrip : UserControl
 
     public static readonly StyledProperty<object?>
         DeleteCommandParameterProperty =
-            AvaloniaProperty.Register<ChannelStrip, object?>(
+            AvaloniaProperty.Register<GroupChannelStrip, object?>(
                 nameof(DeleteCommandParameter));
 
     public object? DeleteCommandParameter
@@ -78,7 +78,7 @@ public partial class GroupChannelStrip : UserControl
      */
     public static readonly StyledProperty<double> Send1TrimProperty =
         AvaloniaProperty
-            .Register<ChannelStrip, double>(
+            .Register<GroupChannelStrip, double>(
                 nameof(Send1Trim),
                 defaultBindingMode: BindingMode.TwoWay);
 
@@ -90,7 +90,7 @@ public partial class GroupChannelStrip : UserControl
 
     public static readonly StyledProperty<double> Send2TrimProperty =
         AvaloniaProperty
-            .Register<ChannelStrip, double>(
+            .Register<GroupChannelStrip, double>(
                 nameof(Send2Trim),
                 defaultBindingMode: BindingMode.TwoWay);
 
@@ -102,7 +102,7 @@ public partial class GroupChannelStrip : UserControl
 
     public static readonly StyledProperty<double> Send3TrimProperty =
         AvaloniaProperty
-            .Register<ChannelStrip, double>(
+            .Register<GroupChannelStrip, double>(
                 nameof(Send3Trim),
                 defaultBindingMode: BindingMode.TwoWay);
 
@@ -114,7 +114,7 @@ public partial class GroupChannelStrip : UserControl
 
     public static readonly StyledProperty<double> Send4TrimProperty =
         AvaloniaProperty
-            .Register<ChannelStrip, double>(
+            .Register<GroupChannelStrip, double>(
                 nameof(Send4Trim),
                 defaultBindingMode: BindingMode.TwoWay);
 
@@ -128,7 +128,7 @@ public partial class GroupChannelStrip : UserControl
      * Filter section
      */
     public static readonly StyledProperty<bool> HasFilterProperty =
-        AvaloniaProperty.Register<ChannelStrip, bool>(
+        AvaloniaProperty.Register<GroupChannelStrip, bool>(
             nameof(HasFilter));
 
     public bool HasFilter
@@ -138,7 +138,7 @@ public partial class GroupChannelStrip : UserControl
     }
 
     public static readonly StyledProperty<ICommand?> AddFilterCommandProperty =
-        AvaloniaProperty.Register<ChannelStrip, ICommand?>(
+        AvaloniaProperty.Register<GroupChannelStrip, ICommand?>(
             nameof(AddFilterCommand));
 
     public ICommand? AddFilterCommand
@@ -149,7 +149,7 @@ public partial class GroupChannelStrip : UserControl
 
     public static readonly StyledProperty<object?>
         AddFilterCommandParameterProperty =
-            AvaloniaProperty.Register<ChannelStrip, object?>(
+            AvaloniaProperty.Register<GroupChannelStrip, object?>(
                 nameof(AddFilterCommandParameter));
 
     public object? AddFilterCommandParameter
@@ -160,7 +160,7 @@ public partial class GroupChannelStrip : UserControl
 
     public static readonly StyledProperty<ICommand?>
         DeleteFilterCommandProperty =
-            AvaloniaProperty.Register<ChannelStrip, ICommand?>(
+            AvaloniaProperty.Register<GroupChannelStrip, ICommand?>(
                 nameof(DeleteFilterCommand));
 
     public ICommand? DeleteFilterCommand
@@ -171,7 +171,7 @@ public partial class GroupChannelStrip : UserControl
 
     public static readonly StyledProperty<object?>
         DeleteFilterCommandParameterProperty =
-            AvaloniaProperty.Register<ChannelStrip, object?>(
+            AvaloniaProperty.Register<GroupChannelStrip, object?>(
                 nameof(DeleteFilterCommandParameter));
 
     public object? DeleteFilterCommandParameter
@@ -190,7 +190,7 @@ public partial class GroupChannelStrip : UserControl
     public static readonly StyledProperty<ObservableCollection<IParameter>?>
         FirstPluginParametersProperty =
             AvaloniaProperty
-                .Register<ChannelStrip, ObservableCollection<IParameter>?>(
+                .Register<GroupChannelStrip, ObservableCollection<IParameter>?>(
                     nameof(FirstPluginParameters));
 
     public ObservableCollection<IParameter>? FirstPluginParameters
@@ -200,7 +200,7 @@ public partial class GroupChannelStrip : UserControl
     }
 
     public static readonly StyledProperty<string> FirstPluginTextProperty =
-        AvaloniaProperty.Register<ChannelStrip, string>(
+        AvaloniaProperty.Register<GroupChannelStrip, string>(
             nameof(Text),
             defaultValue: string.Empty);
 
@@ -226,7 +226,7 @@ public partial class GroupChannelStrip : UserControl
     }
 
     public static readonly StyledProperty<string> SecondPluginTextProperty =
-        AvaloniaProperty.Register<ChannelStrip, string>(
+        AvaloniaProperty.Register<GroupChannelStrip, string>(
             nameof(Text),
             defaultValue: string.Empty);
 
@@ -252,7 +252,7 @@ public partial class GroupChannelStrip : UserControl
     }
 
     public static readonly StyledProperty<string> ThirdPluginTextProperty =
-        AvaloniaProperty.Register<ChannelStrip, string>(
+        AvaloniaProperty.Register<GroupChannelStrip, string>(
             nameof(Text),
             defaultValue: string.Empty);
 
@@ -266,7 +266,7 @@ public partial class GroupChannelStrip : UserControl
      * Volume section
      */
     public static readonly StyledProperty<double> VolumeProperty =
-        AvaloniaProperty.Register<ChannelStrip, double>(
+        AvaloniaProperty.Register<GroupChannelStrip, double>(
             nameof(Volume),
             defaultBindingMode: BindingMode.TwoWay);
 
@@ -277,7 +277,7 @@ public partial class GroupChannelStrip : UserControl
     }
 
     public static readonly StyledProperty<double> PanProperty =
-        AvaloniaProperty.Register<ChannelStrip, double>(
+        AvaloniaProperty.Register<GroupChannelStrip, double>(
             nameof(Pan),
             defaultBindingMode: BindingMode.TwoWay);
 
@@ -285,6 +285,46 @@ public partial class GroupChannelStrip : UserControl
     {
         get => GetValue(PanProperty);
         set => SetValue(PanProperty, value);
+    }
+
+    public static readonly StyledProperty<float> LeftAverageProperty =
+        AvaloniaProperty.Register<GroupChannelStrip, float>(
+            nameof(LeftAverage));
+
+    public float LeftAverage
+    {
+        get => GetValue(LeftAverageProperty);
+        set => SetValue(LeftAverageProperty, value);
+    }
+
+    public static readonly StyledProperty<float> RightAverageProperty =
+        AvaloniaProperty.Register<GroupChannelStrip, float>(
+            nameof(RightAverage));
+
+    public float RightAverage
+    {
+        get => GetValue(RightAverageProperty);
+        set => SetValue(RightAverageProperty, value);
+    }
+
+    public static readonly StyledProperty<float> LeftPeakProperty =
+        AvaloniaProperty.Register<GroupChannelStrip, float>(
+            nameof(LeftPeak));
+
+    public float LeftPeak
+    {
+        get => GetValue(LeftPeakProperty);
+        set => SetValue(LeftPeakProperty, value);
+    }
+
+    public static readonly StyledProperty<float> RightPeakProperty =
+        AvaloniaProperty.Register<GroupChannelStrip, float>(
+            nameof(RightPeak));
+
+    public float RightPeak
+    {
+        get => GetValue(RightPeakProperty);
+        set => SetValue(RightPeakProperty, value);
     }
 
     /*
@@ -304,7 +344,7 @@ public partial class GroupChannelStrip : UserControl
 
     public static readonly StyledProperty<IRoutingTarget?>
         SelectedAudioToRoutingTargetProperty =
-            AvaloniaProperty.Register<ChannelStrip, IRoutingTarget?>(
+            AvaloniaProperty.Register<GroupChannelStrip, IRoutingTarget?>(
                 nameof(SelectedAudioToRoutingTarget),
                 defaultBindingMode: BindingMode.TwoWay);
 

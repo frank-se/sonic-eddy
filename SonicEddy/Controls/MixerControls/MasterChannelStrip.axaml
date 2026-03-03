@@ -5,7 +5,7 @@
              xmlns:mixerControls="clr-namespace:SonicEddy.Controls.MixerControls"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="SonicEddy.Controls.MixerControls.MasterChannelStrip">
-    
+
     <Panel Background="DarkRed">
         <Grid ColumnDefinitions="120"
               RowDefinitions="Auto,Auto,100,100,100,*,Auto"
@@ -41,9 +41,13 @@
                                             Parameters="{Binding $parent[mixerControls:MasterChannelStrip].ThirdPluginParameters}"
                                             Text="{Binding $parent[mixerControls:MasterChannelStrip].ThirdPluginText}" />
 
-            <mixerControls:PanAndVolumeSection Grid.Row="5"
-                                               Volume="{Binding $parent[mixerControls:MasterChannelStrip].Volume}"
-                                               Pan="{Binding $parent[mixerControls:MasterChannelStrip].Pan}" />
+            <mixerControls:PanAndVolumeSectionWithMonitor Grid.Row="5"
+                                                          LeftAverage="{Binding $parent[mixerControls:MasterChannelStrip].LeftAverage}"
+                                                          RightAverage="{Binding $parent[mixerControls:MasterChannelStrip].RightAverage}"
+                                                          LeftPeak="{Binding $parent[mixerControls:MasterChannelStrip].LeftPeak}"
+                                                          RightPeak="{Binding $parent[mixerControls:MasterChannelStrip].RightPeak}"
+                                                          Volume="{Binding $parent[mixerControls:MasterChannelStrip].Volume}"
+                                                          Pan="{Binding $parent[mixerControls:MasterChannelStrip].Pan}" />
 
             <mixerControls:RoutingComboBox Grid.Row="6"
                                            Text="Audio To"
@@ -51,5 +55,5 @@
                                            RoutingTargets="{Binding $parent[mixerControls:MasterChannelStrip].AudioToRoutingTargets}" />
         </Grid>
     </Panel>
-    
+
 </UserControl>

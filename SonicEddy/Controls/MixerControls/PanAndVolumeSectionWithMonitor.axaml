@@ -1,0 +1,37 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:controls="clr-namespace:SonicEddy.Controls"
+             xmlns:mixerControls="clr-namespace:SonicEddy.Controls.MixerControls"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="SonicEddy.Controls.MixerControls.PanAndVolumeSectionWithMonitor">
+
+    <Grid RowDefinitions="3*,40"
+          ColumnDefinitions="*,10"
+          Margin="6">
+
+        <controls:ValueSlider Grid.Row="0"
+                              Grid.Column="0"
+                              Text="Volume"
+                              Margin="2,4,2,2"
+                              IsVertical="True"
+                              Background="Gray"
+                              Maximum="1"
+                              Minimum="0"
+                              Value="{Binding $parent[mixerControls:PanAndVolumeSectionWithMonitor].Volume}" />
+        
+        <mixerControls:ChannelMonitorSection Grid.Row="0"
+                                             Grid.Column="1"
+                                             Margin="2,4,2,2"
+                                             Background="Gray" />
+        
+        <controls:PanSlider Grid.Row="1"
+                            Grid.Column="0"
+                            Grid.ColumnSpan="2"
+                            Text="Pan"
+                            Margin="2,2,2,2"
+                            Background="DimGray"
+                            Value="{Binding $parent[mixerControls:PanAndVolumeSectionWithMonitor].Pan}" />
+    </Grid>
+</UserControl>

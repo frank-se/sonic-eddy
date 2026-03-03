@@ -1,6 +1,7 @@
 ﻿using System;
 using Avalonia;
 using Fr.Lv2;
+using Fr.Pw.Monitoring;
 using Fr.Wireplumber;
 using ReactiveUI.Avalonia;
 
@@ -16,12 +17,14 @@ internal sealed class Program
     {
         Wireplumber.Start();
         Lv2.Init();
+        FrPwMonitoring.Start(TimeSpan.FromMilliseconds(250));
 
         BuildAvaloniaApp()
             .StartWithClassicDesktopLifetime(args);
 
         Wireplumber.Stop();
         Lv2.Destroy();
+        FrPwMonitoring.Stop();
     }
 
     // Avalonia configuration, don't remove; also used by visual designer.

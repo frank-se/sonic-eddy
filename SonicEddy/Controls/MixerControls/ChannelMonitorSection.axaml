@@ -1,0 +1,23 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:mixerControls="clr-namespace:SonicEddy.Controls.MixerControls"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="SonicEddy.Controls.MixerControls.ChannelMonitorSection">
+    <Grid ColumnDefinitions="*,*">
+        
+        <mixerControls:ChannelMonitorValue Grid.Column="0"
+                                           Minimum="0.0"
+                                           Maximum="1.0"
+                                           Value="{Binding $parent[mixerControls:ChannelMonitorSection].LeftAverage}"
+                                           IsVertical="True" />
+
+        <mixerControls:ChannelMonitorValue Grid.Column="1"
+                                           Minimum="0.0"
+                                           Maximum="1.0"
+                                           Value="{Binding $parent[mixerControls:ChannelMonitorSection].RightAverage}"
+                                           IsVertical="True" />
+        
+    </Grid>
+</UserControl>

@@ -5,7 +5,7 @@
              xmlns:mixerControls="clr-namespace:SonicEddy.Controls.MixerControls"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="SonicEddy.Controls.MixerControls.OutputChannelStrip">
-    
+
     <Panel Background="DarkRed">
         <Grid ColumnDefinitions="100"
               RowDefinitions="Auto,Auto,*"
@@ -18,11 +18,15 @@
                                          SelectCommandParameter="{Binding $parent[mixerControls:OutputChannelStrip].SelectCommandParameter}"
                                          IsDeleteButtonVisible="False" />
 
-            <mixerControls:PanAndVolumeSection Grid.Row="2"
-                                               Volume="{Binding $parent[mixerControls:OutputChannelStrip].Volume}"
-                                               Pan="{Binding $parent[mixerControls:OutputChannelStrip].Pan}" />
-            
+            <mixerControls:PanAndVolumeSectionWithMonitor Grid.Row="2"
+                                                          LeftAverage="{Binding $parent[mixerControls:OutputChannelStrip].LeftAverage}"
+                                                          RightAverage="{Binding $parent[mixerControls:OutputChannelStrip].RightAverage}"
+                                                          LeftPeak="{Binding $parent[mixerControls:OutputChannelStrip].LeftPeak}"
+                                                          RightPeak="{Binding $parent[mixerControls:OutputChannelStrip].RightPeak}"
+                                                          Volume="{Binding $parent[mixerControls:OutputChannelStrip].Volume}"
+                                                          Pan="{Binding $parent[mixerControls:OutputChannelStrip].Pan}" />
+
         </Grid>
     </Panel>
-    
+
 </UserControl>

@@ -10,6 +10,7 @@ using ReactiveUI;
 using SonicEddy.Controls.MixerControls;
 using SonicEddy.Services.AppData;
 using SonicEddy.Services.MixerServiceV2;
+using SonicEddy.Services.Monitoring;
 
 namespace SonicEddy.ViewModels.MixerViewModelsV2;
 
@@ -21,14 +22,15 @@ public abstract class ChannelWithSendsViewModelBase : ChannelViewModelBase
         FilterChain? filterChain,
         ObservableCollection<IRoutingTarget> audioToRoutingTargets,
         IRoutingTarget? selectedAudioToRoutingTarget,
-        IAppDataService appDataService, IMixerService mixerService) : base(
+        IAppDataService appDataService, IMixerService mixerService,
+        IMonitoringService monitoringService) : base(
         channelId, text, selectChannelCommand, inputLoopback, outputLoopback,
         filterChain, audioToRoutingTargets,
         selectedAudioToRoutingTarget, appDataService,
-        mixerService)
+        mixerService, monitoringService)
     {
         SendLoopbacks = sendLoopbacks;
-        
+
         this.WhenAnyValue(x => x.Send1Trim)
             .Subscribe(trim => { SetVolumesForSend(0, trim); })
             .DisposeWith(Disposables);

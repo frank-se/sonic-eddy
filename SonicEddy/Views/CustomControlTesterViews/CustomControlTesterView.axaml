@@ -11,7 +11,7 @@
     <HeaderedContentControl Header="Control Tester"
                             Margin="4">
         <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,300,Auto,Auto,*"
-              ColumnDefinitions="*,*,*,Auto,Auto">
+              ColumnDefinitions="*,*,*,Auto,Auto,10,100">
 
             <controls:ValueSlider Grid.Row="0"
                                   Grid.Column="0"
@@ -100,6 +100,14 @@
                                         Grid.RowSpan="11"
                                         Text="Channel 1" />
 
+            <mixerControls:ChannelMonitorSection Grid.Row="0"
+                                                 Grid.Column="5"
+                                                 Grid.RowSpan="8" />
+            
+            <mixerControls:PanAndVolumeSectionWithMonitor Grid.Row="0"
+                                                          Grid.Column="6"
+                                                          Grid.RowSpan="8" />
+            
         </Grid>
     </HeaderedContentControl>
 </UserControl>

@@ -26,7 +26,8 @@
             <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
         </PackageReference>
         <PackageReference Include="FrLv2" Version="0.0.4" />
-        <PackageReference Include="FrWireplumber" Version="0.9.2" />
+        <PackageReference Include="FrPwMonitoring" Version="0.0.4" />
+        <PackageReference Include="FrWireplumber" Version="0.9.3" />
         <PackageReference Include="ReactiveUI.Avalonia" Version="11.3.8" />
         <PackageReference Include="System.Reactive" Version="6.1.0" />
     </ItemGroup>

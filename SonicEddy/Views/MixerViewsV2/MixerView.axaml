@@ -69,6 +69,10 @@
                                                     ThirdPluginText="{Binding ThirdPluginText}"
                                                     Volume="{Binding PanAndVolume.Volume}"
                                                     Pan="{Binding PanAndVolume.Pan}"
+                                                    LeftAverage="{Binding PanAndVolume.LeftAverage}"
+                                                    RightAverage="{Binding PanAndVolume.RightAverage}"
+                                                    LeftPeak="{Binding PanAndVolume.LeftPeak}"
+                                                    RightPeak="{Binding PanAndVolume.RightPeak}"
                                                     AudioToRoutingTargets="{Binding AudioToRoutingTargets}"
                                                     SelectedAudioToRoutingTarget="{Binding SelectedAudioToRoutingTarget}" />
                     </DataTemplate>
@@ -106,6 +110,10 @@
                                                          ThirdPluginText="{Binding ThirdPluginText}"
                                                          Volume="{Binding PanAndVolume.Volume}"
                                                          Pan="{Binding PanAndVolume.Pan}"
+                                                         LeftAverage="{Binding PanAndVolume.LeftAverage}"
+                                                         RightAverage="{Binding PanAndVolume.RightAverage}"
+                                                         LeftPeak="{Binding PanAndVolume.LeftPeak}"
+                                                         RightPeak="{Binding PanAndVolume.RightPeak}"
                                                          AudioToRoutingTargets="{Binding AudioToRoutingTargets}"
                                                          SelectedAudioToRoutingTarget="{Binding SelectedAudioToRoutingTarget}" />
                     </DataTemplate>
@@ -139,6 +147,10 @@
                                                           ThirdPluginText="{Binding ThirdPluginText}"
                                                           Volume="{Binding PanAndVolume.Volume}"
                                                           Pan="{Binding PanAndVolume.Pan}"
+                                                          LeftAverage="{Binding PanAndVolume.LeftAverage}"
+                                                          RightAverage="{Binding PanAndVolume.RightAverage}"
+                                                          LeftPeak="{Binding PanAndVolume.LeftPeak}"
+                                                          RightPeak="{Binding PanAndVolume.RightPeak}"
                                                           AudioToRoutingTargets="{Binding AudioToRoutingTargets}"
                                                           SelectedAudioToRoutingTarget="{Binding SelectedAudioToRoutingTarget}" />
                     </DataTemplate>

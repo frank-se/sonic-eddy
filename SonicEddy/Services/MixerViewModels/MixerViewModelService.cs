@@ -8,6 +8,7 @@ using ReactiveUI;
 using SonicEddy.Controls.MixerControls;
 using SonicEddy.Services.AppData;
 using SonicEddy.Services.MixerServiceV2;
+using SonicEddy.Services.Monitoring;
 using SonicEddy.ViewModels.MixerViewModelsV2;
 using ChannelStrip = SonicEddy.Services.MixerServiceV2.ChannelStrip;
 
@@ -15,7 +16,8 @@ namespace SonicEddy.Services.MixerViewModels;
 
 public class MixerViewModelService(
     IAppDataService appDataService,
-    IMixerService mixerService)
+    IMixerService mixerService,
+    IMonitoringService monitoringService)
     : IMixerViewModelService
 {
     public async Task<MixerViewModel?> ConvertCurrentMixerToViewModel(
@@ -136,7 +138,7 @@ public class MixerViewModelService(
             selectedChannelCommand, channel.InputLoopback,
             channel.OutputLoopback, channel.SendLoopbacks, null,
             audioToRoutingTargets, selectedAudioToRoutingTarget, appDataService,
-            mixerService, channel);
+            mixerService, channel, monitoringService);
 
     private MasterChannelViewModel ConvertMasterChannel(MasterChannel channel,
         ICommand selectedChannelCommand,
@@ -146,7 +148,7 @@ public class MixerViewModelService(
         selectedChannelCommand, channel.InputLoopback,
         channel.OutputLoopback, channel.FilterChain, audioToRoutingTargets,
         selectedAudioToRoutingTarget,
-        appDataService, mixerService, channel);
+        appDataService, mixerService, channel, monitoringService);
 
     public ChannelStripViewModel ConvertChannelStrip(ChannelStrip channel,
         ICommand selectedChannelCommand,
@@ -159,22 +161,23 @@ public class MixerViewModelService(
             channel.SendLoopbacks, channel.FilterChain, audioFromRoutingTargets,
             audioToRoutingTargets,
             audioToRoutingTargets.First(r => r.Channel == masterChannel),
-            channel, appDataService, mixerService);
+            channel, appDataService, mixerService, monitoringService);
 
-    private static ReturnChannelViewModel ConvertReturnChannel(
+    private ReturnChannelViewModel ConvertReturnChannel(
         ReturnChannel channel,
         ICommand selectChannelCommand) =>
         new ReturnChannelViewModel(channel.Name, selectChannelCommand,
-            channel.InputLoopback, channel.OutputLoopback, channel.FilterChain);
+            channel.InputLoopback, channel.OutputLoopback, channel.FilterChain,
+            monitoringService);
 
     public OutputChannelViewModel
         ConvertOutputChannel(OutputChannel channel,
             ICommand selectChannelCommand) =>
         new OutputChannelViewModel(channel.Name, selectChannelCommand,
-            channel.CaptureNode);
+            channel.CaptureNode, monitoringService);
 
     public InputChannelViewModel ConvertInputChannel(InputChannel channel,
         ICommand selectChannelCommand) =>
         new InputChannelViewModel(channel.Name, selectChannelCommand,
-            channel.PlaybackNode);
+            channel.PlaybackNode, monitoringService);
 }

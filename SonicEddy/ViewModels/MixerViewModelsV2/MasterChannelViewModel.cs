@@ -5,6 +5,7 @@ using Fr.Wireplumber.Modules.Models;
 using SonicEddy.Controls.MixerControls;
 using SonicEddy.Services.AppData;
 using SonicEddy.Services.MixerServiceV2;
+using SonicEddy.Services.Monitoring;
 
 namespace SonicEddy.ViewModels.MixerViewModelsV2;
 
@@ -19,10 +20,12 @@ public class MasterChannelViewModel(
     IRoutingTarget? selectedAudioToRoutingTarget,
     IAppDataService appDataService,
     IMixerService mixerService,
-    MasterChannel masterChannel)
+    MasterChannel masterChannel,
+    IMonitoringService monitoringService)
     : ChannelViewModelBase(channelId, text, selectChannelCommand,
             inputLoopback, outputLoopback, filterChain, audioToRoutingTargets,
-            selectedAudioToRoutingTarget, appDataService, mixerService),
+            selectedAudioToRoutingTarget, appDataService, mixerService,
+            monitoringService),
         IMasterChannel
 {
     public MasterChannel MasterChannel { get; } = masterChannel;

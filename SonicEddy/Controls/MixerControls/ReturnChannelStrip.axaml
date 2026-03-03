@@ -19,15 +19,19 @@
                                          IsDeleteButtonVisible="False" />
 
             <mixerControls:FilterSectionHeader Grid.Row="1"
-                                               HasFilter="{Binding $parent[mixerControls:ChannelStrip].HasFilter}"
-                                               AddCommand="{Binding $parent[mixerControls:ChannelStrip].AddFilterCommand}"
-                                               AddCommandParameter="{Binding $parent[mixerControls:ChannelStrip].AddFilterCommandParameter}"
-                                               DeleteCommand="{Binding $parent[mixerControls:ChannelStrip].DeleteFilterCommand}"
-                                               DeleteCommandParameter="{Binding $parent[mixerControls:ChannelStrip].DeleteFilterCommandParameter}" />
+                                               HasFilter="{Binding $parent[mixerControls:ReturnChannelStrip].HasFilter}"
+                                               AddCommand="{Binding $parent[mixerControls:ReturnChannelStrip].AddFilterCommand}"
+                                               AddCommandParameter="{Binding $parent[mixerControls:ReturnChannelStrip].AddFilterCommandParameter}"
+                                               DeleteCommand="{Binding $parent[mixerControls:ReturnChannelStrip].DeleteFilterCommand}"
+                                               DeleteCommandParameter="{Binding $parent[mixerControls:ReturnChannelStrip].DeleteFilterCommandParameter}" />
 
-            <mixerControls:PanAndVolumeSection Grid.Row="2"
-                                               Volume="{Binding $parent[mixerControls:ChannelStrip].Volume}"
-                                               Pan="{Binding $parent[mixerControls:ChannelStrip].Pan}" />
+            <mixerControls:PanAndVolumeSectionWithMonitor Grid.Row="2"
+                                                          LeftAverage="{Binding $parent[mixerControls:ReturnChannelStrip].LeftAverage}"
+                                                          RightAverage="{Binding $parent[mixerControls:ReturnChannelStrip].RightAverage}"
+                                                          LeftPeak="{Binding $parent[mixerControls:ReturnChannelStrip].LeftPeak}"
+                                                          RightPeak="{Binding $parent[mixerControls:ReturnChannelStrip].RightPeak}"
+                                                          Volume="{Binding $parent[mixerControls:ReturnChannelStrip].Volume}"
+                                                          Pan="{Binding $parent[mixerControls:ReturnChannelStrip].Pan}" />
 
         </Grid>
     </Panel>

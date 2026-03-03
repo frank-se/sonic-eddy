@@ -5,7 +5,7 @@
              xmlns:mixerControls="clr-namespace:SonicEddy.Controls.MixerControls"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="SonicEddy.Controls.MixerControls.ChannelStrip">
-    
+
     <Panel Background="MidnightBlue">
         <Grid ColumnDefinitions="120"
               RowDefinitions="Auto,Auto,112,Auto,100,100,100,*,Auto"
@@ -53,9 +53,13 @@
                                             Parameters="{Binding $parent[mixerControls:ChannelStrip].ThirdPluginParameters}"
                                             Text="{Binding $parent[mixerControls:ChannelStrip].ThirdPluginText}" />
 
-            <mixerControls:PanAndVolumeSection Grid.Row="7"
-                                               Volume="{Binding $parent[mixerControls:ChannelStrip].Volume}"
-                                               Pan="{Binding $parent[mixerControls:ChannelStrip].Pan}" />
+            <mixerControls:PanAndVolumeSectionWithMonitor Grid.Row="7"
+                                                          LeftAverage="{Binding $parent[mixerControls:ChannelStrip].LeftAverage}"
+                                                          RightAverage="{Binding $parent[mixerControls:ChannelStrip].RightAverage}"
+                                                          LeftPeak="{Binding $parent[mixerControls:ChannelStrip].LeftPeak}"
+                                                          RightPeak="{Binding $parent[mixerControls:ChannelStrip].RightPeak}"
+                                                          Volume="{Binding $parent[mixerControls:ChannelStrip].Volume}"
+                                                          Pan="{Binding $parent[mixerControls:ChannelStrip].Pan}" />
 
             <mixerControls:RoutingComboBox Grid.Row="8"
                                            Text="Audio To"
@@ -63,5 +67,5 @@
                                            RoutingTargets="{Binding $parent[mixerControls:ChannelStrip].AudioToRoutingTargets}" />
         </Grid>
     </Panel>
-    
+
 </UserControl>
