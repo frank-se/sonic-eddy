@@ -18,7 +18,7 @@ using SonicEddy.Views.SaveFilterGraphDialogViews;
 
 namespace SonicEddy.ViewModels.FilterGraphBuilderViewModels;
 
-public class FilterGraphBuilderViewModel : ViewModelBase, IActivatableViewModel
+public class FilterGraphBuilderViewModel : ViewModelBase
 {
     public FilterGraphBuilderViewModel(IAppDataService appDataService,
         Task<List<ClassDescription>> pluginClasses,
@@ -118,10 +118,6 @@ public class FilterGraphBuilderViewModel : ViewModelBase, IActivatableViewModel
             }
         }
     }
-
-    public string? UrlPathSegment { get; }
-    public IScreen HostScreen { get; }
-    public ViewModelActivator Activator { get; } = new();
 
     private readonly IAppDataService _appDataService;
 }

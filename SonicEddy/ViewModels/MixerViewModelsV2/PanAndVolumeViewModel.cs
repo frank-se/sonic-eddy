@@ -15,14 +15,10 @@ public class PanAndVolumeViewModel : ReactiveObject, IPanAndVolume, IDisposable
 {
     private readonly CompositeDisposable _disposable = new();
 
-    private readonly IMonitoringService _monitoringService;
-
-    public PanAndVolumeViewModel(Node node,
-        IMonitoringService monitoringService)
+    public PanAndVolumeViewModel(Node node)
     {
         _node = node;
-        _monitoringService = monitoringService;
-        
+
         //_monitoringService.StartMonitoring(node);
         //_monitoringService.Updated += OnMonitoringUpdate;
 
@@ -132,8 +128,6 @@ public class PanAndVolumeViewModel : ReactiveObject, IPanAndVolume, IDisposable
     public void Dispose()
     {
         _node?.PropertiesChanged -= OnPropertiesChanged;
-        _monitoringService.StopMonitoring(_node);
-        //_monitoringService.Updated -= OnMonitoringUpdate;
         _disposable.Dispose();
     }
 }

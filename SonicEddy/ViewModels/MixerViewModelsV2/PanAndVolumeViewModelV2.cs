@@ -132,7 +132,9 @@ public class PanAndVolumeViewModelV2 : ReactiveObject, IPanAndVolume, IDisposabl
     public void Dispose()
     {
         _node?.PropertiesChanged -= OnPropertiesChanged;
-        _monitoringService.StopMonitoring(_node);
+        if (_node is not null)
+            _monitoringService.StopMonitoring(_node);
+        
         _monitoringService.Updated -= OnMonitoringUpdate;
         _disposable.Dispose();
     }

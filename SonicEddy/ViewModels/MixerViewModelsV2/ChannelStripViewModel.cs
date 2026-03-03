@@ -28,7 +28,7 @@ public class ChannelStripViewModel : ChannelWithSendsViewModelBase,
         IMonitoringService monitoringService) : base(channelId, text,
         selectChannelCommand, inputLoopback, outputLoopback, sendLoopbacks,
         filterChain, audioToRoutingTargets, selectedAudioToRoutingTarget,
-        appDataService, mixerService, monitoringService)
+        appDataService, mixerService, monitoringService, false)
     {
         AudioFromRoutingTargets = audioFromRoutingTargets;
         SelectedAudioToRoutingTarget = selectedAudioToRoutingTarget;

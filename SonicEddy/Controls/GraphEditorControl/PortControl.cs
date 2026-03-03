@@ -47,6 +47,10 @@ public class PortControl : StackPanel, IDisposable
 
     public Point GetConnectionCenterPoint(Control origin)
     {
+        if (_portRect is null)
+            throw new ApplicationException(
+                "Port rect is not set for port control");
+
         var matrix = _portRect.TransformToVisual(origin);
         if (matrix is null)
             return default;
@@ -64,7 +68,7 @@ public class PortControl : StackPanel, IDisposable
     {
         _portRect?.Fill = Brushes.DarkGreen;
     }
-    
+
     private void AddText(string text)
     {
         Children.Add(

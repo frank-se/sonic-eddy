@@ -78,6 +78,8 @@ public class MixerViewModel : ViewModelBase, IRoutableViewModel,
 
     private void DeleteRemovedInputChannels(List<InputChannel> inputChannels)
     {
+        if (InputChannels is null) return;
+        
         var newObjectSerials =
             inputChannels.Select(c => c.PlaybackNode.ObjectSerial).ToArray();
 
@@ -106,6 +108,8 @@ public class MixerViewModel : ViewModelBase, IRoutableViewModel,
 
     private void AddNewInputChannels(List<InputChannel> inputChannels)
     {
+        if (InputChannels is null) return;
+        
         var currentPlaybackNodeObjectSerials =
             InputChannels.Select(i => i.PlaybackNodeObjectSerial).ToArray();
 
@@ -136,6 +140,8 @@ public class MixerViewModel : ViewModelBase, IRoutableViewModel,
 
     private void DeleteRemovedOutputChannels(List<OutputChannel> outputChannels)
     {
+        if (OutputChannels is null) return;
+        
         var newObjectSerials =
             outputChannels.Select(c => c.CaptureNode.ObjectSerial).ToArray();
 
@@ -150,6 +156,8 @@ public class MixerViewModel : ViewModelBase, IRoutableViewModel,
 
     private void AddNewOutputChannels(List<OutputChannel> outputChannels)
     {
+        if (OutputChannels is null) return;
+        
         var currentCaptureNodeObjectSerials =
             OutputChannels.Select(i => i.CaptureNodeObjectSerial).ToArray();
 

@@ -32,7 +32,8 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
         IRoutingTarget? selectedAudioToRoutingTarget,
         IAppDataService appDataService,
         IMixerService mixerService,
-        IMonitoringService monitoringService)
+        IMonitoringService monitoringService,
+        bool enableMonitoring)
     {
         AudioToRoutingTargets = audioToRoutingTargets;
         SelectChannelCommand = selectChannelCommand;
@@ -45,9 +46,17 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
         AppDataService = appDataService;
         MixerService = mixerService;
 
-        PanAndVolume =
-            new PanAndVolumeViewModel(OutputLoopback.PlaybackNode,
-                monitoringService);
+        if (enableMonitoring)
+        {
+            PanAndVolume =
+                new PanAndVolumeViewModelV2(OutputLoopback.PlaybackNode,
+                    monitoringService);
+        }
+        else
+        {
+            PanAndVolume =
+                new PanAndVolumeViewModel(OutputLoopback.PlaybackNode);
+        }
 
         this.WhenAnyValue(x => x.SelectedAudioToRoutingTarget)
             .Subscribe(routingTarget =>

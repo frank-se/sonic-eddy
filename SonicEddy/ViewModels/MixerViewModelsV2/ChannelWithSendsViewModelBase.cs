@@ -23,11 +23,12 @@ public abstract class ChannelWithSendsViewModelBase : ChannelViewModelBase
         ObservableCollection<IRoutingTarget> audioToRoutingTargets,
         IRoutingTarget? selectedAudioToRoutingTarget,
         IAppDataService appDataService, IMixerService mixerService,
-        IMonitoringService monitoringService) : base(
+        IMonitoringService monitoringService,
+        bool isMonitoringEnabled) : base(
         channelId, text, selectChannelCommand, inputLoopback, outputLoopback,
         filterChain, audioToRoutingTargets,
         selectedAudioToRoutingTarget, appDataService,
-        mixerService, monitoringService)
+        mixerService, monitoringService, isMonitoringEnabled)
     {
         SendLoopbacks = sendLoopbacks;
 

@@ -27,7 +27,7 @@ public class GroupChannelViewModel(
             inputLoopback, outputLoopback,
             sendLoopbacks, filterChain, audioToRoutingTargets,
             selectedAudioToRoutingTarget, appDataService, mixerService,
-            monitoringService),
+            monitoringService, false),
         IGroupChannel
 {
     public GroupChannel GroupChannel { get; } = groupChannel;

@@ -25,7 +25,7 @@ public class MasterChannelViewModel(
     : ChannelViewModelBase(channelId, text, selectChannelCommand,
             inputLoopback, outputLoopback, filterChain, audioToRoutingTargets,
             selectedAudioToRoutingTarget, appDataService, mixerService,
-            monitoringService),
+            monitoringService, false),
         IMasterChannel
 {
     public MasterChannel MasterChannel { get; } = masterChannel;

@@ -56,8 +56,7 @@ public class ReturnChannelViewModel : ReactiveObject, IReturnChannel,
             })
             .DisposeWith(_disposable!);
 
-        PanAndVolume = new PanAndVolumeViewModel(outbackLoopback.PlaybackNode,
-            monitoringService);
+        PanAndVolume = new PanAndVolumeViewModel(outbackLoopback.PlaybackNode);
 
         FilterChain = filterChain;
     }

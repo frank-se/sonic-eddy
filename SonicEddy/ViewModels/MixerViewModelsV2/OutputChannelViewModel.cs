@@ -19,7 +19,7 @@ public class OutputChannelViewModel(
     public IChannel Channel => this;
 
     public IPanAndVolume PanAndVolume { get; } =
-        new PanAndVolumeViewModel(captureNode, monitoringService);
+        new PanAndVolumeViewModel(captureNode);
 
     public string Name { get; } = text;
 

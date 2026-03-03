@@ -352,7 +352,7 @@ public class MainWindowViewModel : ViewModelBase, IScreen
         MixerViewV2ViewSelected = false;
         var wireplumberService =
             Locator.Current.GetService<IWireplumberService>();
-        var ports = wireplumberService.GetMidiPorts();
+        var ports = wireplumberService!.GetMidiPorts();
         Router.Navigate.Execute(
             new MidiConnectionEditorViewModel(ports, "graph-tester", this));
     }

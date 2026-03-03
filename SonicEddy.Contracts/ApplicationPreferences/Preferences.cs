@@ -6,7 +6,7 @@ namespace SonicEddy.Contracts.ApplicationPreferences;
 public record Preferences(
     [property: ProtoMember(1)] string? DefaultMasterOutputName)
 {
-    public Preferences() : this((string)null)
+    public Preferences() : this((string?)null)
     {
     }
 }

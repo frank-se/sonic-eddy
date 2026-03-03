@@ -17,7 +17,7 @@ public class InputChannelViewModel(
     public IChannel Channel => this;
 
     public IPanAndVolume PanAndVolume { get; } =
-        new PanAndVolumeViewModel(playbackNode, monitoringService);
+        new PanAndVolumeViewModel(playbackNode);
 
     private readonly Node _playbackNode = playbackNode;
 
