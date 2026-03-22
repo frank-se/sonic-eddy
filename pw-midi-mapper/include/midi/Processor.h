@@ -5,6 +5,7 @@
 #include "layers/LayerManager.h"
 #include "midi/ActionContainer.h"
 #include "midi/Receiver.h"
+#include "pipewire/Pipewire.h"
 
 #include <condition_variable>
 #include <mutex>
@@ -36,7 +37,7 @@ class Processor {
 public:
   explicit Processor() = default;
 
-  size_t create_midi_mix_port(
+  std::optional<size_t> create_midi_mix_port(
       const char *pmx_purpose, const char *pmx_tag,
       const LayerSelectCallback &layer_select_callback,
       const ChannelSelectCallback &channel_select_callback,
@@ -44,7 +45,7 @@ public:
       const FilterParamsSectionSelectCallback
           &filter_params_section_select_callback);
 
-  size_t create_mm_1_port(
+  std::optional<size_t> create_mm_1_port(
       const char *pmx_purpose, const char *pmx_tag,
       const LayerSelectCallback &layer_select_callback,
       const ChannelSelectCallback &channel_select_callback,
@@ -62,8 +63,6 @@ public:
 
   bool process_queues();
 
-  void quit_main_loop() const;
-
 private:
   std::mutex _action_containers_mutex;
   std::vector<ActionContainerPtr> _action_containers{};
@@ -77,10 +76,7 @@ private:
   std::mutex _senders_mutex;
   Senders _senders{};
 
-  pw_main_loop *_loop = nullptr;
-  pw_context *_context = nullptr;
-  pw_core *_core = nullptr;
-  pw_registry *_registry = nullptr;
+  std::unique_ptr<pipewire::Pipewire> _pipewire{nullptr};
 
   std::thread _midi_processing_thread;
   std::thread _pipewire_thread;
@@ -89,7 +85,6 @@ private:
 
   void start_processing_thread();
   void start_pipewire_thread();
-  void setup_pipewire();
 };
 
 } // namespace midi

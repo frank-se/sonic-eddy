@@ -1,10 +1,52 @@
 #include "registry/Node.h"
 
+#include "pw_utils/set_pw_node_volumes.h"
+
+void registry::Node::set_channel_volumes(
+    const std::array<float, 2> volumes) const {
+  logging::log<logging::LogLevel::Trace>("Node::set_channel_volumes");
+
+  pw_utils::set_pw_node_volume(_loop, _node, volumes);
+}
+
+void registry::Node::set_param(const std::string &name, float value) const {
+  logging::log<logging::LogLevel::Trace>("Node::set_param");
+
+  pw_utils::set_pw_node_param(_loop, _node, name, value);
+}
+
 std::optional<std::array<float, 2>> registry::Node::channel_volumes() const {
   if (_subscribed_to_param_updates == false)
     return std::nullopt;
 
   return std::array<float, 2>{_left, _right};
+}
+
+std::optional<audio::pan::PanAndVolume> registry::Node::pan_and_volume() const {
+  if (_subscribed_to_param_updates == false)
+    return std::nullopt;
+
+  return audio::pan::get_pan_and_volume_from_gains(*channel_volumes());
+}
+
+void registry::Node::set_volume(const double value) const {
+  logging::log<logging::LogLevel::Trace>("Node::set_volume");
+
+  const auto current_pan_and_volume = pan_and_volume();
+
+  if (!current_pan_and_volume) {
+    logging::log<logging::LogLevel::Error>("Couldn't calculate pan and volume");
+    return;
+  }
+
+  const auto gains = audio::pan::get_gains_from_pan_and_volume(
+      audio::pan::PanAndVolume{.pan = current_pan_and_volume->pan,
+                               .volume = static_cast<float>(value)});
+
+  logging::log<logging::LogLevel::Debug>("Calculated left {} and right {} gain",
+                                         gains[0], gains[1]);
+
+  set_channel_volumes(gains);
 }
 
 void registry::Node::subscribe_to_param_updates() {

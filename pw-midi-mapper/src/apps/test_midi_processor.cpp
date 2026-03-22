@@ -24,6 +24,7 @@ void dial_selection_mode_callback(const size_t midi_port_id,
   std::cout << "dial_selection_mode_callback" << std::endl;
   std::cout << midi_port_id << std::endl;
   std::cout << channel_id << std::endl;
+  std::cout << "dial mode: " << mode << std::endl;
 }
 
 void filter_params_section_select_callback(const size_t midi_port_id,

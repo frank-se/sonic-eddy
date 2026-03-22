@@ -2,11 +2,14 @@
 
 #include "controllers/CmdMm1.h"
 #include "feedback/MidiMixFeedbackManager.h"
+#include "logging/log.h"
 
 #include <iostream>
 #include <utility>
 
 void midi::Processor::start() {
+  logging::log<logging::LogLevel::Trace>("Processor::start");
+
   start_pipewire_thread();
   start_processing_thread();
 }
@@ -20,32 +23,15 @@ void midi::Processor::stop() {
 }
 
 void midi::Processor::start_pipewire_thread() {
+  logging::log<logging::LogLevel::Trace>("Processor::start_pipewire_thread");
+
   std::binary_semaphore semaphore{0};
   _pipewire_thread = std::thread([this, &semaphore]() {
-    setup_pipewire();
+    _pipewire = std::make_unique<pipewire::Pipewire>();
     semaphore.release();
-    pw_main_loop_run(_loop);
+    _pipewire->run();
   });
   semaphore.acquire();
-}
-
-static void do_quit(void *user_data, int signal_number) {
-  const auto processor = static_cast<midi::Processor *>(user_data);
-  processor->quit_main_loop();
-}
-
-void midi::Processor::quit_main_loop() const { pw_main_loop_quit(_loop); }
-
-void midi::Processor::setup_pipewire() {
-  pw_init(nullptr, nullptr);
-  _loop = pw_main_loop_new(nullptr);
-
-  pw_loop_add_signal(pw_main_loop_get_loop(_loop), SIGINT, do_quit, this);
-  pw_loop_add_signal(pw_main_loop_get_loop(_loop), SIGTERM, do_quit, this);
-
-  _context = pw_context_new(pw_main_loop_get_loop(_loop), nullptr, 0);
-  _core = pw_context_connect(_context, nullptr, 0);
-  _registry = pw_core_get_registry(_core, PW_VERSION_REGISTRY, 0);
 }
 
 static int setup_receiver_function(struct spa_loop *loop, bool async,
@@ -64,7 +50,7 @@ static int setup_sender_function(struct spa_loop *loop, bool async,
   return 0;
 }
 
-size_t midi::Processor::create_midi_mix_port(
+std::optional<size_t> midi::Processor::create_midi_mix_port(
     const char *pmx_purpose, const char *pmx_tag,
     const std::function<void(size_t port_id, size_t layer_id)>
         &layer_select_callback,
@@ -76,22 +62,35 @@ size_t midi::Processor::create_midi_mix_port(
     const std::function<void(size_t port_id, size_t channel_id,
                              size_t section_id)>
         &filter_params_section_select_callback) {
-  const auto receiver =
-      std::make_shared<Receiver>(pmx_purpose, pmx_tag, _loop, MidiVersion::UMP,
-                                 &_queue_wait_mutex, &_queue_wait_condition);
+  logging::log<logging::LogLevel::Trace>("Processor::create_midi_mix_port");
 
-  pw_loop_invoke(pw_main_loop_get_loop(_loop), setup_receiver_function,
-                 SPA_ID_INVALID, nullptr, 0, false, receiver.get());
+  if (_pipewire == nullptr) {
+    logging::log<logging::LogLevel::Error>(
+        "Couldn't create midi mix port, pipewire not set up!");
 
-  const auto sender = std::make_shared<Sender>(pmx_purpose, pmx_tag, _loop);
+    return std::nullopt;
+  }
 
-  pw_loop_invoke(pw_main_loop_get_loop(_loop), setup_sender_function,
-                 SPA_ID_INVALID, nullptr, 0, false, sender.get());
+  const auto receiver = std::make_shared<Receiver>(
+      pmx_purpose, pmx_tag, _pipewire->loop(), MidiVersion::UMP,
+      &_queue_wait_mutex, &_queue_wait_condition);
+
+  pw_loop_invoke(pw_main_loop_get_loop(_pipewire->loop()),
+                 setup_receiver_function, SPA_ID_INVALID, nullptr, 0, false,
+                 receiver.get());
+
+  const auto sender =
+      std::make_shared<Sender>(pmx_purpose, pmx_tag, _pipewire->loop());
+
+  pw_loop_invoke(pw_main_loop_get_loop(_pipewire->loop()),
+                 setup_sender_function, SPA_ID_INVALID, nullptr, 0, false,
+                 sender.get());
 
   std::lock_guard action_containers_lock(_action_containers_mutex);
   const auto port_id = _action_containers.size();
+
   const auto midi_mix = std::make_shared<controllers::MidiMix>(
-      _registry, _loop, sender,
+      _pipewire->registry(), _pipewire->loop(), sender,
       [port_id, layer_select_callback](const size_t layer_id) {
         layer_select_callback(port_id, layer_id);
       },
@@ -118,7 +117,7 @@ size_t midi::Processor::create_midi_mix_port(
   return port_id;
 }
 
-size_t midi::Processor::create_mm_1_port(
+std::optional<size_t> midi::Processor::create_mm_1_port(
     const char *pmx_purpose, const char *pmx_tag,
     const LayerSelectCallback &layer_select_callback,
     const ChannelSelectCallback &channel_select_callback,
@@ -129,24 +128,35 @@ size_t midi::Processor::create_mm_1_port(
         &filter_params_section_move_pages_right_callback,
     const FilterParamsSectionMovePagesLeftCallback
         &filter_params_section_move_pages_left_callback) {
+  logging::log<logging::LogLevel::Trace>("Processor::create_mm_1_port");
 
-  const auto receiver =
-      std::make_shared<Receiver>(pmx_purpose, pmx_tag, _loop, MidiVersion::Midi,
-                                 &_queue_wait_mutex, &_queue_wait_condition);
+  if (_pipewire == nullptr) {
+    logging::log<logging::LogLevel::Error>(
+        "Couldn't create CMD MM-1 port, pipewire not set up!");
 
-  pw_loop_invoke(pw_main_loop_get_loop(_loop), setup_receiver_function,
-                 SPA_ID_INVALID, nullptr, 0, false, receiver.get());
+    return std::nullopt;
+  }
 
-  const auto sender = std::make_shared<Sender>(pmx_purpose, pmx_tag, _loop);
+  const auto receiver = std::make_shared<Receiver>(
+      pmx_purpose, pmx_tag, _pipewire->loop(), MidiVersion::Midi,
+      &_queue_wait_mutex, &_queue_wait_condition);
 
-  pw_loop_invoke(pw_main_loop_get_loop(_loop), setup_sender_function,
-                 SPA_ID_INVALID, nullptr, 0, false, sender.get());
+  pw_loop_invoke(pw_main_loop_get_loop(_pipewire->loop()),
+                 setup_receiver_function, SPA_ID_INVALID, nullptr, 0, false,
+                 receiver.get());
+
+  const auto sender =
+      std::make_shared<Sender>(pmx_purpose, pmx_tag, _pipewire->loop());
+
+  pw_loop_invoke(pw_main_loop_get_loop(_pipewire->loop()),
+                 setup_sender_function, SPA_ID_INVALID, nullptr, 0, false,
+                 sender.get());
 
   std::lock_guard action_containers_lock(_action_containers_mutex);
   const auto port_id = _action_containers.size();
 
   const auto cmd_mm_1 = std::make_shared<controllers::CmdMm1>(
-      _registry, _loop, sender,
+      _pipewire->registry(), _pipewire->loop(), sender,
       [port_id, layer_select_callback](const size_t layer_id) {
         layer_select_callback(port_id, layer_id);
       },

@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-std::optional<std::shared_ptr<registry::Node>>
+std::optional<registry::Node *>
 registry::Registry::get_node_by_object_id(const uint64_t object_id) {
   auto lock = std::lock_guard(_nodes_mutex);
 
@@ -10,7 +10,7 @@ registry::Registry::get_node_by_object_id(const uint64_t object_id) {
       std::ranges::lower_bound(_nodes, object_id, {}, &Node::object_id);
 
   if (node_it != _nodes.end() && (*node_it)->object_id() == object_id)
-    return *node_it;
+    return node_it->get();
 
   const BindNodeData bind_node_data{
       .object_id = object_id,
@@ -31,23 +31,20 @@ registry::Registry::get_node_by_object_id(const uint64_t object_id) {
   node_it = std::ranges::lower_bound(_nodes, object_id, {}, &Node::object_id);
 
   if (node_it != _nodes.end() && (*node_it)->object_id() == object_id)
-    return *node_it;
+    return node_it->get();
 
   return std::nullopt;
 }
 
-std::optional<std::shared_ptr<registry::Node>>
-registry::Registry::_bind_node(const uint64_t object_id) {
+void registry::Registry::_bind_node(const uint64_t object_id) {
   auto pw_node = static_cast<struct pw_node *>(pw_registry_bind(
       _registry, object_id, PW_TYPE_INTERFACE_Node, PW_VERSION_NODE, 0));
 
   if (pw_node == nullptr) {
     logging::log<logging::LogLevel::Error>(
         "Couldn't bind node with object id {}", object_id);
-    return std::nullopt;
+    return;
   }
 
-  auto node = std::make_shared<registry::Node>(object_id, pw_node);
-  _nodes.emplace_back(node);
-  return node;
+  _nodes.emplace_back(std::make_unique<Node>(_loop, object_id, pw_node));
 }

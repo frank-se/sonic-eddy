@@ -21,17 +21,16 @@ public:
     pw_proxy_destroy(reinterpret_cast<pw_proxy *>(_registry));
   }
 
-  std::optional<std::shared_ptr<Node>>
-  get_node_by_object_id(uint64_t object_id);
+  std::optional<Node *> get_node_by_object_id(uint64_t object_id);
 
-  std::optional<std::shared_ptr<Node>> _bind_node(uint64_t object_id);
+  void _bind_node(uint64_t object_id);
 
 private:
   pw_main_loop *_loop;
   pw_registry *_registry;
 
   std::mutex _nodes_mutex{};
-  std::vector<std::shared_ptr<Node>> _nodes{};
+  std::vector<std::unique_ptr<Node>> _nodes{};
 
   struct BindNodeData {
     uint64_t object_id;
