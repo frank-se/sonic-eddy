@@ -9,7 +9,7 @@ public class ChannelMonitorValue : Panel
 {
     static ChannelMonitorValue()
     {
-        AffectsArrange<ChannelMonitorValue>();
+        AffectsArrange<ChannelMonitorValue>(ValueProperty);
     }
 
     public ChannelMonitorValue()

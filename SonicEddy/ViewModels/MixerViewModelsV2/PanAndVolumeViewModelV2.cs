@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Reactive.Disposables;
 using System.Reactive.Disposables.Fluent;
+using DynamicData.Binding;
 using Fr.Pw.Monitoring.Monitoring;
 using Fr.Wireplumber.Model.Objects;
 using Fr.Wireplumber.Model.Props;
@@ -11,7 +12,8 @@ using SonicEddy.Services.Monitoring;
 
 namespace SonicEddy.ViewModels.MixerViewModelsV2;
 
-public class PanAndVolumeViewModelV2 : ReactiveObject, IPanAndVolume, IDisposable
+public class PanAndVolumeViewModelV2 : ReactiveObject, IPanAndVolume,
+    IDisposable
 {
     private readonly CompositeDisposable _disposable = new();
 
@@ -22,7 +24,7 @@ public class PanAndVolumeViewModelV2 : ReactiveObject, IPanAndVolume, IDisposabl
     {
         _node = node;
         _monitoringService = monitoringService;
-        
+
         _monitoringService.StartMonitoring(node);
         _monitoringService.Updated += OnMonitoringUpdate;
 
@@ -59,10 +61,15 @@ public class PanAndVolumeViewModelV2 : ReactiveObject, IPanAndVolume, IDisposabl
         RightAverage = update.Averages[1];
     }
 
-    private void SetNodeVolumesFromPanAndVolume(double pan, double volume) =>
-        _node.SetVolumes(
-            Audio.Pan.BoostToExternal(
-                Audio.Pan.GetGainsFromPanAndVolume(pan, volume)));
+    private bool _internalChanges = false;
+    
+    private void SetNodeVolumesFromPanAndVolume(double pan, double volume)
+    {
+        if (_internalChanges) return;
+        var internalVolumes = Audio.Pan.GetGainsFromPanAndVolume(pan, volume);
+        var externalVolumes = Audio.Pan.BoostToExternal(internalVolumes);
+        _node.SetVolumes(externalVolumes);
+    }
 
     private void OnPropertiesChanged(Properties? properties) =>
         SetVolumeAndPanFromProperties(properties);
@@ -71,24 +78,34 @@ public class PanAndVolumeViewModelV2 : ReactiveObject, IPanAndVolume, IDisposabl
     {
         if (properties is null) return;
 
-        var volumes =
-            Audio.Pan.AttenuateFromExternal(
-                properties.Channels.Select(c => (double)c.Volume)
-                    .ToArray());
+        var externalVolumes =
+            properties.Channels.Select(c => (double)c.Volume)
+                .ToArray();
 
-        if (volumes.Length < 2)
+        if (externalVolumes.Length < 2)
         {
             Pan = 0.0f;
             Volume = 0.0f;
         }
-        else
-        {
-            var (pan, volume) =
-                Audio.Pan.GetPanAndVolumeFromGains(volumes[0], volumes[1]);
 
-            Pan = (float)pan;
-            Volume = (float)volume;
+        var internalVolumes =
+            Audio.Pan.AttenuateFromExternal(externalVolumes);
+
+        var (pan, volume) =
+            Audio.Pan.GetPanAndVolumeFromGains(internalVolumes[0],
+                internalVolumes[1]);
+
+        _internalChanges = true;
+        Volume = volume;
+
+        if (Volume == 0.0f)
+        {
+            _internalChanges = false;
+            return;
         }
+
+        Pan = pan;
+        _internalChanges = false;
     }
 
     private readonly Node _node;
@@ -109,32 +126,32 @@ public class PanAndVolumeViewModelV2 : ReactiveObject, IPanAndVolume, IDisposabl
     {
         get;
         set => this.RaiseAndSetIfChanged(ref field, value);
-    } = 0.0f;
+    }
 
     public float RightAverage
     {
         get;
         set => this.RaiseAndSetIfChanged(ref field, value);
-    } = 0.0f;
+    }
 
     public float LeftPeak
     {
         get;
         set => this.RaiseAndSetIfChanged(ref field, value);
-    } = 0.0f;
+    }
 
     public float RightPeak
     {
         get;
         set => this.RaiseAndSetIfChanged(ref field, value);
-    } = 0.0f;
+    }
 
     public void Dispose()
     {
         _node?.PropertiesChanged -= OnPropertiesChanged;
         if (_node is not null)
             _monitoringService.StopMonitoring(_node);
-        
+
         _monitoringService.Updated -= OnMonitoringUpdate;
         _disposable.Dispose();
     }

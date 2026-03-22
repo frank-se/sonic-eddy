@@ -61,5 +61,10 @@
 
     <ItemGroup>
       <ProjectReference Include="..\SonicEddy.Contracts\SonicEddy.Contracts.csproj" />
+      <ProjectReference Include="..\Fr.Pw.Midi\Fr.Pw.Midi.csproj" />
     </ItemGroup>
+
+    <ItemGroup>
+        <None Include="runtimes/linux-x64/libfrmidimapper.so.0.0.1" Pack="true" PackagePath="runtimes/linux-x64/native/"/>
+    </ItemGroup> 
 </Project>

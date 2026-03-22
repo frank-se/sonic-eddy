@@ -53,6 +53,16 @@
                                             Parameters="{Binding $parent[mixerControls:ChannelStrip].ThirdPluginParameters}"
                                             Text="{Binding $parent[mixerControls:ChannelStrip].ThirdPluginText}" />
 
+            <!--
+            <mixerControls:PanAndVolumeSectionWithMonitor Grid.Row="7"
+                                                          LeftAverage="0.73"
+                                                          RightAverage="0.57"
+                                                          LeftPeak="{Binding $parent[mixerControls:ChannelStrip].LeftPeak}"
+                                                          RightPeak="{Binding $parent[mixerControls:ChannelStrip].RightPeak}"
+                                                          Volume="{Binding $parent[mixerControls:ChannelStrip].Volume}"
+                                                          Pan="{Binding $parent[mixerControls:ChannelStrip].Pan}" />
+            -->
+
             <mixerControls:PanAndVolumeSectionWithMonitor Grid.Row="7"
                                                           LeftAverage="{Binding $parent[mixerControls:ChannelStrip].LeftAverage}"
                                                           RightAverage="{Binding $parent[mixerControls:ChannelStrip].RightAverage}"
@@ -60,7 +70,7 @@
                                                           RightPeak="{Binding $parent[mixerControls:ChannelStrip].RightPeak}"
                                                           Volume="{Binding $parent[mixerControls:ChannelStrip].Volume}"
                                                           Pan="{Binding $parent[mixerControls:ChannelStrip].Pan}" />
-
+            
             <mixerControls:RoutingComboBox Grid.Row="8"
                                            Text="Audio To"
                                            SelectedRoutingTarget="{Binding $parent[mixerControls:ChannelStrip].SelectedAudioToRoutingTarget}"

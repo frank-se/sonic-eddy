@@ -145,28 +145,13 @@ public class ParameterSection : Grid
             else
             {
                 s.IsVisible = true;
+                s.Text = p.Name;
+                s.Maximum = p.Maximum;
+                s.Minimum = p.Minimum;
 
-                s.Bind(ValueSlider.TextProperty, new Binding
+                s.Bind(ValueSlider.ValueProperty, new Binding("Value")
                 {
-                    Source = p.Name,
-                    Mode = BindingMode.OneTime
-                });
-
-                s.Bind(ValueSlider.MaximumProperty, new Binding
-                {
-                    Source = p.Maximum,
-                    Mode = BindingMode.OneTime
-                });
-
-                s.Bind(ValueSlider.MinimumProperty, new Binding
-                {
-                    Source = p.Minimum,
-                    Mode = BindingMode.OneTime
-                });
-
-                s.Bind(ValueSlider.ValueProperty, new Binding
-                {
-                    Source = p.Value,
+                    Source = p,
                     Mode = BindingMode.TwoWay
                 });
             }

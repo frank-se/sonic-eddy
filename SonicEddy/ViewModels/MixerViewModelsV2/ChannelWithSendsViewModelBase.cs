@@ -136,9 +136,7 @@ public abstract class ChannelWithSendsViewModelBase : ChannelViewModelBase
     private void SetVolumesForSend(int index, double volume)
     {
         if (SendLoopbacks.Count > index)
-            SendLoopbacks[index].PlaybackNode.SetVolumes(
-                Audio.Pan.BoostToExternal(
-                    Audio.Pan.GetGainsFromPanAndVolume(0.0, volume)));
+            SendLoopbacks[index].PlaybackNode.SetVolumes([volume, volume]);
     }
 
     protected override void Dispose(bool disposing)

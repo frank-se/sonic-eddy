@@ -7,6 +7,7 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using Fr.Wireplumber.Model.Objects;
 using Fr.Wireplumber.Modules.Models;
+using SonicEddy.ViewModels.MixerViewModelsV2;
 
 namespace SonicEddy.Controls.MixerControls;
 
@@ -90,7 +91,7 @@ public partial class ChannelDetailsSection : UserControl
         }
 
         _detailsLeftControls.Clear();
-        
+
         foreach (var control in _detailsRightControls)
         {
             PART_DetailsRightColumn.Children.Remove(control);
@@ -120,6 +121,13 @@ public partial class ChannelDetailsSection : UserControl
             AddLoopbackModuleDetails("Input Module", cs.InputLoopback,
                 AddDetailsLeftControl);
 
+            if (channelStrip.HasFilter &&
+                channelStrip is ChannelStripViewModel viewModel)
+            {
+                AddFilterChainModuleDetails("Filter Chain",
+                    viewModel.FilterChain, AddDetailsLeftControl);
+            }
+
             AddLoopbackModuleDetails("Output Module", cs.OutputLoopback,
                 AddDetailsLeftControl);
 
@@ -136,6 +144,83 @@ public partial class ChannelDetailsSection : UserControl
                 AddLoopbackModuleDetails($"Send Module {send.Name}", send,
                     AddDetailsRightControl);
             }
+        }
+    }
+
+    private void AddFilterChainModuleDetails(string name, FilterChain module,
+        Action<Control> AddAction)
+    {
+        AddAction(
+            new TextBlock()
+            {
+                Text = name,
+                FontWeight = FontWeight.Bold,
+                Margin = new Thickness(6)
+            });
+
+        AddAction(
+            new TextBlock()
+            {
+                Text = "Capture Node",
+                FontWeight = FontWeight.Medium,
+                Margin = new Thickness(4)
+            });
+
+        AddAction(
+            new TextBlock()
+            {
+                Text = $"Object Serial: {module.CaptureNode.ObjectSerial}"
+            });
+
+        AddAction(
+            new TextBlock()
+            {
+                Text = $"Object Id: {module.CaptureNode.ObjectId}"
+            });
+
+        // ReSharper disable once MergeIntoPattern
+        if (module.CaptureNode.Properties.IsCompleted &&
+            module.CaptureNode.Properties.Result is not null)
+        {
+            AddAction(
+                new TextBlock()
+                {
+                    Text =
+                        $"Volumes: {string.Join(", ", module.CaptureNode.Properties.Result.Channels.Select(c => c.Volume))}"
+                });
+        }
+
+        AddAction(
+            new TextBlock()
+            {
+                Text = "Playback Node",
+                FontWeight = FontWeight.Medium,
+                Margin = new Thickness(4)
+            });
+
+        AddAction(
+            new TextBlock()
+            {
+                Text =
+                    $"Object Serial: {module.PlaybackNode.ObjectSerial}"
+            });
+
+        AddAction(
+            new TextBlock()
+            {
+                Text = $"Object Id: {module.PlaybackNode.ObjectId}"
+            });
+
+        // ReSharper disable once MergeIntoPattern
+        if (module.PlaybackNode.Properties.IsCompleted &&
+            module.PlaybackNode.Properties.Result is not null)
+        {
+            AddAction(
+                new TextBlock()
+                {
+                    Text =
+                        $"Volumes: {string.Join(", ", module.PlaybackNode.Properties.Result.Channels.Select(c => c.Volume))}"
+                });
         }
     }
 

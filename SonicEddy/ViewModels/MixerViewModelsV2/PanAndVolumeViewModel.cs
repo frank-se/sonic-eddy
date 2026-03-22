@@ -67,24 +67,28 @@ public class PanAndVolumeViewModel : ReactiveObject, IPanAndVolume, IDisposable
     {
         if (properties is null) return;
 
-        var volumes =
-            Audio.Pan.AttenuateFromExternal(
-                properties.Channels.Select(c => (double)c.Volume)
-                    .ToArray());
+        var externalVolumes =
+            properties.Channels.Select(c => (double)c.Volume)
+                .ToArray();
 
-        if (volumes.Length < 2)
+        if (externalVolumes.Length < 2)
         {
             Pan = 0.0f;
             Volume = 0.0f;
         }
-        else
-        {
-            var (pan, volume) =
-                Audio.Pan.GetPanAndVolumeFromGains(volumes[0], volumes[1]);
 
-            Pan = (float)pan;
-            Volume = (float)volume;
-        }
+        var internalVolumes =
+            Audio.Pan.AttenuateFromExternal(externalVolumes);
+
+        var (pan, volume) =
+            Audio.Pan.GetPanAndVolumeFromGains(internalVolumes[0],
+                internalVolumes[1]);
+        
+        Volume = volume;
+
+        if (Volume == 0.0f) return;
+
+        Pan = pan;
     }
 
     private readonly Node _node;

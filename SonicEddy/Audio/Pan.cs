@@ -5,7 +5,7 @@ namespace SonicEddy.Audio;
 
 public static class Pan
 {
-    public static (double Pan, double Volume) GetPanAndVolumeFromGains(
+    public static (float Pan, float Volume) GetPanAndVolumeFromGains(
         double leftGain,
         double rightGain)
     {
@@ -13,8 +13,8 @@ public static class Pan
         var pan = Math.Atan2(rightGain, leftGain) / (Math.PI / 2.0);
         return new()
         {
-            Pan = pan * 2 - 1,
-            Volume = volume
+            Pan = (float)pan * 2 - 1,
+            Volume = (float)volume
         };
     }
 

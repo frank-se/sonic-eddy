@@ -20,12 +20,16 @@
                               Maximum="1"
                               Minimum="0"
                               Value="{Binding $parent[mixerControls:PanAndVolumeSectionWithMonitor].Volume}" />
-        
+
         <mixerControls:ChannelMonitorSection Grid.Row="0"
                                              Grid.Column="1"
+                                             LeftAverage="{Binding $parent[mixerControls:PanAndVolumeSectionWithMonitor].LeftAverage}"
+                                             RightAverage="{Binding $parent[mixerControls:PanAndVolumeSectionWithMonitor].RightAverage}"
+                                             LeftPeak="{Binding $parent[mixerControls:PanAndVolumeSectionWithMonitor].LeftPeak}"
+                                             RightPeak="{Binding $parent[mixerControls:PanAndVolumeSectionWithMonitor].RightAverage}"
                                              Margin="2,4,2,2"
                                              Background="Gray" />
-        
+
         <controls:PanSlider Grid.Row="1"
                             Grid.Column="0"
                             Grid.ColumnSpan="2"
