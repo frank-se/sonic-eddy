@@ -34,7 +34,7 @@ public class MixerService : IMixerService, IDisposable
     private readonly Lock _isModifyingLock = new Lock();
     private bool _isModifyingMixer;
 
-    private List<ulong> _myNodeIds = [];
+    private readonly List<ulong> _myNodeIds = [];
 
     private readonly SemaphoreSlim _externalChange = new(1, 1);
     private readonly SemaphoreSlim _internalChange = new(1, 1);
@@ -43,7 +43,7 @@ public class MixerService : IMixerService, IDisposable
     {
         if (_preferenceService.Preferences is null)
             await _preferenceService.Load();
-        
+
         await _externalChange.WaitAsync();
 
         try
@@ -57,98 +57,21 @@ public class MixerService : IMixerService, IDisposable
 
             try
             {
-                CurrentMixer = await _editor.Create(_preferenceService.Preferences?.DefaultMasterOutputName);
+                _myNodeIds.Clear();
 
-                List<IEnumerable<ulong>> ids =
-                [
-                    CurrentMixer.Channels
-                        .Select(c => c.FilterChain?.CaptureNode.ObjectSerial)
-                        .OfType<ulong>(),
-                    CurrentMixer.Channels
-                        .Select(c => c.FilterChain?.PlaybackNode.ObjectSerial)
-                        .OfType<ulong>(),
-                    CurrentMixer.Channels
-                        .Select(c => c.InputLoopback.CaptureNode.ObjectSerial),
-                    CurrentMixer.Channels
-                        .Select(c => c.InputLoopback.PlaybackNode.ObjectSerial),
-                    CurrentMixer.Channels
-                        .Select(c => c.OutputLoopback.CaptureNode.ObjectSerial),
-                    CurrentMixer.Channels
-                        .Select(c =>
-                            c.OutputLoopback.PlaybackNode.ObjectSerial),
-                    CurrentMixer.Channels
-                        .SelectMany(c =>
-                            c.SendLoopbacks.Select(s =>
-                                s.CaptureNode.ObjectSerial)),
-                    CurrentMixer.Channels
-                        .SelectMany(c =>
-                            c.SendLoopbacks.Select(s =>
-                                s.PlaybackNode.ObjectSerial)),
-                    CurrentMixer.SendReturns
-                        .Select(r => r.FilterChain?.CaptureNode.ObjectSerial)
-                        .OfType<ulong>(),
-                    CurrentMixer.SendReturns
-                        .Select(r => r.FilterChain?.PlaybackNode.ObjectSerial)
-                        .OfType<ulong>(),
-                    CurrentMixer.SendReturns
-                        .Select(r => r.InputLoopback.CaptureNode.ObjectSerial),
-                    CurrentMixer.SendReturns
-                        .Select(r => r.InputLoopback.PlaybackNode.ObjectSerial),
-                    CurrentMixer.SendReturns
-                        .Select(r => r.OutputLoopback.CaptureNode.ObjectSerial),
-                    CurrentMixer.SendReturns
-                        .Select(r =>
-                            r.OutputLoopback.PlaybackNode.ObjectSerial),
-                    CurrentMixer.GroupChannels
-                        .Select(c => c.FilterChain?.CaptureNode.ObjectSerial)
-                        .OfType<ulong>(),
-                    CurrentMixer.GroupChannels
-                        .Select(c => c.FilterChain?.PlaybackNode.ObjectSerial)
-                        .OfType<ulong>(),
-                    CurrentMixer.GroupChannels
-                        .Select(c => c.InputLoopback.CaptureNode.ObjectSerial),
-                    CurrentMixer.GroupChannels
-                        .Select(c => c.InputLoopback.PlaybackNode.ObjectSerial),
-                    CurrentMixer.GroupChannels
-                        .Select(c => c.OutputLoopback.CaptureNode.ObjectSerial),
-                    CurrentMixer.GroupChannels
-                        .Select(c =>
-                            c.OutputLoopback.PlaybackNode.ObjectSerial),
-                    CurrentMixer.GroupChannels
-                        .SelectMany(c =>
-                            c.SendLoopbacks.Select(s =>
-                                s.CaptureNode.ObjectSerial)),
-                    CurrentMixer.GroupChannels
-                        .SelectMany(c =>
-                            c.SendLoopbacks.Select(s =>
-                                s.PlaybackNode.ObjectSerial)),
-                    [
-                        CurrentMixer.MasterChannel.FilterChain?.CaptureNode
-                            .ObjectSerial ?? 0ul
-                    ],
-                    [
-                        CurrentMixer.MasterChannel.FilterChain?.PlaybackNode
-                            .ObjectSerial ?? 0ul
-                    ],
-                    [
-                        CurrentMixer.MasterChannel.InputLoopback.CaptureNode
-                            .ObjectSerial
-                    ],
-                    [
-                        CurrentMixer.MasterChannel.InputLoopback.PlaybackNode
-                            .ObjectSerial
-                    ],
-                    [
-                        CurrentMixer.MasterChannel.OutputLoopback.CaptureNode
-                            .ObjectSerial
-                    ],
-                    [
-                        CurrentMixer.MasterChannel.OutputLoopback.PlaybackNode
-                            .ObjectSerial
-                    ],
-                ];
+                var firstLayer = await _editor.Create(_preferenceService
+                    .Preferences?.DefaultMasterOutputName);
 
-                _myNodeIds = ids.SelectMany(i => i).ToList();
+                var layerOneIds = CollectMixerLayerIds(firstLayer).ToArray();
+                _myNodeIds.AddRange(layerOneIds);
+
+                var secondLayer = await _editor.Create(_preferenceService
+                        .Preferences?.DefaultMasterOutputName,
+                    layerOneIds.ToArray());
+
+                _myNodeIds.AddRange(CollectMixerLayerIds(secondLayer));
+
+                CurrentMixer = new([firstLayer, secondLayer]);
             }
             finally
             {
@@ -168,6 +91,100 @@ public class MixerService : IMixerService, IDisposable
         }
 
         return CurrentMixer;
+    }
+
+    private static IEnumerable<ulong> CollectMixerLayerIds(MixerLayer layer)
+    {
+        List<IEnumerable<ulong>> ids =
+        [
+            layer.Channels
+                .Select(c => c.FilterChain?.CaptureNode.ObjectSerial)
+                .OfType<ulong>(),
+            layer.Channels
+                .Select(c => c.FilterChain?.PlaybackNode.ObjectSerial)
+                .OfType<ulong>(),
+            layer.Channels
+                .Select(c => c.InputLoopback.CaptureNode.ObjectSerial),
+            layer.Channels
+                .Select(c => c.InputLoopback.PlaybackNode.ObjectSerial),
+            layer.Channels
+                .Select(c => c.OutputLoopback.CaptureNode.ObjectSerial),
+            layer.Channels
+                .Select(c =>
+                    c.OutputLoopback.PlaybackNode.ObjectSerial),
+            layer.Channels
+                .SelectMany(c =>
+                    c.SendLoopbacks.Select(s =>
+                        s.CaptureNode.ObjectSerial)),
+            layer.Channels
+                .SelectMany(c =>
+                    c.SendLoopbacks.Select(s =>
+                        s.PlaybackNode.ObjectSerial)),
+            layer.SendReturns
+                .Select(r => r.FilterChain?.CaptureNode.ObjectSerial)
+                .OfType<ulong>(),
+            layer.SendReturns
+                .Select(r => r.FilterChain?.PlaybackNode.ObjectSerial)
+                .OfType<ulong>(),
+            layer.SendReturns
+                .Select(r => r.InputLoopback.CaptureNode.ObjectSerial),
+            layer.SendReturns
+                .Select(r => r.InputLoopback.PlaybackNode.ObjectSerial),
+            layer.SendReturns
+                .Select(r => r.OutputLoopback.CaptureNode.ObjectSerial),
+            layer.SendReturns
+                .Select(r =>
+                    r.OutputLoopback.PlaybackNode.ObjectSerial),
+            layer.GroupChannels
+                .Select(c => c.FilterChain?.CaptureNode.ObjectSerial)
+                .OfType<ulong>(),
+            layer.GroupChannels
+                .Select(c => c.FilterChain?.PlaybackNode.ObjectSerial)
+                .OfType<ulong>(),
+            layer.GroupChannels
+                .Select(c => c.InputLoopback.CaptureNode.ObjectSerial),
+            layer.GroupChannels
+                .Select(c => c.InputLoopback.PlaybackNode.ObjectSerial),
+            layer.GroupChannels
+                .Select(c => c.OutputLoopback.CaptureNode.ObjectSerial),
+            layer.GroupChannels
+                .Select(c =>
+                    c.OutputLoopback.PlaybackNode.ObjectSerial),
+            layer.GroupChannels
+                .SelectMany(c =>
+                    c.SendLoopbacks.Select(s =>
+                        s.CaptureNode.ObjectSerial)),
+            layer.GroupChannels
+                .SelectMany(c =>
+                    c.SendLoopbacks.Select(s =>
+                        s.PlaybackNode.ObjectSerial)),
+            [
+                layer.MasterChannel.FilterChain?.CaptureNode
+                    .ObjectSerial ?? 0ul
+            ],
+            [
+                layer.MasterChannel.FilterChain?.PlaybackNode
+                    .ObjectSerial ?? 0ul
+            ],
+            [
+                layer.MasterChannel.InputLoopback.CaptureNode
+                    .ObjectSerial
+            ],
+            [
+                layer.MasterChannel.InputLoopback.PlaybackNode
+                    .ObjectSerial
+            ],
+            [
+                layer.MasterChannel.OutputLoopback.CaptureNode
+                    .ObjectSerial
+            ],
+            [
+                layer.MasterChannel.OutputLoopback.PlaybackNode
+                    .ObjectSerial
+            ],
+        ];
+
+        return ids.SelectMany(i => i);
     }
 
     public async Task<Mixer?> GetAndLock()
@@ -204,7 +221,8 @@ public class MixerService : IMixerService, IDisposable
         }
     }
 
-    public async Task<ChannelStrip> AddFilterToChannelStrip(ulong channelId,
+    public async Task<ChannelStrip> AddFilterToChannelStrip(int layerId,
+        ulong channelId,
         FilterGraph filterGraph)
     {
         await _externalChange.WaitAsync();
@@ -223,13 +241,15 @@ public class MixerService : IMixerService, IDisposable
 
             try
             {
-                CurrentMixer = await _editor.AddFilterToChannelStrip(
-                    CurrentMixer,
-                    channelId,
-                    filterGraph);
+                CurrentMixer.Layers[layerId] =
+                    await MixerEditor.AddFilterToChannelStrip(
+                        CurrentMixer.Layers[layerId],
+                        channelId,
+                        filterGraph);
 
                 var modifiedChannel =
-                    CurrentMixer.Channels.First(c => c.ChannelId == channelId);
+                    CurrentMixer.Layers[layerId].Channels
+                        .First(c => c.ChannelId == channelId);
 
                 List<ulong?> ids =
                 [
@@ -256,7 +276,8 @@ public class MixerService : IMixerService, IDisposable
             _externalChange.Release();
         }
 
-        return CurrentMixer.Channels.First(c => c.ChannelId == channelId);
+        return CurrentMixer.Layers[layerId].Channels
+            .First(c => c.ChannelId == channelId);
     }
 
     public event Action<List<InputChannel>>? InputsChanged;
@@ -310,14 +331,16 @@ public class MixerService : IMixerService, IDisposable
                 {
                     var input = new InputChannel(node.Description ?? "Unknown",
                         node);
-                    CurrentMixer.Inputs.Add(input);
+                    CurrentMixer.Layers[0].Inputs.Add(input);
+                    CurrentMixer.Layers[1].Inputs.Add(input);
                     inputsChanged = true;
                 }
                 else if (_wireplumberService.IsCaptureNode(node))
                 {
                     var output =
                         new OutputChannel(node.Description ?? "Unknown", node);
-                    CurrentMixer.Outputs.Add(output);
+                    CurrentMixer.Layers[0].Outputs.Add(output);
+                    CurrentMixer.Layers[1].Outputs.Add(output);
                     outputsChanged = true;
                 }
             }
@@ -327,8 +350,10 @@ public class MixerService : IMixerService, IDisposable
             _internalChange.Release();
         }
 
-        if (inputsChanged) InputsChanged?.Invoke(CurrentMixer!.Inputs);
-        if (outputsChanged) OutputsChanged?.Invoke(CurrentMixer!.Outputs);
+        if (inputsChanged)
+            InputsChanged?.Invoke(CurrentMixer!.Layers[0].Inputs);
+        if (outputsChanged)
+            OutputsChanged?.Invoke(CurrentMixer!.Layers[0].Outputs);
     }
 
     private void OnNodeDeleted(Node node)
@@ -339,7 +364,7 @@ public class MixerService : IMixerService, IDisposable
     {
         _wireplumberService.NodeAdded -= OnNodeAdded;
         _wireplumberService.NodeDeleted -= OnNodeDeleted;
-        
+
         GC.SuppressFinalize(this);
     }
 }

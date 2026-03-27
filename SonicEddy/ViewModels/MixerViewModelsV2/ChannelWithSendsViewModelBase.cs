@@ -24,11 +24,11 @@ public abstract class ChannelWithSendsViewModelBase : ChannelViewModelBase
         IRoutingTarget? selectedAudioToRoutingTarget,
         IAppDataService appDataService, IMixerService mixerService,
         IMonitoringService monitoringService,
-        bool isMonitoringEnabled) : base(
+        bool isMonitoringEnabled, int layerId) : base(
         channelId, text, selectChannelCommand, inputLoopback, outputLoopback,
         filterChain, audioToRoutingTargets,
         selectedAudioToRoutingTarget, appDataService,
-        mixerService, monitoringService, isMonitoringEnabled)
+        mixerService, monitoringService, isMonitoringEnabled, layerId)
     {
         SendLoopbacks = sendLoopbacks;
 

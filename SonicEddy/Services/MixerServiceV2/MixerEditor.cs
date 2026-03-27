@@ -12,16 +12,16 @@ namespace SonicEddy.Services.MixerServiceV2;
 
 public class MixerEditor(IWireplumberService wireplumberService)
 {
-    private const int InitialChannelCount = 1;
+    private const int InitialChannelCount = 2;
     private const int SendChannelCount = 1;
 
-    public async Task<Mixer> AddFilterToChannelStrip(
-        Mixer mixer,
+    public static async Task<MixerLayer> AddFilterToChannelStrip(
+        MixerLayer mixerLayer,
         ulong channelId,
         FilterGraph filterGraph)
     {
         var channel =
-            mixer.Channels.First(c => c.ChannelId == channelId);
+            mixerLayer.Channels.First(c => c.ChannelId == channelId);
 
         var filterChainConfig = new FilterChainModuleConfig()
         {
@@ -75,18 +75,21 @@ public class MixerEditor(IWireplumberService wireplumberService)
             FilterChain = filterChain
         };
 
-        var newList = mixer.Channels.Select(c =>
+        var newList = mixerLayer.Channels.Select(c =>
             c.ChannelId == channelId ? newChannel : c).ToList();
 
-        return mixer with
+        return mixerLayer with
         {
             Channels = newList
         };
     }
 
-    public async Task<Mixer> Create(string? defaultMasterName)
+    public async Task<MixerLayer> Create(string? defaultMasterName,
+        ulong[]? ignoreSerials = null)
     {
-        var outputChannels = CreateOutputChannels();
+        ignoreSerials ??= [];
+
+        var outputChannels = CreateOutputChannels(ignoreSerials);
 
         var defaultOutput = defaultMasterName == null
             ? outputChannels.First()
@@ -94,7 +97,7 @@ public class MixerEditor(IWireplumberService wireplumberService)
                   c.CaptureNode.Name == defaultMasterName) ??
               outputChannels.First();
 
-        var inputChannels = CreateInputChannels();
+        var inputChannels = CreateInputChannels(ignoreSerials);
 
         var masterChannel = await CreateMasterChannel(defaultOutput);
 
@@ -104,7 +107,7 @@ public class MixerEditor(IWireplumberService wireplumberService)
 
         var channels = await CreateChannels(masterChannel, returns);
 
-        return new Mixer(
+        return new(
             "Mixer",
             masterChannel,
             groupChannels,
@@ -288,19 +291,21 @@ public class MixerEditor(IWireplumberService wireplumberService)
             masterChannel.InputLoopback.CaptureNode);
     }
 
-    private List<OutputChannel> CreateOutputChannels()
+    private List<OutputChannel> CreateOutputChannels(ulong[] ignoreSerials)
     {
         var captureNodes = wireplumberService.GetCaptureNodes();
-        return captureNodes.Select(CreateOutputChannel).ToList();
+        return captureNodes.Where(n => !ignoreSerials.Contains(n.ObjectSerial))
+            .Select(CreateOutputChannel).ToList();
     }
 
     private static OutputChannel CreateOutputChannel(Node captureNode) =>
         new OutputChannel(captureNode.Description ?? "Unknown", captureNode);
 
-    private List<InputChannel> CreateInputChannels()
+    private List<InputChannel> CreateInputChannels(ulong[] ignoreSerials)
     {
         var playbackNodes = wireplumberService.GetPlaybackNodes();
-        return playbackNodes.Select(CreateInputChannel).ToList();
+        return playbackNodes.Where(n => !ignoreSerials.Contains(n.ObjectSerial))
+            .Select(CreateInputChannel).ToList();
     }
 
     private static InputChannel CreateInputChannel(Node playbackNode) =>

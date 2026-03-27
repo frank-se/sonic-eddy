@@ -70,15 +70,31 @@
                     <Button HorizontalAlignment="Stretch"
                             Padding="8"
                             Margin="4"
-                            Classes.selected="{Binding MixerViewV2ViewSelected}"
-                            Command="{Binding NavigateToMixerV2View}">
+                            Classes.selected="{Binding MixerViewV2LayerAViewSelected}"
+                            Command="{Binding NavigateToMixerV2ViewLayerA}">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xF6FB;"
                                        FontFamily="{StaticResource FluentIconsRegular}"
                                        FontSize="24"
                                        Margin="4" />
 
-                            <TextBlock Text="MIX"
+                            <TextBlock Text="MIX A"
+                                       FontSize="20"
+                                       Margin="4" />
+                        </StackPanel>
+                    </Button>
+                    <Button HorizontalAlignment="Stretch"
+                            Padding="8"
+                            Margin="4"
+                            Classes.selected="{Binding MixerViewV2LayerBViewSelected}"
+                            Command="{Binding NavigateToMixerV2ViewLayerB}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xF6FB;"
+                                       FontFamily="{StaticResource FluentIconsRegular}"
+                                       FontSize="24"
+                                       Margin="4" />
+
+                            <TextBlock Text="MIX B"
                                        FontSize="20"
                                        Margin="4" />
                         </StackPanel>

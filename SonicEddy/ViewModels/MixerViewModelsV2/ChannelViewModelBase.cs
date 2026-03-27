@@ -33,29 +33,31 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
         IAppDataService appDataService,
         IMixerService mixerService,
         IMonitoringService monitoringService,
-        bool enableMonitoring)
+        bool enableMonitoring,
+        int layerId)
     {
+        _layerId = layerId;
         AudioToRoutingTargets = audioToRoutingTargets;
         SelectChannelCommand = selectChannelCommand;
-        InputLoopback = inputLoopback;
-        OutputLoopback = outputLoopback;
+        _inputLoopback = inputLoopback;
+        _outputLoopback = outputLoopback;
         Text = text;
         ChannelId = channelId;
         FilterChain = filterChain;
         SelectedAudioToRoutingTarget = selectedAudioToRoutingTarget;
-        AppDataService = appDataService;
-        MixerService = mixerService;
+        _appDataService = appDataService;
+        _mixerService = mixerService;
 
         if (enableMonitoring)
         {
             PanAndVolume =
-                new PanAndVolumeViewModelV2(OutputLoopback.PlaybackNode,
+                new PanAndVolumeViewModelV2(_outputLoopback.PlaybackNode,
                     monitoringService);
         }
         else
         {
             PanAndVolume =
-                new PanAndVolumeViewModel(OutputLoopback.PlaybackNode);
+                new PanAndVolumeViewModel(_outputLoopback.PlaybackNode);
         }
 
         this.WhenAnyValue(x => x.SelectedAudioToRoutingTarget)
@@ -66,12 +68,12 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
                 switch (routingTarget.Channel)
                 {
                     case ChannelViewModelBase channel:
-                        OutputLoopback.PlaybackNode.OverrideTargetObject(
-                            channel.InputLoopback.CaptureNode.ObjectSerial
+                        _outputLoopback.PlaybackNode.OverrideTargetObject(
+                            channel._inputLoopback.CaptureNode.ObjectSerial
                                 .ToString());
                         break;
                     case OutputChannelViewModel output:
-                        OutputLoopback.PlaybackNode.OverrideTargetObject(
+                        _outputLoopback.PlaybackNode.OverrideTargetObject(
                             output.CaptureNodeObjectSerial.ToString());
                         break;
                 }
@@ -143,10 +145,11 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
             .DisposeWith(Disposables);
     }
 
-    protected readonly LoopbackModule InputLoopback;
-    protected readonly LoopbackModule OutputLoopback;
-    protected readonly IAppDataService AppDataService;
-    protected readonly IMixerService MixerService;
+    private readonly LoopbackModule _inputLoopback;
+    private readonly LoopbackModule _outputLoopback;
+    private readonly IAppDataService _appDataService;
+    private readonly IMixerService _mixerService;
+    private readonly int _layerId;
 
     public FilterChain? FilterChain
     {
@@ -191,7 +194,7 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
 
     public async Task AddFilterAction()
     {
-        var dialogViewModel = new AddFilterChainViewModel(AppDataService);
+        var dialogViewModel = new AddFilterChainViewModel(_appDataService);
         var dialog = new AddFilterChainView()
         {
             DataContext = dialogViewModel
@@ -202,7 +205,8 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
         if (dialogViewModel is
             { DialogResult: true, SelectedFilterGraph: not null })
         {
-            var channelStrip = await MixerService.AddFilterToChannelStrip(
+            var channelStrip = await _mixerService.AddFilterToChannelStrip(
+                _layerId,
                 ChannelId,
                 dialogViewModel.SelectedFilterGraph);
             FilterChain = channelStrip.FilterChain;

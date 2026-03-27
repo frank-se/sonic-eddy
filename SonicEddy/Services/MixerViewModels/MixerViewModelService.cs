@@ -21,12 +21,15 @@ public class MixerViewModelService(
     : IMixerViewModelService
 {
     public async Task<MixerViewModel?> ConvertCurrentMixerToViewModel(
+        int layerId,
         string? urlSegment,
         IScreen hostScreen)
     {
         var mixer = await mixerService.GetAndLock();
 
         if (mixer is null) return null;
+
+        var layer = mixer.Layers[layerId];
 
         ObservableCollection<IRoutingTarget> audioFromRoutingTargets = [];
         ObservableCollection<IRoutingTarget>
@@ -52,7 +55,7 @@ public class MixerViewModelService(
         {
             var selectChannelCommand = mixerModel.SelectChannelCommand;
 
-            var inputChannels = mixer.Inputs.Select(i =>
+            var inputChannels = layer.Inputs.Select(i =>
                 ConvertInputChannel(i, selectChannelCommand)).ToList();
 
             audioFromRoutingTargets.AddRange(
@@ -61,7 +64,7 @@ public class MixerViewModelService(
 
             mixerModel.InputChannels = new(inputChannels);
 
-            var outputChannels = mixer.Outputs.Select(o =>
+            var outputChannels = layer.Outputs.Select(o =>
                 ConvertOutputChannel(o, selectChannelCommand)).ToList();
 
             mixerModel.OutputChannels = new(outputChannels);
@@ -76,14 +79,15 @@ public class MixerViewModelService(
                     if (target.Channel is not OutputChannelViewModel output)
                         return false;
 
-                    if (mixer.MasterChannel.OutputTargetObject is null)
+                    if (layer.MasterChannel.OutputTargetObject is null)
                         return false;
 
-                    return output.CaptureNodeObjectSerial == mixer.MasterChannel
+                    return output.CaptureNodeObjectSerial == layer.MasterChannel
                         .OutputTargetObject.ObjectSerial;
                 });
 
-            var masterChannel = ConvertMasterChannel(mixer.MasterChannel,
+            var masterChannel = ConvertMasterChannel(layerId,
+                layer.MasterChannel,
                 selectChannelCommand, audioToRoutingTargetsMasterChannel,
                 masterSelectedRoutingTarget ??
                 audioToRoutingTargetsMasterChannel.First());
@@ -96,13 +100,13 @@ public class MixerViewModelService(
             audioToRoutingTargetsGroupChannels.Add(
                 new RoutingTargetViewModel("Master", masterChannel));
 
-            var returnChannels = mixer.SendReturns.Select(s =>
+            var returnChannels = layer.SendReturns.Select(s =>
                 ConvertReturnChannel(s, selectChannelCommand));
 
             mixerModel.ReturnChannels = new(returnChannels);
 
-            var groupChannels = mixer.GroupChannels.Select(g =>
-                ConvertGroupChannel(g, selectChannelCommand,
+            var groupChannels = layer.GroupChannels.Select(g =>
+                ConvertGroupChannel(layerId, g, selectChannelCommand,
                     audioToRoutingTargetsGroupChannels,
                     audioToRoutingTargetsGroupChannels.First())).ToArray();
 
@@ -112,8 +116,8 @@ public class MixerViewModelService(
                 groupChannels.Select(g =>
                     new RoutingTargetViewModel(g.Text, g)));
 
-            var channels = mixer.Channels.Select(c =>
-                ConvertChannelStrip(c, selectChannelCommand,
+            var channels = layer.Channels.Select(c =>
+                ConvertChannelStrip(layerId, c, selectChannelCommand,
                     audioFromRoutingTargets,
                     audioToRoutingTargetsChannelStrips,
                     masterChannel));
@@ -130,7 +134,8 @@ public class MixerViewModelService(
         return mixerModel;
     }
 
-    private GroupChannelViewModel ConvertGroupChannel(GroupChannel channel,
+    private GroupChannelViewModel ConvertGroupChannel(int layerId,
+        GroupChannel channel,
         ICommand selectedChannelCommand,
         ObservableCollection<IRoutingTarget> audioToRoutingTargets,
         IRoutingTarget selectedAudioToRoutingTarget) =>
@@ -138,9 +143,10 @@ public class MixerViewModelService(
             selectedChannelCommand, channel.InputLoopback,
             channel.OutputLoopback, channel.SendLoopbacks, null,
             audioToRoutingTargets, selectedAudioToRoutingTarget, appDataService,
-            mixerService, channel, monitoringService);
+            mixerService, channel, monitoringService, layerId);
 
-    private MasterChannelViewModel ConvertMasterChannel(MasterChannel channel,
+    private MasterChannelViewModel ConvertMasterChannel(int layerId,
+        MasterChannel channel,
         ICommand selectedChannelCommand,
         ObservableCollection<IRoutingTarget> audioToRoutingTargets,
         IRoutingTarget selectedAudioToRoutingTarget
@@ -148,9 +154,10 @@ public class MixerViewModelService(
         selectedChannelCommand, channel.InputLoopback,
         channel.OutputLoopback, channel.FilterChain, audioToRoutingTargets,
         selectedAudioToRoutingTarget,
-        appDataService, mixerService, channel, monitoringService);
+        appDataService, mixerService, channel, monitoringService, layerId);
 
-    public ChannelStripViewModel ConvertChannelStrip(ChannelStrip channel,
+    public ChannelStripViewModel ConvertChannelStrip(int layerId,
+        ChannelStrip channel,
         ICommand selectedChannelCommand,
         ObservableCollection<IRoutingTarget> audioFromRoutingTargets,
         ObservableCollection<IRoutingTarget> audioToRoutingTargets,
@@ -161,7 +168,7 @@ public class MixerViewModelService(
             channel.SendLoopbacks, channel.FilterChain, audioFromRoutingTargets,
             audioToRoutingTargets,
             audioToRoutingTargets.First(r => r.Channel == masterChannel),
-            channel, appDataService, mixerService, monitoringService);
+            channel, appDataService, mixerService, monitoringService, layerId);
 
     private ReturnChannelViewModel ConvertReturnChannel(
         ReturnChannel channel,

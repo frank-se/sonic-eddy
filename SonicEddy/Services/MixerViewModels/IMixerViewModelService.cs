@@ -13,6 +13,7 @@ namespace SonicEddy.Services.MixerViewModels;
 public interface IMixerViewModelService
 {
     Task<MixerViewModel?> ConvertCurrentMixerToViewModel(
+        int layerId,
         string? urlSegment,
         IScreen hostScreen);
 
@@ -24,7 +25,9 @@ public interface IMixerViewModelService
         OutputChannel channel,
         ICommand selectChannelCommand);
 
-    ChannelStripViewModel ConvertChannelStrip(ChannelStrip channel,
+    ChannelStripViewModel ConvertChannelStrip(
+        int layerId,
+        ChannelStrip channel,
         ICommand selectedChannelCommand,
         ObservableCollection<IRoutingTarget> audioFromRoutingTargets,
         ObservableCollection<IRoutingTarget> audioToRoutingTargets,

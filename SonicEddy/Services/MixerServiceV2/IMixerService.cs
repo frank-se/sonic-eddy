@@ -15,9 +15,10 @@ public interface IMixerService
     public Task Unlock();
 
     public Task<ChannelStrip> AddFilterToChannelStrip(
+        int layerId,
         ulong channelId,
         FilterGraph filterGraph);
-    
+
     event Action<List<InputChannel>>? InputsChanged;
     event Action<List<OutputChannel>>? OutputsChanged;
 }

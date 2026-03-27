@@ -21,11 +21,12 @@ public class MasterChannelViewModel(
     IAppDataService appDataService,
     IMixerService mixerService,
     MasterChannel masterChannel,
-    IMonitoringService monitoringService)
+    IMonitoringService monitoringService,
+    int layerId)
     : ChannelViewModelBase(channelId, text, selectChannelCommand,
             inputLoopback, outputLoopback, filterChain, audioToRoutingTargets,
             selectedAudioToRoutingTarget, appDataService, mixerService,
-            monitoringService, false),
+            monitoringService, false, layerId),
         IMasterChannel
 {
     public MasterChannel MasterChannel { get; } = masterChannel;

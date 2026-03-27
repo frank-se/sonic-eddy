@@ -22,12 +22,13 @@ public class GroupChannelViewModel(
     IAppDataService appDataService,
     IMixerService mixerService,
     GroupChannel groupChannel,
-    IMonitoringService monitoringService)
+    IMonitoringService monitoringService,
+    int layerId)
     : ChannelWithSendsViewModelBase(channelId, text, selectChannelCommand,
             inputLoopback, outputLoopback,
             sendLoopbacks, filterChain, audioToRoutingTargets,
             selectedAudioToRoutingTarget, appDataService, mixerService,
-            monitoringService, false),
+            monitoringService, false, layerId),
         IGroupChannel
 {
     public GroupChannel GroupChannel { get; } = groupChannel;
