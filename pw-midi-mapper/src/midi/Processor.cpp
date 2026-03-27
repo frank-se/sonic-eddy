@@ -1,11 +1,7 @@
 #include "midi/Processor.h"
-
 #include "controllers/CmdMm1.h"
-#include "feedback/MidiMixFeedbackManager.h"
+#include "controllers/FaderfoxPc4.h"
 #include "logging/log.h"
-
-#include <iostream>
-#include <utility>
 
 void midi::Processor::start() {
   logging::log<logging::LogLevel::Trace>("Processor::start");
@@ -15,10 +11,13 @@ void midi::Processor::start() {
 }
 
 void midi::Processor::stop() {
+  logging::log<logging::LogLevel::Trace>("Processor::stop");
+
+  _is_running = false;
+
   pthread_kill(_pipewire_thread.native_handle(), SIGINT);
   _pipewire_thread.join();
 
-  pthread_kill(_midi_processing_thread.native_handle(), SIGINT);
   _midi_processing_thread.join();
 }
 
@@ -34,17 +33,21 @@ void midi::Processor::start_pipewire_thread() {
   semaphore.acquire();
 }
 
-static int setup_receiver_function(struct spa_loop *loop, bool async,
-                                   uint32_t seq, const void *data, size_t size,
+static int setup_receiver_function(spa_loop *loop, bool async, uint32_t seq,
+                                   const void *data, size_t size,
                                    void *user_data) {
+  logging::log<logging::LogLevel::Trace>("Processor::setup_receiver_function");
+
   const auto receiver = static_cast<midi::Receiver *>(user_data);
   receiver->setup();
   return 0;
 }
 
-static int setup_sender_function(struct spa_loop *loop, bool async,
-                                 uint32_t seq, const void *data, size_t size,
+static int setup_sender_function(spa_loop *loop, bool async, uint32_t seq,
+                                 const void *data, size_t size,
                                  void *user_data) {
+  logging::log<logging::LogLevel::Trace>("Processor::setup_sender_function");
+
   const auto sender = static_cast<midi::Sender *>(user_data);
   sender->setup();
   return 0;
@@ -52,14 +55,13 @@ static int setup_sender_function(struct spa_loop *loop, bool async,
 
 std::optional<size_t> midi::Processor::create_midi_mix_port(
     const char *pmx_purpose, const char *pmx_tag,
-    const std::function<void(size_t port_id, size_t layer_id)>
-        &layer_select_callback,
-    const std::function<void(size_t port_id, size_t channel_id)>
+    const std::function<void(size_t layer_id)> &layer_select_callback,
+    const std::function<void(controllers::ChannelType, size_t channel_id)>
         &channel_select_callback,
-    const std::function<void(size_t port_id, size_t channel_id,
+    const std::function<void(controllers::ChannelType, size_t channel_id,
                              controllers::DialMode)>
         &dial_section_mode_select_callback,
-    const std::function<void(size_t port_id, size_t channel_id,
+    const std::function<void(controllers::ChannelType, size_t channel_id,
                              size_t section_id)>
         &filter_params_section_select_callback) {
   logging::log<logging::LogLevel::Trace>("Processor::create_midi_mix_port");
@@ -71,48 +73,95 @@ std::optional<size_t> midi::Processor::create_midi_mix_port(
     return std::nullopt;
   }
 
+  std::lock_guard controllers_lock(_controllers_mutex);
+  const auto port_id = _controllers.size();
+
+  const auto receiver_name = std::format("midi-receiver {} Midi Mix", port_id);
+  const auto sender_name = std::format("midi-sender {} Midi Mix", port_id);
+
   const auto receiver = std::make_shared<Receiver>(
-      pmx_purpose, pmx_tag, _pipewire->loop(), MidiVersion::UMP,
+      pmx_purpose, pmx_tag, receiver_name, _pipewire->loop(), MidiVersion::UMP,
       &_queue_wait_mutex, &_queue_wait_condition);
 
   pw_loop_invoke(pw_main_loop_get_loop(_pipewire->loop()),
                  setup_receiver_function, SPA_ID_INVALID, nullptr, 0, false,
                  receiver.get());
 
-  const auto sender =
-      std::make_shared<Sender>(pmx_purpose, pmx_tag, _pipewire->loop());
+  const auto sender = std::make_shared<Sender>(pmx_purpose, pmx_tag,
+                                               sender_name, _pipewire->loop());
 
   pw_loop_invoke(pw_main_loop_get_loop(_pipewire->loop()),
                  setup_sender_function, SPA_ID_INVALID, nullptr, 0, false,
                  sender.get());
 
-  std::lock_guard action_containers_lock(_action_containers_mutex);
-  const auto port_id = _action_containers.size();
-
   const auto midi_mix = std::make_shared<controllers::MidiMix>(
       _pipewire->registry(), _pipewire->loop(), sender,
-      [port_id, layer_select_callback](const size_t layer_id) {
-        layer_select_callback(port_id, layer_id);
+      [this, layer_select_callback](const size_t layer_id) {
+        for (const auto &action_container : _controllers) {
+          action_container->set_layer_from_processor(layer_id);
+        }
+
+        layer_select_callback(layer_id);
       },
-      [port_id, channel_select_callback](const size_t channel_id) {
-        channel_select_callback(port_id, channel_id);
+      [this, channel_select_callback](const size_t channel_id) {
+        for (const auto &action_container : _controllers) {
+          action_container->set_selected_channel_from_processor(
+              controllers::ChannelType::CHANNEL, channel_id);
+        }
+        channel_select_callback(controllers::ChannelType::CHANNEL, channel_id);
       },
-      [port_id, dial_section_mode_select_callback](
-          const size_t channel_id, const controllers::DialMode mode) {
-        dial_section_mode_select_callback(port_id, channel_id, mode);
+      [dial_section_mode_select_callback](const size_t channel_id,
+                                          const controllers::DialMode mode) {
+        dial_section_mode_select_callback(controllers::ChannelType::CHANNEL,
+                                          channel_id, mode);
       },
-      [port_id, filter_params_section_select_callback](
-          const size_t channel_id, const size_t section_id) {
-        filter_params_section_select_callback(port_id, channel_id, section_id);
+      [filter_params_section_select_callback](const size_t channel_id,
+                                              const size_t section_id) {
+        filter_params_section_select_callback(controllers::ChannelType::CHANNEL,
+                                              channel_id, section_id);
       });
 
-  _action_containers.push_back(midi_mix);
+  _controllers.push_back(midi_mix);
 
-  std::lock_guard _receivers_lock(_receivers_mutex);
   _receivers.push_back(receiver);
 
-  std::lock_guard _senders_lock(_senders_mutex);
-  _senders.push_back(sender);
+  midi_mix->add_current_state_as_feedback();
+
+  return port_id;
+}
+
+std::optional<size_t>
+midi::Processor::create_fader_fox_pc4_port(const char *pmx_purpose,
+                                           const char *pmx_tag) {
+  logging::log<logging::LogLevel::Trace>(
+      "Processor::create_fader_fox_pc4_port");
+
+  if (_pipewire == nullptr) {
+    logging::log<logging::LogLevel::Error>(
+        "Couldn't create Fader Fox PC4 port, pipewire not set up!");
+
+    return std::nullopt;
+  }
+
+  std::lock_guard controllers_lock(_controllers_mutex);
+  const auto port_id = _controllers.size();
+
+  const auto receiver_name = std::format("midi-receiver {} FF PC4", port_id);
+
+  const auto receiver = std::make_shared<Receiver>(
+      pmx_purpose, pmx_tag, receiver_name, _pipewire->loop(), MidiVersion::UMP,
+      &_queue_wait_mutex, &_queue_wait_condition);
+
+  pw_loop_invoke(pw_main_loop_get_loop(_pipewire->loop()),
+                 setup_receiver_function, SPA_ID_INVALID, nullptr, 0, false,
+                 receiver.get());
+
+  const auto faderfox_pc4 = std::make_shared<controllers::FaderfoxPc4>(
+      _pipewire->registry(), _pipewire->loop());
+
+  _controllers.push_back(faderfox_pc4);
+
+  _receivers.push_back(receiver);
 
   return port_id;
 }
@@ -137,87 +186,190 @@ std::optional<size_t> midi::Processor::create_mm_1_port(
     return std::nullopt;
   }
 
+  std::lock_guard controllers_lock(_controllers_mutex);
+  const auto port_id = _controllers.size();
+
+  const auto receiver_name = std::format("midi-receiver {} MM1", port_id);
+  const auto sender_name = std::format("midi-sender {} MM1", port_id);
+
   const auto receiver = std::make_shared<Receiver>(
-      pmx_purpose, pmx_tag, _pipewire->loop(), MidiVersion::Midi,
+      pmx_purpose, pmx_tag, receiver_name, _pipewire->loop(), MidiVersion::UMP,
       &_queue_wait_mutex, &_queue_wait_condition);
 
   pw_loop_invoke(pw_main_loop_get_loop(_pipewire->loop()),
                  setup_receiver_function, SPA_ID_INVALID, nullptr, 0, false,
                  receiver.get());
 
-  const auto sender =
-      std::make_shared<Sender>(pmx_purpose, pmx_tag, _pipewire->loop());
+  const auto sender = std::make_shared<Sender>(pmx_purpose, pmx_tag,
+                                               sender_name, _pipewire->loop());
 
   pw_loop_invoke(pw_main_loop_get_loop(_pipewire->loop()),
                  setup_sender_function, SPA_ID_INVALID, nullptr, 0, false,
                  sender.get());
 
-  std::lock_guard action_containers_lock(_action_containers_mutex);
-  const auto port_id = _action_containers.size();
-
   const auto cmd_mm_1 = std::make_shared<controllers::CmdMm1>(
       _pipewire->registry(), _pipewire->loop(), sender,
-      [port_id, layer_select_callback](const size_t layer_id) {
-        layer_select_callback(port_id, layer_id);
+      [this, layer_select_callback](const size_t layer_id) {
+        for (const auto &action_container : _controllers) {
+          action_container->set_layer_from_processor(layer_id);
+        }
+
+        layer_select_callback(layer_id);
       },
-      [port_id, channel_select_callback](const size_t channel_id) {
-        channel_select_callback(port_id, channel_id);
+      [this, channel_select_callback](const size_t channel_id) {
+        for (const auto &action_container : _controllers) {
+          action_container->set_selected_channel_from_processor(
+              controllers::ChannelType::GROUP_CHANNEL, channel_id);
+        }
+
+        channel_select_callback(controllers::ChannelType::GROUP_CHANNEL,
+                                channel_id);
       },
-      [port_id, dial_section_mode_select_callback](
+      [dial_section_mode_select_callback](
           const size_t channel_id, const controllers::DialMode dial_mode) {
-        dial_section_mode_select_callback(port_id, channel_id, dial_mode);
+        dial_section_mode_select_callback(
+            controllers::ChannelType::GROUP_CHANNEL, channel_id, dial_mode);
       },
-      [port_id, filter_params_section_select_callback](
-          size_t channel_id, const size_t section_id) {
-        filter_params_section_select_callback(port_id, channel_id, section_id);
+      [filter_params_section_select_callback](const size_t channel_id,
+                                              const size_t section_id) {
+        filter_params_section_select_callback(
+            controllers::ChannelType::GROUP_CHANNEL, channel_id, section_id);
       },
-      [port_id, filter_params_section_move_pages_right_callback](
+      [filter_params_section_move_pages_right_callback](
           const uint64_t step_count) {
-        filter_params_section_move_pages_right_callback(port_id, step_count);
+        filter_params_section_move_pages_right_callback(step_count);
       },
-      [port_id, filter_params_section_move_pages_left_callback](
+      [filter_params_section_move_pages_left_callback](
           const uint64_t step_count) {
-        filter_params_section_move_pages_left_callback(port_id, step_count);
+        filter_params_section_move_pages_left_callback(step_count);
       });
 
-  _action_containers.push_back(cmd_mm_1);
+  _controllers.push_back(cmd_mm_1);
 
-  std::lock_guard _receivers_lock(_receivers_mutex);
   _receivers.push_back(receiver);
 
-  std::lock_guard _senders_lock(_senders_mutex);
-  _senders.push_back(sender);
-
+  cmd_mm_1->add_current_state_as_feedback();
   return port_id;
 }
 
 void midi::Processor::start_processing_thread() {
+  logging::log<logging::LogLevel::Trace>("Processor::start_processing_thread");
+
   _midi_processing_thread = std::thread([this]() {
-    while (true) {
+    while (_is_running) {
       while (process_queues()) {
+        // Keep processing until no receiver queue has messages anymore
       }
 
       auto lock = std::unique_lock(_queue_wait_mutex);
-      _queue_wait_condition.wait(lock);
+      _queue_wait_condition.wait_for(lock, std::chrono::seconds(1));
     }
   });
 }
 
 bool midi::Processor::process_queues() {
-  auto receivers_lock = std::lock_guard(_receivers_mutex);
-  auto action_containers_lock = std::lock_guard(_action_containers_mutex);
+  auto controllers_lock = std::lock_guard(_controllers_mutex);
 
   auto message_processed = false;
   for (size_t i = 0; i < _receivers.size(); i++) {
     const auto receiver = _receivers[i];
-    const auto message = receiver->pop();
 
-    if (message) {
-      const auto action_container = _action_containers[i];
+    if (const auto message = receiver->pop()) {
+      const auto action_container = _controllers[i];
       action_container->process(*message);
       message_processed = true;
     }
   }
 
   return message_processed;
+}
+
+void midi::Processor::set_selected_channel(
+    const controllers::ChannelType channel_type,
+    const size_t channel_id) const {
+  logging::log<logging::LogLevel::Trace>("Processor::set_selected_channel");
+
+  for (const auto &action_container : _controllers) {
+    action_container->set_selected_channel_from_processor(channel_type,
+                                                          channel_id);
+  }
+}
+
+void midi::Processor::set_selected_plugin_page(const size_t plugin_id,
+                                               const size_t page_number) const {
+  logging::log<logging::LogLevel::Trace>("Processor::set_selected_plugin_page");
+
+  for (const auto &action_container : _controllers) {
+    action_container->set_selected_plugin_page_from_processor(plugin_id,
+                                                              page_number);
+  }
+}
+
+void midi::Processor::set_selected_layer(const size_t layer_id) const {
+  logging::log<logging::LogLevel::Trace>("Processor::set_selected_layer");
+
+  for (const auto &action_container : _controllers) {
+    action_container->set_layer_from_processor(layer_id);
+  }
+}
+
+void midi::Processor::set_channel_node(
+    const controllers::ChannelType channel_type, const size_t channel_id,
+    const uint64_t object_id) {
+  logging::log<logging::LogLevel::Trace>("Processor::set_channel_node");
+
+  for (const auto &controller : _controllers) {
+    controller->set_channel_node(channel_type, channel_id, object_id);
+  }
+
+  std::lock_guard controllers_lock(_controllers_mutex);
+}
+
+void midi::Processor::set_channel_filter_node(
+    const controllers::ChannelType channel_type, const size_t channel_id,
+    const uint64_t object_id) {
+  logging::log<logging::LogLevel::Trace>("Processor::set_channel_filter_node");
+
+  for (const auto &controller : _controllers) {
+    controller->set_channel_filter_node(channel_type, channel_id, object_id);
+  }
+
+  std::lock_guard controllers_lock(_controllers_mutex);
+}
+
+void midi::Processor::set_channel_send_node(
+    const controllers::ChannelType channel_type, const size_t channel_id,
+    const size_t send_id, const uint64_t object_id) {
+  logging::log<logging::LogLevel::Trace>("Processor::set_channel_send_node");
+
+  for (const auto &controller : _controllers) {
+    controller->set_channel_send_node(channel_type, channel_id, send_id,
+                                      object_id);
+  }
+
+  std::lock_guard controllers_lock(_controllers_mutex);
+}
+
+void midi::Processor::clear_filter_parameters(
+    const controllers::ChannelType channel_type, const size_t channel_id) {
+  logging::log<logging::LogLevel::Trace>("Processor::clear_filter_parameters");
+
+  for (const auto &controller : _controllers) {
+    controller->clear_filter_parameters(channel_type, channel_id);
+  }
+
+  std::lock_guard controllers_lock(_controllers_mutex);
+}
+
+void midi::Processor::add_filter_parameter(
+    const controllers::ChannelType channel_type, const size_t channel_id,
+    const size_t plugin_id, char *name, const float min, const float max) {
+  logging::log<logging::LogLevel::Trace>("Processor::add_filter_parameter");
+
+  for (const auto &controller : _controllers) {
+    controller->add_filter_parameter(channel_type, channel_id, plugin_id, name,
+                                     min, max);
+  }
+
+  std::lock_guard controllers_lock(_controllers_mutex);
 }

@@ -2,7 +2,7 @@
 
 #include "Callbacks.h"
 #include "DialColumnAndRow.h"
-#include "action_container/IActionContainer.h"
+#include "IController.h"
 #include "controllers/Channel.h"
 #include "midi/Messages.h"
 #include "midi/Sender.h"
@@ -14,7 +14,7 @@
 
 namespace controllers {
 
-class MidiMix : public action_container::IActionContainer {
+class MidiMix : public controllers::IController {
 public:
   MidiMix(
       registry::Registry &registry, pw_main_loop *loop,
@@ -34,9 +34,29 @@ public:
 
   void process(const midi::Message &message) override;
 
+  void set_layer_from_processor(size_t layer) override;
+  void set_selected_channel_from_processor(ChannelType channel_type,
+                                           size_t channel_id) override;
+  void set_selected_plugin_page_from_processor(size_t plugin_id,
+                                               size_t page_number) override;
+
   void set_channel_playback_node(size_t channel_id, uint64_t object_id);
   void set_channel_filter_node(size_t channel_id, uint64_t object_id);
   void set_send_node(size_t channel_id, size_t send_id, uint64_t object_id);
+
+  void add_current_state_as_feedback() override;
+
+  void set_channel_node(ChannelType channel_type, size_t channel_id,
+                        uint64_t object_id) override;
+  void set_channel_filter_node(ChannelType channel_type, size_t channel_id,
+                               uint64_t object_id) override;
+  void set_channel_send_node(ChannelType channel_type, size_t channel_id,
+                             size_t send_id, uint64_t object_id) override;
+  void clear_filter_parameters(ChannelType channel_type,
+                               size_t channel_id) override;
+  void add_filter_parameter(ChannelType channel_type, size_t channel_id,
+                            size_t plugin_id, char *name, float min,
+                            float max) override;
 
 private:
   static constexpr size_t _channels_per_layer{8};
@@ -50,6 +70,7 @@ private:
 
   registry::Node *_master_channel_playback_node = nullptr;
 
+  std::mutex _channels_mutex{};
   /*
    * We always have 16 channels, each assigned to a layer. The first 8 are
    * assigned to layer 0, and the second 8 are assigned to layer 1.
@@ -72,19 +93,18 @@ private:
   [[nodiscard]] bool handle_dial_mode_selection(uint8_t note_number);
   [[nodiscard]] bool handle_filter_params_increment(uint8_t note_number);
 
-  void handle_normalized_control_change(uint8_t index, double value) const;
-  [[nodiscard]] bool handle_volume_control_change(uint8_t index,
-                                                  double value) const;
+  void handle_normalized_control_change(uint8_t index, double value);
+  [[nodiscard]] bool handle_volume_control_change(uint8_t index, double value);
   [[nodiscard]] bool handle_send_volume_control_change(uint8_t index,
-                                                       double value) const;
+                                                       double value);
   [[nodiscard]] bool handle_filter_params_control_change(uint8_t index,
-                                                         double value) const;
+                                                         double value);
   [[nodiscard]] bool handle_master_volume_control_change(uint8_t index,
                                                          double value) const;
 
   void add_channel_feedback() const;
   void add_layer_feedback() const;
-  void add_dial_mode_feedback() const;
+  void add_dial_mode_feedback();
 
   void call_channel_callback() const;
   void call_layer_callback() const;
@@ -98,6 +118,9 @@ private:
 
   static std::optional<DialColumnAndRow>
   get_column_and_row_for_dial_index(uint8_t index);
+
+  std::optional<std::reference_wrapper<Channel>>
+  channel_by_type_and_id(ChannelType channel_type, size_t channel_id);
 };
 
 } // namespace controllers

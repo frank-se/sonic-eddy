@@ -8,7 +8,7 @@ namespace logging {
 
 enum class LogLevel { None = 0, Fatal, Error, Warning, Info, Debug, Trace };
 
-inline constexpr auto LOG_LEVEL = LogLevel::Trace;
+inline constexpr auto LOG_LEVEL = LogLevel::Debug;
 
 constexpr std::string_view to_string(const LogLevel level) noexcept {
   switch (level) {

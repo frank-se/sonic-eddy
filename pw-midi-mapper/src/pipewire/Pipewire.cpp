@@ -1,6 +1,8 @@
 #include "pipewire/Pipewire.h"
 
 void pipewire::Pipewire::setup_pipewire() {
+  logging::log<logging::LogLevel::Trace>("Pipewire::setup_pipewire");
+
   pw_init(nullptr, nullptr);
 
   _loop = pw_main_loop_new(nullptr);
@@ -14,6 +16,8 @@ void pipewire::Pipewire::setup_pipewire() {
 }
 
 void pipewire::Pipewire::do_quit(void *user_data, int signal_number) {
+  logging::log<logging::LogLevel::Trace>("Pipewire::do_quit");
+
   const auto pipewire = static_cast<Pipewire *>(user_data);
   pipewire->quit_main_loop();
 }

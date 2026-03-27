@@ -1,9 +1,7 @@
 #pragma once
 
-#include "Sender.h"
+#include "controllers/ChannelType.h"
 #include "controllers/MidiMix.h"
-#include "layers/LayerManager.h"
-#include "midi/ActionContainer.h"
 #include "midi/Receiver.h"
 #include "pipewire/Pipewire.h"
 
@@ -12,26 +10,22 @@
 
 namespace midi {
 
-using LayerSelectCallback =
-    std::function<void(size_t port_id, size_t layer_id)>;
+using LayerSelectCallback = std::function<void(size_t layer_id)>;
 
 using ChannelSelectCallback =
-    std::function<void(size_t port_id, size_t channel_id)>;
+    std::function<void(controllers::ChannelType, size_t channel_id)>;
 
 using DialSectionModeCallback = std::function<void(
-    size_t port_id, size_t channel_id, controllers::DialMode)>;
+    controllers::ChannelType, size_t channel_id, controllers::DialMode)>;
 
-using FilterParamsSectionSelectCallback =
-    std::function<void(size_t port_id, size_t channel_id, size_t section_id)>;
+using FilterParamsSectionSelectCallback = std::function<void(
+    controllers::ChannelType, size_t channel_id, size_t section_id)>;
 
-using FilterParamsSectionMovePagesRightCallback =
-    std::function<void(size_t port_id, uint64_t)>;
+using FilterParamsSectionMovePagesRightCallback = std::function<void(uint64_t)>;
 
-using FilterParamsSectionMovePagesLeftCallback =
-    std::function<void(size_t port_id, uint64_t)>;
+using FilterParamsSectionMovePagesLeftCallback = std::function<void(uint64_t)>;
 
-using ActionContainerPtr =
-    std::shared_ptr<::action_container::IActionContainer>;
+using ControllerPtr = std::shared_ptr<::controllers::IController>;
 
 class Processor {
 public:
@@ -57,24 +51,44 @@ public:
       const FilterParamsSectionMovePagesLeftCallback
           &filter_params_section_move_pages_left_callback);
 
+  std::optional<size_t> create_fader_fox_pc4_port(const char *pmx_purpose,
+                                                  const char *pmx_tag);
+
   void start();
 
   void stop();
 
   bool process_queues();
 
+  void set_selected_channel(controllers::ChannelType channel_type,
+                            size_t channel_id) const;
+
+  void set_selected_plugin_page(size_t plugin_id, size_t page_number) const;
+
+  void set_selected_layer(size_t layer_id) const;
+
+  void set_channel_node(controllers::ChannelType channel_type,
+                        size_t channel_id, uint64_t object_id);
+
+  void set_channel_filter_node(controllers::ChannelType channel_type,
+                               size_t channel_id, uint64_t object_id);
+
+  void set_channel_send_node(controllers::ChannelType channel_type,
+                             size_t channel_id, size_t send_id,
+                             uint64_t object_id);
+
+  void clear_filter_parameters(controllers::ChannelType channel_type,
+                               size_t channel_id);
+
+  void add_filter_parameter(controllers::ChannelType channel_type,
+                            size_t channel_id, size_t plugin_id, char *name,
+                            float min, float max);
+
 private:
-  std::mutex _action_containers_mutex;
-  std::vector<ActionContainerPtr> _action_containers{};
+  std::mutex _controllers_mutex;
+  std::vector<ControllerPtr> _controllers{};
 
-  std::mutex _layer_managers_mutex;
-  std::vector<layers::LayerManagerPtr> _layer_managers{};
-
-  std::mutex _receivers_mutex;
   Receivers _receivers{};
-
-  std::mutex _senders_mutex;
-  Senders _senders{};
 
   std::unique_ptr<pipewire::Pipewire> _pipewire{nullptr};
 
@@ -82,6 +96,8 @@ private:
   std::thread _pipewire_thread;
   std::mutex _queue_wait_mutex;
   std::condition_variable _queue_wait_condition;
+
+  std::atomic<bool> _is_running{true};
 
   void start_processing_thread();
   void start_pipewire_thread();

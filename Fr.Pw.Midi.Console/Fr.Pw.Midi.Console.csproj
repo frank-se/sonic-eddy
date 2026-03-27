@@ -12,7 +12,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <None Include="runtimes/linux-x64/libfrmidimapper.so.0.0.1" Pack="true" PackagePath="runtimes/linux-x64/native/"/>
+        <None Include="runtimes/linux-x64/libfrmidimapper.so.0.0.2" Pack="true" PackagePath="runtimes/linux-x64/native/"/>
     </ItemGroup>
 
 </Project>

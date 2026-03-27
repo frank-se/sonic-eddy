@@ -19,19 +19,8 @@ if (midiPortFactory is null)
 await Task.Delay(TimeSpan.FromSeconds(1));
 
 var midiMixPort = await midiPortFactory.CreateMidiMixPort();
-
-midiMixPort.LayerSelected +=
-    layerId => Console.WriteLine($"Layer selected {layerId}");
-
-midiMixPort.ChannelSelected += channelId =>
-    Console.WriteLine($"Channel selected {channelId}");
-
-midiMixPort.DialSelectionModeChanged += (ulong channelId, DialMode dialMode) =>
-    Console.WriteLine($"Set dial mode {dialMode} for channel {channelId}");
-
-midiMixPort.FilterParamsSectionChanged += (ulong channelId, ulong sectionId) =>
-    Console.WriteLine(
-        $"Filter params section {sectionId} activated for channel {channelId}");
+var cmdMm1Port = await midiPortFactory.CreateCmdMm1Port();
+var faderFoxPort = await midiPortFactory.CreateFaderFoxPc4Port();
 
 await Task.Delay(TimeSpan.FromMinutes(30));
 

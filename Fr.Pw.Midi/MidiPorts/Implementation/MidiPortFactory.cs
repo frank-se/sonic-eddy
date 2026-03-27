@@ -9,16 +9,45 @@ namespace Fr.Pw.Midi.MidiPorts.Implementation;
 
 public class MidiPortFactory : IMidiPortFactory, IDisposable
 {
-    public MidiPortFactory(NodeRegistry nodeRegistry,
+    internal MidiPortFactory(NodeRegistry nodeRegistry,
         MidiPortRegistry midiPortRegistry, ILinkFactory linkFactory,
-        PortRegistry portRegistry)
+        PortRegistry portRegistry, LayerSelectCallback layerSelectCallback,
+        ChannelSelectCallback channelSelectCallback,
+        DialSectionModeSelectCallback dialSectionModeSelectCallback,
+        FilterParamsSectionSelectCallback filterParamsSectionSelectCallback,
+        FilterParamsSectionMovePagesRightCallback
+            filterParamsSectionMovePagesRightCallback,
+        FilterParamsSectionMovePagesLeftCallback
+            filterParamsSectionMovePagesLeftCallback)
     {
         nodeRegistry.Added += HandleNodeAddedEvent;
         _nodeRegistry = nodeRegistry;
         _midiPortRegistry = midiPortRegistry;
         _linkFactory = linkFactory;
         _portRegistry = portRegistry;
+        _layerSelectCallback = layerSelectCallback;
+        _channelSelectCallback = channelSelectCallback;
+        _dialSectionModeSelectCallback = dialSectionModeSelectCallback;
+        _filterParamsSectionSelectCallback = filterParamsSectionSelectCallback;
+        _filterParamsSectionMovePagesRightCallback =
+            filterParamsSectionMovePagesRightCallback;
+        _filterParamsSectionMovePagesLeftCallback =
+            filterParamsSectionMovePagesLeftCallback;
     }
+
+    private LayerSelectCallback _layerSelectCallback;
+    private ChannelSelectCallback _channelSelectCallback;
+    private DialSectionModeSelectCallback _dialSectionModeSelectCallback;
+
+    private FilterParamsSectionSelectCallback
+        _filterParamsSectionSelectCallback;
+
+    private FilterParamsSectionMovePagesRightCallback
+        _filterParamsSectionMovePagesRightCallback;
+
+    private FilterParamsSectionMovePagesLeftCallback
+        _filterParamsSectionMovePagesLeftCallback;
+
 
     private void HandleNodeAddedEvent(Node? node)
     {
@@ -54,7 +83,10 @@ public class MidiPortFactory : IMidiPortFactory, IDisposable
                     break;
             }
 
-            if (pending.Receiver is null || pending.Sender is null) return;
+            if (pending.Receiver is null || (pending.Sender is null &&
+                                             pending.ControllerInputPort is not
+                                                 null))
+                return;
 
             _pendingMidiPorts.TryRemove(tag, out _);
 
@@ -63,8 +95,8 @@ public class MidiPortFactory : IMidiPortFactory, IDisposable
 
             tcs = pending.TaskCompletionSource;
 
-            inputPort = pending.InputPort;
-            outputPort = pending.OutputPort;
+            inputPort = pending.ControllerInputPort;
+            outputPort = pending.ControllerOutputPort;
         }
 
         tcs.TrySetResult(midiPort);
@@ -78,6 +110,10 @@ public class MidiPortFactory : IMidiPortFactory, IDisposable
             throw new ApplicationException(
                 $"Couldn't find my input port for node id {midiPort.Receiver.ObjectId}");
 
+        _linkFactory.CreateLink(outputPort, myInputPort);
+
+        if (midiPort.Sender is null || inputPort is null) return;
+
         var myOutputPort =
             _portRegistry.Objects.FirstOrDefault(p =>
                 p.Node.Id == midiPort.Sender.ObjectId);
@@ -87,10 +123,67 @@ public class MidiPortFactory : IMidiPortFactory, IDisposable
                 $"Couldn't find my output port for node id {midiPort.Sender.ObjectId}");
 
         _linkFactory.CreateLink(myOutputPort, inputPort);
-        _linkFactory.CreateLink(outputPort, myInputPort);
     }
 
     public Task<MidiPort> CreateMidiMixPort()
+    {
+        var (inputPort, outputPort) =
+            GetPotentialPorts("MIDI Mix:MIDI Mix MIDI");
+
+        var tag = GenerateTag();
+
+        var id = FrPwMidiLib.CreateMidiMixPort(tag,
+            _layerSelectCallback, _channelSelectCallback,
+            _dialSectionModeSelectCallback,
+            _filterParamsSectionSelectCallback);
+
+        var pending =
+            new PendingMidiPort(id, tag, new(), inputPort, outputPort);
+
+        _pendingMidiPorts[tag] = pending;
+
+        return pending.TaskCompletionSource.Task;
+    }
+
+    public Task<MidiPort> CreateCmdMm1Port()
+    {
+        var (inputPort, outputPort) =
+            GetPotentialPorts("CMD MM-1:CMD MM-1 MIDI");
+
+        var tag = GenerateTag();
+
+        var id = FrPwMidiLib.CreateCmdMm1Port(tag,
+            _layerSelectCallback, _channelSelectCallback,
+            _dialSectionModeSelectCallback,
+            _filterParamsSectionSelectCallback,
+            _filterParamsSectionMovePagesRightCallback,
+            _filterParamsSectionMovePagesLeftCallback);
+
+        var pending =
+            new PendingMidiPort(id, tag, new(), inputPort, outputPort);
+
+        _pendingMidiPorts[tag] = pending;
+
+        return pending.TaskCompletionSource.Task;
+    }
+
+    public Task<MidiPort> CreateFaderFoxPc4Port()
+    {
+        var outputPort = GetOutputPort("Faderfox PC4:Faderfox PC4 MIDI");
+
+        var tag = GenerateTag();
+
+        var id = FrPwMidiLib.CreateFaderFoxPc4Port(tag);
+
+        var pending =
+            new PendingMidiPort(id, tag, new(), null, outputPort);
+
+        _pendingMidiPorts[tag] = pending;
+
+        return pending.TaskCompletionSource.Task;
+    }
+
+    private (Port input, Port output) GetPotentialPorts(string portAlias)
     {
         var targetNode = _nodeRegistry.Objects.FirstOrDefault(n =>
             n is { Name: "Midi-Bridge", Media.Class: "Midi/Bridge" });
@@ -104,7 +197,7 @@ public class MidiPortFactory : IMidiPortFactory, IDisposable
                     var alias = p.Alias;
                     if (alias is null) return false;
                     return p.Node.Id == targetNode.ObjectId &&
-                           alias.Contains("MIDI Mix:MIDI Mix MIDI");
+                           alias.Contains(portAlias);
                 }
             ).ToArray();
 
@@ -120,74 +213,34 @@ public class MidiPortFactory : IMidiPortFactory, IDisposable
         if (outputPort is null)
             throw new ApplicationException("No midi output port found");
 
-        var tag = GenerateTag();
-
-        var id = FrPwMidiLib.CreateMidiMixPort(tag,
-            LayerSelectCallback, ChannelSelectCallback,
-            DialSectionModeSelectionCallback,
-            FilterParamsSectionSelectCallback);
-
-        var pending =
-            new PendingMidiPort(id, tag, new(), inputPort, outputPort);
-
-        _pendingMidiPorts[tag] = pending;
-
-        return pending.TaskCompletionSource.Task;
+        return (inputPort, outputPort);
     }
 
-    private void LayerSelectCallback(ulong midiPortId, ulong layerId)
+    private Port GetOutputPort(string portAlias)
     {
-        var port = _midiPortRegistry.ById(midiPortId);
+        var targetNode = _nodeRegistry.Objects.FirstOrDefault(n =>
+            n is { Name: "Midi-Bridge", Media.Class: "Midi/Bridge" });
 
-        if (port is null)
-        {
-            Console.WriteLine(
-                $"ERROR: Received callback for unknown midi port {midiPortId}");
-            return;
-        }
+        if (targetNode is null)
+            throw new ApplicationException("Midi bridge not found");
 
-        port.TriggerLayerSelectedEvent(layerId);
-    }
+        var potentialPorts =
+            _portRegistry.Objects.Where(p =>
+                {
+                    var alias = p.Alias;
+                    if (alias is null) return false;
+                    return p.Node.Id == targetNode.ObjectId &&
+                           alias.Contains(portAlias);
+                }
+            ).ToArray();
 
-    private void ChannelSelectCallback(ulong midiPortId, ulong channelId)
-    {
-        var port = _midiPortRegistry.ById(midiPortId);
+        var outputPort =
+            potentialPorts.FirstOrDefault(p => p.Direction == "out");
 
-        if (port is null)
-        {
-            Console.WriteLine("ERROR: Received callback for unknown midi port");
-            return;
-        }
+        if (outputPort is null)
+            throw new ApplicationException("No midi output port found");
 
-        port.TriggerChannelSelectedEvent(channelId);
-    }
-
-    private void DialSectionModeSelectionCallback(ulong midiPortId,
-        ulong channelId, DialMode dialMode)
-    {
-        var port = _midiPortRegistry.ById(midiPortId);
-
-        if (port is null)
-        {
-            Console.WriteLine("ERROR: Received callback for unknown midi port");
-            return;
-        }
-
-        port.TriggerDialSelectionModeChangedEvent(channelId, dialMode);
-    }
-
-    private void FilterParamsSectionSelectCallback(ulong midiPortId,
-        ulong channelId, ulong sectionId)
-    {
-        var port = _midiPortRegistry.ById(midiPortId);
-
-        if (port is null)
-        {
-            Console.WriteLine("ERROR: Received callback for unknown midi port");
-            return;
-        }
-
-        port.TriggerFilterParamsSectionChangedEvent(channelId, sectionId);
+        return outputPort;
     }
 
     public void Dispose()

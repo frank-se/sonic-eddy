@@ -17,11 +17,12 @@ using LockFreeQueueReceiver =
 
 class Receiver {
 public:
-  Receiver(std::string pmx_purpose, std::string pmx_tag, pw_main_loop *loop,
-           const MidiVersion midi_version, std::mutex *queue_wait_mutex,
+  Receiver(std::string pmx_purpose, std::string pmx_tag, std::string name,
+           pw_main_loop *loop, const MidiVersion midi_version,
+           std::mutex *queue_wait_mutex,
            std::condition_variable *queue_wait_condition)
       : _pmx_purpose(std::move(pmx_purpose)), _pmx_tag(std::move(pmx_tag)),
-        _loop(loop), _midi_version(midi_version),
+        _name(std::move(name)), _loop(loop), _midi_version(midi_version),
         _queue_wait_mutex(queue_wait_mutex),
         _queue_wait_condition(queue_wait_condition) {}
 
@@ -41,6 +42,7 @@ public:
 private:
   std::string _pmx_purpose;
   std::string _pmx_tag;
+  std::string _name;
   pw_main_loop *_loop;
   MidiVersion _midi_version;
   pw_stream *_stream = nullptr;

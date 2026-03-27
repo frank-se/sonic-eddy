@@ -15,7 +15,7 @@ static void on_process_sender(void *user_data) {
   sender->process();
 }
 
-static const struct pw_stream_events stream_events = {
+static constexpr pw_stream_events stream_events = {
     .version = PW_VERSION_STREAM_EVENTS,
     .process = on_process_sender,
 };
@@ -81,7 +81,7 @@ void midi::Sender::process() {
 }
 
 void midi::Sender::setup() {
-  const auto name = std::format("midi-sender");
+  logging::log<logging::LogLevel::Trace>("Sender::setup");
 
   const auto properties = pw_properties_new(
       PW_KEY_MEDIA_TYPE, "Midi", PW_KEY_MEDIA_CATEGORY, "Playback",
@@ -89,7 +89,7 @@ void midi::Sender::setup() {
       PW_KEY_FORMAT_DSP, "32 bit raw UMP", "pmx.purpose", _pmx_purpose.c_str(),
       "pmx.tag", _pmx_tag.c_str(), nullptr);
 
-  _stream = pw_stream_new_simple(pw_main_loop_get_loop(_loop), name.c_str(),
+  _stream = pw_stream_new_simple(pw_main_loop_get_loop(_loop), _name.c_str(),
                                  properties, &stream_events, this);
 
   const spa_pod *param[1];

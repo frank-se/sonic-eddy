@@ -16,9 +16,9 @@ using LockFreeQueue =
 class Sender {
 public:
   explicit Sender(std::string pmx_purpose, std::string pmx_tag,
-                  pw_main_loop *loop)
+                  std::string name, pw_main_loop *loop)
       : _pmx_purpose(std::move(pmx_purpose)), _pmx_tag(std::move(pmx_tag)),
-        _loop(loop) {}
+        _name(std::move(name)), _loop(loop) {}
 
   ~Sender() {
     if (_stream != nullptr) {
@@ -36,6 +36,7 @@ public:
 private:
   std::string _pmx_purpose;
   std::string _pmx_tag;
+  std::string _name;
   pw_main_loop *_loop;
   pw_stream *_stream = nullptr;
   LockFreeQueue _queue{};

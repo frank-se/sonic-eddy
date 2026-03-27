@@ -79,7 +79,7 @@ bool controllers::CmdMm1::handle_channel_selection(const uint8_t note_number) {
   return false;
 }
 
-bool controllers::CmdMm1::handle_layer_selection(uint8_t note_number) {
+bool controllers::CmdMm1::handle_layer_selection(const uint8_t note_number) {
   logging::log<logging::LogLevel::Trace>("CmdMm1::handle_layer_selection");
 
   if (note_number == 18) {
@@ -97,7 +97,8 @@ bool controllers::CmdMm1::handle_layer_selection(uint8_t note_number) {
   return false;
 }
 
-bool controllers::CmdMm1::handle_dial_mode_selection(uint8_t note_number) {
+bool controllers::CmdMm1::handle_dial_mode_selection(
+    const uint8_t note_number) {
   logging::log<logging::LogLevel::Trace>("CmdMm1::handle_dial_mode_selection");
 
   size_t channel_id{0};
@@ -127,6 +128,7 @@ bool controllers::CmdMm1::handle_dial_mode_selection(uint8_t note_number) {
 
   channel_id += layer_channel_offset();
 
+  std::lock_guard lock(_channels_mutex);
   auto &channel = _channels[channel_id];
 
   channel.swap_dial_mode();
@@ -136,7 +138,8 @@ bool controllers::CmdMm1::handle_dial_mode_selection(uint8_t note_number) {
   return true;
 }
 
-bool controllers::CmdMm1::handle_filter_params_increment(uint8_t note_number) {
+bool controllers::CmdMm1::handle_filter_params_increment(
+    const uint8_t note_number) {
   logging::log<logging::LogLevel::Trace>(
       "MidiMix::handle_filter_params_increment");
 
@@ -166,6 +169,7 @@ bool controllers::CmdMm1::handle_filter_params_increment(uint8_t note_number) {
 
   channel_id += layer_channel_offset();
 
+  std::lock_guard lock(_channels_mutex);
   auto &channel = _channels[channel_id];
 
   channel.increment_selected_filter_param_section();
@@ -176,7 +180,7 @@ bool controllers::CmdMm1::handle_filter_params_increment(uint8_t note_number) {
 }
 
 bool controllers::CmdMm1::handle_filter_params_page_select(
-    uint8_t note_number) {
+    const uint8_t note_number) {
   logging::log<logging::LogLevel::Trace>(
       "CmdMm1::handle_filter_params_page_select");
 
@@ -199,8 +203,8 @@ bool controllers::CmdMm1::handle_filter_params_page_select(
   return false;
 }
 
-void controllers::CmdMm1::handle_normalized_control_change(uint8_t index,
-                                                           double value) const {
+void controllers::CmdMm1::handle_normalized_control_change(const uint8_t index,
+                                                           const double value) {
   logging::log<logging::LogLevel::Trace>(
       "CmdMm1::handle_normalized_control_change");
 
@@ -214,8 +218,8 @@ void controllers::CmdMm1::handle_normalized_control_change(uint8_t index,
     return;
 }
 
-bool controllers::CmdMm1::handle_volume_control_change(uint8_t index,
-                                                       double value) const {
+bool controllers::CmdMm1::handle_volume_control_change(const uint8_t index,
+                                                       const double value) {
   logging::log<logging::LogLevel::Trace>(
       "CmdMm1::handle_volume_control_change");
 
@@ -245,7 +249,8 @@ bool controllers::CmdMm1::handle_volume_control_change(uint8_t index,
   logging::log<logging::LogLevel::Debug>(
       "Processing volume change for channel {}", channel_id);
 
-  auto &channel = _channels[channel_id];
+  std::lock_guard lock(_channels_mutex);
+  const auto &channel = _channels[channel_id];
 
   channel.set_volume(value);
 
@@ -253,7 +258,7 @@ bool controllers::CmdMm1::handle_volume_control_change(uint8_t index,
 }
 
 bool controllers::CmdMm1::handle_send_volume_control_change(
-    uint8_t index, double value) const {
+    const uint8_t index, const double value) {
   logging::log<logging::LogLevel::Trace>(
       "CmdMm1::handle_send_volume_control_change");
 
@@ -266,7 +271,9 @@ bool controllers::CmdMm1::handle_send_volume_control_change(
     return false;
   }
 
-  auto &channel = _channels[column_and_row->column + layer_channel_offset()];
+  std::lock_guard lock(_channels_mutex);
+  const auto &channel =
+      _channels[column_and_row->column + layer_channel_offset()];
 
   if (channel.dial_mode() == FILTER_PARAMS) {
     logging::log<logging::LogLevel::Debug>(
@@ -284,7 +291,7 @@ bool controllers::CmdMm1::handle_send_volume_control_change(
 }
 
 bool controllers::CmdMm1::handle_filter_params_control_change(
-    uint8_t index, double value) const {
+    const uint8_t index, const double value) {
   logging::log<logging::LogLevel::Trace>(
       "CmdMm1::handle_filter_params_control_change");
 
@@ -297,7 +304,9 @@ bool controllers::CmdMm1::handle_filter_params_control_change(
     return false;
   }
 
-  auto &channel = _channels[column_and_row->column + layer_channel_offset()];
+  std::lock_guard lock(_channels_mutex);
+  const auto &channel =
+      _channels[column_and_row->column + layer_channel_offset()];
 
   if (channel.dial_mode() == SENDS) {
     logging::log<logging::LogLevel::Debug>(
@@ -394,9 +403,10 @@ void controllers::CmdMm1::add_layer_feedback() const {
   });
 }
 
-void controllers::CmdMm1::add_dial_mode_feedback() const {
+void controllers::CmdMm1::add_dial_mode_feedback() {
   logging::log<logging::LogLevel::Trace>("CmdMm1::add_dial_mode_feedback");
 
+  std::lock_guard lock(_channels_mutex);
   for (size_t i = 0; i < _channels_per_layer; i++) {
     const auto channel_id = i + layer_channel_offset();
     auto &channel = _channels[channel_id];
@@ -419,9 +429,10 @@ void controllers::CmdMm1::add_dial_mode_feedback() const {
   }
 }
 
-void controllers::CmdMm1::add_filter_params_feedback() const {
+void controllers::CmdMm1::add_filter_params_feedback() {
   logging::log<logging::LogLevel::Trace>("CmdMm1::add_filter_params_feedback");
 
+  std::lock_guard lock(_channels_mutex);
   for (size_t i = 0; i < _channels_per_layer; i++) {
     const auto channel_id = i + layer_channel_offset();
     auto &channel = _channels[channel_id];
@@ -437,7 +448,7 @@ void controllers::CmdMm1::add_filter_params_feedback() const {
     _feedback_channel->push(midi::NoteOnV1{
         .channel = _midi_channel,
         .note_number = note_number,
-        .velocity = static_cast<uint8_t>(velocity),
+        .velocity = velocity,
     });
   }
 }
@@ -445,8 +456,8 @@ void controllers::CmdMm1::add_filter_params_feedback() const {
 void controllers::CmdMm1::call_channel_callback() const {
   logging::log<logging::LogLevel::Trace>("CmdMm1::call_channel_callback");
 
-  if (const auto channel = _selected_channel_id.load())
-    _channel_select_callback(*channel);
+  if (const auto channel_id = _selected_channel_id.load())
+    _channel_select_callback(*channel_id);
 }
 
 void controllers::CmdMm1::call_layer_callback() const {
@@ -495,4 +506,193 @@ controllers::CmdMm1::get_column_and_row_for_dial_index(uint8_t index) {
   }
 
   return std::nullopt;
+}
+
+void controllers::CmdMm1::set_layer_from_processor(const size_t layer) {
+  logging::log<logging::LogLevel::Trace>("CmdMM1::set_layer_from_processor");
+
+  if (layer >= 2) {
+    logging::log<logging::LogLevel::Error>("Layer {} out of bounds", layer);
+
+    return;
+  }
+
+  if (layer == _selected_layer_id.load()) {
+    logging::log<logging::LogLevel::Debug>("Layer already same value");
+    return;
+  }
+
+  _selected_layer_id.store(layer);
+
+  logging::log<logging::LogLevel::Debug>("Set layer to {}", layer);
+
+  add_current_state_as_feedback();
+}
+
+void controllers::CmdMm1::set_selected_channel_from_processor(
+    ChannelType channel_type, size_t channel_id) {
+  logging::log<logging::LogLevel::Trace>(
+      "CmdMM1::set_selected_channel_from_processor");
+
+  if (channel_type == ChannelType::CHANNEL) {
+    _selected_channel_id = std::nullopt;
+  } else {
+    if (channel_id >= _channels.size()) {
+      logging::log<logging::LogLevel::Error>(
+          "Group channel id {} out of bounds", channel_id);
+
+      return;
+    }
+
+    _selected_channel_id.store(channel_id);
+  }
+
+  add_channel_feedback();
+  add_dial_mode_feedback();
+  add_filter_params_feedback();
+}
+
+void controllers::CmdMm1::set_selected_plugin_page_from_processor(
+    size_t plugin_id, size_t page_number) {
+  logging::log<logging::LogLevel::Trace>(
+      "CmdMM1::set_selected_plugin_page_from_processor");
+}
+
+void controllers::CmdMm1::add_current_state_as_feedback() {
+  logging::log<logging::LogLevel::Trace>(
+      "CmdMm1::add_current_state_as_feedback");
+
+  add_layer_feedback();
+  add_channel_feedback();
+  add_dial_mode_feedback();
+  add_filter_params_feedback();
+}
+
+void controllers::CmdMm1::set_channel_node(const ChannelType channel_type,
+                                           const size_t channel_id,
+                                           const uint64_t object_id) {
+  logging::log<logging::LogLevel::Trace>("CmdMM1::set_channel_node");
+
+  std::lock_guard lock(_channels_mutex);
+  const auto channel = channel_by_type_and_id(channel_type, channel_id);
+
+  if (!channel) {
+    return;
+  }
+
+  const auto node = _registry.get_node_by_object_id(object_id);
+
+  if (!node) {
+    logging::log<logging::LogLevel::Error>("Couldn't find node {}", object_id);
+
+    return;
+  }
+
+  channel->get().set_playback_node(*node);
+}
+
+void controllers::CmdMm1::set_channel_filter_node(
+    const ChannelType channel_type, const size_t channel_id,
+    const uint64_t object_id) {
+  logging::log<::logging::LogLevel::Trace>("CmdMM1::set_channel_filter_node");
+
+  std::lock_guard lock(_channels_mutex);
+  const auto channel = channel_by_type_and_id(channel_type, channel_id);
+
+  if (!channel) {
+    return;
+  }
+
+  const auto node = _registry.get_node_by_object_id(object_id);
+
+  if (!node) {
+    logging::log<logging::LogLevel::Error>("Couldn't find node {}", object_id);
+
+    return;
+  }
+
+  channel->get().set_filter_node(*node);
+}
+
+void controllers::CmdMm1::set_channel_send_node(const ChannelType channel_type,
+                                                const size_t channel_id,
+                                                const size_t send_id,
+                                                const uint64_t object_id) {
+  logging::log<logging::LogLevel::Trace>("CmdMM1::set_channel_send_node");
+
+  if (send_id >= 4) {
+    logging::log<logging::LogLevel::Error>("Send {} out of bounds", send_id);
+
+    return;
+  }
+
+  std::lock_guard lock(_channels_mutex);
+  const auto channel = channel_by_type_and_id(channel_type, channel_id);
+
+  if (!channel) {
+    return;
+  }
+
+  const auto node = _registry.get_node_by_object_id(object_id);
+
+  if (!node) {
+    logging::log<logging::LogLevel::Error>("Couldn't find node {}", object_id);
+
+    return;
+  }
+
+  channel->get().set_send_node(send_id, *node);
+}
+
+void controllers::CmdMm1::clear_filter_parameters(
+    const ChannelType channel_type, const size_t channel_id) {
+  logging::log<logging::LogLevel::Trace>("CmdMM1::clear_filter_parameters");
+
+  std::lock_guard lock(_channels_mutex);
+  const auto channel = channel_by_type_and_id(channel_type, channel_id);
+
+  if (!channel) {
+    return;
+  }
+
+  channel->get().clear_parameters();
+}
+
+void controllers::CmdMm1::add_filter_parameter(const ChannelType channel_type,
+                                               const size_t channel_id,
+                                               const size_t plugin_id,
+                                               char *name, const float min,
+                                               const float max) {
+  logging::log<logging::LogLevel::Trace>("CmdMM1::add_filter_parameter");
+
+  std::lock_guard lock(_channels_mutex);
+  const auto channel = channel_by_type_and_id(channel_type, channel_id);
+
+  if (!channel) {
+    return;
+  }
+
+  channel->get().add_parameter(channel_id, name, min, max);
+}
+
+std::optional<std::reference_wrapper<controllers::Channel>>
+controllers::CmdMm1::channel_by_type_and_id(const ChannelType channel_type,
+                                            const size_t channel_id) {
+  logging::log<logging::LogLevel::Trace>("CmdMm1::channel_by_type_and_id");
+
+  if (channel_type == ChannelType::CHANNEL) {
+    logging::log<logging::LogLevel::Trace>("Ignoring channel");
+
+    return std::nullopt;
+  }
+
+  if (channel_id >= _number_of_channels) {
+    logging::log<logging::LogLevel::Error>("Channel {} out of bounds",
+                                           channel_id);
+
+    return std::nullopt;
+  }
+
+  auto &channel = _channels[channel_id];
+  return channel;
 }

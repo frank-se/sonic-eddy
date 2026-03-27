@@ -1,5 +1,6 @@
 #include "midi/Receiver.h"
 
+#include "logging/log.h"
 #include "midi/parse_midi.h"
 #include "midi/parse_ump.h"
 
@@ -88,7 +89,7 @@ void midi::Receiver::process() {
 }
 
 void midi::Receiver::setup() {
-  const std::string name("midi-receiver");
+  logging::log<logging::LogLevel::Trace>("Receiver::setup");
 
   const std::string midi_format =
       _midi_version == MidiVersion::UMP ? "32 bit raw UMP" : "8 bit raw midi";
@@ -99,7 +100,7 @@ void midi::Receiver::setup() {
       PW_KEY_FORMAT_DSP, midi_format.c_str(), "pmx.purpose",
       _pmx_purpose.c_str(), "pmx.tag", _pmx_tag.c_str(), nullptr);
 
-  _stream = pw_stream_new_simple(pw_main_loop_get_loop(_loop), name.c_str(),
+  _stream = pw_stream_new_simple(pw_main_loop_get_loop(_loop), _name.c_str(),
                                  properties, &stream_events, this);
 
   const struct spa_pod *param[1];

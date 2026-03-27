@@ -4,6 +4,8 @@
 
 std::optional<registry::Node *>
 registry::Registry::get_node_by_object_id(const uint64_t object_id) {
+  logging::log<logging::LogLevel::Trace>("Registry::get_node_by_object_id");
+
   auto lock = std::lock_guard(_nodes_mutex);
 
   auto node_it =
@@ -37,6 +39,8 @@ registry::Registry::get_node_by_object_id(const uint64_t object_id) {
 }
 
 void registry::Registry::_bind_node(const uint64_t object_id) {
+  logging::log<logging::LogLevel::Trace>("Registry::_bind_node");
+
   auto pw_node = static_cast<struct pw_node *>(pw_registry_bind(
       _registry, object_id, PW_TYPE_INTERFACE_Node, PW_VERSION_NODE, 0));
 

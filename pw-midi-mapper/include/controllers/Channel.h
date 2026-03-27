@@ -1,23 +1,16 @@
 #pragma once
 
+#include "Parameter.h"
 #include "pipewire/pipewire.h"
 #include "registry/Node.h"
 
 #include <array>
 #include <atomic>
 #include <optional>
-#include <string>
 
 namespace controllers {
 
 enum DialMode { SENDS = 1, FILTER_PARAMS = 2 };
-
-struct Parameter {
-  std::string name;
-  float value;
-  float max;
-  float min;
-};
 
 class Channel {
 public:
@@ -44,6 +37,10 @@ public:
 
   void set_send_node(size_t send_id, registry::Node *node);
 
+  void clear_parameters();
+
+  void add_parameter(size_t plugin_id, char *name, float min, float max);
+
 private:
   size_t _channel_id;
 
@@ -54,7 +51,7 @@ private:
   std::atomic<uint8_t> _selected_filter_params_section{0};
   std::atomic<DialMode> _dial_mode{SENDS};
 
-  std::array<std::array<std::optional<Parameter>, 4>, 3> _parameters{};
+  std::array<std::array<std::optional<Parameter>, 4>, 3> _plugins{};
 };
 
 } // namespace controllers

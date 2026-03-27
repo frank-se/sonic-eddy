@@ -86,7 +86,7 @@ void controllers::Channel::set_parameter_for_selected_section(
     return;
   }
 
-  auto parameter = _parameters[_selected_filter_params_section][parameter_id];
+  auto parameter = _plugins[_selected_filter_params_section][parameter_id];
 
   if (!parameter) {
     logging::log<logging::LogLevel::Debug>(
@@ -117,4 +117,47 @@ void controllers::Channel::set_send_node(size_t send_id, registry::Node *node) {
   }
 
   _sends[send_id] = node;
+}
+
+void controllers::Channel::clear_parameters() {
+  logging::log<logging::LogLevel::Debug>("Channel::clear_parameters");
+
+  for (auto &plugin : _plugins) {
+    for (size_t parameter_id = 0; parameter_id < _plugins.size();
+         parameter_id++) {
+      plugin[parameter_id] = std::nullopt;
+    }
+  }
+}
+
+void controllers::Channel::add_parameter(const size_t plugin_id, char *name,
+                                         const float min, const float max) {
+  logging::log<logging::LogLevel::Debug>("Channel::add_parameter");
+
+  if (plugin_id >= _plugins.size()) {
+    logging::log<logging::LogLevel::Error>("Plugin {} out of bounds",
+                                           plugin_id);
+    return;
+  }
+
+  auto &plugin = _plugins[plugin_id];
+  for (size_t parameter_id = 0; parameter_id < _plugins.size();
+       parameter_id++) {
+    if (!plugin[parameter_id]) {
+      logging::log<logging::LogLevel::Debug>(
+          "Setting parameter {} for plugin {} to {}", parameter_id, plugin_id,
+          name);
+
+      plugin[parameter_id] = Parameter{
+          .name = name,
+          .value = 0.0f,
+          .max = max,
+          .min = min,
+      };
+      return;
+    }
+  }
+
+  logging::log<logging::LogLevel::Debug>("Couldn't find parameter space for {}",
+                                         name);
 }

@@ -1,16 +1,8 @@
 #include "controllers/MidiMix.h"
 
-#include "audio/pan.h"
 #include "logging/log.h"
-#include "pw_utils/fill_set_params_pod.h"
 #include "pw_utils/fill_set_value_pod.h"
-#include "pw_utils/set_pw_node_param.h"
 #include "pw_utils/set_pw_node_volumes.h"
-
-#include <spa/debug/pod.h>
-#include <spa/param/props.h>
-#include <spa/pod/builder.h>
-#include <spa/pod/iter.h>
 
 void controllers::MidiMix::process(const midi::Message &message) {
   logging::log<logging::LogLevel::Trace>("MidiMix::process");
@@ -93,6 +85,7 @@ bool controllers::MidiMix::handle_dial_mode_selection(
 
   channel_id += layer_channel_offset();
 
+  std::lock_guard lock(_channels_mutex);
   auto &channel = _channels[channel_id];
 
   channel.swap_dial_mode();
@@ -145,6 +138,7 @@ bool controllers::MidiMix::handle_filter_params_increment(
 
   channel_id += layer_channel_offset();
 
+  std::lock_guard lock(_channels_mutex);
   auto &channel = _channels[channel_id];
 
   channel.increment_selected_filter_param_section();
@@ -282,8 +276,8 @@ void controllers::MidiMix::add_channel_feedback() const {
 void controllers::MidiMix::call_channel_callback() const {
   logging::log<logging::LogLevel::Trace>("MidiMix::call_channel_callback");
 
-  if (const auto channel = _selected_channel_id.load())
-    _channel_select_callback(*channel);
+  if (const auto channel_id = _selected_channel_id.load())
+    _channel_select_callback(*channel_id);
 }
 
 void controllers::MidiMix::add_layer_feedback() const {
@@ -311,9 +305,10 @@ void controllers::MidiMix::call_layer_callback() const {
   _layer_select_callback(id);
 }
 
-void controllers::MidiMix::add_dial_mode_feedback() const {
+void controllers::MidiMix::add_dial_mode_feedback() {
   logging::log<logging::LogLevel::Trace>("MidiMix::add_dial_mode_feedback");
 
+  std::lock_guard lock(_channels_mutex);
   for (int i = 0; i < 8; i++) {
     const auto channel_id = i + _selected_layer_id * 8;
     auto &channel = _channels[channel_id];
@@ -340,7 +335,7 @@ void controllers::MidiMix::call_dial_mode_callback(
 }
 
 void controllers::MidiMix::call_filter_params_section_select_callback(
-    size_t channel_id, const Channel &channel) const {
+    const size_t channel_id, const Channel &channel) const {
   logging::log<logging::LogLevel::Trace>(
       "MidiMix::call_filter_params_section_select_callback");
 
@@ -349,7 +344,7 @@ void controllers::MidiMix::call_filter_params_section_select_callback(
 }
 
 void controllers::MidiMix::handle_normalized_control_change(
-    const uint8_t index, const double value) const {
+    const uint8_t index, const double value) {
   logging::log<logging::LogLevel::Trace>(
       "MidiMix::handle_normalized_control_change");
 
@@ -366,8 +361,8 @@ void controllers::MidiMix::handle_normalized_control_change(
     return;
 }
 
-bool controllers::MidiMix::handle_volume_control_change(
-    const uint8_t index, const double value) const {
+bool controllers::MidiMix::handle_volume_control_change(const uint8_t index,
+                                                        const double value) {
   logging::log<logging::LogLevel::Trace>(
       "MidiMix::handle_volume_control_change");
 
@@ -409,6 +404,7 @@ bool controllers::MidiMix::handle_volume_control_change(
   logging::log<logging::LogLevel::Debug>(
       "Processing volume change for channel {}", channel_id);
 
+  std::lock_guard lock(_channels_mutex);
   auto &channel = _channels[channel_id];
 
   channel.set_volume(value);
@@ -434,7 +430,7 @@ bool controllers::MidiMix::handle_master_volume_control_change(
 }
 
 bool controllers::MidiMix::handle_send_volume_control_change(
-    const uint8_t index, const double value) const {
+    const uint8_t index, const double value) {
   logging::log<logging::LogLevel::Trace>(
       "MidiMix::handle_send_volume_control_change");
 
@@ -447,6 +443,7 @@ bool controllers::MidiMix::handle_send_volume_control_change(
     return false;
   }
 
+  std::lock_guard lock(_channels_mutex);
   auto &channel = _channels[column_and_row->column + layer_channel_offset()];
 
   if (channel.dial_mode() == FILTER_PARAMS) {
@@ -465,7 +462,7 @@ bool controllers::MidiMix::handle_send_volume_control_change(
 }
 
 bool controllers::MidiMix::handle_filter_params_control_change(
-    const uint8_t index, const double value) const {
+    const uint8_t index, const double value) {
   logging::log<logging::LogLevel::Trace>(
       "MidiMix::handle_filter_params_control_change");
 
@@ -478,7 +475,9 @@ bool controllers::MidiMix::handle_filter_params_control_change(
     return false;
   }
 
-  auto &channel = _channels[column_and_row->column + layer_channel_offset()];
+  std::lock_guard lock(_channels_mutex);
+  const auto &channel =
+      _channels[column_and_row->column + layer_channel_offset()];
 
   if (channel.dial_mode() == SENDS) {
     logging::log<logging::LogLevel::Debug>(
@@ -499,6 +498,7 @@ void controllers::MidiMix::set_channel_playback_node(const size_t channel_id,
                                                      uint64_t object_id) {
   logging::log<logging::LogLevel::Trace>("MidiMix::set_playback_node");
 
+  std::lock_guard lock(_channels_mutex);
   if (channel_id >= _channels.size()) {
     logging::log<logging::LogLevel::Error>("Channel {} out of bounds",
                                            channel_id);
@@ -522,6 +522,7 @@ void controllers::MidiMix::set_channel_filter_node(size_t channel_id,
                                                    uint64_t object_id) {
   logging::log<logging::LogLevel::Trace>("MidiMix::set_channel_filter_node");
 
+  std::lock_guard lock(_channels_mutex);
   if (channel_id >= _channels.size()) {
     logging::log<logging::LogLevel::Error>("Channel {} out of bounds",
                                            channel_id);
@@ -541,10 +542,12 @@ void controllers::MidiMix::set_channel_filter_node(size_t channel_id,
   channel.set_filter_node(*node);
 }
 
-void controllers::MidiMix::set_send_node(size_t channel_id, size_t send_id,
-                                         uint64_t object_id) {
+void controllers::MidiMix::set_send_node(const size_t channel_id,
+                                         const size_t send_id,
+                                         const uint64_t object_id) {
   logging::log<logging::LogLevel::Trace>("MidiMix::set_send_node");
 
+  std::lock_guard lock(_channels_mutex);
   if (channel_id >= _channels.size()) {
     logging::log<logging::LogLevel::Error>("Channel {} out of bounds",
                                            channel_id);
@@ -593,4 +596,191 @@ controllers::MidiMix::get_column_and_row_for_dial_index(const uint8_t index) {
   }
 
   return std::nullopt;
+}
+
+void controllers::MidiMix::set_layer_from_processor(size_t layer) {
+  logging::log<logging::LogLevel::Trace>("MidiMix::set_layer_from_processor");
+
+  if (layer >= 2) {
+    logging::log<logging::LogLevel::Error>("Layer {} out of bounds", layer);
+
+    return;
+  }
+
+  if (layer == _selected_layer_id.load()) {
+    logging::log<logging::LogLevel::Debug>("Layer already same value");
+    return;
+  }
+
+  _selected_layer_id.store(layer);
+
+  logging::log<logging::LogLevel::Debug>("Set layer to {}", layer);
+
+  add_current_state_as_feedback();
+}
+
+void controllers::MidiMix::set_selected_channel_from_processor(
+    ChannelType channel_type, size_t channel_id) {
+  logging::log<logging::LogLevel::Trace>(
+      "MidiMix::set_selected_channel_from_processor");
+
+  if (channel_type == ChannelType::CHANNEL) {
+    if (channel_id >= 16) {
+      logging::log<logging::LogLevel::Error>("Channel {} out of bounds",
+                                             channel_id);
+
+      return;
+    }
+
+    _selected_channel_id = channel_id;
+  } else {
+    _selected_channel_id = std::nullopt;
+  }
+
+  add_channel_feedback();
+  add_dial_mode_feedback();
+}
+
+void controllers::MidiMix::set_selected_plugin_page_from_processor(
+    size_t plugin_id, size_t page_number) {
+  logging::log<logging::LogLevel::Trace>(
+      "MidiMix::set_selected_plugin_page_from_processor");
+}
+
+void controllers::MidiMix::add_current_state_as_feedback() {
+  logging::log<logging::LogLevel::Trace>(
+      "MidiMix::add_current_state_as_feedback");
+
+  add_layer_feedback();
+  add_channel_feedback();
+  add_dial_mode_feedback();
+}
+
+void controllers::MidiMix::set_channel_node(const ChannelType channel_type,
+                                            const size_t channel_id,
+                                            const uint64_t object_id) {
+  logging::log<logging::LogLevel::Trace>("MidiMix::set_channel_node");
+
+  std::lock_guard lock(_channels_mutex);
+  const auto channel = channel_by_type_and_id(channel_type, channel_id);
+
+  if (!channel) {
+    return;
+  }
+
+  const auto node = _registry.get_node_by_object_id(object_id);
+
+  if (!node) {
+    logging::log<logging::LogLevel::Error>("Couldn't find node {}", object_id);
+
+    return;
+  }
+
+  channel->get().set_playback_node(*node);
+}
+
+void controllers::MidiMix::set_channel_filter_node(
+    const ChannelType channel_type, const size_t channel_id,
+    const uint64_t object_id) {
+  logging::log<logging::LogLevel::Trace>("MidiMix::set_channel_filter_node");
+
+  std::lock_guard lock(_channels_mutex);
+  const auto channel = channel_by_type_and_id(channel_type, channel_id);
+
+  if (!channel) {
+    return;
+  }
+
+  const auto node = _registry.get_node_by_object_id(object_id);
+
+  if (!node) {
+    logging::log<logging::LogLevel::Error>("Couldn't find node {}", object_id);
+
+    return;
+  }
+
+  channel->get().set_filter_node(*node);
+}
+
+void controllers::MidiMix::set_channel_send_node(const ChannelType channel_type,
+                                                 const size_t channel_id,
+                                                 const size_t send_id,
+                                                 const uint64_t object_id) {
+  logging::log<logging::LogLevel::Trace>("MidiMix::set_channel_send_node");
+
+  if (send_id >= 4) {
+    logging::log<logging::LogLevel::Error>("Send {} out of bounds", send_id);
+
+    return;
+  }
+
+  std::lock_guard lock(_channels_mutex);
+  const auto channel = channel_by_type_and_id(channel_type, channel_id);
+
+  if (!channel) {
+    return;
+  }
+
+  const auto node = _registry.get_node_by_object_id(object_id);
+
+  if (!node) {
+    logging::log<logging::LogLevel::Error>("Couldn't find node {}", object_id);
+
+    return;
+  }
+
+  channel->get().set_send_node(send_id, *node);
+}
+
+void controllers::MidiMix::clear_filter_parameters(
+    const ChannelType channel_type, const size_t channel_id) {
+  logging::log<logging::LogLevel::Trace>("MidiMix::clear_filter_parameters");
+
+  std::lock_guard lock(_channels_mutex);
+  const auto channel = channel_by_type_and_id(channel_type, channel_id);
+
+  if (!channel) {
+    return;
+  }
+
+  channel->get().clear_parameters();
+}
+
+void controllers::MidiMix::add_filter_parameter(const ChannelType channel_type,
+                                                const size_t channel_id,
+                                                const size_t plugin_id,
+                                                char *name, const float min,
+                                                const float max) {
+  logging::log<logging::LogLevel::Trace>("MidiMix::add_filter_parameter");
+
+  std::lock_guard lock(_channels_mutex);
+  const auto channel = channel_by_type_and_id(channel_type, channel_id);
+
+  if (!channel) {
+    return;
+  }
+
+  channel->get().add_parameter(channel_id, name, min, max);
+}
+
+std::optional<std::reference_wrapper<controllers::Channel>>
+controllers::MidiMix::channel_by_type_and_id(const ChannelType channel_type,
+                                             const size_t channel_id) {
+  logging::log<logging::LogLevel::Trace>("MidiMix::channel_by_type_and_id");
+
+  if (channel_type == ChannelType::GROUP_CHANNEL) {
+    logging::log<logging::LogLevel::Trace>("Ignoring group channel");
+
+    return std::nullopt;
+  }
+
+  if (channel_id >= 16) {
+    logging::log<logging::LogLevel::Error>("Channel {} out of bounds",
+                                           channel_id);
+
+    return std::nullopt;
+  }
+
+  auto &channel = _channels[channel_id];
+  return channel;
 }

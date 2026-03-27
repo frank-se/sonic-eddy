@@ -6,8 +6,8 @@ internal record PendingMidiPort(
     ulong MidiPortId,
     string Tag,
     TaskCompletionSource<MidiPort> TaskCompletionSource,
-    Port InputPort,
-    Port OutputPort)
+    Port? ControllerInputPort,
+    Port ControllerOutputPort)
 {
     internal Node? Sender { get; set; }
     internal Node? Receiver { get; set; }
