@@ -23,7 +23,7 @@ public:
 
   std::optional<Node *> get_node_by_object_id(uint64_t object_id);
 
-  void _bind_node(uint64_t object_id);
+  bool _bind_node(uint64_t object_id);
 
 private:
   pw_main_loop *_loop;

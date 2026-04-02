@@ -12,19 +12,15 @@ using SonicEddy.Views.MetadataViews;
 
 namespace SonicEddy.ViewModels.MetadataViewModels;
 
-public class MetadataViewModel : ViewModelBase, IRoutableViewModel,
-    IActivatableViewModel
+public class MetadataViewModel : ViewModelBase
 {
     public ObservableCollection<MetadataCollection>
         MetadataCollections { get; } = [];
 
     public ObservableCollection<MetadataEntry> MetadataEntries { get; } = [];
 
-    public MetadataViewModel(IAppDataService appDataService,
-        string? urlPathSegment, IScreen hostScreen)
+    public MetadataViewModel(IAppDataService appDataService)
     {
-        UrlPathSegment = urlPathSegment;
-        HostScreen = hostScreen;
         _appDataService = appDataService;
 
         var defaultMetadata =
@@ -171,10 +167,6 @@ public class MetadataViewModel : ViewModelBase, IRoutableViewModel,
         var metadata = _metadataRegistry.GetByName(metadataEntry.MetadataName);
         metadata?.DeleteMetadataEntry(metadataEntry.Subject, metadataEntry.Key);
     }
-
-    public string? UrlPathSegment { get; }
-    public IScreen HostScreen { get; }
-    public ViewModelActivator Activator { get; } = new();
 
     private readonly IAppDataService _appDataService;
 }

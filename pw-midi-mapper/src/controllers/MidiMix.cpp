@@ -417,14 +417,16 @@ bool controllers::MidiMix::handle_master_volume_control_change(
   logging::log<logging::LogLevel::Trace>(
       "MidiMix::handle_master_volume_control_change");
 
-  if (_master_channel_playback_node == nullptr) {
+  auto master_channel = _master_channel_playback_nodes[_selected_layer_id];
+
+  if (master_channel == nullptr) {
     logging::log<logging::LogLevel::Debug>(
         "Master channel playback node is null");
 
     return true;
   }
 
-  _master_channel_playback_node->set_volume(value);
+  master_channel->set_volume(value);
 
   return true;
 }
@@ -542,31 +544,6 @@ void controllers::MidiMix::set_channel_filter_node(size_t channel_id,
   channel.set_filter_node(*node);
 }
 
-void controllers::MidiMix::set_send_node(const size_t channel_id,
-                                         const size_t send_id,
-                                         const uint64_t object_id) {
-  logging::log<logging::LogLevel::Trace>("MidiMix::set_send_node");
-
-  std::lock_guard lock(_channels_mutex);
-  if (channel_id >= _channels.size()) {
-    logging::log<logging::LogLevel::Error>("Channel {} out of bounds",
-                                           channel_id);
-    return;
-  }
-
-  auto &channel = _channels[channel_id];
-
-  auto node = _registry.get_node_by_object_id(object_id);
-
-  if (!node) {
-    logging::log<logging::LogLevel::Error>("Couldn't get node for object id {}",
-                                           object_id);
-    return;
-  }
-
-  channel.set_send_node(send_id, *node);
-}
-
 std::optional<controllers::DialColumnAndRow>
 controllers::MidiMix::get_column_and_row_for_dial_index(const uint8_t index) {
   if (index >= 16 && index <= 18) {
@@ -636,6 +613,16 @@ void controllers::MidiMix::set_selected_channel_from_processor(
   } else {
     _selected_channel_id = std::nullopt;
   }
+
+  add_channel_feedback();
+  add_dial_mode_feedback();
+}
+
+void controllers::MidiMix::clear_selected_channel_from_processor() {
+  logging::log<logging::LogLevel::Trace>(
+      "MidiMix::clear_selected_channel_from_processor");
+
+  _selected_channel_id = std::nullopt;
 
   add_channel_feedback();
   add_dial_mode_feedback();
@@ -783,4 +770,25 @@ controllers::MidiMix::channel_by_type_and_id(const ChannelType channel_type,
 
   auto &channel = _channels[channel_id];
   return channel;
+}
+
+void controllers::MidiMix::set_master_channel_node(const size_t layer_id,
+                                                   const uint64_t object_id) {
+  logging::log<logging::LogLevel::Trace>("MidiMix::set_master_channel_node");
+
+  if (layer_id >= _number_of_layers) {
+    logging::log<logging::LogLevel::Error>("Layer {} out of bounds", layer_id);
+
+    return;
+  }
+
+  const auto node = _registry.get_node_by_object_id(object_id);
+
+  if (!node) {
+    logging::log<logging::LogLevel::Error>("Couldn't find node {}", object_id);
+
+    return;
+  }
+
+  _master_channel_playback_nodes[layer_id] = *node;
 }

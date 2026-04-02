@@ -29,6 +29,9 @@
         <PackageReference Include="FrPwMonitoring" Version="0.0.4" />
         <PackageReference Include="FrWireplumber" Version="0.9.3" />
         <PackageReference Include="ReactiveUI.Avalonia" Version="11.4.7" />
+        <PackageReference Include="Serilog" Version="4.3.1" />
+        <PackageReference Include="Serilog.Extensions.Logging" Version="10.0.0" />
+        <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
         <PackageReference Include="System.Reactive" Version="6.1.0" />
     </ItemGroup>
 
@@ -65,6 +68,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <None Include="runtimes/linux-x64/libfrmidimapper.so.0.0.1" Pack="true" PackagePath="runtimes/linux-x64/native/"/>
+        <None Include="runtimes/linux-x64/libfrmidimapper.so.0.0.4" Pack="true" PackagePath="runtimes/linux-x64/native/" />
     </ItemGroup> 
 </Project>

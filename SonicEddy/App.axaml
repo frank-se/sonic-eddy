@@ -2,8 +2,6 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="SonicEddy.App"
              xmlns:local="using:SonicEddy"
-             xmlns:mixerViewModels="clr-namespace:SonicEddy.ViewModels.MixerViewModels"
-             xmlns:mixerViews="clr-namespace:SonicEddy.Views.MixerViews"
              xmlns:converters="clr-namespace:Avalonia.Controls.Converters;assembly=Avalonia.Controls"
              RequestedThemeVariant="Default">
 

@@ -86,6 +86,7 @@ public class PanAndVolumeViewModelV2 : ReactiveObject, IPanAndVolume,
         {
             Pan = 0.0f;
             Volume = 0.0f;
+            return;
         }
 
         var internalVolumes =

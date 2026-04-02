@@ -193,6 +193,11 @@ void controllers::FaderfoxPc4::set_selected_channel_from_processor(
   }
 }
 
+void controllers::FaderfoxPc4::clear_selected_channel_from_processor() {
+  logging::log<logging::LogLevel::Trace>(
+      "FaderfoxPc4::clear_selected_channel_from_processor");
+}
+
 void controllers::FaderfoxPc4::set_selected_plugin_page_from_processor(
     const size_t plugin_id, const size_t page_number) {
   logging::log<logging::LogLevel::Trace>(

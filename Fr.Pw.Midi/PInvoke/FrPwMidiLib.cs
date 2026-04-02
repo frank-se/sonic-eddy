@@ -31,7 +31,7 @@ internal delegate void FilterParamsSectionMovePagesLeftCallback(
 
 internal static partial class FrPwMidiLib
 {
-    private const string LIBRARY_NAME = "libfrmidimapper.so.0.0.2";
+    private const string LIBRARY_NAME = "libfrmidimapper.so.0.0.4";
 
     [LibraryImport(LIBRARY_NAME, EntryPoint = "init")]
     private static partial void InitC();
@@ -77,12 +77,19 @@ internal static partial class FrPwMidiLib
     private static partial void SetSelectedChannelC(ChannelType channel_type,
         ulong channel_id);
 
+    [LibraryImport(LIBRARY_NAME, EntryPoint = "clear_selected_channel")]
+    private static partial void ClearSelectedChannelC();
+    
     [LibraryImport(LIBRARY_NAME, EntryPoint = "set_selected_layer")]
     private static partial void SetSelectedLayerC(ulong layer_id);
 
     [LibraryImport(LIBRARY_NAME, EntryPoint = "set_channel_node")]
     private static partial void SetChannelNodeC(ChannelType channel_type,
         ulong channel_id, ulong object_id);
+
+    [LibraryImport(LIBRARY_NAME, EntryPoint = "set_master_channel_node")]
+    private static partial void SetMasterChannelNodeC(ulong layer_id,
+        ulong object_id);
 
     [LibraryImport(LIBRARY_NAME, EntryPoint = "set_channel_filter_node")]
     private static partial void SetChannelFilterNodeC(ChannelType channel_type,
@@ -143,12 +150,18 @@ internal static partial class FrPwMidiLib
     internal static void SetSelectedChannel(ChannelType channelType,
         ulong channelId) => SetSelectedChannelC(channelType, channelId);
 
+    internal static void ClearSelectedChannel() => ClearSelectedChannelC();
+    
     internal static void SetSelectedLayer(ulong layerId) =>
         SetSelectedLayerC(layerId);
 
     internal static void SetChannelNode(ChannelType channelType,
         ulong channelId, ulong objectId) =>
         SetChannelNodeC(channelType, channelId, objectId);
+
+    internal static void SetMasterChannelNode(ulong layer_id,
+        ulong object_id) => SetMasterChannelNodeC(layer_id,
+        object_id);
 
     internal static void SetChannelFilterNode(ChannelType channelType,
         ulong channelId, ulong objectId) =>

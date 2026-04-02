@@ -18,17 +18,27 @@ registry::Registry::get_node_by_object_id(const uint64_t object_id) {
       .object_id = object_id,
   };
 
-  pw_loop_invoke(
+  const auto result = pw_loop_invoke(
       pw_main_loop_get_loop(_loop),
       [](spa_loop *loop, bool async, std::uint32_t seq, const void *data,
          size_t size, void *user_data) {
         const auto bind_node_data_local =
             static_cast<const BindNodeData *>(data);
         const auto registry = static_cast<Registry *>(user_data);
-        registry->_bind_node(bind_node_data_local->object_id);
-        return 0;
+        if (registry->_bind_node(bind_node_data_local->object_id)) {
+          return 0;
+        } else {
+          return -1;
+        }
       },
       0, &bind_node_data, sizeof(bind_node_data), true, this);
+
+  if (result == -1) {
+    logging::log<logging::LogLevel::Error>(
+        "Couldn't bind node with object id {}", object_id);
+
+    return std::nullopt;
+  }
 
   node_it = std::ranges::lower_bound(_nodes, object_id, {}, &Node::object_id);
 
@@ -38,7 +48,7 @@ registry::Registry::get_node_by_object_id(const uint64_t object_id) {
   return std::nullopt;
 }
 
-void registry::Registry::_bind_node(const uint64_t object_id) {
+bool registry::Registry::_bind_node(const uint64_t object_id) {
   logging::log<logging::LogLevel::Trace>("Registry::_bind_node");
 
   auto pw_node = static_cast<struct pw_node *>(pw_registry_bind(
@@ -47,8 +57,15 @@ void registry::Registry::_bind_node(const uint64_t object_id) {
   if (pw_node == nullptr) {
     logging::log<logging::LogLevel::Error>(
         "Couldn't bind node with object id {}", object_id);
-    return;
+
+    return false;
   }
 
+  logging::log<logging::LogLevel::Debug>("Bound node with object id {}",
+                                         object_id);
   _nodes.emplace_back(std::make_unique<Node>(_loop, object_id, pw_node));
+
+  std::ranges::sort(_nodes, {}, &Node::object_id);
+
+  return true;
 }

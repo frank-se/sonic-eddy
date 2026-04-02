@@ -6,7 +6,7 @@
              xmlns:mixerControls="clr-namespace:SonicEddy.Controls.MixerControls"
              xmlns:mixerViewsV2="clr-namespace:SonicEddy.Views.MixerViewsV2"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-             x:DataType="mixerViewModelsV2:MixerViewModel"
+             x:DataType="mixerViewModelsV2:MixerLayerViewModel"
              x:Class="SonicEddy.Views.MixerViewsV2.MixerView">
 
     <SplitView IsPaneOpen="True"

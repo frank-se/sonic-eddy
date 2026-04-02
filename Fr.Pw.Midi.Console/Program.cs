@@ -1,5 +1,4 @@
 ﻿using Fr.Pw.Midi;
-using Fr.Pw.Midi.PInvoke;
 
 Console.WriteLine("Fr Midi Console App");
 

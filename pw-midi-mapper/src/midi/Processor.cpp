@@ -285,9 +285,10 @@ bool midi::Processor::process_queues() {
 }
 
 void midi::Processor::set_selected_channel(
-    const controllers::ChannelType channel_type,
-    const size_t channel_id) const {
+    const controllers::ChannelType channel_type, const size_t channel_id) {
   logging::log<logging::LogLevel::Trace>("Processor::set_selected_channel");
+
+  std::lock_guard controllers_lock(_controllers_mutex);
 
   for (const auto &action_container : _controllers) {
     action_container->set_selected_channel_from_processor(channel_type,
@@ -295,9 +296,21 @@ void midi::Processor::set_selected_channel(
   }
 }
 
+void midi::Processor::clear_selected_channel() {
+  logging::log<logging::LogLevel::Trace>("Processor::clear_selected_channel");
+
+  std::lock_guard controllers_lock(_controllers_mutex);
+
+  for (const auto &action_container : _controllers) {
+    action_container->clear_selected_channel_from_processor();
+  }
+}
+
 void midi::Processor::set_selected_plugin_page(const size_t plugin_id,
-                                               const size_t page_number) const {
+                                               const size_t page_number) {
   logging::log<logging::LogLevel::Trace>("Processor::set_selected_plugin_page");
+
+  std::lock_guard controllers_lock(_controllers_mutex);
 
   for (const auto &action_container : _controllers) {
     action_container->set_selected_plugin_page_from_processor(plugin_id,
@@ -305,11 +318,18 @@ void midi::Processor::set_selected_plugin_page(const size_t plugin_id,
   }
 }
 
-void midi::Processor::set_selected_layer(const size_t layer_id) const {
+void midi::Processor::set_selected_layer(const size_t layer_id) {
   logging::log<logging::LogLevel::Trace>("Processor::set_selected_layer");
 
-  for (const auto &action_container : _controllers) {
-    action_container->set_layer_from_processor(layer_id);
+  std::lock_guard controllers_lock(_controllers_mutex);
+
+  size_t index = 0;
+  for (const auto &controller : _controllers) {
+    logging::log<logging::LogLevel::Trace>("Setting layer {} for controller {}",
+                                           layer_id, index);
+
+    controller->set_layer_from_processor(layer_id);
+    index++;
   }
 }
 
@@ -318,11 +338,11 @@ void midi::Processor::set_channel_node(
     const uint64_t object_id) {
   logging::log<logging::LogLevel::Trace>("Processor::set_channel_node");
 
+  std::lock_guard controllers_lock(_controllers_mutex);
+
   for (const auto &controller : _controllers) {
     controller->set_channel_node(channel_type, channel_id, object_id);
   }
-
-  std::lock_guard controllers_lock(_controllers_mutex);
 }
 
 void midi::Processor::set_channel_filter_node(
@@ -330,11 +350,11 @@ void midi::Processor::set_channel_filter_node(
     const uint64_t object_id) {
   logging::log<logging::LogLevel::Trace>("Processor::set_channel_filter_node");
 
+  std::lock_guard controllers_lock(_controllers_mutex);
+
   for (const auto &controller : _controllers) {
     controller->set_channel_filter_node(channel_type, channel_id, object_id);
   }
-
-  std::lock_guard controllers_lock(_controllers_mutex);
 }
 
 void midi::Processor::set_channel_send_node(
@@ -342,23 +362,23 @@ void midi::Processor::set_channel_send_node(
     const size_t send_id, const uint64_t object_id) {
   logging::log<logging::LogLevel::Trace>("Processor::set_channel_send_node");
 
+  std::lock_guard controllers_lock(_controllers_mutex);
+
   for (const auto &controller : _controllers) {
     controller->set_channel_send_node(channel_type, channel_id, send_id,
                                       object_id);
   }
-
-  std::lock_guard controllers_lock(_controllers_mutex);
 }
 
 void midi::Processor::clear_filter_parameters(
     const controllers::ChannelType channel_type, const size_t channel_id) {
   logging::log<logging::LogLevel::Trace>("Processor::clear_filter_parameters");
 
+  std::lock_guard controllers_lock(_controllers_mutex);
+
   for (const auto &controller : _controllers) {
     controller->clear_filter_parameters(channel_type, channel_id);
   }
-
-  std::lock_guard controllers_lock(_controllers_mutex);
 }
 
 void midi::Processor::add_filter_parameter(
@@ -366,10 +386,19 @@ void midi::Processor::add_filter_parameter(
     const size_t plugin_id, char *name, const float min, const float max) {
   logging::log<logging::LogLevel::Trace>("Processor::add_filter_parameter");
 
+  std::lock_guard controllers_lock(_controllers_mutex);
+
   for (const auto &controller : _controllers) {
     controller->add_filter_parameter(channel_type, channel_id, plugin_id, name,
                                      min, max);
   }
+}
 
-  std::lock_guard controllers_lock(_controllers_mutex);
+void midi::Processor::set_master_channel_node(const size_t layer_id,
+                                              const uint64_t object_id) {
+  logging::log<logging::LogLevel::Trace>("Processor::set_master_channel_node");
+
+  for (const auto &controller : _controllers) {
+    controller->set_master_channel_node(layer_id, object_id);
+  }
 }

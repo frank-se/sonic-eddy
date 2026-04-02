@@ -4,8 +4,10 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fr.Wireplumber.Model.Objects;
+using Microsoft.Extensions.Logging;
 using SonicEddy.Contracts.FilterGraph;
 using SonicEddy.Services.AppData;
+using SonicEddy.Services.Midi;
 using SonicEddy.Services.Preferences;
 using SonicEddy.Services.Wireplumber;
 
@@ -16,13 +18,16 @@ public class MixerService : IMixerService, IDisposable
     private readonly IWireplumberService _wireplumberService;
     private readonly IPreferenceService _preferenceService;
     private readonly MixerEditor _editor;
+    private readonly ILogger<MixerService> _logger;
 
     public MixerService(IAppDataService appDataService,
         IWireplumberService wireplumberService,
-        IPreferenceService preferenceService)
+        IPreferenceService preferenceService,
+        ILogger<MixerService> logger)
     {
         _wireplumberService = wireplumberService;
         _preferenceService = preferenceService;
+        _logger = logger;
         _editor = new(wireplumberService);
 
         _wireplumberService.NodeAdded += OnNodeAdded;
@@ -41,6 +46,9 @@ public class MixerService : IMixerService, IDisposable
 
     public async Task<Mixer> NewCurrentMixer(string name)
     {
+        if (_logger.IsEnabled(LogLevel.Trace))
+            _logger.LogTrace("NewCurrentMixer {Name}", name);
+
         if (_preferenceService.Preferences is null)
             await _preferenceService.Load();
 
@@ -60,16 +68,16 @@ public class MixerService : IMixerService, IDisposable
                 _myNodeIds.Clear();
 
                 var firstLayer = await _editor.Create(_preferenceService
-                    .Preferences?.DefaultMasterOutputName);
+                    .Preferences?.DefaultMasterOutputName, 0);
 
-                var layerOneIds = CollectMixerLayerIds(firstLayer).ToArray();
+                var layerOneIds = CollectMixerLayerNodeIds(firstLayer).ToArray();
                 _myNodeIds.AddRange(layerOneIds);
 
                 var secondLayer = await _editor.Create(_preferenceService
-                        .Preferences?.DefaultMasterOutputName,
+                        .Preferences?.DefaultMasterOutputName, 1,
                     layerOneIds.ToArray());
 
-                _myNodeIds.AddRange(CollectMixerLayerIds(secondLayer));
+                _myNodeIds.AddRange(CollectMixerLayerNodeIds(secondLayer));
 
                 CurrentMixer = new([firstLayer, secondLayer]);
             }
@@ -93,8 +101,11 @@ public class MixerService : IMixerService, IDisposable
         return CurrentMixer;
     }
 
-    private static IEnumerable<ulong> CollectMixerLayerIds(MixerLayer layer)
+    private IEnumerable<ulong> CollectMixerLayerNodeIds(MixerLayer layer)
     {
+        if (_logger.IsEnabled(LogLevel.Trace))
+            _logger.LogTrace("CollectMixerLayerIds");
+
         List<IEnumerable<ulong>> ids =
         [
             layer.Channels
@@ -189,6 +200,8 @@ public class MixerService : IMixerService, IDisposable
 
     public async Task<Mixer?> GetAndLock()
     {
+        _logger.LogTrace("GetAndLock");
+
         if (CurrentMixer is null) return null;
 
         await _externalChange.WaitAsync();
@@ -204,6 +217,8 @@ public class MixerService : IMixerService, IDisposable
 
     public async Task Unlock()
     {
+        _logger.LogTrace("Unlock");
+
         _internalChange.Release();
 
         lock (_isModifyingLock)
@@ -225,6 +240,8 @@ public class MixerService : IMixerService, IDisposable
         ulong channelId,
         FilterGraph filterGraph)
     {
+        _logger.LogTrace("AddFilterToChannelStrip");
+
         await _externalChange.WaitAsync();
 
         try
@@ -242,7 +259,7 @@ public class MixerService : IMixerService, IDisposable
             try
             {
                 CurrentMixer.Layers[layerId] =
-                    await MixerEditor.AddFilterToChannelStrip(
+                    await _editor.AddFilterToChannelStrip(
                         CurrentMixer.Layers[layerId],
                         channelId,
                         filterGraph);
@@ -287,6 +304,8 @@ public class MixerService : IMixerService, IDisposable
 
     private void OnNodeAdded(Node node)
     {
+        _logger.LogTrace("OnNodeAdded");
+
         lock (_isModifyingLock)
         {
             if (_isModifyingMixer)
@@ -301,6 +320,8 @@ public class MixerService : IMixerService, IDisposable
 
     private async Task FinishPendingAddNodeEvents()
     {
+        _logger.LogTrace("FinishPendingAddNodeEvents");
+
         Queue<Node> toProcess;
         lock (_isModifyingLock)
         {
@@ -317,6 +338,8 @@ public class MixerService : IMixerService, IDisposable
 
     private async Task ProcessNodeAddedEvent(Node node)
     {
+        _logger.LogTrace("ProcessNodeAddedEvent");
+
         await _internalChange.WaitAsync();
 
         var inputsChanged = false;

@@ -55,10 +55,16 @@ public class PanAndVolumeViewModel : ReactiveObject, IPanAndVolume, IDisposable
         RightAverage = update.Averages[1];
     }
 
-    private void SetNodeVolumesFromPanAndVolume(double pan, double volume) =>
-        _node.SetVolumes(
-            Audio.Pan.BoostToExternal(
-                Audio.Pan.GetGainsFromPanAndVolume(pan, volume)));
+    private bool _internalChanges = false;
+
+    private void SetNodeVolumesFromPanAndVolume(double pan, double volume)
+    {
+        if (_internalChanges) return;
+        var internalVolumes = Audio.Pan.GetGainsFromPanAndVolume(pan, volume);
+        var externalVolumes = Audio.Pan.BoostToExternal(internalVolumes);
+        _node.SetVolumes(externalVolumes);
+    }
+
 
     private void OnPropertiesChanged(Properties? properties) =>
         SetVolumeAndPanFromProperties(properties);
@@ -75,6 +81,7 @@ public class PanAndVolumeViewModel : ReactiveObject, IPanAndVolume, IDisposable
         {
             Pan = 0.0f;
             Volume = 0.0f;
+            return;
         }
 
         var internalVolumes =
@@ -83,12 +90,18 @@ public class PanAndVolumeViewModel : ReactiveObject, IPanAndVolume, IDisposable
         var (pan, volume) =
             Audio.Pan.GetPanAndVolumeFromGains(internalVolumes[0],
                 internalVolumes[1]);
-        
+
+        _internalChanges = true;
         Volume = volume;
 
-        if (Volume == 0.0f) return;
+        if (Volume == 0.0f)
+        {
+            _internalChanges = false;
+            return;
+        }
 
         Pan = pan;
+        _internalChanges = false;
     }
 
     private readonly Node _node;

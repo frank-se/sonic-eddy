@@ -15,22 +15,14 @@ using SonicEddy.ViewModels.ObjectDetailsViewModels;
 
 namespace SonicEddy.ViewModels.ObjectBrowserViewModels;
 
-public class ObjectBrowserViewModel : ViewModelBase, IActivatableViewModel,
-    IRoutableViewModel
+public class ObjectBrowserViewModel : ViewModelBase, IActivatableViewModel
 {
     private readonly IAppDataService _appDataService;
     private readonly List<PipewireObject> _leftover = [];
 
-    private PipewireObject? _selectedObject;
-
-    private ObjectDetailsViewModelBase? _selectedObjectViewModel;
-
-    public ObjectBrowserViewModel(IAppDataService appDataService,
-        string? urlPathSegment, IScreen hostScreen)
+    public ObjectBrowserViewModel(IAppDataService appDataService)
     {
         _appDataService = appDataService;
-        UrlPathSegment = urlPathSegment;
-        HostScreen = hostScreen;
         var clients = Wireplumber.ClientRegistry.Objects;
         Objects = new(clients.Select(PipewireObject.FromClient));
 
@@ -75,14 +67,14 @@ public class ObjectBrowserViewModel : ViewModelBase, IActivatableViewModel,
 
     public ObjectDetailsViewModelBase? SelectedObjectViewModel
     {
-        get => _selectedObjectViewModel;
-        set => this.RaiseAndSetIfChanged(ref _selectedObjectViewModel, value);
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
     public PipewireObject? SelectedObject
     {
-        get => _selectedObject;
-        set => this.RaiseAndSetIfChanged(ref _selectedObject, value);
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
     public ObservableCollection<PipewireObject> Objects { get; set; }
@@ -396,7 +388,4 @@ public class ObjectBrowserViewModel : ViewModelBase, IActivatableViewModel,
                 _leftover.Add(PipewireObject.FromDevice(device));
         }
     }
-
-    public string? UrlPathSegment { get; }
-    public IScreen HostScreen { get; }
 }

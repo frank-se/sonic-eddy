@@ -1,6 +1,6 @@
 project(
     'fr-midi-mapper', 'cpp',
-    version : '0.0.2',
+    version : '0.0.4',
     license : 'MIT',
     default_options : ['cpp_std=c++26'])
 

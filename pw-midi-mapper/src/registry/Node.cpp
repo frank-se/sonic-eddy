@@ -43,8 +43,9 @@ void registry::Node::set_volume(const double value) const {
       audio::pan::PanAndVolume{.pan = current_pan_and_volume->pan,
                                .volume = static_cast<float>(value)});
 
-  logging::log<logging::LogLevel::Debug>("Calculated left {} and right {} gain",
-                                         gains[0], gains[1]);
+  logging::log<logging::LogLevel::Debug>(
+      "Calculated left {} and right {} gain for node {}", gains[0], gains[1],
+      _object_id);
 
   set_channel_volumes(gains);
 }
@@ -74,11 +75,17 @@ void registry::Node::on_channel_playback_node_params_changed(
   auto *node = static_cast<Node *>(user_data);
 
   if (SPA_POD_TYPE(pod) == SPA_TYPE_Object) {
+    logging::log<logging::LogLevel::Trace>("Processing SPA_TYPE_Object");
+
     const auto channel_volumes_property =
         spa_pod_find_prop(pod, nullptr, SPA_PROP_channelVolumes);
 
-    if (channel_volumes_property == nullptr)
+    if (channel_volumes_property == nullptr) {
+      logging::log<logging::LogLevel::Trace>(
+          "No channel volume message in updates");
+
       return;
+    }
 
     const auto channel_volumes_array = &channel_volumes_property->value;
     if (!spa_pod_is_array(channel_volumes_array))
@@ -87,14 +94,22 @@ void registry::Node::on_channel_playback_node_params_changed(
     const auto number_of_channels =
         SPA_POD_ARRAY_N_VALUES(channel_volumes_array);
 
-    if (number_of_channels != 2)
+    if (number_of_channels != 2) {
+      logging::log<logging::LogLevel::Debug>("Unexpected number of channels {}",
+                                             number_of_channels);
+
       return;
+    }
 
     if (SPA_POD_ARRAY_VALUE_TYPE(channel_volumes_array) != SPA_TYPE_Float)
       return;
 
     const auto channel_volumes =
         static_cast<float *>(SPA_POD_ARRAY_VALUES(channel_volumes_array));
+
+    logging::log<logging::LogLevel::Debug>(
+        "Channel volumes: left {}, right {} for node {}", channel_volumes[0],
+        channel_volumes[1], node->object_id());
 
     node->_left = channel_volumes[0];
     node->_right = channel_volumes[1];

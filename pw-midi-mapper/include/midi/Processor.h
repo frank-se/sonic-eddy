@@ -61,11 +61,15 @@ public:
   bool process_queues();
 
   void set_selected_channel(controllers::ChannelType channel_type,
-                            size_t channel_id) const;
+                            size_t channel_id);
 
-  void set_selected_plugin_page(size_t plugin_id, size_t page_number) const;
+  void clear_selected_channel();
 
-  void set_selected_layer(size_t layer_id) const;
+  void set_selected_plugin_page(size_t plugin_id, size_t page_number);
+
+  void set_selected_layer(size_t layer_id);
+
+  void set_master_channel_node(size_t layer_id, uint64_t object_id);
 
   void set_channel_node(controllers::ChannelType channel_type,
                         size_t channel_id, uint64_t object_id);

@@ -6,7 +6,7 @@ using SonicEddy.ViewModels.MixerViewModelsV2;
 
 namespace SonicEddy.Views.MixerViewsV2;
 
-public partial class MixerView : ReactiveUserControl<MixerViewModel>
+public partial class MixerView : ReactiveUserControl<MixerLayerViewModel>
 {
     public MixerView()
     {

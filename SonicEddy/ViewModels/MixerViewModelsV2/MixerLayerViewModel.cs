@@ -2,34 +2,38 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Reactive.Disposables;
+using System.Reactive.Disposables.Fluent;
 using System.Windows.Input;
 using DynamicData;
+using Fr.Pw.Midi.PInvoke;
 using ReactiveUI;
 using SonicEddy.Controls.MixerControls;
+using SonicEddy.Services.Midi;
 using SonicEddy.Services.MixerServiceV2;
 using SonicEddy.Services.MixerViewModels;
 
 namespace SonicEddy.ViewModels.MixerViewModelsV2;
 
-public class MixerViewModel : ViewModelBase, IRoutableViewModel,
+public class MixerLayerViewModel : ViewModelBase,
     IActivatableViewModel, IDisposable
 {
     public ICommand SelectChannelCommand { get; }
 
     private readonly IMixerService _mixerService;
     private readonly IMixerViewModelService _mixerViewModelService;
+    private readonly IMidiControllerService _midiControllerService;
+    private readonly CompositeDisposable _disposables = new();
 
-    public MixerViewModel(string? urlPathSegment, IScreen hostScreen,
+    public MixerLayerViewModel(
         IMixerService mixerService,
         IMixerViewModelService mixerViewModelService,
         ObservableCollection<IRoutingTarget> audioFromRoutingTargets,
         ObservableCollection<IRoutingTarget> audioToRoutingTargetsChannelStrips,
         ObservableCollection<IRoutingTarget> audioToRoutingTargetsGroupChannels,
-        ObservableCollection<IRoutingTarget> audioToRoutingTargetsMasterChannel)
+        ObservableCollection<IRoutingTarget> audioToRoutingTargetsMasterChannel,
+        IMidiControllerService midiControllerService, ulong layerId)
     {
-        HostScreen = hostScreen;
-        UrlPathSegment = urlPathSegment;
-
         ICommand selectChannelCommand =
             ReactiveCommand.Create<IChannel>(channel =>
             {
@@ -60,6 +64,25 @@ public class MixerViewModel : ViewModelBase, IRoutableViewModel,
         AudioToRoutingTargetsChannelStrips = audioToRoutingTargetsChannelStrips;
         AudioToRoutingTargetsGroupChannels = audioToRoutingTargetsGroupChannels;
         AudioToRoutingTargetsMasterChannel = audioToRoutingTargetsMasterChannel;
+        _midiControllerService = midiControllerService;
+
+        this.WhenAnyValue(x => x.SelectedChannel).Subscribe(selectedChannel =>
+        {
+            switch (selectedChannel)
+            {
+                case IChannelStrip channelStrip:
+                    _midiControllerService.SetSelectedChannel(
+                        ChannelType.Channel, channelStrip.ChannelId);
+                    break;
+                case IGroupChannel groupChannel:
+                    _midiControllerService.SetSelectedChannel(
+                        ChannelType.GroupChannel, groupChannel.ChannelId);
+                    break;
+                default:
+                    _midiControllerService.ClearSelectedChannel();
+                    break;
+            }
+        }).DisposeWith(_disposables);
     }
 
     public void SetupEvents()
@@ -79,7 +102,7 @@ public class MixerViewModel : ViewModelBase, IRoutableViewModel,
     private void DeleteRemovedInputChannels(List<InputChannel> inputChannels)
     {
         if (InputChannels is null) return;
-        
+
         var newObjectSerials =
             inputChannels.Select(c => c.PlaybackNode.ObjectSerial).ToArray();
 
@@ -89,7 +112,7 @@ public class MixerViewModel : ViewModelBase, IRoutableViewModel,
         foreach (var deletedChannel in deletedChannels)
         {
             InputChannels.Remove(deletedChannel);
-            
+
             var audioFromRoutingTarget =
                 AudioFromRoutingTargets.FirstOrDefault(c =>
                 {
@@ -99,7 +122,7 @@ public class MixerViewModel : ViewModelBase, IRoutableViewModel,
                     return inputChannel.PlaybackNodeObjectSerial ==
                            deletedChannel.PlaybackNodeObjectSerial;
                 });
-            
+
             if (audioFromRoutingTarget is null) continue;
 
             AudioFromRoutingTargets.Remove(audioFromRoutingTarget);
@@ -109,7 +132,7 @@ public class MixerViewModel : ViewModelBase, IRoutableViewModel,
     private void AddNewInputChannels(List<InputChannel> inputChannels)
     {
         if (InputChannels is null) return;
-        
+
         var currentPlaybackNodeObjectSerials =
             InputChannels.Select(i => i.PlaybackNodeObjectSerial).ToArray();
 
@@ -141,7 +164,7 @@ public class MixerViewModel : ViewModelBase, IRoutableViewModel,
     private void DeleteRemovedOutputChannels(List<OutputChannel> outputChannels)
     {
         if (OutputChannels is null) return;
-        
+
         var newObjectSerials =
             outputChannels.Select(c => c.CaptureNode.ObjectSerial).ToArray();
 
@@ -157,7 +180,7 @@ public class MixerViewModel : ViewModelBase, IRoutableViewModel,
     private void AddNewOutputChannels(List<OutputChannel> outputChannels)
     {
         if (OutputChannels is null) return;
-        
+
         var currentCaptureNodeObjectSerials =
             OutputChannels.Select(i => i.CaptureNodeObjectSerial).ToArray();
 
@@ -204,8 +227,6 @@ public class MixerViewModel : ViewModelBase, IRoutableViewModel,
         set => this.RaiseAndSetIfChanged(ref field, value);
     } = [];
 
-    public string? UrlPathSegment { get; }
-    public IScreen HostScreen { get; }
     public ViewModelActivator Activator { get; } = new();
 
     public void Dispose()

@@ -106,6 +106,7 @@ void controllers::Channel::set_parameter_for_selected_section(
 
   _filter_node->set_param(parameter->name, new_value);
 }
+
 void controllers::Channel::set_send_node(size_t send_id, registry::Node *node) {
   logging::log<logging::LogLevel::Debug>("Channel::set_send_node");
 
@@ -115,6 +116,9 @@ void controllers::Channel::set_send_node(size_t send_id, registry::Node *node) {
 
     return;
   }
+
+  logging::log<logging::LogLevel::Debug>(
+      "Setting node for send {} in channel {}", send_id, _channel_id);
 
   _sends[send_id] = node;
 }

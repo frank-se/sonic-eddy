@@ -552,6 +552,17 @@ void controllers::CmdMm1::set_selected_channel_from_processor(
   add_filter_params_feedback();
 }
 
+void controllers::CmdMm1::clear_selected_channel_from_processor() {
+  logging::log<logging::LogLevel::Trace>(
+      "CmdMM1::clear_selected_channel_from_processor");
+
+  _selected_channel_id = std::nullopt;
+
+  add_channel_feedback();
+  add_dial_mode_feedback();
+  add_filter_params_feedback();
+}
+
 void controllers::CmdMm1::set_selected_plugin_page_from_processor(
     size_t plugin_id, size_t page_number) {
   logging::log<logging::LogLevel::Trace>(

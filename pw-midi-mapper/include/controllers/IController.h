@@ -14,10 +14,14 @@ public:
   virtual void set_selected_channel_from_processor(ChannelType channel_type,
                                                    size_t channel_id) = 0;
 
+  virtual void clear_selected_channel_from_processor() = 0;
+
   virtual void set_selected_plugin_page_from_processor(size_t plugin_id,
                                                        size_t page_number) = 0;
 
   virtual void add_current_state_as_feedback() = 0;
+
+  virtual void set_master_channel_node(size_t layer_id, uint64_t object_id) = 0;
 
   virtual void set_channel_node(ChannelType channel_type, size_t channel_id,
                                 uint64_t object_id) = 0;

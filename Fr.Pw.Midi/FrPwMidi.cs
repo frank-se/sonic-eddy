@@ -60,6 +60,45 @@ public static class FrPwMidi
     public static event Action<FilterParamsSectionMovePagesEventArgs>?
         FilterParamsSectionMovedLeft;
 
+    public static void
+        SetSelectedPluginPage(ulong pluginId, ulong pageNumber) =>
+        FrPwMidiLib.SetSelectedPluginPage(pluginId, pageNumber);
+
+    public static void SetSelectedChannel(ChannelType channelType,
+        ulong channelId) =>
+        FrPwMidiLib.SetSelectedChannel(channelType, channelId);
+
+    public static void ClearSelectedChannel() =>
+        FrPwMidiLib.ClearSelectedChannel();
+    
+    public static void SetSelectedLayer(ulong layerId) =>
+        FrPwMidiLib.SetSelectedLayer(layerId);
+
+    public static void SetChannelNode(ChannelType channelType,
+        ulong channelId, ulong objectId) =>
+        FrPwMidiLib.SetChannelNode(channelType, channelId, objectId);
+
+    public static void SetMasterChannelNode(ulong layerId, ulong objectId) =>
+        FrPwMidiLib.SetMasterChannelNode(layerId, objectId);
+
+    public static void SetChannelFilterNode(ChannelType channelType,
+        ulong channelId, ulong objectId) =>
+        FrPwMidiLib.SetChannelFilterNode(channelType, channelId, objectId);
+
+    public static void SetChannelSendNode(ChannelType channelType,
+        ulong channelId, ulong sendId, ulong objectId) =>
+        FrPwMidiLib.SetChannelSendNode(channelType, channelId, sendId,
+            objectId);
+
+    public static void ClearFilterParameters(ChannelType channelType,
+        ulong channelId) =>
+        FrPwMidiLib.ClearFilterParameters(channelType, channelId);
+
+    public static void AddFilterParameter(ChannelType channelType,
+        ulong channelId, ulong pluginId, string name, float min, float max) =>
+        FrPwMidiLib.AddFilterParameter(channelType, channelId, pluginId, name,
+            min, max);
+
     public static void Stop() => FrPwMidiLib.Stop();
 
     private static void OnLayerSelect(ulong layerId)

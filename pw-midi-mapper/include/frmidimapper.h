@@ -59,10 +59,15 @@ FR_MIDI_MAPPER_API void set_selected_plugin_page(size_t plugin_id,
 FR_MIDI_MAPPER_API void
 set_selected_channel(controllers::ChannelType channel_type, size_t channel_id);
 
+FR_MIDI_MAPPER_API void clear_selected_channel();
+
 FR_MIDI_MAPPER_API void set_selected_layer(size_t layer_id);
 
 FR_MIDI_MAPPER_API void set_channel_node(controllers::ChannelType channel_type,
                                          size_t channel_id, uint64_t object_id);
+
+FR_MIDI_MAPPER_API void set_master_channel_node(size_t layer_id,
+                                                uint64_t object_id);
 
 FR_MIDI_MAPPER_API void
 set_channel_filter_node(controllers::ChannelType channel_type,

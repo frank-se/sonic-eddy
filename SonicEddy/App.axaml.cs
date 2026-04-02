@@ -5,9 +5,12 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Fr.Pw.Monitoring;
+using Microsoft.Extensions.Logging;
 using ReactiveUI;
+using Serilog;
 using SonicEddy.Services.AppData;
-using SonicEddy.Services.MixerData;
+using SonicEddy.Services.Midi;
+using SonicEddy.Services.MixerServiceV2;
 using SonicEddy.Services.MixerViewModels;
 using SonicEddy.Services.Monitoring;
 using SonicEddy.Services.Preferences;
@@ -63,6 +66,13 @@ public class App : Application
 
         Directory.CreateDirectory(preferencesPath);
 
+        var loggerFactory = CreateLoggerFactory();
+        var logger = loggerFactory.CreateLogger<App>();
+
+        logger.LogInformation("Logger initialized, starting App");
+
+        Locator.CurrentMutable.Register(() => loggerFactory);
+
         var appDataService =
             new AppDataService(filterGraphPath, mixerPath, preferencesPath);
 
@@ -71,9 +81,6 @@ public class App : Application
         var preferencesService = new PreferenceService(appDataService);
         Locator.CurrentMutable.Register<IPreferenceService>(() =>
             preferencesService);
-
-        var mixerService = new MixerService(appDataService);
-        Locator.CurrentMutable.Register<IMixerService>(() => mixerService);
 
         var wireplumberService = new WireplumberService();
         Locator.CurrentMutable.Register<IWireplumberService>(() =>
@@ -88,22 +95,45 @@ public class App : Application
         Locator.CurrentMutable.Register<IMonitoringService>(() =>
             monitoringService);
 
+        var mixerServiceLogger = loggerFactory.CreateLogger<MixerService>();
         var mixerServiceV2 =
-            new Services.MixerServiceV2.MixerService(appDataService,
-                wireplumberService, preferencesService);
+            new MixerService(appDataService,
+                wireplumberService, preferencesService, mixerServiceLogger);
 
         Locator.CurrentMutable
-            .Register<Services.MixerServiceV2.IMixerService>(() =>
+            .Register<IMixerService>(() =>
                 mixerServiceV2);
 
+        var midiControllerService = new MidiControllerService();
+        var setupService = new MidiControllerSetupService();
+        
+        var mixerViewModelServiceLogger =
+            loggerFactory.CreateLogger<MixerViewModelService>();
         var mixerViewModelService =
             new MixerViewModelService(appDataService, mixerServiceV2,
-                monitoringService);
+                monitoringService, mixerViewModelServiceLogger, setupService,
+                midiControllerService);
         Locator.CurrentMutable.Register<IMixerViewModelService>(() =>
             mixerViewModelService);
 
-        Locator.CurrentMutable.RegisterViewsForViewModels(Assembly.GetExecutingAssembly());
-        
-        Locator.CurrentMutable.Register(() => new MainWindowViewModel());
+        Locator.CurrentMutable.RegisterViewsForViewModels(
+            Assembly.GetExecutingAssembly());
+
+        Locator.CurrentMutable.Register(() =>
+            new MainWindowViewModel(midiControllerService));
+    }
+
+    private static ILoggerFactory CreateLoggerFactory()
+    {
+        Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.Verbose()
+            .Enrich.FromLogContext()
+            .WriteTo.Console()
+            .CreateLogger();
+
+        return LoggerFactory.Create(builder =>
+        {
+            builder.AddSerilog(dispose: true);
+        });
     }
 }

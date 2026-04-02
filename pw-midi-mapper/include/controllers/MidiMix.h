@@ -6,7 +6,6 @@
 #include "controllers/Channel.h"
 #include "midi/Messages.h"
 #include "midi/Sender.h"
-#include "pw_utils/SetParamsData.h"
 #include "registry/Registry.h"
 
 #include <functional>
@@ -14,7 +13,7 @@
 
 namespace controllers {
 
-class MidiMix : public controllers::IController {
+class MidiMix : public IController {
 public:
   MidiMix(
       registry::Registry &registry, pw_main_loop *loop,
@@ -37,15 +36,18 @@ public:
   void set_layer_from_processor(size_t layer) override;
   void set_selected_channel_from_processor(ChannelType channel_type,
                                            size_t channel_id) override;
+
+  void clear_selected_channel_from_processor() override;
+
   void set_selected_plugin_page_from_processor(size_t plugin_id,
                                                size_t page_number) override;
 
   void set_channel_playback_node(size_t channel_id, uint64_t object_id);
   void set_channel_filter_node(size_t channel_id, uint64_t object_id);
-  void set_send_node(size_t channel_id, size_t send_id, uint64_t object_id);
 
   void add_current_state_as_feedback() override;
 
+  void set_master_channel_node(size_t layer_id, uint64_t object_id) override;
   void set_channel_node(ChannelType channel_type, size_t channel_id,
                         uint64_t object_id) override;
   void set_channel_filter_node(ChannelType channel_type, size_t channel_id,
@@ -59,6 +61,7 @@ public:
                             float max) override;
 
 private:
+  static constexpr size_t _number_of_layers{2};
   static constexpr size_t _channels_per_layer{8};
 
   registry::Registry &_registry;
@@ -68,7 +71,8 @@ private:
   std::atomic<size_t> _selected_layer_id{0};
   std::atomic<std::optional<size_t>> _selected_channel_id{std::nullopt};
 
-  registry::Node *_master_channel_playback_node = nullptr;
+  std::array<registry::Node *, 2> _master_channel_playback_nodes = {nullptr,
+                                                                    nullptr};
 
   std::mutex _channels_mutex{};
   /*

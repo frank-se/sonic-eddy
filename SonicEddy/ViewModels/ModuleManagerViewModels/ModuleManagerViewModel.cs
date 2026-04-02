@@ -15,8 +15,7 @@ using SonicEddy.Views.CreateModuleDialogViews;
 
 namespace SonicEddy.ViewModels.ModuleManagerViewModels;
 
-public class ModuleManagerViewModel : ViewModelBase, IRoutableViewModel,
-    IActivatableViewModel, IDisposable
+public class ModuleManagerViewModel : ViewModelBase, IDisposable
 {
     private readonly CompositeDisposable _disposables = new();
     public ObservableCollection<PipewireModule> Modules { get; } = [];
@@ -33,13 +32,8 @@ public class ModuleManagerViewModel : ViewModelBase, IRoutableViewModel,
         set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
-    public ModuleManagerViewModel(
-        IAppDataService appDataService,
-        string? urlPathSegment,
-        IScreen hostScreen)
+    public ModuleManagerViewModel(IAppDataService appDataService)
     {
-        HostScreen = hostScreen;
-        UrlPathSegment = urlPathSegment;
         _appDataService = appDataService;
 
         _ = Task.Run(LoadModules);
@@ -100,9 +94,6 @@ public class ModuleManagerViewModel : ViewModelBase, IRoutableViewModel,
     }
 
     private readonly IAppDataService _appDataService;
-    public string? UrlPathSegment { get; }
-    public IScreen HostScreen { get; }
-    public ViewModelActivator Activator { get; } = new();
 
     public async Task CreateModule()
     {
@@ -145,6 +136,6 @@ public class ModuleManagerViewModel : ViewModelBase, IRoutableViewModel,
     public void Dispose()
     {
         _disposables.Dispose();
-        Activator.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

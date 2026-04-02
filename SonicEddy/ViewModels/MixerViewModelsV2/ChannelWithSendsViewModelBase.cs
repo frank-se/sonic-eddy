@@ -91,24 +91,34 @@ public abstract class ChannelWithSendsViewModelBase : ChannelViewModelBase
         set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
+    private List<bool> _sendsChanging = [false, false, false, false];
+    
     private void OnSend1PropertiesChanged(Properties? properties)
     {
+        _sendsChanging[0] = true;
         Send1Trim = CalcSendTrimFromProperties(properties);
+        _sendsChanging[0] = false;
     }
 
     private void OnSend2PropertiesChanged(Properties? properties)
     {
+        _sendsChanging[1] = true;
         Send2Trim = CalcSendTrimFromProperties(properties);
+        _sendsChanging[1] = false;
     }
 
     private void OnSend3PropertiesChanged(Properties? properties)
     {
+        _sendsChanging[2] = true;
         Send3Trim = CalcSendTrimFromProperties(properties);
+        _sendsChanging[2] = false;
     }
 
     private void OnSend4PropertiesChanged(Properties? properties)
     {
+        _sendsChanging[3] = true;
         Send4Trim = CalcSendTrimFromProperties(properties);
+        _sendsChanging[3] = false;
     }
 
     private static float CalcSendTrimFromProperties(Properties? properties)
@@ -116,9 +126,7 @@ public abstract class ChannelWithSendsViewModelBase : ChannelViewModelBase
         if (properties is null) return 0.0f;
 
         var volumes =
-            Audio.Pan.AttenuateFromExternal(
-                properties.Channels.Select(c => (double)c.Volume)
-                    .ToArray());
+            properties.Channels.Select(c => (double)c.Volume).ToArray();
 
         if (volumes.Length < 2)
         {
@@ -126,16 +134,13 @@ public abstract class ChannelWithSendsViewModelBase : ChannelViewModelBase
         }
         else
         {
-            var (_, volume) =
-                Audio.Pan.GetPanAndVolumeFromGains(volumes[0], volumes[1]);
-
-            return (float)volume;
+            return (float)volumes.First();
         }
     }
 
     private void SetVolumesForSend(int index, double volume)
     {
-        if (SendLoopbacks.Count > index)
+        if (SendLoopbacks.Count > index && !_sendsChanging[index])
             SendLoopbacks[index].PlaybackNode.SetVolumes([volume, volume]);
     }
 

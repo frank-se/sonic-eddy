@@ -7,6 +7,7 @@ using Fr.Wireplumber.Modules.Models;
 using ReactiveUI;
 using SonicEddy.Controls.MixerControls;
 using SonicEddy.Services.AppData;
+using SonicEddy.Services.Midi;
 using SonicEddy.Services.MixerServiceV2;
 using SonicEddy.Services.Monitoring;
 using ChannelStrip = SonicEddy.Services.MixerServiceV2.ChannelStrip;
@@ -29,7 +30,7 @@ public class ChannelStripViewModel : ChannelWithSendsViewModelBase,
         text,
         selectChannelCommand, inputLoopback, outputLoopback, sendLoopbacks,
         filterChain, audioToRoutingTargets, selectedAudioToRoutingTarget,
-        appDataService, mixerService, monitoringService, true, layerId)
+        appDataService, mixerService, monitoringService, false, layerId)
     {
         AudioFromRoutingTargets = audioFromRoutingTargets;
         SelectedAudioToRoutingTarget = selectedAudioToRoutingTarget;

@@ -1,12 +1,16 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using DynamicData;
+using Fr.Pw.Midi.PInvoke;
+using Microsoft.Extensions.Logging;
 using ReactiveUI;
 using SonicEddy.Controls.MixerControls;
 using SonicEddy.Services.AppData;
+using SonicEddy.Services.Midi;
 using SonicEddy.Services.MixerServiceV2;
 using SonicEddy.Services.Monitoring;
 using SonicEddy.ViewModels.MixerViewModelsV2;
@@ -17,14 +21,17 @@ namespace SonicEddy.Services.MixerViewModels;
 public class MixerViewModelService(
     IAppDataService appDataService,
     IMixerService mixerService,
-    IMonitoringService monitoringService)
+    IMonitoringService monitoringService,
+    ILogger<MixerViewModelService> logger,
+    IMidiControllerSetupService controllerSetupService,
+    IMidiControllerService midiControllerService)
     : IMixerViewModelService
 {
-    public async Task<MixerViewModel?> ConvertCurrentMixerToViewModel(
-        int layerId,
-        string? urlSegment,
-        IScreen hostScreen)
+    public async Task<MixerLayerViewModel?> ConvertCurrentMixerToViewModel(
+        int layerId)
     {
+        logger.LogTrace("ConvertCurrentMixerToViewModel");
+
         var mixer = await mixerService.GetAndLock();
 
         if (mixer is null) return null;
@@ -40,15 +47,14 @@ public class MixerViewModelService(
             audioToRoutingTargetsMasterChannel = [];
 
         var mixerModel =
-            new MixerViewModel(
-                urlSegment,
-                hostScreen,
+            new MixerLayerViewModel(
                 mixerService,
                 this,
                 audioFromRoutingTargets,
                 audioToRoutingTargetsChannelStrips,
                 audioToRoutingTargetsGroupChannels,
-                audioToRoutingTargetsMasterChannel
+                audioToRoutingTargetsMasterChannel,
+                midiControllerService, (ulong)layerId
             );
 
         try
@@ -125,6 +131,12 @@ public class MixerViewModelService(
             mixerModel.ChannelStrips = new(channels);
 
             mixerModel.SetupEvents();
+
+            SetupMidiControllerForLayer(layer);
+        }
+        catch (Exception e)
+        {
+            logger.LogError("Exception {}", e.Message);
         }
         finally
         {
@@ -133,6 +145,51 @@ public class MixerViewModelService(
 
         return mixerModel;
     }
+
+    private void SetupMidiControllerForLayer(MixerLayer layer)
+    {
+        controllerSetupService.SetMasterChannelNode(layer.layerId,
+            layer.MasterChannel.OutputLoopback.PlaybackNode.ObjectId);
+
+        foreach (var (channel, index) in
+                 layer.Channels.Select((c, i) => (c, i)))
+        {
+            var channelId = (ulong)index +
+                            layer.layerId * (ulong)layer.Channels.Count;
+
+            controllerSetupService.SetChannelNode(ChannelType.Channel,
+                channelId, channel.OutputLoopback.PlaybackNode.ObjectId);
+
+            foreach (var (send, sendIndex) in channel.SendLoopbacks.Select((s,
+                             i) =>
+                         (s, i)))
+            {
+                controllerSetupService.SetChannelSendNode(ChannelType.Channel,
+                    channelId, (ulong)sendIndex, send.PlaybackNode.ObjectId);
+            }
+        }
+
+        foreach (var (groupChannel, index) in
+                 layer.GroupChannels.Select((g, i) => (g, i)))
+        {
+            var channelId = (ulong)index +
+                            layer.layerId * (ulong)layer.GroupChannels.Count;
+
+            controllerSetupService.SetChannelNode(ChannelType.GroupChannel,
+                channelId, groupChannel.OutputLoopback.PlaybackNode.ObjectId);
+
+            foreach (var (send, sendIndex) in
+                     groupChannel.SendLoopbacks.Select((s,
+                             i) =>
+                         (s, i)))
+            {
+                controllerSetupService.SetChannelSendNode(
+                    ChannelType.GroupChannel,
+                    channelId, (ulong)sendIndex, send.PlaybackNode.ObjectId);
+            }
+        }
+    }
+
 
     private GroupChannelViewModel ConvertGroupChannel(int layerId,
         GroupChannel channel,
@@ -162,7 +219,7 @@ public class MixerViewModelService(
         ObservableCollection<IRoutingTarget> audioFromRoutingTargets,
         ObservableCollection<IRoutingTarget> audioToRoutingTargets,
         MasterChannelViewModel masterChannel) =>
-        new ChannelStripViewModel(channel.ChannelId, channel.Name,
+        new(channel.ChannelId, channel.Name,
             selectedChannelCommand, channel.InputLoopback,
             channel.OutputLoopback,
             channel.SendLoopbacks, channel.FilterChain, audioFromRoutingTargets,
@@ -173,18 +230,18 @@ public class MixerViewModelService(
     private ReturnChannelViewModel ConvertReturnChannel(
         ReturnChannel channel,
         ICommand selectChannelCommand) =>
-        new ReturnChannelViewModel(channel.Name, selectChannelCommand,
+        new(channel.Name, selectChannelCommand,
             channel.InputLoopback, channel.OutputLoopback, channel.FilterChain,
             monitoringService);
 
     public OutputChannelViewModel
         ConvertOutputChannel(OutputChannel channel,
             ICommand selectChannelCommand) =>
-        new OutputChannelViewModel(channel.Name, selectChannelCommand,
+        new(channel.Name, selectChannelCommand,
             channel.CaptureNode, monitoringService);
 
     public InputChannelViewModel ConvertInputChannel(InputChannel channel,
         ICommand selectChannelCommand) =>
-        new InputChannelViewModel(channel.Name, selectChannelCommand,
+        new(channel.Name, selectChannelCommand,
             channel.PlaybackNode, monitoringService);
 }

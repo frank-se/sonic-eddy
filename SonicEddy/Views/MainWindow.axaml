@@ -4,11 +4,13 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:reactiveUi="http://reactiveui.net"
+        xmlns:mixerViewsV2="clr-namespace:SonicEddy.Views.MixerViewsV2"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
         Width="1200" Height="1000"
         x:Class="SonicEddy.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/avalonia-logo.ico"
+        x:Name="Window"
         Title="SonicEddy">
 
     <Design.DataContext>
@@ -99,48 +101,16 @@
                                        Margin="4" />
                         </StackPanel>
                     </Button>
-                    <Button HorizontalAlignment="Stretch"
-                            Padding="8"
-                            Margin="4"
-                            Classes.selected="{Binding MidiConnectionEditorViewSelected}"
-                            Command="{Binding NavigateToMidiConnectionEditorView}">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xF35C;"
-                                       FontFamily="{StaticResource FluentIconsRegular}"
-                                       FontSize="24"
-                                       Margin="4" />
-
-                            <TextBlock Text="MIDI"
-                                       FontSize="20"
-                                       Margin="4" />
-                        </StackPanel>
-                    </Button>
-                    <Button HorizontalAlignment="Stretch"
-                            Padding="8"
-                            Margin="4"
-                            Classes.selected="{Binding CustomControlTesterViewSelected}"
-                            Command="{Binding NavigateToCustomControlTesterView}">
-                        Custom Control Tester
-                    </Button>
-                    <!--
-                        <Button HorizontalAlignment="Stretch"
-                                Padding="8"
-                                Margin="4"
-                                Classes.selected="{Binding MixerManagerViewSelected}"
-                                Command="{Binding NavigateToMixerManagerAction}">
-                            Mixer Manager
-                        </Button>
-                        <Button HorizontalAlignment="Stretch"
-                                Padding="8"
-                                Margin="4"
-                                Classes.selected="{Binding GraphControlTesterViewSelected}"
-                                Command="{Binding NavigateToGraphControlTesterView}">
-                            Graph Control Tester
-                        </Button>
-                        -->
                 </StackPanel>
             </SplitView.Pane>
-            <reactiveUi:RoutedViewHost Router="{Binding Router}" />
+            <Grid>
+                <mixerViewsV2:MixerView
+                    IsVisible="{Binding #Window.((vm:MainWindowViewModel)DataContext).MixerViewV2LayerAViewSelected}"
+                    DataContext="{Binding LayerAViewModel}" />
+                <mixerViewsV2:MixerView
+                    IsVisible="{Binding #Window.((vm:MainWindowViewModel)DataContext).MixerViewV2LayerBViewSelected}"
+                    DataContext="{Binding LayerBViewModel}" />
+            </Grid>
         </SplitView>
     </DockPanel>
 </Window>

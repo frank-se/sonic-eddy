@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using DynamicData;
-using ReactiveUI;
 using SonicEddy.Services.AppData;
 using SonicEddy.ViewModels.FilterGraphBuilderViewModels;
 using SonicEddy.Views.FilterGraphBuilderViews;
@@ -12,17 +11,13 @@ using Splat;
 
 namespace SonicEddy.ViewModels.FilterGraphManagerViewModels;
 
-public class FilterGraphManagerViewModel : ViewModelBase, IRoutableViewModel,
-    IActivatableViewModel
+public class FilterGraphManagerViewModel : ViewModelBase
 {
     private Window? _filterGraphBuilder;
 
-    public FilterGraphManagerViewModel(IAppDataService appDataService,
-        string? urlPathSegment, IScreen hostScreen)
+    public FilterGraphManagerViewModel(IAppDataService appDataService)
     {
         _appDataService = appDataService;
-        UrlPathSegment = urlPathSegment;
-        HostScreen = hostScreen;
 
         _ = Task.Run(LoadFilterGraphs);
     }
@@ -55,6 +50,8 @@ public class FilterGraphManagerViewModel : ViewModelBase, IRoutableViewModel,
         _ = Task.Run(LoadFilterGraphs);
     }
 
+    public void EditFilterGraphParameterOrder(Guid id) {}
+    
     public void ShowFilterGraphBuilderWindow()
     {
         if (_filterGraphBuilder is not null &&
@@ -75,8 +72,4 @@ public class FilterGraphManagerViewModel : ViewModelBase, IRoutableViewModel,
     }
 
     private readonly IAppDataService _appDataService;
-
-    public string? UrlPathSegment { get; }
-    public IScreen HostScreen { get; }
-    public ViewModelActivator Activator { get; } = new();
 }

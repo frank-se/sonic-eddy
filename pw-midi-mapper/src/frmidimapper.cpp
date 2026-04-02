@@ -77,6 +77,42 @@ void set_selected_channel(const controllers::ChannelType channel_type,
   g_processor->set_selected_channel(channel_type, channel_id);
 }
 
+void clear_selected_channel() { g_processor->clear_selected_channel(); }
+
 void set_selected_layer(const size_t layer_id) {
   g_processor->set_selected_layer(layer_id);
+}
+
+void set_channel_node(const controllers::ChannelType channel_type,
+                      const size_t channel_id, const uint64_t object_id) {
+  g_processor->set_channel_node(channel_type, channel_id, object_id);
+}
+
+void set_master_channel_node(const size_t layer_id, const uint64_t object_id) {
+  g_processor->set_master_channel_node(layer_id, object_id);
+}
+
+void set_channel_filter_node(const controllers::ChannelType channel_type,
+                             const size_t channel_id,
+                             const uint64_t object_id) {
+  g_processor->set_channel_filter_node(channel_type, channel_id, object_id);
+}
+
+void set_channel_send_node(const controllers::ChannelType channel_type,
+                           const size_t channel_id, const size_t send_id,
+                           const uint64_t object_id) {
+  g_processor->set_channel_send_node(channel_type, channel_id, send_id,
+                                     object_id);
+}
+
+void clear_filter_parameters(const controllers::ChannelType channel_type,
+                             const size_t channel_id) {
+  g_processor->clear_filter_parameters(channel_type, channel_id);
+}
+
+void add_filter_parameter(const controllers::ChannelType channel_type,
+                          const size_t channel_id, const size_t plugin_id,
+                          char *name, const float min, const float max) {
+  g_processor->add_filter_parameter(channel_type, channel_id, plugin_id, name,
+                                    min, max);
 }
