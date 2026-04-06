@@ -25,14 +25,16 @@
                                            RoutingTargets="{Binding $parent[mixerControls:ChannelStrip].AudioFromRoutingTargets}" />
 
             <mixerControls:SendSection Grid.Row="2"
-                                       Margin="4,4,4,8"
+                                       Margin="4,4,4,16"
                                        Send1Trim="{Binding $parent[mixerControls:ChannelStrip].Send1Trim}"
                                        Send2Trim="{Binding $parent[mixerControls:ChannelStrip].Send2Trim}"
                                        Send3Trim="{Binding $parent[mixerControls:ChannelStrip].Send3Trim}"
-                                       Send4Trim="{Binding $parent[mixerControls:ChannelStrip].Send4Trim}" />
+                                       Send4Trim="{Binding $parent[mixerControls:ChannelStrip].Send4Trim}"
+                                       IsMidiControlled="{Binding $parent[mixerControls:ChannelStrip].IsSendMidiControlled}" />
 
             <mixerControls:FilterSectionHeader Grid.Row="3"
                                                HasFilter="{Binding $parent[mixerControls:ChannelStrip].HasFilter}"
+                                               IsMidiControlled="{Binding $parent[mixerControls:ChannelStrip].IsFilterMidiControlled}"
                                                AddCommand="{Binding $parent[mixerControls:ChannelStrip].AddFilterCommand}"
                                                AddCommandParameter="{Binding $parent[mixerControls:ChannelStrip].AddFilterCommandParameter}"
                                                DeleteCommand="{Binding $parent[mixerControls:ChannelStrip].DeleteFilterCommand}"
@@ -40,16 +42,19 @@
 
             <mixerControls:ParameterSection Grid.Row="4"
                                             Margin="4"
+                                            IsMidiControlled="{Binding $parent[mixerControls:ChannelStrip].FirstPluginParametersMidiControlled}"
                                             Parameters="{Binding $parent[mixerControls:ChannelStrip].FirstPluginParameters}"
                                             Text="{Binding $parent[mixerControls:ChannelStrip].FirstPluginText}" />
 
             <mixerControls:ParameterSection Grid.Row="5"
                                             Margin="4"
+                                            IsMidiControlled="{Binding $parent[mixerControls:ChannelStrip].SecondPluginParametersMidiControlled}"
                                             Parameters="{Binding $parent[mixerControls:ChannelStrip].SecondPluginParameters}"
                                             Text="{Binding $parent[mixerControls:ChannelStrip].SecondPluginText}" />
 
             <mixerControls:ParameterSection Grid.Row="6"
                                             Margin="4"
+                                            IsMidiControlled="{Binding $parent[mixerControls:ChannelStrip].ThirdPluginParametersMidiControlled}"
                                             Parameters="{Binding $parent[mixerControls:ChannelStrip].ThirdPluginParameters}"
                                             Text="{Binding $parent[mixerControls:ChannelStrip].ThirdPluginText}" />
 
@@ -70,7 +75,7 @@
                                                           RightPeak="{Binding $parent[mixerControls:ChannelStrip].RightPeak}"
                                                           Volume="{Binding $parent[mixerControls:ChannelStrip].Volume}"
                                                           Pan="{Binding $parent[mixerControls:ChannelStrip].Pan}" />
-            
+
             <mixerControls:RoutingComboBox Grid.Row="8"
                                            Text="Audio To"
                                            SelectedRoutingTarget="{Binding $parent[mixerControls:ChannelStrip].SelectedAudioToRoutingTarget}"

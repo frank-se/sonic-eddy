@@ -76,6 +76,16 @@ public partial class GroupChannelStrip : UserControl
     /*
      * Send section
      */
+    public static readonly StyledProperty<bool> IsSendMidiControlledProperty =
+        AvaloniaProperty.Register<GroupChannelStrip, bool>(
+            nameof(IsSendMidiControlled));
+
+    public bool IsSendMidiControlled
+    {
+        get => GetValue(HasFilterProperty);
+        set => SetValue(HasFilterProperty, value);
+    }
+
     public static readonly StyledProperty<double> Send1TrimProperty =
         AvaloniaProperty
             .Register<GroupChannelStrip, double>(
@@ -136,6 +146,16 @@ public partial class GroupChannelStrip : UserControl
         get => GetValue(HasFilterProperty);
         set => SetValue(HasFilterProperty, value);
     }
+    
+    public static readonly StyledProperty<bool> IsFilterMidiControlledProperty =
+        AvaloniaProperty.Register<GroupChannelStrip, bool>(
+            nameof(IsFilterMidiControlled));
+
+    public bool IsFilterMidiControlled
+    {
+        get => GetValue(HasFilterProperty);
+        set => SetValue(HasFilterProperty, value);
+    }
 
     public static readonly StyledProperty<ICommand?> AddFilterCommandProperty =
         AvaloniaProperty.Register<GroupChannelStrip, ICommand?>(
@@ -187,6 +207,17 @@ public partial class GroupChannelStrip : UserControl
     /*
      * First parameter section
      */
+    public static readonly StyledProperty<bool>
+        FirstPluginParametersMidiControlledProperty =
+            AvaloniaProperty.Register<GroupChannelStrip, bool>(
+                nameof(FirstPluginParametersMidiControlled));
+
+    public bool FirstPluginParametersMidiControlled
+    {
+        get => GetValue(FirstPluginParametersMidiControlledProperty);
+        set => SetValue(FirstPluginParametersMidiControlledProperty, value);
+    }
+
     public static readonly StyledProperty<ObservableCollection<IParameter>?>
         FirstPluginParametersProperty =
             AvaloniaProperty
@@ -213,6 +244,17 @@ public partial class GroupChannelStrip : UserControl
     /*
      * Second parameter section
      */
+    public static readonly StyledProperty<bool>
+        SecondPluginParametersMidiControlledProperty =
+            AvaloniaProperty.Register<GroupChannelStrip, bool>(
+                nameof(SecondPluginParametersMidiControlled));
+
+    public bool SecondPluginParametersMidiControlled
+    {
+        get => GetValue(SecondPluginParametersMidiControlledProperty);
+        set => SetValue(SecondPluginParametersMidiControlledProperty, value);
+    }
+    
     public static readonly StyledProperty<ObservableCollection<IParameter>?>
         SecondPluginParametersProperty =
             AvaloniaProperty
@@ -239,6 +281,17 @@ public partial class GroupChannelStrip : UserControl
     /*
      * Third parameter section
      */
+    public static readonly StyledProperty<bool>
+        ThirdPluginParametersMidiControlledProperty =
+            AvaloniaProperty.Register<GroupChannelStrip, bool>(
+                nameof(ThirdPluginParametersMidiControlled));
+
+    public bool ThirdPluginParametersMidiControlled
+    {
+        get => GetValue(ThirdPluginParametersMidiControlledProperty);
+        set => SetValue(ThirdPluginParametersMidiControlledProperty, value);
+    }
+
     public static readonly StyledProperty<ObservableCollection<IParameter>?>
         ThirdPluginParametersProperty =
             AvaloniaProperty

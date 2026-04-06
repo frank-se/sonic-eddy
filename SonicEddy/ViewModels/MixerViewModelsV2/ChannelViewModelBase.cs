@@ -243,7 +243,13 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
     {
         get;
         set => this.RaiseAndSetIfChanged(ref field, value);
-    }
+    } = false;
+
+    public bool IsFilterMidiControlled
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    } = false;
 
     public async Task AddFilterAction()
     {
@@ -307,6 +313,31 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
     {
         get;
         set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
+    public bool FirstPluginSelectedForMidi
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
+    public bool SecondPluginSelectedForMidi
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
+    public bool ThirdPluginSelectedForMidi
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
+    public void SetMidiControlledSectionId(ulong sectionId)
+    {
+        FirstPluginSelectedForMidi = sectionId == 0;
+        SecondPluginSelectedForMidi = sectionId == 1;
+        ThirdPluginSelectedForMidi = sectionId == 2;
     }
 
     protected virtual void Dispose(bool disposing)

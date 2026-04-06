@@ -747,7 +747,7 @@ void controllers::MidiMix::add_filter_parameter(const ChannelType channel_type,
     return;
   }
 
-  channel->get().add_parameter(channel_id, name, min, max);
+  channel->get().add_parameter(plugin_id, name, min, max);
 }
 
 std::optional<std::reference_wrapper<controllers::Channel>>

@@ -75,7 +75,12 @@
                                                     LeftPeak="{Binding PanAndVolume.LeftPeak}"
                                                     RightPeak="{Binding PanAndVolume.RightPeak}"
                                                     AudioToRoutingTargets="{Binding AudioToRoutingTargets}"
-                                                    SelectedAudioToRoutingTarget="{Binding SelectedAudioToRoutingTarget}" />
+                                                    SelectedAudioToRoutingTarget="{Binding SelectedAudioToRoutingTarget}"
+                                                    IsFilterMidiControlled="{Binding IsFilterMidiControlled}"
+                                                    IsSendMidiControlled="{Binding IsSendMidiControlled}"
+                                                    FirstPluginParametersMidiControlled="{Binding FirstPluginSelectedForMidi}"
+                                                    SecondPluginParametersMidiControlled="{Binding SecondPluginSelectedForMidi}"
+                                                    ThirdPluginParametersMidiControlled="{Binding ThirdPluginSelectedForMidi}" />
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
 
@@ -116,7 +121,12 @@
                                                          LeftPeak="{Binding PanAndVolume.LeftPeak}"
                                                          RightPeak="{Binding PanAndVolume.RightPeak}"
                                                          AudioToRoutingTargets="{Binding AudioToRoutingTargets}"
-                                                         SelectedAudioToRoutingTarget="{Binding SelectedAudioToRoutingTarget}" />
+                                                         SelectedAudioToRoutingTarget="{Binding SelectedAudioToRoutingTarget}"
+                                                         IsFilterMidiControlled="{Binding IsFilterMidiControlled}"
+                                                         IsSendMidiControlled="{Binding IsSendMidiControlled}"
+                                                         FirstPluginParametersMidiControlled="{Binding FirstPluginSelectedForMidi}"
+                                                         SecondPluginParametersMidiControlled="{Binding SecondPluginSelectedForMidi}"
+                                                         ThirdPluginParametersMidiControlled="{Binding ThirdPluginSelectedForMidi}" />
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
 

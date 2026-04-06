@@ -14,6 +14,91 @@ namespace SonicEddy.Controls.MixerControls;
 
 public class ParameterSection : Grid
 {
+    public ParameterSection()
+    {
+        ColumnDefinitions = ColumnDefinitions.Parse("*,*");
+        RowDefinitions = RowDefinitions.Parse("20,40,40");
+
+        var header = new TextBlock()
+        {
+            FontSize = 10,
+            [!TextBlock.TextProperty] = this[!TextProperty],
+            Margin = new(6),
+            Foreground = BrushForHighlightState(IsMidiControlled)
+        };
+
+        SetRow(header, 0);
+        SetColumn(header, 0);
+        SetColumnSpan(header, 2);
+
+        Children.Add(header);
+
+        _headerText = header;
+
+        _sliders =
+        [
+            new()
+            {
+                Background = Brushes.DimGray,
+                Margin = new(2),
+                IsVisible = false,
+            },
+            new()
+            {
+                Background = Brushes.DimGray,
+                Margin = new(2),
+                IsVisible = false,
+            },
+            new()
+            {
+                Background = Brushes.DimGray,
+                Margin = new(2),
+                IsVisible = false,
+            },
+            new()
+            {
+                Background = Brushes.DimGray,
+                Margin = new(2),
+                IsVisible = false,
+            },
+        ];
+
+        SetRow(_sliders[0], 1);
+        SetColumn(_sliders[0], 0);
+
+        SetRow(_sliders[1], 1);
+        SetColumn(_sliders[1], 1);
+
+        SetRow(_sliders[2], 2);
+        SetColumn(_sliders[2], 0);
+
+        SetRow(_sliders[3], 2);
+        SetColumn(_sliders[3], 1);
+
+        Children.AddRange(_sliders);
+    }
+
+    private TextBlock _headerText;
+
+    private readonly IImmutableSolidColorBrush _normalBrush =
+        Brushes.White;
+
+    private readonly IImmutableSolidColorBrush _highlightBrush = Brushes.Cyan;
+
+
+    public static readonly StyledProperty<bool> IsMidiControlledProperty =
+        AvaloniaProperty.Register<ParameterSection, bool>(
+            nameof(IsMidiControlled));
+
+    private IImmutableSolidColorBrush BrushForHighlightState(bool state) =>
+        state ? _highlightBrush : _normalBrush;
+
+    public bool IsMidiControlled
+    {
+        get => GetValue(IsMidiControlledProperty);
+        set => SetValue(IsMidiControlledProperty, value);
+    }
+
     public static readonly StyledProperty<ObservableCollection<IParameter>?>
         ParametersProperty =
             AvaloniaProperty
@@ -39,67 +124,6 @@ public class ParameterSection : Grid
 
     private readonly ValueSlider[] _sliders;
 
-    public ParameterSection()
-    {
-        ColumnDefinitions = ColumnDefinitions.Parse("*,*");
-        RowDefinitions = RowDefinitions.Parse("20,40,40");
-
-        var header = new TextBlock()
-        {
-            FontSize = 10,
-            [!TextBlock.TextProperty] = this[!TextProperty],
-            Margin = new Thickness(6)
-        };
-
-        SetRow(header, 0);
-        SetColumn(header, 0);
-        SetColumnSpan(header, 2);
-
-        Children.Add(header);
-
-        _sliders =
-        [
-            new()
-            {
-                Background = Brushes.DimGray,
-                Margin = new Thickness(2),
-                IsVisible = false,
-            },
-            new()
-            {
-                Background = Brushes.DimGray,
-                Margin = new Thickness(2),
-                IsVisible = false,
-            },
-            new()
-            {
-                Background = Brushes.DimGray,
-                Margin = new Thickness(2),
-                IsVisible = false,
-            },
-            new()
-            {
-                Background = Brushes.DimGray,
-                Margin = new Thickness(2),
-                IsVisible = false,
-            },
-        ];
-
-        SetRow(_sliders[0], 1);
-        SetColumn(_sliders[0], 0);
-
-        SetRow(_sliders[1], 1);
-        SetColumn(_sliders[1], 1);
-
-        SetRow(_sliders[2], 2);
-        SetColumn(_sliders[2], 0);
-
-        SetRow(_sliders[3], 2);
-        SetColumn(_sliders[3], 1);
-
-        Children.AddRange(_sliders);
-    }
-
     private IDisposable? _parametersCollectionChangeSubscription;
 
     protected override void OnPropertyChanged(
@@ -119,6 +143,14 @@ public class ParameterSection : Grid
                 parameters.WeakSubscribe(OnPropertiesCollectionChanged);
 
             UpdateAllSliderBindings(parameters);
+        }
+        else if (change.Property == IsMidiControlledProperty)
+        {
+            if (change.NewValue is bool isMidiControlled)
+            {
+                _headerText.Foreground =
+                    BrushForHighlightState(isMidiControlled);
+            }
         }
     }
 

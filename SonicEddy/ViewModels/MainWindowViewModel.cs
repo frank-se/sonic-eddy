@@ -47,9 +47,15 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         _midiControllerService.SelectedChannelChanged +=
             OnSelectedChannelChanged;
 
+        _midiControllerService.DialSelectionModeChanged +=
+            OnDialSelectionModeChanged;
+
+        _midiControllerService.SelectedFilterParamsSectionChanged +=
+            OnFilterMidiControlSectionIdChanged;
+        
         _ = NavigateToMixerV2ViewLayerA();
     }
-    
+
     private const int NumberOfGroupChannels = 8;
     private const int NumberOfGroupChannelsPerLayer = NumberOfGroupChannels / 2;
     private const int NumberOfChannels = 16;
@@ -88,7 +94,91 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
 
     private readonly IMidiControllerService _midiControllerService;
     private readonly ILogger<MainWindowViewModel> _logger;
-    
+
+    private void OnFilterMidiControlSectionIdChanged(
+        FilterParamsSectionSelectEventArgs eventArgs)
+    {
+        if (eventArgs.ChannelType == ChannelType.Channel)
+        {
+            var channelId = eventArgs.ChannelId;
+            var layerId = 0;
+            if (channelId > NumberOfChannelsPerLayer)
+            {
+                channelId = channelId - NumberOfChannelsPerLayer;
+                layerId = 1;
+            }
+
+            if (layerId == 0)
+                LayerAViewModel?.SetChannelFilterMidiControlSectionId(
+                    eventArgs.ChannelType, channelId, eventArgs.SectionId);
+
+            if (layerId == 1)
+                LayerBViewModel?.SetChannelFilterMidiControlSectionId(
+                    eventArgs.ChannelType, channelId, eventArgs.SectionId);
+        }
+
+        if (eventArgs.ChannelType == ChannelType.GroupChannel)
+        {
+            var channelId = eventArgs.ChannelId;
+            var layerId = 0;
+            if (channelId > NumberOfGroupChannelsPerLayer)
+            {
+                channelId = channelId - NumberOfGroupChannelsPerLayer;
+                layerId = 1;
+            }
+
+            if (layerId == 0)
+                LayerAViewModel?.SetChannelFilterMidiControlSectionId(
+                    eventArgs.ChannelType, channelId, eventArgs.SectionId);
+
+            if (layerId == 1)
+                LayerBViewModel?.SetChannelFilterMidiControlSectionId(
+                    eventArgs.ChannelType, channelId, eventArgs.SectionId);
+        }
+    }
+
+    private void OnDialSelectionModeChanged(
+        DialSelectionModeSelectEventArgs eventArgs)
+    {
+        if (eventArgs.ChannelType == ChannelType.Channel)
+        {
+            var channelId = eventArgs.ChannelId;
+            var layerId = 0;
+            if (channelId > NumberOfChannelsPerLayer)
+            {
+                channelId = channelId - NumberOfChannelsPerLayer;
+                layerId = 1;
+            }
+
+            if (layerId == 0)
+                LayerAViewModel?.SetChannelDialMode(
+                    eventArgs.ChannelType, channelId, eventArgs.DialMode);
+
+            if (layerId == 1)
+                LayerBViewModel?.SetChannelDialMode(
+                    eventArgs.ChannelType, channelId, eventArgs.DialMode);
+        }
+
+        if (eventArgs.ChannelType == ChannelType.GroupChannel)
+        {
+            var channelId = eventArgs.ChannelId;
+            var layerId = 0;
+            if (channelId > NumberOfGroupChannelsPerLayer)
+            {
+                channelId = channelId - NumberOfGroupChannelsPerLayer;
+                layerId = 1;
+            }
+
+            if (layerId == 0)
+                LayerAViewModel?.SetChannelDialMode(
+                    eventArgs.ChannelType, channelId, eventArgs.DialMode);
+
+            if (layerId == 1)
+                LayerBViewModel?.SetChannelDialMode(
+                    eventArgs.ChannelType, channelId, eventArgs.DialMode);
+        }
+    }
+
     private void OnSelectedChannelChanged(ChannelSelectEventArgs eventArgs)
     {
         _logger.LogTrace("OnSelectedChannelChanged");
@@ -361,10 +451,21 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     public void Dispose()
     {
         _midiControllerService.LayerChanged -= OnLayerSelected;
+        _midiControllerService.FilterParamsSectionMovedRight -=
+            OnMoveFilterParamsPageRight;
+
+        _midiControllerService.FilterParamsSectionMovedLeft -=
+            OnMoveFilterParamsPageLeft;
 
         _midiControllerService.SelectedChannelChanged -=
             OnSelectedChannelChanged;
 
+        _midiControllerService.DialSelectionModeChanged -=
+            OnDialSelectionModeChanged;
+
+        _midiControllerService.SelectedFilterParamsSectionChanged -=
+            OnFilterMidiControlSectionIdChanged;
+        
         GC.SuppressFinalize(this);
     }
 }

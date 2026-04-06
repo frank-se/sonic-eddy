@@ -26,6 +26,7 @@ public class MixerLayerViewModel : ViewModelBase,
     private readonly IMidiControllerService _midiControllerService;
     private readonly CompositeDisposable _disposables = new();
     private readonly ILogger<MixerLayerViewModel> _logger;
+    private readonly ulong _layerId;
 
     public MixerLayerViewModel(
         IMixerService mixerService,
@@ -37,6 +38,7 @@ public class MixerLayerViewModel : ViewModelBase,
         IMidiControllerService midiControllerService, ulong layerId,
         ILogger<MixerLayerViewModel> logger)
     {
+        _layerId = layerId;
         var internalChange = false;
 
         ICommand selectChannelCommand =
@@ -148,9 +150,113 @@ public class MixerLayerViewModel : ViewModelBase,
         SetSelectedChannel(channel);
     }
 
-    public int NumberOfRows { get; } = 6;
+    public void SetChannelFilterMidiControlSectionId(ChannelType channelType,
+        ulong channelId, ulong sectionId)
+    {
+        _logger.LogTrace("SetChannelFilterMidiControlSectionId");
 
-    public int NumberOfColumns { get; } = 4;
+        if (channelType == ChannelType.Channel)
+        {
+            if ((int)channelId > ChannelStrips?.Count)
+            {
+                _logger.LogError("Channel {ChannelId} out of bounds",
+                    channelId);
+                return;
+            }
+
+            var channel = ChannelStrips?[(int)channelId];
+            channel?.SetMidiControlledSectionId(sectionId);
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+                _logger.LogDebug(
+                    "Filter midi control index for channel {ChannelId} on layer {LayerId} set to {SectionId}",
+                    channelId, _layerId, sectionId);
+
+            return;
+        }
+
+        if (channelType == ChannelType.GroupChannel)
+        {
+            if ((int)channelId > GroupChannels?.Count)
+            {
+                _logger.LogError("Group Channel {GroupChannelId} out of bounds",
+                    channelId);
+                return;
+            }
+
+            var channel = GroupChannels?[(int)channelId];
+            channel?.SetMidiControlledSectionId(sectionId);
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+                _logger.LogDebug(
+                    "Filter midi control index for group channel {GroupChannelId} on layer {LayerId} set to {SectionId}",
+                    channelId, _layerId, sectionId);
+
+            return;
+        }
+    }
+
+    public void SetChannelDialMode(ChannelType channelType,
+        ulong channelId, DialMode dialMode)
+    {
+        if (channelType == ChannelType.Channel)
+        {
+            if ((int)channelId > ChannelStrips?.Count)
+            {
+                _logger.LogError("Channel {ChannelId} out of bounds",
+                    channelId);
+                return;
+            }
+
+            var channel = ChannelStrips?[(int)channelId];
+            channel?.IsSendMidiControlled = dialMode == DialMode.Sends;
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+                _logger.LogDebug(
+                    "Send midi control indicator for channel {ChannelId} on layer {LayerId} set to {IsSendMidiControlled}",
+                    channelId, _layerId, dialMode == DialMode.Sends);
+
+            channel?.IsFilterMidiControlled = dialMode == DialMode.FilterParams;
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+                _logger.LogDebug(
+                    "Filter midi control indicator for channel {ChannelId} on layer {LayerId} set to {IsFilterMidiControlled}",
+                    channelId, _layerId, dialMode == DialMode.FilterParams);
+
+            return;
+        }
+
+        if (channelType == ChannelType.GroupChannel)
+        {
+            if ((int)channelId > GroupChannels?.Count)
+            {
+                _logger.LogError("Group Channel {GroupChannelId} out of bounds",
+                    channelId);
+                return;
+            }
+
+            var channel = GroupChannels?[(int)channelId];
+            channel?.IsSendMidiControlled = dialMode == DialMode.Sends;
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+                _logger.LogDebug(
+                    "Midi control indicator for group channel {GroupChannelId} on layer {LayerId} set to {IsSendMidiControlled}",
+                    channelId, _layerId, dialMode == DialMode.Sends);
+
+            channel?.IsFilterMidiControlled = dialMode == DialMode.FilterParams;
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+                _logger.LogDebug(
+                    "Filter midi control indicator for channel {ChannelId} on layer {LayerId} set to {IsFilterMidiControlled}",
+                    channelId, _layerId, dialMode == DialMode.FilterParams);
+
+            return;
+        }
+    }
+
+    public int NumberOfRows => 6;
+
+    public int NumberOfColumns => 4;
 
     public void ActivateNextPluginPage()
     {

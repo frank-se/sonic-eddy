@@ -74,6 +74,12 @@ public abstract class ChannelWithSendsViewModelBase : ChannelViewModelBase
 
     protected readonly List<LoopbackModule> SendLoopbacks;
 
+    public bool IsSendMidiControlled
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    } = true;
+
     public double Send1Trim
     {
         get;
