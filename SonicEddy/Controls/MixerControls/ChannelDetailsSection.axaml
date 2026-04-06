@@ -21,7 +21,8 @@
             <mixerControls:ParametersEditor
                 NumberOfColumns="{Binding $parent[mixerControls:ChannelDetailsSection].NumberOfColumns}"
                 NumberOfRows="{Binding $parent[mixerControls:ChannelDetailsSection].NumberOfRows}"
-                ParameterCollections="{Binding $parent[mixerControls:ChannelDetailsSection].ParameterCollections}" />
+                ParameterCollections="{Binding $parent[mixerControls:ChannelDetailsSection].ParameterCollections}"
+                SelectedPage="{Binding $parent[mixerControls:ChannelDetailsSection].SelectedPage}" />
         </TabItem>
         <TabItem Header="Details">
             <ScrollViewer>

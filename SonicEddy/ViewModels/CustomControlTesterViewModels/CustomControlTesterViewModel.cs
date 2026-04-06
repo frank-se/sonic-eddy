@@ -30,31 +30,36 @@ public class CustomControlTesterViewModel : ViewModelBase,
         {
             IsMainParameter = true,
             Name = "Threshold",
-            Value = 0.5f
+            Value = 0.5f,
+            FullyQualifiedName = ""
         },
         new TestParameter()
         {
             IsMainParameter = true,
             Name = "Threshold",
-            Value = 0.5f
+            Value = 0.5f,
+            FullyQualifiedName = ""
         },
         new TestParameter()
         {
             IsMainParameter = true,
             Name = "Threshold",
-            Value = 0.5f
+            Value = 0.5f,
+            FullyQualifiedName = ""
         },
         new TestParameter()
         {
             IsMainParameter = true,
             Name = "Threshold",
-            Value = 0.5f
+            Value = 0.5f,
+            FullyQualifiedName = ""
         },
         new TestParameter()
         {
             IsMainParameter = true,
             Name = "Threshold",
-            Value = 0.5f
+            Value = 0.5f,
+            FullyQualifiedName = ""
         },
     ];
 
@@ -114,61 +119,71 @@ public class CustomControlTesterViewModel : ViewModelBase,
             {
                 IsMainParameter = true,
                 Name = "Threshold",
-                Value = 0.5f
+                Value = 0.5f,
+                FullyQualifiedName = ""
             },
             new TestParameter()
             {
                 IsMainParameter = true,
                 Name = "Threshold",
-                Value = 0.5f
+                Value = 0.5f,
+                FullyQualifiedName = ""
             },
             new TestParameter()
             {
                 IsMainParameter = true,
                 Name = "Threshold",
-                Value = 0.5f
+                Value = 0.5f,
+                FullyQualifiedName = ""
             },
             new TestParameter()
             {
                 IsMainParameter = true,
                 Name = "Threshold",
-                Value = 0.5f
+                Value = 0.5f,
+                FullyQualifiedName = ""
             },
             new TestParameter()
             {
                 IsMainParameter = true,
                 Name = "Threshold",
-                Value = 0.5f
+                Value = 0.5f,
+                FullyQualifiedName = ""
             },
             new TestParameter()
             {
                 IsMainParameter = true,
                 Name = "Threshold",
-                Value = 0.5f
+                Value = 0.5f,
+                FullyQualifiedName = ""
             },
             new TestParameter()
             {
                 IsMainParameter = true,
                 Name = "Threshold",
-                Value = 0.5f
+                Value = 0.5f,
+                FullyQualifiedName = ""
             },
             new TestParameter()
             {
                 IsMainParameter = true,
                 Name = "Threshold",
-                Value = 0.5f
+                Value = 0.5f,
+                FullyQualifiedName = ""
             },
             new TestParameter()
             {
                 IsMainParameter = true,
                 Name = "Threshold",
-                Value = 0.5f
+                Value = 0.5f,
+                FullyQualifiedName = ""
             },
             new TestParameter()
             {
                 IsMainParameter = true,
                 Name = "Threshold",
-                Value = 0.5f
+                Value = 0.5f,
+                FullyQualifiedName = ""
             },
         ]),
         new ParameterCollection("Equalizer", [
@@ -176,79 +191,92 @@ public class CustomControlTesterViewModel : ViewModelBase,
             {
                 IsMainParameter = true,
                 Name = "High",
-                Value = 0.5f
+                Value = 0.5f,
+                FullyQualifiedName = ""
             },
             new TestParameter()
             {
                 IsMainParameter = true,
                 Name = "Mid",
-                Value = 0.5f
+                Value = 0.5f,
+                FullyQualifiedName = ""
             },
             new TestParameter()
             {
                 IsMainParameter = true,
                 Name = "Low",
-                Value = 0.5f
+                Value = 0.5f,
+                FullyQualifiedName = ""
             },
             new TestParameter()
             {
                 IsMainParameter = true,
                 Name = "Threshold",
-                Value = 0.5f
+                Value = 0.5f,
+                FullyQualifiedName = ""
             },
             new TestParameter()
             {
                 IsMainParameter = true,
                 Name = "Threshold",
-                Value = 0.5f
+                Value = 0.5f,
+                FullyQualifiedName = ""
             },
             new TestParameter()
             {
                 IsMainParameter = true,
                 Name = "Threshold",
-                Value = 0.5f
+                Value = 0.5f,
+                FullyQualifiedName = ""
             },
             new TestParameter()
             {
                 IsMainParameter = true,
                 Name = "Threshold",
-                Value = 0.5f
+                Value = 0.5f,
+                FullyQualifiedName = ""
             },
             new TestParameter()
             {
                 IsMainParameter = true,
                 Name = "Threshold",
-                Value = 0.5f
+                Value = 0.5f,
+                FullyQualifiedName = ""
             },
             new TestParameter()
             {
                 IsMainParameter = true,
                 Name = "Threshold",
-                Value = 0.5f
+                Value = 0.5f,
+                FullyQualifiedName = ""
             },
             new TestParameter()
             {
                 IsMainParameter = true,
                 Name = "Threshold",
-                Value = 0.5f
+                Value = 0.5f,
+                FullyQualifiedName = ""
             },
             new TestParameter()
             {
                 IsMainParameter = true,
                 Name = "Threshold",
-                Value = 0.5f
+                Value = 0.5f,
+                FullyQualifiedName = ""
             },
             new TestParameter()
             {
                 IsMainParameter = true,
                 Name = "Threshold",
-                Value = 0.5f
+                Value = 0.5f,
+                FullyQualifiedName = ""
             },
             new TestParameter()
             {
                 IsMainParameter = true,
                 Name = "Threshold",
-                Value = 0.5f
+                Value = 0.5f,
+                FullyQualifiedName = ""
             },
         ]),
     ];

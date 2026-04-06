@@ -15,7 +15,9 @@ public class ReadAndStoreFilterGraphTests
     public ReadAndStoreFilterGraphTests()
     {
         Directory.CreateDirectory(TestFileFolder);
-        _appDataService = new Services.AppData.AppDataService(TestFileFolder, TestFileFolder, "");
+        _appDataService =
+            new Services.AppData.AppDataService(TestFileFolder, TestFileFolder,
+                "");
     }
 
     [Fact]
@@ -38,7 +40,7 @@ public class ReadAndStoreFilterGraphTests
                 ])
             ], [
                 new(lv2OutPortId, lv2InPortId)
-            ]);
+            ], null);
 
         await _appDataService.CreateFilterGraph(filterGraph);
 
@@ -89,7 +91,7 @@ public class ReadAndStoreFilterGraphTests
                 ])
             ], [
                 new(lv2OutPortId, lv2InPortId)
-            ]);
+            ], null);
 
         await _appDataService.CreateFilterGraph(filterGraph);
 

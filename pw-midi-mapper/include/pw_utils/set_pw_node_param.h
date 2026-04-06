@@ -13,7 +13,7 @@ namespace pw_utils {
 
 inline void set_pw_node_param(pw_main_loop *loop, pw_node *node,
                               const std::string &param_name, float value) {
-  logging::log<logging::LogLevel::Trace>("MidiMix::set_pw_node_param");
+  logging::log<logging::LogLevel::Trace>("pw_utils::set_pw_node_param");
 
   const auto data = new SetParamsData{.node = node};
 

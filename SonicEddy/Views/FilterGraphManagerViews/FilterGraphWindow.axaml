@@ -55,7 +55,7 @@
                                 <Button Content="&#xF7F6;"
                                         FontFamily="{StaticResource FluentIconsRegular}"
                                         FontSize="20"
-                                        ToolTip.Tip="Edit Parameter Order ..."
+                                        ToolTip.Tip="Edit Parameters ..."
                                         Padding="8"
                                         Margin="4"
                                         IsEnabled="True"

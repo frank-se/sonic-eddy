@@ -7,6 +7,7 @@ using DynamicData;
 using SonicEddy.Services.AppData;
 using SonicEddy.ViewModels.FilterGraphBuilderViewModels;
 using SonicEddy.Views.FilterGraphBuilderViews;
+using SonicEddy.Views.FilterGraphManagerViews;
 using Splat;
 
 namespace SonicEddy.ViewModels.FilterGraphManagerViewModels;
@@ -14,6 +15,7 @@ namespace SonicEddy.ViewModels.FilterGraphManagerViewModels;
 public class FilterGraphManagerViewModel : ViewModelBase
 {
     private Window? _filterGraphBuilder;
+    private Window? _filterGraphParameterEditor;
 
     public FilterGraphManagerViewModel(IAppDataService appDataService)
     {
@@ -50,8 +52,24 @@ public class FilterGraphManagerViewModel : ViewModelBase
         _ = Task.Run(LoadFilterGraphs);
     }
 
-    public void EditFilterGraphParameterOrder(Guid id) {}
-    
+    public async Task EditFilterGraphParameterOrder(Guid id)
+    {
+        if (_filterGraphParameterEditor is not null &&
+            _filterGraphParameterEditor.IsVisible) return;
+
+        var filterGraph = await _appDataService.GetFilterGraph(id);
+
+        var viewModel = new FilterGraphParameterEditorViewModel(filterGraph,
+            Fr.Lv2.Lv2.PluginDescriptions(), _appDataService);
+
+        _filterGraphParameterEditor = new FilterGraphParameterEditorWindow()
+        {
+            DataContext = viewModel
+        };
+
+        _filterGraphParameterEditor.Show();
+    }
+
     public void ShowFilterGraphBuilderWindow()
     {
         if (_filterGraphBuilder is not null &&
@@ -60,8 +78,8 @@ public class FilterGraphManagerViewModel : ViewModelBase
         var appDataService = Locator.Current.GetService<IAppDataService>();
 
         var viewModel = new FilterGraphBuilderViewModel(appDataService!,
-            Task.Run(Fr.Lv2.Lv2.ClassDescriptions),
-            Task.Run(Fr.Lv2.Lv2.PluginDescriptions));
+            Fr.Lv2.Lv2.ClassDescriptions(),
+            Fr.Lv2.Lv2.PluginDescriptions());
 
         _filterGraphBuilder = new FilterGraphBuilderWindow()
         {

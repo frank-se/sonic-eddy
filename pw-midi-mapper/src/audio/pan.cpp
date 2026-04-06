@@ -7,6 +7,13 @@ constexpr float Boost = std::sqrt(2);
 
 audio::pan::PanAndVolume
 audio::pan::get_pan_and_volume_from_gains(const std::array<float, 2> gains) {
+  if (gains[0] == 0.0f && gains[1] == 0.0f) {
+    return PanAndVolume{
+        .pan = 0.0f,
+        .volume = 0.0f,
+    };
+  }
+
   auto internal =
       gains | std::views::transform([](auto gain) { return gain / Boost; });
 

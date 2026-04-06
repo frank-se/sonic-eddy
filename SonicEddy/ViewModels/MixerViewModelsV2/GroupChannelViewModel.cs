@@ -1,9 +1,12 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
+using Fr.Pw.Midi.PInvoke;
 using Fr.Wireplumber.Modules.Models;
+using SonicEddy.Contracts.FilterGraph;
 using SonicEddy.Controls.MixerControls;
 using SonicEddy.Services.AppData;
+using SonicEddy.Services.Midi;
 using SonicEddy.Services.MixerServiceV2;
 using SonicEddy.Services.Monitoring;
 
@@ -17,18 +20,21 @@ public class GroupChannelViewModel(
     LoopbackModule outputLoopback,
     List<LoopbackModule> sendLoopbacks,
     FilterChain? filterChain,
+    FilterGraph? filterGraph,
     ObservableCollection<IRoutingTarget> audioToRoutingTargets,
     IRoutingTarget? selectedAudioToRoutingTarget,
     IAppDataService appDataService,
     IMixerService mixerService,
     GroupChannel groupChannel,
     IMonitoringService monitoringService,
-    int layerId)
+    int layerId,
+    IMidiControllerSetupService midiControllerSetupService)
     : ChannelWithSendsViewModelBase(channelId, text, selectChannelCommand,
             inputLoopback, outputLoopback,
-            sendLoopbacks, filterChain, audioToRoutingTargets,
+            sendLoopbacks, filterChain, filterGraph, audioToRoutingTargets,
             selectedAudioToRoutingTarget, appDataService, mixerService,
-            monitoringService, false, layerId),
+            monitoringService, false, layerId, midiControllerSetupService,
+            ChannelType.GroupChannel),
         IGroupChannel
 {
     public GroupChannel GroupChannel { get; } = groupChannel;

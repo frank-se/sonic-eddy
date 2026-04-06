@@ -9,7 +9,8 @@ void registry::Node::set_channel_volumes(
   pw_utils::set_pw_node_volume(_loop, _node, volumes);
 }
 
-void registry::Node::set_param(const std::string &name, float value) const {
+void registry::Node::set_param(const std::string &name,
+                               const float value) const {
   logging::log<logging::LogLevel::Trace>("Node::set_param");
 
   pw_utils::set_pw_node_param(_loop, _node, name, value);
@@ -31,6 +32,11 @@ std::optional<audio::pan::PanAndVolume> registry::Node::pan_and_volume() const {
 
 void registry::Node::set_volume(const double value) const {
   logging::log<logging::LogLevel::Trace>("Node::set_volume");
+
+  if (value == 0) {
+    set_channel_volumes({0.0f, 0.0f});
+    return;
+  }
 
   const auto current_pan_and_volume = pan_and_volume();
 

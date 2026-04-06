@@ -2,6 +2,8 @@
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Fr.Pw.Midi;
+using Fr.Pw.Midi.PInvoke;
+using Microsoft.Extensions.Logging;
 using ReactiveUI;
 using SonicEddy.Services.AppData;
 using SonicEddy.Services.Midi;
@@ -29,6 +31,30 @@ namespace SonicEddy.ViewModels;
 
 public class MainWindowViewModel : ViewModelBase, IDisposable
 {
+    public MainWindowViewModel(IMidiControllerService midiControllerService,
+        ILogger<MainWindowViewModel> logger)
+    {
+        _midiControllerService = midiControllerService;
+        _logger = logger;
+
+        _midiControllerService.LayerChanged += OnLayerSelected;
+        _midiControllerService.FilterParamsSectionMovedRight +=
+            OnMoveFilterParamsPageRight;
+
+        _midiControllerService.FilterParamsSectionMovedLeft +=
+            OnMoveFilterParamsPageLeft;
+
+        _midiControllerService.SelectedChannelChanged +=
+            OnSelectedChannelChanged;
+
+        _ = NavigateToMixerV2ViewLayerA();
+    }
+    
+    private const int NumberOfGroupChannels = 8;
+    private const int NumberOfGroupChannelsPerLayer = NumberOfGroupChannels / 2;
+    private const int NumberOfChannels = 16;
+    private const int NumberOfChannelsPerLayer = NumberOfChannels / 2;
+
     private Window? _objectBrowserWindow;
     private Window? _metadataManagerWindow;
     private Window? _moduleManagerWindow;
@@ -61,18 +87,64 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     }
 
     private readonly IMidiControllerService _midiControllerService;
-
-    public MainWindowViewModel(IMidiControllerService midiControllerService)
+    private readonly ILogger<MainWindowViewModel> _logger;
+    
+    private void OnSelectedChannelChanged(ChannelSelectEventArgs eventArgs)
     {
-        _midiControllerService = midiControllerService;
+        _logger.LogTrace("OnSelectedChannelChanged");
 
-        _midiControllerService.LayerChanged += OnLayerSelected;
+        var (channelId, layerId) = eventArgs.ChannelType switch
+        {
+            ChannelType.Channel => (eventArgs.ChannelId >=
+                                    NumberOfChannelsPerLayer) switch
+            {
+                true => (eventArgs.ChannelId - NumberOfChannelsPerLayer, 1),
+                false => (eventArgs.ChannelId, 0)
+            },
+            ChannelType.GroupChannel => (eventArgs.ChannelId >=
+                                         NumberOfGroupChannelsPerLayer) switch
+            {
+                true => (eventArgs.ChannelId - NumberOfGroupChannelsPerLayer,
+                    1),
+                false => (eventArgs.ChannelId, 0)
+            },
+            _ => throw new ArgumentOutOfRangeException(
+                $"Channel type invalid {eventArgs.ChannelType}")
+        };
 
-        _ = NavigateToMixerV2ViewLayerA();
+        LayerAViewModel?.ClearSelectedChannel();
+        LayerBViewModel?.ClearSelectedChannel();
+
+        if (layerId == 0)
+        {
+            switch (eventArgs.ChannelType)
+            {
+                case ChannelType.Channel:
+                    LayerAViewModel?.SetSelectedChannel((int)channelId);
+                    break;
+                case ChannelType.GroupChannel:
+                    LayerAViewModel?.SetSelectedGroupChannel((int)channelId);
+                    break;
+            }
+        }
+        else
+        {
+            switch (eventArgs.ChannelType)
+            {
+                case ChannelType.Channel:
+                    LayerBViewModel?.SetSelectedChannel((int)channelId);
+                    break;
+                case ChannelType.GroupChannel:
+                    LayerBViewModel?.SetSelectedGroupChannel((int)channelId);
+                    break;
+            }
+        }
     }
 
     private void OnLayerSelected(LayerSelectEventArgs eventArgs)
     {
+        _logger.LogTrace("OnLayerSelected");
+
         switch (eventArgs.LayerId)
         {
             case 0:
@@ -82,6 +154,24 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
                 _ = ActivateLayerB();
                 break;
         }
+    }
+
+    private void OnMoveFilterParamsPageRight(
+        FilterParamsSectionMovePagesEventArgs eventArgs)
+    {
+        _logger.LogTrace("OnMoveFilterParamsPageRight");
+
+        LayerAViewModel?.ActivateNextPluginPage();
+        LayerBViewModel?.ActivateNextPluginPage();
+    }
+
+    private void OnMoveFilterParamsPageLeft(
+        FilterParamsSectionMovePagesEventArgs eventArgs)
+    {
+        _logger.LogTrace("OnMoveFilterParamsPageLeft");
+
+        LayerAViewModel?.ActivatePreviousPluginPage();
+        LayerBViewModel?.ActivatePreviousPluginPage();
     }
 
     public void ShowVirtualInputsWindow()
@@ -271,6 +361,10 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     public void Dispose()
     {
         _midiControllerService.LayerChanged -= OnLayerSelected;
+
+        _midiControllerService.SelectedChannelChanged -=
+            OnSelectedChannelChanged;
+
         GC.SuppressFinalize(this);
     }
 }

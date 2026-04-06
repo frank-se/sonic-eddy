@@ -4,11 +4,14 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reactive.Disposables.Fluent;
 using System.Windows.Input;
+using Fr.Pw.Midi.PInvoke;
 using Fr.Wireplumber.Model.Props;
 using Fr.Wireplumber.Modules.Models;
 using ReactiveUI;
+using SonicEddy.Contracts.FilterGraph;
 using SonicEddy.Controls.MixerControls;
 using SonicEddy.Services.AppData;
+using SonicEddy.Services.Midi;
 using SonicEddy.Services.MixerServiceV2;
 using SonicEddy.Services.Monitoring;
 
@@ -20,15 +23,19 @@ public abstract class ChannelWithSendsViewModelBase : ChannelViewModelBase
         ICommand selectChannelCommand, LoopbackModule inputLoopback,
         LoopbackModule outputLoopback, List<LoopbackModule> sendLoopbacks,
         FilterChain? filterChain,
+        FilterGraph? filterGraph,
         ObservableCollection<IRoutingTarget> audioToRoutingTargets,
         IRoutingTarget? selectedAudioToRoutingTarget,
         IAppDataService appDataService, IMixerService mixerService,
         IMonitoringService monitoringService,
-        bool isMonitoringEnabled, int layerId) : base(
+        bool isMonitoringEnabled, int layerId,
+        IMidiControllerSetupService midiControllerSetupService,
+        ChannelType channelType) : base(
         channelId, text, selectChannelCommand, inputLoopback, outputLoopback,
-        filterChain, audioToRoutingTargets,
+        filterChain, filterGraph, audioToRoutingTargets,
         selectedAudioToRoutingTarget, appDataService,
-        mixerService, monitoringService, isMonitoringEnabled, layerId)
+        mixerService, monitoringService, isMonitoringEnabled, layerId,
+        midiControllerSetupService, channelType)
     {
         SendLoopbacks = sendLoopbacks;
 
@@ -92,7 +99,7 @@ public abstract class ChannelWithSendsViewModelBase : ChannelViewModelBase
     }
 
     private List<bool> _sendsChanging = [false, false, false, false];
-    
+
     private void OnSend1PropertiesChanged(Properties? properties)
     {
         _sendsChanging[0] = true;

@@ -12,7 +12,7 @@ namespace pw_utils {
 inline void fill_set_params_pod(const std::string &name, float value,
                                 SetParamsData &props_data) {
 
-  logging::log<logging::LogLevel::Trace>("MidiMix::fill_set_params_pod");
+  logging::log<logging::LogLevel::Trace>("pw_utils::fill_set_params_pod");
 
   spa_pod_builder builder{};
   spa_pod_builder_init(&builder, props_data.buffer,

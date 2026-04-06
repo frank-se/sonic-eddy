@@ -1,9 +1,12 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
+using Fr.Pw.Midi.PInvoke;
 using Fr.Wireplumber.Modules.Models;
+using SonicEddy.Contracts.FilterGraph;
 using SonicEddy.Controls.MixerControls;
 using SonicEddy.Services.AppData;
+using SonicEddy.Services.Midi;
 using SonicEddy.Services.MixerServiceV2;
 using SonicEddy.Services.Monitoring;
 
@@ -16,17 +19,21 @@ public class MasterChannelViewModel(
     LoopbackModule inputLoopback,
     LoopbackModule outputLoopback,
     FilterChain? filterChain,
+    FilterGraph? filterGraph,
     ObservableCollection<IRoutingTarget> audioToRoutingTargets,
     IRoutingTarget? selectedAudioToRoutingTarget,
     IAppDataService appDataService,
     IMixerService mixerService,
     MasterChannel masterChannel,
     IMonitoringService monitoringService,
-    int layerId)
+    int layerId,
+    IMidiControllerSetupService midiControllerSetupService)
     : ChannelViewModelBase(channelId, text, selectChannelCommand,
-            inputLoopback, outputLoopback, filterChain, audioToRoutingTargets,
+            inputLoopback, outputLoopback, filterChain, filterGraph,
+            audioToRoutingTargets,
             selectedAudioToRoutingTarget, appDataService, mixerService,
-            monitoringService, false, layerId),
+            monitoringService, false, layerId, midiControllerSetupService,
+            ChannelType.Channel),
         IMasterChannel
 {
     public MasterChannel MasterChannel { get; } = masterChannel;

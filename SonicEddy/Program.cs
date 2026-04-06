@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Fr.Lv2;
@@ -27,15 +28,15 @@ internal static class Program
 
         FrPwMidi.Start(nodeRegistry, linkFactory, portRegistry);
 
-        _ = Task.Run(async () =>
-        {
-            await Task.Delay(TimeSpan.FromSeconds(1));
-
-            var midiPortFactory = FrPwMidi.MidiPortFactory;
-            var midiMixPort = await midiPortFactory!.CreateMidiMixPort();
-            var cmdMm1Port = await midiPortFactory.CreateCmdMm1Port();
-            var faderFoxPort = await midiPortFactory.CreateFaderFoxPc4Port();
-        });
+        /*
+         * TODO: Update to wait for the availability of the midi bridge directly
+         * instead
+         */
+        Thread.Sleep(TimeSpan.FromSeconds(1));
+        var midiPortFactory = FrPwMidi.MidiPortFactory;
+        var midiMixPort = midiPortFactory!.CreateMidiMixPort().Result;
+        var cmdMm1Port = midiPortFactory.CreateCmdMm1Port().Result;
+        var faderFoxPort = midiPortFactory.CreateFaderFoxPc4Port().Result;
 
         BuildAvaloniaApp()
             .StartWithClassicDesktopLifetime(args);

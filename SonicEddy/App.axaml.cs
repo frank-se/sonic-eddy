@@ -106,13 +106,13 @@ public class App : Application
 
         var midiControllerService = new MidiControllerService();
         var setupService = new MidiControllerSetupService();
-        
+
         var mixerViewModelServiceLogger =
             loggerFactory.CreateLogger<MixerViewModelService>();
         var mixerViewModelService =
             new MixerViewModelService(appDataService, mixerServiceV2,
-                monitoringService, mixerViewModelServiceLogger, setupService,
-                midiControllerService);
+                monitoringService, mixerViewModelServiceLogger, loggerFactory,
+                setupService, midiControllerService);
         Locator.CurrentMutable.Register<IMixerViewModelService>(() =>
             mixerViewModelService);
 
@@ -120,7 +120,8 @@ public class App : Application
             Assembly.GetExecutingAssembly());
 
         Locator.CurrentMutable.Register(() =>
-            new MainWindowViewModel(midiControllerService));
+            new MainWindowViewModel(midiControllerService,
+                loggerFactory.CreateLogger<MainWindowViewModel>()));
     }
 
     private static ILoggerFactory CreateLoggerFactory()

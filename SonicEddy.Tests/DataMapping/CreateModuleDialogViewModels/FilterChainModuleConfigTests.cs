@@ -58,7 +58,7 @@ public class FilterChainModuleConfigTests
                 new(pluginOneOutputPorts[1], pluginTwoInputPorts[1]),
                 new(pluginTwoOutputPorts[0], outputNodePortIds[0]),
                 new(pluginTwoOutputPorts[1], outputNodePortIds[1])
-            ]);
+            ], []);
 
         var appDataService = Substitute.For<IAppDataService>();
         appDataService.GetFilterGraph(filterGraph.Id)

@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
@@ -7,7 +6,6 @@ using System.Windows.Input;
 using DynamicData;
 using Fr.Pw.Midi.PInvoke;
 using Microsoft.Extensions.Logging;
-using ReactiveUI;
 using SonicEddy.Controls.MixerControls;
 using SonicEddy.Services.AppData;
 using SonicEddy.Services.Midi;
@@ -23,6 +21,7 @@ public class MixerViewModelService(
     IMixerService mixerService,
     IMonitoringService monitoringService,
     ILogger<MixerViewModelService> logger,
+    ILoggerFactory loggerFactory,
     IMidiControllerSetupService controllerSetupService,
     IMidiControllerService midiControllerService)
     : IMixerViewModelService
@@ -46,6 +45,9 @@ public class MixerViewModelService(
         ObservableCollection<IRoutingTarget>
             audioToRoutingTargetsMasterChannel = [];
 
+        var mixerLayerLogger =
+            loggerFactory.CreateLogger<MixerLayerViewModel>();
+
         var mixerModel =
             new MixerLayerViewModel(
                 mixerService,
@@ -54,7 +56,8 @@ public class MixerViewModelService(
                 audioToRoutingTargetsChannelStrips,
                 audioToRoutingTargetsGroupChannels,
                 audioToRoutingTargetsMasterChannel,
-                midiControllerService, (ulong)layerId
+                midiControllerService, (ulong)layerId,
+                mixerLayerLogger
             );
 
         try
@@ -155,7 +158,8 @@ public class MixerViewModelService(
                  layer.Channels.Select((c, i) => (c, i)))
         {
             var channelId = (ulong)index +
-                            layer.layerId * (ulong)layer.Channels.Count;
+                            layer.layerId *
+                            (ulong)mixerService.NumberOfChannelsPerLayer;
 
             controllerSetupService.SetChannelNode(ChannelType.Channel,
                 channelId, channel.OutputLoopback.PlaybackNode.ObjectId);
@@ -173,7 +177,8 @@ public class MixerViewModelService(
                  layer.GroupChannels.Select((g, i) => (g, i)))
         {
             var channelId = (ulong)index +
-                            layer.layerId * (ulong)layer.GroupChannels.Count;
+                            layer.layerId * (ulong)mixerService
+                                .NumberOfGroupChannelsPerLayer;
 
             controllerSetupService.SetChannelNode(ChannelType.GroupChannel,
                 channelId, groupChannel.OutputLoopback.PlaybackNode.ObjectId);
@@ -198,9 +203,10 @@ public class MixerViewModelService(
         IRoutingTarget selectedAudioToRoutingTarget) =>
         new(channel.ChannelId, channel.Name,
             selectedChannelCommand, channel.InputLoopback,
-            channel.OutputLoopback, channel.SendLoopbacks, null,
+            channel.OutputLoopback, channel.SendLoopbacks, null, null,
             audioToRoutingTargets, selectedAudioToRoutingTarget, appDataService,
-            mixerService, channel, monitoringService, layerId);
+            mixerService, channel, monitoringService, layerId,
+            controllerSetupService);
 
     private MasterChannelViewModel ConvertMasterChannel(int layerId,
         MasterChannel channel,
@@ -209,9 +215,11 @@ public class MixerViewModelService(
         IRoutingTarget selectedAudioToRoutingTarget
     ) => new(channel.ChannelId, channel.Name,
         selectedChannelCommand, channel.InputLoopback,
-        channel.OutputLoopback, channel.FilterChain, audioToRoutingTargets,
+        channel.OutputLoopback, channel.FilterChain, channel.FilterGraph,
+        audioToRoutingTargets,
         selectedAudioToRoutingTarget,
-        appDataService, mixerService, channel, monitoringService, layerId);
+        appDataService, mixerService, channel, monitoringService, layerId,
+        controllerSetupService);
 
     public ChannelStripViewModel ConvertChannelStrip(int layerId,
         ChannelStrip channel,
@@ -222,10 +230,12 @@ public class MixerViewModelService(
         new(channel.ChannelId, channel.Name,
             selectedChannelCommand, channel.InputLoopback,
             channel.OutputLoopback,
-            channel.SendLoopbacks, channel.FilterChain, audioFromRoutingTargets,
+            channel.SendLoopbacks, channel.FilterChain, channel.FilterGraph,
+            audioFromRoutingTargets,
             audioToRoutingTargets,
             audioToRoutingTargets.First(r => r.Channel == masterChannel),
-            channel, appDataService, mixerService, monitoringService, layerId);
+            channel, appDataService, mixerService, monitoringService, layerId,
+            controllerSetupService);
 
     private ReturnChannelViewModel ConvertReturnChannel(
         ReturnChannel channel,

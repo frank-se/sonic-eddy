@@ -14,5 +14,6 @@ public class TestParameter : ReactiveObject, IParameter
     public float Minimum { get; } = 0;
     public float Maximum { get; } = 10;
     public required string Name { get; init; }
+    public required string FullyQualifiedName { get; init; }
     public required bool IsMainParameter { get; init; }
 }

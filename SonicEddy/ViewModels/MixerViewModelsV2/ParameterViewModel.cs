@@ -9,7 +9,6 @@ namespace SonicEddy.ViewModels.MixerViewModelsV2;
 
 public class ParameterViewModel : ReactiveObject, IParameter, IDisposable
 {
-    private readonly string _fullName;
     private readonly Node _node;
 
     public ParameterViewModel(float minimum, float maximum, string name,
@@ -20,7 +19,7 @@ public class ParameterViewModel : ReactiveObject, IParameter, IDisposable
         Name = name;
         IsMainParameter = isMainParameter;
 
-        _fullName = fullName;
+        FullyQualifiedName = fullName;
         _node = node;
 
         node.ParamsChanged += OnParameterChanged;
@@ -30,7 +29,8 @@ public class ParameterViewModel : ReactiveObject, IParameter, IDisposable
         Dictionary<string, Fr.Wireplumber.Model.Params.IParameter>?
             parameters)
     {
-        if (!(parameters?.TryGetValue(_fullName, out var value) ?? false))
+        if (!(parameters?.TryGetValue(FullyQualifiedName, out var value) ??
+              false))
             return;
 
         if (value is Parameter<float> floatValue)
@@ -46,6 +46,8 @@ public class ParameterViewModel : ReactiveObject, IParameter, IDisposable
     public float Minimum { get; }
     public float Maximum { get; }
     public string Name { get; }
+    public string FullyQualifiedName { get; }
+
     public bool IsMainParameter { get; }
 
     public void Dispose()

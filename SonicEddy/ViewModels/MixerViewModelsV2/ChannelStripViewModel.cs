@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Reactive.Disposables.Fluent;
 using System.Windows.Input;
+using Fr.Pw.Midi.PInvoke;
 using Fr.Wireplumber.Modules.Models;
 using ReactiveUI;
+using SonicEddy.Contracts.FilterGraph;
 using SonicEddy.Controls.MixerControls;
 using SonicEddy.Services.AppData;
 using SonicEddy.Services.Midi;
@@ -21,16 +23,21 @@ public class ChannelStripViewModel : ChannelWithSendsViewModelBase,
         ICommand selectChannelCommand, LoopbackModule inputLoopback,
         LoopbackModule outputLoopback, List<LoopbackModule> sendLoopbacks,
         FilterChain? filterChain,
+        FilterGraph? filterGraph,
         ObservableCollection<IRoutingTarget> audioFromRoutingTargets,
         ObservableCollection<IRoutingTarget> audioToRoutingTargets,
         IRoutingTarget? selectedAudioToRoutingTarget,
         ChannelStrip channelStrip, IAppDataService appDataService,
         IMixerService mixerService,
-        IMonitoringService monitoringService, int layerId) : base(channelId,
+        IMonitoringService monitoringService, int layerId,
+        IMidiControllerSetupService midiControllerSetupService) : base(
+        channelId,
         text,
         selectChannelCommand, inputLoopback, outputLoopback, sendLoopbacks,
-        filterChain, audioToRoutingTargets, selectedAudioToRoutingTarget,
-        appDataService, mixerService, monitoringService, false, layerId)
+        filterChain, filterGraph, audioToRoutingTargets,
+        selectedAudioToRoutingTarget,
+        appDataService, mixerService, monitoringService, false, layerId,
+        midiControllerSetupService, ChannelType.Channel)
     {
         AudioFromRoutingTargets = audioFromRoutingTargets;
         SelectedAudioToRoutingTarget = selectedAudioToRoutingTarget;

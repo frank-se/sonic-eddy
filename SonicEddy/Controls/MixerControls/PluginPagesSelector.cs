@@ -14,6 +14,14 @@ namespace SonicEddy.Controls.MixerControls;
 
 public class PluginPagesSelector : StackPanel
 {
+    public PluginPagesSelector()
+    {
+        Orientation = Orientation.Horizontal;
+
+        if (PluginPagesCounts is not null)
+            UpdateButtons(PluginPagesCounts);
+    }
+
     public static readonly StyledProperty<
             ObservableCollection<PluginPageSelectorPluginPageCount>?>
         PluginPagesCountsProperty = AvaloniaProperty
@@ -43,14 +51,6 @@ public class PluginPagesSelector : StackPanel
     }
 
     private readonly List<Button> _buttons = [];
-
-    public PluginPagesSelector()
-    {
-        Orientation = Orientation.Horizontal;
-
-        if (PluginPagesCounts is not null)
-            UpdateButtons(PluginPagesCounts);
-    }
 
     private void UpdateButtons(
         IList<PluginPageSelectorPluginPageCount> pluginPageCounts)
@@ -95,22 +95,22 @@ public class PluginPagesSelector : StackPanel
     {
         if (PluginPagesCounts is null || !PluginPagesCounts.Any()) return;
 
-        var activeIndex = 0;
-        var wasDifferentBefore = false;
-        foreach (var pageCount in PluginPagesCounts)
-        {
-            if (pageCount.Name == selectedPage.Name)
-            {
-                activeIndex += selectedPage.PageNumber +
-                               (wasDifferentBefore ? 1 : 0);
-                break;
-            }
-            else
-            {
-                activeIndex++;
-                wasDifferentBefore = true;
-            }
-        }
+        var selectedPageCount =
+            PluginPagesCounts.First(p => p.Name == selectedPage.Name);
+
+        var indexOfSelectedPageCount =
+            PluginPagesCounts.IndexOf(selectedPageCount);
+
+        var pagesBefore =
+            PluginPagesCounts.Where((p, i) => i < indexOfSelectedPageCount);
+
+        var indexOfPagesBefore =
+            pagesBefore.Aggregate(0,
+                (long acc, PluginPageSelectorPluginPageCount x) =>
+                    acc + x.TotalNumberOfPages);
+
+
+        var activeIndex = indexOfPagesBefore + selectedPage.PageNumber;
 
         var index = 0;
         foreach (var button in _buttons)

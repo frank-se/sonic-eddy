@@ -1,10 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Collections.Specialized;
 using System.Linq;
 using Avalonia;
-using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Data;
 
@@ -12,6 +10,32 @@ namespace SonicEddy.Controls.MixerControls;
 
 public class ParametersEditor : Grid
 {
+    public ParametersEditor()
+    {
+        RowDefinitions = RowDefinitions.Parse("*,Auto");
+
+        _pagesSelector = new()
+        {
+            Margin = new(0, 8, 0, 0)
+        };
+
+        _pagesSelector.Bind(PluginPagesSelector.SelectedPageProperty,
+            new Binding("SelectedPage")
+            {
+                Source = this,
+                Mode = BindingMode.TwoWay
+            });
+
+        SetRow(_pagesSelector, 1);
+
+        Children.Add(_pagesSelector);
+
+        if (ParameterCollections is null ||
+            ParameterCollections.Count == 0) return;
+
+        UpdateParameterGrids();
+    }
+
     public static readonly
         StyledProperty<List<ParameterCollection>?>
         ParameterCollectionsProperty =
@@ -65,32 +89,6 @@ public class ParametersEditor : Grid
     private readonly List<ParameterGrid> _parameterGrids = [];
     private readonly PluginPagesSelector _pagesSelector;
 
-    public ParametersEditor()
-    {
-        RowDefinitions = RowDefinitions.Parse("*,Auto");
-        
-        _pagesSelector = new()
-        {
-            Margin = new Thickness(0, 8, 0, 0)
-        };
-
-        _pagesSelector.Bind(PluginPagesSelector.SelectedPageProperty,
-            new Binding("SelectedPage")
-            {
-                Source = this,
-                Mode = BindingMode.TwoWay
-            });
-
-        SetRow(_pagesSelector, 1);
-        
-        Children.Add(_pagesSelector);
-
-        if (ParameterCollections is null ||
-            ParameterCollections.Count == 0) return;
-        
-        UpdateParameterGrids();
-    }
-
     protected override void OnPropertyChanged(
         AvaloniaPropertyChangedEventArgs change)
     {
@@ -98,8 +96,7 @@ public class ParametersEditor : Grid
 
         if (change.Property == ParameterCollectionsProperty)
         {
-            if (change.NewValue is not List<ParameterCollection>
-                parameterCollections) return;
+            if (change.NewValue is not List<ParameterCollection>) return;
 
             UpdateParameterGrids();
         }
@@ -147,6 +144,7 @@ public class ParametersEditor : Grid
                 (uint)Math.Ceiling(
                     (double)parameterCollection.Parameters.Count /
                     itemsPerPage));
+            
             counts.Add(count);
 
             var parameterGrid = new ParameterGrid()
@@ -164,9 +162,8 @@ public class ParametersEditor : Grid
             Children.Add(parameterGrid);
         }
 
-        _pagesSelector.PluginPagesCounts =
-            new ObservableCollection<PluginPageSelectorPluginPageCount>(counts);
-        SelectedPage = new PluginPageSelectorSelectedPage(
-            counts.First().Name, 0);
+        _pagesSelector.PluginPagesCounts = new(counts);
+
+        SelectedPage = new(counts.First().Name, 0);
     }
 }

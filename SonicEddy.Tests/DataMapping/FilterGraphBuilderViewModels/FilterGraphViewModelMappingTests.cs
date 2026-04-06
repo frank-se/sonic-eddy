@@ -25,9 +25,7 @@ public class FilterGraphViewModelMappingTests
         var screen = Substitute.For<IScreen>();
 
         var viewModel =
-            new FilterGraphBuilderViewModel(appDataService,
-                Task.FromResult<List<ClassDescription>>([]),
-                Task.FromResult<List<PluginDescription>>([]))
+            new FilterGraphBuilderViewModel(appDataService, [], [])
             {
                 Name = "My Filter Graph",
                 Id = Guid.NewGuid()

@@ -76,7 +76,8 @@ public class MixerEditor(IWireplumberService wireplumberService)
 
         var newChannel = channel with
         {
-            FilterChain = filterChain
+            FilterChain = filterChain,
+            FilterGraph = filterGraph
         };
 
         var newList = mixerLayer.Channels.Select(c =>
@@ -186,8 +187,9 @@ public class MixerEditor(IWireplumberService wireplumberService)
 
         return new(
             "Master",
-            1,
+            0,
             inputLoopback,
+            null,
             null,
             outputLoopback,
             defaultOutput.CaptureNode);
@@ -293,9 +295,11 @@ public class MixerEditor(IWireplumberService wireplumberService)
                         }
                     })))).ToList();
 
+        var id = index - 1 + (int)layerId * InitialGroupChannelCount;
+        
         return new(
             $"Group {index}",
-            (ulong)index,
+            (ulong)id,
             inputLoopback,
             null,
             outputLoopback,
@@ -505,11 +509,12 @@ public class MixerEditor(IWireplumberService wireplumberService)
                     })));
 
         var id = (channelId - 1) + layerId * InitialChannelCount;
-        
+
         return new(
             name,
             id,
             inputLoopback,
+            null,
             null,
             outputLoopback,
             sendLoopbacks.ToList(),

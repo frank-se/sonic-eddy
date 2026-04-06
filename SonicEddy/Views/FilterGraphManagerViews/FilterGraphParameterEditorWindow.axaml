@@ -1,0 +1,65 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:filterGraphManagerViewModels="clr-namespace:SonicEddy.ViewModels.FilterGraphManagerViewModels"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450" Width="800" Height="600"
+        x:Class="SonicEddy.Views.FilterGraphManagerViews.FilterGraphParameterEditorWindow"
+        x:DataType="filterGraphManagerViewModels:FilterGraphParameterEditorViewModel"
+        Title="Edit Parameters">
+    <Grid RowDefinitions="*,Auto">
+        <TabControl Grid.Row="0"
+                    ItemsSource="{Binding Plugins}"
+                    SelectedItem="{Binding SelectedPlugin}">
+
+            <TabControl.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding Name}"></TextBlock>
+                </DataTemplate>
+            </TabControl.ItemTemplate>
+
+            <TabControl.ContentTemplate>
+                <DataTemplate DataType="filterGraphManagerViewModels:FilterGraphPluginViewModel">
+                    <DataGrid ItemsSource="{Binding Parameters}"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="False">
+
+                        <DataGrid.Columns>
+                            <DataGridTextColumn
+                                IsReadOnly="True"
+                                Header="Name"
+                                Binding="{Binding Name}" />
+
+                            <DataGridTextColumn
+                                IsReadOnly="True"
+                                Header="Minimum"
+                                Binding="{Binding Min}" />
+
+                            <DataGridTextColumn
+                                IsReadOnly="True"
+                                Header="Maximum"
+                                Binding="{Binding Max}" />
+
+                            <DataGridTextColumn
+                                IsReadOnly="True"
+                                Header="Default"
+                                Binding="{Binding Default}" />
+
+                            <DataGridTextColumn
+                                Header="Sort Order"
+                                Binding="{Binding SortOrder}" />
+
+                        </DataGrid.Columns>
+
+                    </DataGrid>
+                </DataTemplate>
+            </TabControl.ContentTemplate>
+        </TabControl>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="4">
+            <Button IsEnabled="{Binding HasChanges}"
+                    Command="{Binding SaveChanges}"
+                    Content="Save" />
+        </StackPanel>
+    </Grid>
+</Window>

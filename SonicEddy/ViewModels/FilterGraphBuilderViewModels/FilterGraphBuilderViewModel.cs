@@ -21,8 +21,8 @@ namespace SonicEddy.ViewModels.FilterGraphBuilderViewModels;
 public class FilterGraphBuilderViewModel : ViewModelBase
 {
     public FilterGraphBuilderViewModel(IAppDataService appDataService,
-        Task<List<ClassDescription>> pluginClasses,
-        Task<List<PluginDescription>> pluginDescriptions)
+        List<ClassDescription> pluginClasses,
+        List<PluginDescription> pluginDescriptions)
     {
         _appDataService = appDataService;
 
@@ -73,18 +73,16 @@ public class FilterGraphBuilderViewModel : ViewModelBase
     }
 
     private async Task BuildPluginClasses(
-        Task<List<ClassDescription>> classDescriptionTask,
-        Task<List<PluginDescription>> pluginDescriptionTask)
+        List<ClassDescription> classDescriptions,
+        List<PluginDescription> pluginDescriptions)
     {
-        var classDescriptions = await classDescriptionTask;
         var classes = classDescriptions.ToDictionary(x => x.Uri,
             x => new Lv2PluginClass(x.Uri, x.Label, []));
 
-        var pluginDescriptions = await pluginDescriptionTask;
         foreach (var pluginDescription in pluginDescriptions)
         {
             classes[pluginDescription.ClassUri].Plugins
-                .Add(new AvailableLv2Plugin(pluginDescription));
+                .Add(new(pluginDescription));
         }
 
         var classesWithDescriptions =

@@ -21,4 +21,9 @@ public interface IMixerService
 
     event Action<List<InputChannel>>? InputsChanged;
     event Action<List<OutputChannel>>? OutputsChanged;
+
+    int NumberOfChannelsPerLayer { get; }
+    int NumberOfChannels { get; }
+    int NumberOfGroupChannelsPerLayer { get; }
+    int NumberOfGroupChannels { get; }
 }

@@ -7,9 +7,11 @@ public record FilterGraph(
     [property: ProtoMember(1)] Guid Id,
     [property: ProtoMember(2)] string Name,
     [property: ProtoMember(3)] List<FilterGraphNodeBase> Nodes,
-    [property: ProtoMember(4)] List<FilterGraphEdge> Edges)
+    [property: ProtoMember(4)] List<FilterGraphEdge> Edges,
+    [property: ProtoMember(5)]
+    List<FilterGraphPluginParameters>? PluginParameters)
 {
-    public FilterGraph() : this(Guid.Empty, string.Empty, [], [])
+    public FilterGraph() : this(Guid.Empty, string.Empty, [], [], null)
     {
     }
 }

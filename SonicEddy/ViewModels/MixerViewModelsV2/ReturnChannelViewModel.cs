@@ -46,11 +46,7 @@ public class ReturnChannelViewModel : ReactiveObject, IReturnChannel,
                     !chain.CaptureNode.PropertyInfos.IsCompleted)
                     return;
 
-                Parameters =
-                    ConversionHelper.GetCollectionFromFilterChainParams(
-                        chain.CaptureNode.Params.Result,
-                        chain.CaptureNode.PropertyInfos.Result,
-                        chain.CaptureNode);
+                Parameters = [];
 
                 HasFilter = true;
             })

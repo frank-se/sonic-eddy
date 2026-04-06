@@ -7,10 +7,13 @@ using System.Reactive.Disposables.Fluent;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using DynamicData;
+using Fr.Pw.Midi.PInvoke;
 using Fr.Wireplumber.Modules.Models;
 using ReactiveUI;
+using SonicEddy.Contracts.FilterGraph;
 using SonicEddy.Controls.MixerControls;
 using SonicEddy.Services.AppData;
+using SonicEddy.Services.Midi;
 using SonicEddy.Services.MixerServiceV2;
 using SonicEddy.Services.Monitoring;
 using SonicEddy.Tools;
@@ -28,13 +31,16 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
         ICommand selectChannelCommand, LoopbackModule inputLoopback,
         LoopbackModule outputLoopback,
         FilterChain? filterChain,
+        FilterGraph? filterGraph,
         ObservableCollection<IRoutingTarget> audioToRoutingTargets,
         IRoutingTarget? selectedAudioToRoutingTarget,
         IAppDataService appDataService,
         IMixerService mixerService,
         IMonitoringService monitoringService,
         bool enableMonitoring,
-        int layerId)
+        int layerId,
+        IMidiControllerSetupService midiControllerSetupService,
+        ChannelType channelType)
     {
         _layerId = layerId;
         AudioToRoutingTargets = audioToRoutingTargets;
@@ -43,10 +49,19 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
         _outputLoopback = outputLoopback;
         Text = text;
         ChannelId = channelId;
-        FilterChain = filterChain;
         SelectedAudioToRoutingTarget = selectedAudioToRoutingTarget;
         _appDataService = appDataService;
         _mixerService = mixerService;
+        _midiSetupService = midiControllerSetupService;
+        _channelType = channelType;
+
+        _midiControllerChannelId = channelId + (ulong)_layerId *
+            (channelType == ChannelType.Channel
+                ? (ulong)mixerService.NumberOfChannelsPerLayer
+                : (ulong)mixerService.NumberOfGroupChannelsPerLayer);
+
+        FilterGraph = filterGraph;
+        FilterChain = filterChain;
 
         if (enableMonitoring)
         {
@@ -113,48 +128,86 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
 
                     index++;
                 }
+
+                _midiSetupService.ClearFilterParameters(channelType, ChannelId);
+
+                foreach (var (parameterCollection, i) in parameters
+                             .Select((x, i) => (x, i)))
+                {
+                    foreach (var parameter in parameterCollection.Parameters)
+                    {
+                        _midiSetupService.AddFilterParameter(channelType,
+                            _midiControllerChannelId, (ulong)i,
+                            parameter.FullyQualifiedName,
+                            parameter.Minimum, parameter.Maximum);
+                    }
+                }
             })
             .DisposeWith(Disposables);
 
         this.WhenAnyValue(x => x.FilterChain)
-            .Subscribe(chain =>
-            {
-                if (chain is null)
-                {
-                    HasFilter = false;
-                    Parameters = null;
-                    return;
-                }
-
-                // ReSharper disable once MergeIntoPattern
-                // DO NOT CHANGE TO PATTERN
-                // OTHERWISE ACCESS TO RESULT MIGHT BE BLOCKING!
-                if (!chain.CaptureNode.Params.IsCompleted ||
-                    chain.CaptureNode.Params.Result is null ||
-                    !chain.CaptureNode.PropertyInfos.IsCompleted)
-                    return;
-
-                Parameters =
-                    ConversionHelper.GetCollectionFromFilterChainParams(
-                        chain.CaptureNode.Params.Result,
-                        chain.CaptureNode.PropertyInfos.Result,
-                        chain.CaptureNode);
-
-                HasFilter = true;
-            })
+            .Subscribe(OnFilterChainUpdate)
             .DisposeWith(Disposables);
+    }
+
+    private void OnFilterChainUpdate(FilterChain? chain)
+    {
+        if (chain is null || FilterGraph is null)
+        {
+            HasFilter = false;
+            Parameters = null;
+            return;
+        }
+
+        // ReSharper disable once MergeIntoPattern
+        // DO NOT CHANGE TO PATTERN
+        // OTHERWISE ACCESS TO RESULT MIGHT BE BLOCKING!
+        if (!chain.CaptureNode.Params.IsCompleted ||
+            chain.CaptureNode.Params.Result is null ||
+            !chain.CaptureNode.PropertyInfos.IsCompleted)
+            return;
+
+        Parameters = FilterGraph.PluginParameters?.Select(plugin =>
+        {
+            var node =
+                FilterGraph.Nodes.First(n => n.Id == plugin.NodeId);
+
+            var parameters =
+                plugin.ParameterDescriptions.Select((p, i) =>
+                        new ParameterViewModel(
+                            p.Min, p.Max, p.DisplayName, i < 4, p.Name,
+                            chain.CaptureNode))
+                    .OfType<IParameter>()
+                    .ToList();
+
+            return new ParameterCollection(node.Name, parameters);
+        }).ToList() ?? [];
+
+        _midiSetupService.SetChannelFilterNode(_channelType,
+            _midiControllerChannelId,
+            chain.CaptureNode.ObjectId);
+
+        HasFilter = true;
     }
 
     private readonly LoopbackModule _inputLoopback;
     private readonly LoopbackModule _outputLoopback;
     private readonly IAppDataService _appDataService;
     private readonly IMixerService _mixerService;
+    private readonly IMidiControllerSetupService _midiSetupService;
     private readonly int _layerId;
+    private readonly ulong _midiControllerChannelId;
 
     public FilterChain? FilterChain
     {
         get;
-        set => this.RaiseAndSetIfChanged(ref field, value);
+        private set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
+    public FilterGraph? FilterGraph
+    {
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
     public ulong ChannelId
@@ -209,6 +262,7 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
                 _layerId,
                 ChannelId,
                 dialogViewModel.SelectedFilterGraph);
+            FilterGraph = dialogViewModel.SelectedFilterGraph;
             FilterChain = channelStrip.FilterChain;
         }
     }
@@ -267,4 +321,6 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
         Dispose(true);
         GC.SuppressFinalize(this);
     }
+
+    private readonly ChannelType _channelType;
 }

@@ -1,11 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reactive.Concurrency;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Data;
 using Avalonia.Media;
-using Fr.Wireplumber.Model.Objects;
 using Fr.Wireplumber.Modules.Models;
 using SonicEddy.ViewModels.MixerViewModelsV2;
 
@@ -13,6 +12,11 @@ namespace SonicEddy.Controls.MixerControls;
 
 public partial class ChannelDetailsSection : UserControl
 {
+    public ChannelDetailsSection()
+    {
+        InitializeComponent();
+    }
+
     public static readonly StyledProperty<IChannel?> SelectedChannelProperty =
         AvaloniaProperty.Register<ChannelDetailsSection, IChannel?>(
             nameof(SelectedChannel));
@@ -37,6 +41,20 @@ public partial class ChannelDetailsSection : UserControl
         set => SetValue(ParameterCollectionsProperty, value);
     }
 
+    public static readonly StyledProperty<PluginPageSelectorSelectedPage?>
+        SelectedPageProperty =
+            AvaloniaProperty
+                .Register<ChannelDetailsSection, PluginPageSelectorSelectedPage
+                    ?>(nameof(SelectedPage),
+                    defaultValue: null,
+                    defaultBindingMode: BindingMode.TwoWay);
+
+    public PluginPageSelectorSelectedPage? SelectedPage
+    {
+        get => GetValue(SelectedPageProperty);
+        set => SetValue(SelectedPageProperty, value);
+    }
+
     public static readonly StyledProperty<int> NumberOfColumnsProperty =
         AvaloniaProperty.Register<ChannelDetailsSection, int>(
             nameof(NumberOfColumns),
@@ -57,11 +75,6 @@ public partial class ChannelDetailsSection : UserControl
     {
         get => GetValue(NumberOfRowsProperty);
         set => SetValue(NumberOfRowsProperty, value);
-    }
-
-    public ChannelDetailsSection()
-    {
-        InitializeComponent();
     }
 
     protected override void OnPropertyChanged(
@@ -147,10 +160,11 @@ public partial class ChannelDetailsSection : UserControl
         }
     }
 
-    private void AddFilterChainModuleDetails(string name, FilterChain module,
-        Action<Control> AddAction)
+    private static void AddFilterChainModuleDetails(string name,
+        FilterChain module,
+        Action<Control> addAction)
     {
-        AddAction(
+        addAction(
             new TextBlock()
             {
                 Text = name,
@@ -158,21 +172,21 @@ public partial class ChannelDetailsSection : UserControl
                 Margin = new Thickness(6)
             });
 
-        AddAction(
+        addAction(
             new TextBlock()
             {
                 Text = "Capture Node",
                 FontWeight = FontWeight.Medium,
-                Margin = new Thickness(4)
+                Margin = new(4)
             });
 
-        AddAction(
+        addAction(
             new TextBlock()
             {
                 Text = $"Object Serial: {module.CaptureNode.ObjectSerial}"
             });
 
-        AddAction(
+        addAction(
             new TextBlock()
             {
                 Text = $"Object Id: {module.CaptureNode.ObjectId}"
@@ -182,7 +196,7 @@ public partial class ChannelDetailsSection : UserControl
         if (module.CaptureNode.Properties.IsCompleted &&
             module.CaptureNode.Properties.Result is not null)
         {
-            AddAction(
+            addAction(
                 new TextBlock()
                 {
                     Text =
@@ -190,22 +204,22 @@ public partial class ChannelDetailsSection : UserControl
                 });
         }
 
-        AddAction(
+        addAction(
             new TextBlock()
             {
                 Text = "Playback Node",
                 FontWeight = FontWeight.Medium,
-                Margin = new Thickness(4)
+                Margin = new(4)
             });
 
-        AddAction(
+        addAction(
             new TextBlock()
             {
                 Text =
                     $"Object Serial: {module.PlaybackNode.ObjectSerial}"
             });
 
-        AddAction(
+        addAction(
             new TextBlock()
             {
                 Text = $"Object Id: {module.PlaybackNode.ObjectId}"
@@ -215,7 +229,7 @@ public partial class ChannelDetailsSection : UserControl
         if (module.PlaybackNode.Properties.IsCompleted &&
             module.PlaybackNode.Properties.Result is not null)
         {
-            AddAction(
+            addAction(
                 new TextBlock()
                 {
                     Text =
@@ -224,32 +238,33 @@ public partial class ChannelDetailsSection : UserControl
         }
     }
 
-    private void AddLoopbackModuleDetails(string name, LoopbackModule module,
-        Action<Control> AddAction)
+    private static void AddLoopbackModuleDetails(string name,
+        LoopbackModule module,
+        Action<Control> addAction)
     {
-        AddAction(
+        addAction(
             new TextBlock()
             {
                 Text = name,
                 FontWeight = FontWeight.Bold,
-                Margin = new Thickness(6)
+                Margin = new(6)
             });
 
-        AddAction(
+        addAction(
             new TextBlock()
             {
                 Text = "Capture Node",
                 FontWeight = FontWeight.Medium,
-                Margin = new Thickness(4)
+                Margin = new(4)
             });
 
-        AddAction(
+        addAction(
             new TextBlock()
             {
                 Text = $"Object Serial: {module.CaptureNode.ObjectSerial}"
             });
 
-        AddAction(
+        addAction(
             new TextBlock()
             {
                 Text = $"Object Id: {module.CaptureNode.ObjectId}"
@@ -259,7 +274,7 @@ public partial class ChannelDetailsSection : UserControl
         if (module.CaptureNode.Properties.IsCompleted &&
             module.CaptureNode.Properties.Result is not null)
         {
-            AddAction(
+            addAction(
                 new TextBlock()
                 {
                     Text =
@@ -267,22 +282,22 @@ public partial class ChannelDetailsSection : UserControl
                 });
         }
 
-        AddAction(
+        addAction(
             new TextBlock()
             {
                 Text = "Playback Node",
                 FontWeight = FontWeight.Medium,
-                Margin = new Thickness(4)
+                Margin = new(4)
             });
 
-        AddAction(
+        addAction(
             new TextBlock()
             {
                 Text =
                     $"Object Serial: {module.PlaybackNode.ObjectSerial}"
             });
 
-        AddAction(
+        addAction(
             new TextBlock()
             {
                 Text = $"Object Id: {module.PlaybackNode.ObjectId}"
@@ -292,7 +307,7 @@ public partial class ChannelDetailsSection : UserControl
         if (module.PlaybackNode.Properties.IsCompleted &&
             module.PlaybackNode.Properties.Result is not null)
         {
-            AddAction(
+            addAction(
                 new TextBlock()
                 {
                     Text =

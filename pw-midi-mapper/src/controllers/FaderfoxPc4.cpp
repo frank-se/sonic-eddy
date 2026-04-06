@@ -29,12 +29,18 @@ void controllers::FaderfoxPc4::handle_normalized_control_change(size_t index,
 
     return;
   }
-
   const size_t parameter_id = index - 1;
   const size_t row = parameter_id / 4;
   const size_t column = parameter_id - (row * 4);
 
   auto &[filter_node, plugins] = _channels[_selected_channel_id];
+
+  if (filter_node == nullptr) {
+    logging::log<logging::LogLevel::Warning>("Channel {} filter node is null",
+                                             _selected_channel_id.load());
+
+    return;
+  }
 
   auto &parameter =
       plugins[_selected_plugin_id][_selected_parameter_page][row][column];
@@ -57,7 +63,7 @@ void controllers::FaderfoxPc4::handle_normalized_control_change(size_t index,
       _selected_channel_id.load(), _selected_plugin_id.load(),
       _selected_parameter_page.load(), index, row, column, param_value, value);
 
-  filter_node->set_param(parameter->name, param_value);
+  filter_node->set_param(parameter->name, static_cast<float>(param_value));
 }
 
 void controllers::FaderfoxPc4::set_layer_from_processor(
@@ -218,6 +224,30 @@ void controllers::FaderfoxPc4::set_channel_filter_node(ChannelType channel_type,
                                                        uint64_t object_id) {
   logging::log<logging::LogLevel::Trace>(
       "FaderfoxPc4::set_channel_filter_node");
+
+  size_t ff_channel_id{0};
+
+  if (channel_type == ChannelType::GROUP_CHANNEL) {
+    ff_channel_id = channel_id + number_of_channels;
+  } else {
+    ff_channel_id = channel_id;
+  }
+
+  if (ff_channel_id >= _channels.size()) {
+    logging::log<logging::LogLevel::Error>("Channel id {} out of bounds",
+                                           ff_channel_id);
+
+    return;
+  }
+
+  const auto node = _registry.get_node_by_object_id(object_id);
+
+  if (!node) {
+    logging::log<logging::LogLevel::Error>("Couldn't find node {}", object_id);
+    return;
+  }
+
+  _channels[ff_channel_id].filter_node = *node;
 }
 
 void controllers::FaderfoxPc4::set_channel_send_node(ChannelType channel_type,

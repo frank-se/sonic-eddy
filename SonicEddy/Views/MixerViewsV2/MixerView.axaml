@@ -28,11 +28,12 @@
 
                 <mixerControls:ChannelDetailsSection Grid.Row="1"
                                                      Grid.Column="0"
-                                                     NumberOfColumns="4"
-                                                     NumberOfRows="6"
+                                                     NumberOfColumns="{Binding NumberOfColumns}"
+                                                     NumberOfRows="{Binding NumberOfRows}"
                                                      Margin="0,6,0,0"
                                                      ParameterCollections="{Binding SelectedChannelParameters}"
-                                                     SelectedChannel="{Binding SelectedChannel}" />
+                                                     SelectedChannel="{Binding SelectedChannel}"
+                                                     SelectedPage="{Binding PluginDetailsSelectedPage}" />
             </Grid>
         </SplitView.Pane>
 

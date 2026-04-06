@@ -98,7 +98,7 @@ void controllers::Channel::set_parameter_for_selected_section(
                                          parameter->name);
 
   const auto new_value =
-      parameter->max + value * (parameter->max - parameter->min);
+      parameter->min + value * (parameter->max - parameter->min);
 
   logging::log<logging::LogLevel::Debug>(
       "Setting section {}, parameter {} to value {}",
@@ -145,8 +145,7 @@ void controllers::Channel::add_parameter(const size_t plugin_id, char *name,
   }
 
   auto &plugin = _plugins[plugin_id];
-  for (size_t parameter_id = 0; parameter_id < _plugins.size();
-       parameter_id++) {
+  for (size_t parameter_id = 0; parameter_id < plugin.size(); parameter_id++) {
     if (!plugin[parameter_id]) {
       logging::log<logging::LogLevel::Debug>(
           "Setting parameter {} for plugin {} to {}", parameter_id, plugin_id,
@@ -162,6 +161,6 @@ void controllers::Channel::add_parameter(const size_t plugin_id, char *name,
     }
   }
 
-  logging::log<logging::LogLevel::Debug>("Couldn't find parameter space for {}",
-                                         name);
+  logging::log<logging::LogLevel::Debug>(
+      "Couldn't find parameter space for {}, plugin {}", name, plugin_id);
 }

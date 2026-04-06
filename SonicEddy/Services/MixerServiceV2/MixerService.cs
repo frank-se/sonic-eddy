@@ -300,6 +300,11 @@ public class MixerService : IMixerService, IDisposable
     public event Action<List<InputChannel>>? InputsChanged;
     public event Action<List<OutputChannel>>? OutputsChanged;
 
+    public int NumberOfChannelsPerLayer { get; } = 8;
+    public int NumberOfChannels { get; } = 16;
+    public int NumberOfGroupChannelsPerLayer { get; } = 4;
+    public int NumberOfGroupChannels { get; } = 8;
+
     private readonly Queue<Node> _pendingAddedNodes = [];
 
     private void OnNodeAdded(Node node)

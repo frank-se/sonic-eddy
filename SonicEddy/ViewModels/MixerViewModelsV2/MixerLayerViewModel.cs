@@ -7,6 +7,7 @@ using System.Reactive.Disposables.Fluent;
 using System.Windows.Input;
 using DynamicData;
 using Fr.Pw.Midi.PInvoke;
+using Microsoft.Extensions.Logging;
 using ReactiveUI;
 using SonicEddy.Controls.MixerControls;
 using SonicEddy.Services.Midi;
@@ -24,6 +25,7 @@ public class MixerLayerViewModel : ViewModelBase,
     private readonly IMixerViewModelService _mixerViewModelService;
     private readonly IMidiControllerService _midiControllerService;
     private readonly CompositeDisposable _disposables = new();
+    private readonly ILogger<MixerLayerViewModel> _logger;
 
     public MixerLayerViewModel(
         IMixerService mixerService,
@@ -32,8 +34,11 @@ public class MixerLayerViewModel : ViewModelBase,
         ObservableCollection<IRoutingTarget> audioToRoutingTargetsChannelStrips,
         ObservableCollection<IRoutingTarget> audioToRoutingTargetsGroupChannels,
         ObservableCollection<IRoutingTarget> audioToRoutingTargetsMasterChannel,
-        IMidiControllerService midiControllerService, ulong layerId)
+        IMidiControllerService midiControllerService, ulong layerId,
+        ILogger<MixerLayerViewModel> logger)
     {
+        var internalChange = false;
+
         ICommand selectChannelCommand =
             ReactiveCommand.Create<IChannel>(channel =>
             {
@@ -50,10 +55,10 @@ public class MixerLayerViewModel : ViewModelBase,
                     return;
                 }
 
-                channel.IsSelected = true;
-                SelectedChannel?.IsSelected = false;
-                SelectedChannel = channel;
-                SelectedChannelParameters = channel.Parameters ?? [];
+                internalChange = true;
+                ClearSelectedChannel();
+                SetSelectedChannel(channel);
+                internalChange = false;
             });
 
         SelectChannelCommand = selectChannelCommand;
@@ -65,9 +70,12 @@ public class MixerLayerViewModel : ViewModelBase,
         AudioToRoutingTargetsGroupChannels = audioToRoutingTargetsGroupChannels;
         AudioToRoutingTargetsMasterChannel = audioToRoutingTargetsMasterChannel;
         _midiControllerService = midiControllerService;
+        _logger = logger;
 
         this.WhenAnyValue(x => x.SelectedChannel).Subscribe(selectedChannel =>
         {
+            if (!internalChange) return;
+
             switch (selectedChannel)
             {
                 case IChannelStrip channelStrip:
@@ -83,6 +91,208 @@ public class MixerLayerViewModel : ViewModelBase,
                     break;
             }
         }).DisposeWith(_disposables);
+    }
+
+    public void ClearSelectedChannel()
+    {
+        SelectedChannel?.IsSelected = false;
+        SelectedChannel = null;
+        SelectedChannelParameters = [];
+    }
+
+    public void SetSelectedChannel(IChannel channel)
+    {
+        channel.IsSelected = true;
+        SelectedChannel = channel;
+        SelectedChannelParameters = channel.Parameters ?? [];
+    }
+
+    public void SetSelectedChannel(int channelId)
+    {
+        if (ChannelStrips is null)
+        {
+            _logger.LogError("Channel Strips list is null");
+
+            return;
+        }
+
+        if (channelId >= (ChannelStrips?.Count ?? 0))
+        {
+            _logger.LogError("Channel {ChannelId} out of bounds", channelId);
+
+            return;
+        }
+
+        var channel = ChannelStrips![channelId];
+        SetSelectedChannel(channel);
+    }
+
+    public void SetSelectedGroupChannel(int channelId)
+    {
+        if (GroupChannels is null)
+        {
+            _logger.LogError("Group channels list is null");
+
+            return;
+        }
+
+        if (channelId >= (GroupChannels?.Count ?? 0))
+        {
+            _logger.LogError("Group channel {ChannelId} out of bounds",
+                channelId);
+
+            return;
+        }
+
+        var channel = GroupChannels![channelId];
+        SetSelectedChannel(channel);
+    }
+
+    public int NumberOfRows { get; } = 6;
+
+    public int NumberOfColumns { get; } = 4;
+
+    public void ActivateNextPluginPage()
+    {
+        _logger.LogTrace("ActivateNextPluginPage");
+
+        if (SelectedChannel is null)
+        {
+            _logger.LogTrace(
+                "SelectedChannel is null, ignoring previous plugin page navigation");
+            return;
+        }
+
+        if (PluginDetailsSelectedPage is null)
+        {
+            _logger.LogTrace("No current plugin page selected, ignoring.");
+            return;
+        }
+
+        var currentPluginName = PluginDetailsSelectedPage.Name;
+        var selectedPlugin =
+            SelectedChannel.Parameters?.FirstOrDefault(p =>
+                p.Name == currentPluginName);
+
+        if (selectedPlugin is null)
+        {
+            if (_logger.IsEnabled(LogLevel.Trace))
+                _logger.LogTrace("Plugin {Name} could not be found",
+                    currentPluginName);
+            return;
+        }
+
+        var numberOfPagesForCurrentPlugin =
+            selectedPlugin.Parameters.Count / (NumberOfColumns * NumberOfRows);
+
+        var nextPageNumber = PluginDetailsSelectedPage.PageNumber + 1;
+        if (nextPageNumber < numberOfPagesForCurrentPlugin)
+        {
+            PluginDetailsSelectedPage = PluginDetailsSelectedPage with
+            {
+                PageNumber = nextPageNumber
+            };
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+                _logger.LogDebug(
+                    "Set selected page number {PageNumber} for plugin {PluginName}",
+                    nextPageNumber, currentPluginName);
+
+            return;
+        }
+
+        var currentPluginIndex =
+            SelectedChannel.Parameters?.IndexOf(selectedPlugin);
+
+        if (currentPluginIndex is null)
+        {
+            _logger.LogError("Couldn't find plugin index");
+            return;
+        }
+
+        var nextPluginIndex = currentPluginIndex + 1;
+
+        if (nextPluginIndex >= SelectedChannel?.Parameters?.Count)
+        {
+            if (_logger.IsEnabled(LogLevel.Trace))
+                _logger.LogTrace(
+                    "Next plugin index {NextPluginIndex} would be past the end, ignoring",
+                    nextPluginIndex);
+
+            return;
+        }
+
+        var nextSelectedPlugin =
+            SelectedChannel!.Parameters![nextPluginIndex.Value];
+
+        PluginDetailsSelectedPage = new(nextSelectedPlugin.Name, 0);
+    }
+
+    public void ActivatePreviousPluginPage()
+    {
+        _logger.LogTrace("ActivatePreviousPluginPage");
+
+        if (SelectedChannel is null)
+        {
+            _logger.LogTrace(
+                "SelectedChannel is null, ignoring previous plugin page navigation");
+            return;
+        }
+
+        if (PluginDetailsSelectedPage is null)
+        {
+            _logger.LogTrace("No current plugin page selected, ignoring.");
+            return;
+        }
+
+        var currentPluginName = PluginDetailsSelectedPage.Name;
+        var selectedPlugin =
+            SelectedChannel.Parameters?.FirstOrDefault(p =>
+                p.Name == currentPluginName);
+
+        if (selectedPlugin is null)
+        {
+            if (_logger.IsEnabled(LogLevel.Trace))
+                _logger.LogTrace("Plugin {Name} could not be found",
+                    currentPluginName);
+            return;
+        }
+
+        if (PluginDetailsSelectedPage.PageNumber > 0)
+        {
+            var nextPageNumber = PluginDetailsSelectedPage.PageNumber - 1;
+            PluginDetailsSelectedPage = PluginDetailsSelectedPage with
+            {
+                PageNumber = nextPageNumber
+            };
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+                _logger.LogDebug(
+                    "Set selected page number {PageNumber} for plugin {PluginName}",
+                    nextPageNumber, currentPluginName);
+
+            return;
+        }
+
+        var currentPluginIndex =
+            SelectedChannel.Parameters?.IndexOf(selectedPlugin);
+
+        if (currentPluginIndex is null)
+        {
+            _logger.LogError("Couldn't find plugin index");
+            return;
+        }
+
+        if (currentPluginIndex == 0)
+        {
+            _logger.LogError("Already leftmost page, ignoring");
+            return;
+        }
+
+        var nextPluginIndex = currentPluginIndex - 1;
+        var nextPlugin = SelectedChannel!.Parameters![nextPluginIndex.Value];
+
+        PluginDetailsSelectedPage = new(nextPlugin.Name, 0);
     }
 
     public void SetupEvents()
@@ -226,6 +436,12 @@ public class MixerLayerViewModel : ViewModelBase,
         get;
         set => this.RaiseAndSetIfChanged(ref field, value);
     } = [];
+
+    public PluginPageSelectorSelectedPage? PluginDetailsSelectedPage
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    }
 
     public ViewModelActivator Activator { get; } = new();
 

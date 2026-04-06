@@ -65,7 +65,7 @@ public static class StorageConversionExtensions
             edges.Add(new(source.Id, target.Id));
         }
 
-        return new(viewModel.Id, viewModel.Name, nodes, edges);
+        return new(viewModel.Id, viewModel.Name, nodes, edges, null);
     }
 
     private static Guid
