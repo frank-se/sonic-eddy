@@ -509,7 +509,8 @@ void controllers::MidiMix::set_channel_playback_node(const size_t channel_id,
 
   auto &channel = _channels[channel_id];
 
-  auto node = _registry.get_node_by_object_id(object_id);
+  const auto node = _registry.get_node_by_object_id(
+      object_id, ChannelType::CHANNEL, channel_id);
 
   if (!node) {
     logging::log<logging::LogLevel::Error>("Couldn't get node for object id {}",
@@ -533,7 +534,8 @@ void controllers::MidiMix::set_channel_filter_node(size_t channel_id,
 
   auto &channel = _channels[channel_id];
 
-  auto node = _registry.get_node_by_object_id(object_id);
+  const auto node = _registry.get_node_by_object_id(
+      object_id, ChannelType::CHANNEL, channel_id);
 
   if (!node) {
     logging::log<logging::LogLevel::Error>("Couldn't get node for object id {}",
@@ -655,7 +657,8 @@ void controllers::MidiMix::set_channel_node(const ChannelType channel_type,
     return;
   }
 
-  const auto node = _registry.get_node_by_object_id(object_id);
+  const auto node = _registry.get_node_by_object_id(
+      object_id, ChannelType::CHANNEL, channel_id);
 
   if (!node) {
     logging::log<logging::LogLevel::Error>("Couldn't find node {}", object_id);
@@ -678,7 +681,8 @@ void controllers::MidiMix::set_channel_filter_node(
     return;
   }
 
-  const auto node = _registry.get_node_by_object_id(object_id);
+  const auto node = _registry.get_node_by_object_id(
+      object_id, ChannelType::CHANNEL, channel_id);
 
   if (!node) {
     logging::log<logging::LogLevel::Error>("Couldn't find node {}", object_id);
@@ -708,7 +712,8 @@ void controllers::MidiMix::set_channel_send_node(const ChannelType channel_type,
     return;
   }
 
-  const auto node = _registry.get_node_by_object_id(object_id);
+  const auto node = _registry.get_node_by_object_id(
+      object_id, ChannelType::CHANNEL, channel_id);
 
   if (!node) {
     logging::log<logging::LogLevel::Error>("Couldn't find node {}", object_id);
@@ -782,7 +787,8 @@ void controllers::MidiMix::set_master_channel_node(const size_t layer_id,
     return;
   }
 
-  const auto node = _registry.get_node_by_object_id(object_id);
+  const auto node = _registry.get_node_by_object_id(
+      object_id, ChannelType::CHANNEL, layer_id);
 
   if (!node) {
     logging::log<logging::LogLevel::Error>("Couldn't find node {}", object_id);

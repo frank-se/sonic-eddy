@@ -26,7 +26,8 @@ void midi::Processor::start_pipewire_thread() {
 
   std::binary_semaphore semaphore{0};
   _pipewire_thread = std::thread([this, &semaphore]() {
-    _pipewire = std::make_unique<pipewire::Pipewire>();
+    _pipewire =
+        std::make_unique<pipewire::Pipewire>(_controller_update_callback);
     semaphore.release();
     _pipewire->run();
   });
@@ -119,7 +120,8 @@ std::optional<size_t> midi::Processor::create_midi_mix_port(
                                               const size_t section_id) {
         filter_params_section_select_callback(controllers::ChannelType::CHANNEL,
                                               channel_id, section_id);
-      });
+      },
+      _controller_update_callback);
 
   _controllers.push_back(midi_mix);
 
@@ -242,7 +244,8 @@ std::optional<size_t> midi::Processor::create_mm_1_port(
       [filter_params_section_move_pages_left_callback](
           const uint64_t step_count) {
         filter_params_section_move_pages_left_callback(step_count);
-      });
+  },
+  _controller_update_callback);
 
   _controllers.push_back(cmd_mm_1);
 

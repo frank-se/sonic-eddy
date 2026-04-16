@@ -6,7 +6,9 @@
 
 std::shared_ptr<midi::Processor> g_processor = nullptr;
 
-void init() { g_processor = std::make_shared<midi::Processor>(); }
+void init(MidiControlChangeUpdateCallbackPtr callback) {
+  g_processor = std::make_shared<midi::Processor>(callback);
+}
 
 void start() { g_processor->start(); }
 

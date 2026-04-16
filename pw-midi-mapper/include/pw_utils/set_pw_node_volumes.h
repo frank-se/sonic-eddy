@@ -24,7 +24,7 @@ inline void set_pw_node_volume(pw_main_loop *loop, pw_node *node,
       pw_main_loop_get_loop(loop),
       [](spa_loop *loop, bool async, std::uint32_t seq, const void *data,
          size_t size, void *user_data) {
-        auto set_props_data = static_cast<pw_utils::SetParamsData *>(user_data);
+        auto set_props_data = static_cast<SetParamsData *>(user_data);
 
         logging::log<logging::LogLevel::Debug>(
             "Calling pw_node_set_param in pipewire loop");

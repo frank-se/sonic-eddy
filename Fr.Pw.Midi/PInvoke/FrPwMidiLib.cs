@@ -29,12 +29,18 @@ internal delegate void FilterParamsSectionMovePagesRightCallback(
 internal delegate void FilterParamsSectionMovePagesLeftCallback(
     ulong step_count);
 
+[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+internal delegate void MidiControlChangeUpdateCallback(
+    ChannelType channel_type, ulong channel_id, ulong object_id,
+    IntPtr parameter_name, float normalized_controller_value,
+    float normalized_known_value, bool catching_up);
+
 internal static partial class FrPwMidiLib
 {
     private const string LIBRARY_NAME = "libfrmidimapper.so.0.0.4";
 
     [LibraryImport(LIBRARY_NAME, EntryPoint = "init")]
-    private static partial void InitC();
+    private static partial void InitC(MidiControlChangeUpdateCallback callback);
 
     [LibraryImport(LIBRARY_NAME, EntryPoint = "start")]
     private static partial void StartC();
@@ -67,7 +73,8 @@ internal static partial class FrPwMidiLib
     [LibraryImport(LIBRARY_NAME, EntryPoint = "create_fader_fox_pc4_port",
         StringMarshalling = StringMarshalling.Utf8)]
     private static partial ulong CreateFaderFoxPc4PortC(string pmx_purpose,
-        string pmx_tag);
+        string pmx_tag,
+        MidiControlChangeUpdateCallback midi_control_change_update_callback);
 
     [LibraryImport(LIBRARY_NAME, EntryPoint = "set_selected_plugin_page")]
     private static partial void SetSelectedPluginPageC(ulong plugin_id,
@@ -79,7 +86,7 @@ internal static partial class FrPwMidiLib
 
     [LibraryImport(LIBRARY_NAME, EntryPoint = "clear_selected_channel")]
     private static partial void ClearSelectedChannelC();
-    
+
     [LibraryImport(LIBRARY_NAME, EntryPoint = "set_selected_layer")]
     private static partial void SetSelectedLayerC(ulong layer_id);
 
@@ -109,7 +116,9 @@ internal static partial class FrPwMidiLib
         ulong channel_id,
         ulong plugin_id, string name, float min, float max);
 
-    internal static void Init() => InitC();
+    internal static void Init(MidiControlChangeUpdateCallback callback) =>
+        InitC(callback);
+
     internal static void Start() => StartC();
     internal static void Stop() => StopC();
 
@@ -134,14 +143,17 @@ internal static partial class FrPwMidiLib
         FilterParamsSectionMovePagesRightCallback
             filterParamsSectionMovePagesRightCallback,
         FilterParamsSectionMovePagesLeftCallback
-            filterParamsSectionMovePagesLeftCallback) => CreateMm1PortC(
-        PMX_PURPOSE, pmxTag, layerSelectCallback, channelSelectCallback,
-        dialSectionModeSelectCallback, filterParamsSectionSelectCallback,
-        filterParamsSectionMovePagesRightCallback,
-        filterParamsSectionMovePagesLeftCallback);
+            filterParamsSectionMovePagesLeftCallback) =>
+        CreateMm1PortC(
+            PMX_PURPOSE, pmxTag, layerSelectCallback, channelSelectCallback,
+            dialSectionModeSelectCallback, filterParamsSectionSelectCallback,
+            filterParamsSectionMovePagesRightCallback,
+            filterParamsSectionMovePagesLeftCallback);
 
-    internal static ulong CreateFaderFoxPc4Port(string pmxTag) =>
-        CreateFaderFoxPc4PortC(PMX_PURPOSE, pmxTag);
+    internal static ulong CreateFaderFoxPc4Port(string pmxTag,
+        MidiControlChangeUpdateCallback midiControlChangeUpdateCallback) =>
+        CreateFaderFoxPc4PortC(PMX_PURPOSE, pmxTag,
+            midiControlChangeUpdateCallback);
 
     internal static void
         SetSelectedPluginPage(ulong pluginId, ulong pageNumber) =>
@@ -151,7 +163,7 @@ internal static partial class FrPwMidiLib
         ulong channelId) => SetSelectedChannelC(channelType, channelId);
 
     internal static void ClearSelectedChannel() => ClearSelectedChannelC();
-    
+
     internal static void SetSelectedLayer(ulong layerId) =>
         SetSelectedLayerC(layerId);
 

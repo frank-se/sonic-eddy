@@ -18,7 +18,8 @@ public class MidiPortFactory : IMidiPortFactory, IDisposable
         FilterParamsSectionMovePagesRightCallback
             filterParamsSectionMovePagesRightCallback,
         FilterParamsSectionMovePagesLeftCallback
-            filterParamsSectionMovePagesLeftCallback)
+            filterParamsSectionMovePagesLeftCallback,
+        MidiControlChangeUpdateCallback midiControlChangeUpdateCallback)
     {
         nodeRegistry.Added += HandleNodeAddedEvent;
         _nodeRegistry = nodeRegistry;
@@ -33,21 +34,26 @@ public class MidiPortFactory : IMidiPortFactory, IDisposable
             filterParamsSectionMovePagesRightCallback;
         _filterParamsSectionMovePagesLeftCallback =
             filterParamsSectionMovePagesLeftCallback;
+        _midiControlChangeUpdateCallback = midiControlChangeUpdateCallback;
     }
 
-    private LayerSelectCallback _layerSelectCallback;
-    private ChannelSelectCallback _channelSelectCallback;
-    private DialSectionModeSelectCallback _dialSectionModeSelectCallback;
+    private readonly LayerSelectCallback _layerSelectCallback;
+    private readonly ChannelSelectCallback _channelSelectCallback;
 
-    private FilterParamsSectionSelectCallback
+    private readonly DialSectionModeSelectCallback
+        _dialSectionModeSelectCallback;
+
+    private readonly FilterParamsSectionSelectCallback
         _filterParamsSectionSelectCallback;
 
-    private FilterParamsSectionMovePagesRightCallback
+    private readonly FilterParamsSectionMovePagesRightCallback
         _filterParamsSectionMovePagesRightCallback;
 
-    private FilterParamsSectionMovePagesLeftCallback
+    private readonly FilterParamsSectionMovePagesLeftCallback
         _filterParamsSectionMovePagesLeftCallback;
 
+    private readonly MidiControlChangeUpdateCallback
+        _midiControlChangeUpdateCallback;
 
     private void HandleNodeAddedEvent(Node? node)
     {
@@ -173,7 +179,9 @@ public class MidiPortFactory : IMidiPortFactory, IDisposable
 
         var tag = GenerateTag();
 
-        var id = FrPwMidiLib.CreateFaderFoxPc4Port(tag);
+        var id =
+            FrPwMidiLib.CreateFaderFoxPc4Port(tag,
+                _midiControlChangeUpdateCallback);
 
         var pending =
             new PendingMidiPort(id, tag, new(), null, outputPort);

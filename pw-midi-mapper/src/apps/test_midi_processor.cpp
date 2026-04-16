@@ -44,8 +44,23 @@ void filter_params_move_left_callback(const uint64_t step_count) {
   std::cout << "step count: " << step_count << std::endl;
 }
 
+void midi_control_change_update_callback(
+    const controllers::ChannelType channel_type, const ulong channel_id,
+    const ulong object_serial, const char *parameter_name,
+    const float normalized_controller_value, const float normalized_known_value,
+    const bool catching_up) {
+  std::cout << "midi_control_change_update_callback" << std::endl;
+  std::cout << "channel type: " << channel_type << std::endl;
+  std::cout << "channel id: " << channel_id << std::endl;
+  std::cout << "object serial: " << object_serial << std::endl;
+  std::cout << "parameter name: " << parameter_name << std::endl;
+  std::cout << "controller value: " << normalized_controller_value << std::endl;
+  std::cout << "known value: " << normalized_known_value << std::endl;
+  std::cout << "catching up: " << catching_up << std::endl;
+}
+
 int main(int argc, char **argv) {
-  init();
+  init(midi_control_change_update_callback);
   start();
 
   [[maybe_unused]] auto mm_1_port_id = create_mm_1_port(

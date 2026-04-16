@@ -1,4 +1,6 @@
 #pragma once
+#include "CatchUpHandler.h"
+
 #include <atomic>
 #include <string>
 
@@ -9,6 +11,8 @@ struct Parameter {
   float value;
   float max;
   float min;
+  std::shared_ptr<CatchUpHandler> catch_up_handler =
+      std::make_shared<CatchUpHandler>();
 };
 
 } // namespace controllers

@@ -21,9 +21,28 @@ public:
       LayerSelectCallback layer_select_callback,
       ChannelSelectCallback channel_select_callback,
       DialSectionModeCallback dial_section_mode_select_callback,
-      FilterParamsSectionSelectCallback filter_params_section_select_callback)
+      FilterParamsSectionSelectCallback filter_params_section_select_callback,
+      const MidiControlChangeUpdateCallback &control_update_callback)
       : _registry(registry), _loop(loop),
         _feedback_channel(std::move(feedback_channel)),
+        _channels{
+            Channel(ChannelType::CHANNEL, 0, control_update_callback),
+            Channel(ChannelType::CHANNEL, 1, control_update_callback),
+            Channel(ChannelType::CHANNEL, 2, control_update_callback),
+            Channel(ChannelType::CHANNEL, 3, control_update_callback),
+            Channel(ChannelType::CHANNEL, 4, control_update_callback),
+            Channel(ChannelType::CHANNEL, 5, control_update_callback),
+            Channel(ChannelType::CHANNEL, 6, control_update_callback),
+            Channel(ChannelType::CHANNEL, 7, control_update_callback),
+            Channel(ChannelType::CHANNEL, 8, control_update_callback),
+            Channel(ChannelType::CHANNEL, 9, control_update_callback),
+            Channel(ChannelType::CHANNEL, 10, control_update_callback),
+            Channel(ChannelType::CHANNEL, 11, control_update_callback),
+            Channel(ChannelType::CHANNEL, 12, control_update_callback),
+            Channel(ChannelType::CHANNEL, 13, control_update_callback),
+            Channel(ChannelType::CHANNEL, 14, control_update_callback),
+            Channel(ChannelType::CHANNEL, 15, control_update_callback),
+        },
         _layer_select_callback(std::move(layer_select_callback)),
         _channel_select_callback(std::move(channel_select_callback)),
         _dial_section_mode_select_callback(
@@ -79,12 +98,7 @@ private:
    * We always have 16 channels, each assigned to a layer. The first 8 are
    * assigned to layer 0, and the second 8 are assigned to layer 1.
    */
-  std::array<Channel, 16> _channels{
-      Channel(0),  Channel(1),  Channel(2),  Channel(3),
-      Channel(4),  Channel(5),  Channel(6),  Channel(7),
-      Channel(8),  Channel(9),  Channel(10), Channel(11),
-      Channel(12), Channel(13), Channel(14), Channel(15),
-  };
+  std::array<Channel, 16> _channels;
 
   LayerSelectCallback _layer_select_callback;
   ChannelSelectCallback _channel_select_callback;

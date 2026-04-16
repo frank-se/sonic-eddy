@@ -26,9 +26,20 @@ public:
       FilterParamsSectionMovePagesRightCallback
           filter_params_pages_right_callback,
       FilterParamsSectionMovePagesLeftCallback
-          filter_params_pages_left_callback)
+          filter_params_pages_left_callback,
+      const MidiControlChangeUpdateCallback &control_update_callback)
       : _registry(registry), _loop(loop),
         _feedback_channel(std::move(feedback_channel)),
+        _channels{
+            Channel(ChannelType::GROUP_CHANNEL, 0, control_update_callback),
+            Channel(ChannelType::GROUP_CHANNEL, 1, control_update_callback),
+            Channel(ChannelType::GROUP_CHANNEL, 2, control_update_callback),
+            Channel(ChannelType::GROUP_CHANNEL, 3, control_update_callback),
+            Channel(ChannelType::GROUP_CHANNEL, 4, control_update_callback),
+            Channel(ChannelType::GROUP_CHANNEL, 5, control_update_callback),
+            Channel(ChannelType::GROUP_CHANNEL, 6, control_update_callback),
+            Channel(ChannelType::GROUP_CHANNEL, 7, control_update_callback),
+        },
         _layer_select_callback(std::move(layer_select_callback)),
         _channel_select_callback(std::move(channel_select_callback)),
         _dial_section_mode_callback(std::move(dial_section_mode_callback)),
@@ -96,10 +107,7 @@ private:
    * We always have 8 channels, each assigned to a layer. The first 4 are
    * assigned to layer 0, and the second 4 are assigned to layer 1.
    */
-  std::array<Channel, 8> _channels{
-      Channel(0), Channel(1), Channel(2), Channel(3),
-      Channel(4), Channel(5), Channel(6), Channel(7),
-  };
+  std::array<Channel, 8> _channels;
 
   LayerSelectCallback _layer_select_callback;
   ChannelSelectCallback _channel_select_callback;

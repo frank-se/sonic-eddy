@@ -2,8 +2,9 @@
 
 #include <algorithm>
 
-std::optional<registry::Node *>
-registry::Registry::get_node_by_object_id(const uint64_t object_id) {
+std::optional<registry::Node *> registry::Registry::get_node_by_object_id(
+    const uint64_t object_id, const controllers::ChannelType channel_type,
+    const uint64_t channel_id) {
   logging::log<logging::LogLevel::Trace>("Registry::get_node_by_object_id");
 
   auto lock = std::lock_guard(_nodes_mutex);
@@ -14,9 +15,9 @@ registry::Registry::get_node_by_object_id(const uint64_t object_id) {
   if (node_it != _nodes.end() && (*node_it)->object_id() == object_id)
     return node_it->get();
 
-  const BindNodeData bind_node_data{
-      .object_id = object_id,
-  };
+  const BindNodeData bind_node_data{.object_id = object_id,
+                                    .channel_type = channel_type,
+                                    .channel_id = channel_id};
 
   const auto result = pw_loop_invoke(
       pw_main_loop_get_loop(_loop),
@@ -25,7 +26,9 @@ registry::Registry::get_node_by_object_id(const uint64_t object_id) {
         const auto bind_node_data_local =
             static_cast<const BindNodeData *>(data);
         const auto registry = static_cast<Registry *>(user_data);
-        if (registry->_bind_node(bind_node_data_local->object_id)) {
+        if (registry->_bind_node(bind_node_data_local->object_id,
+                                 bind_node_data_local->channel_type,
+                                 bind_node_data_local->channel_id)) {
           return 0;
         } else {
           return -1;
@@ -48,7 +51,9 @@ registry::Registry::get_node_by_object_id(const uint64_t object_id) {
   return std::nullopt;
 }
 
-bool registry::Registry::_bind_node(const uint64_t object_id) {
+bool registry::Registry::_bind_node(const uint64_t object_id,
+                                    const controllers::ChannelType channel_type,
+                                    const uint64_t channel_id) {
   logging::log<logging::LogLevel::Trace>("Registry::_bind_node");
 
   auto pw_node = static_cast<struct pw_node *>(pw_registry_bind(
@@ -63,7 +68,9 @@ bool registry::Registry::_bind_node(const uint64_t object_id) {
 
   logging::log<logging::LogLevel::Debug>("Bound node with object id {}",
                                          object_id);
-  _nodes.emplace_back(std::make_unique<Node>(_loop, object_id, pw_node));
+  _nodes.emplace_back(std::make_unique<Node>(_loop, object_id, pw_node,
+                                             _controller_update_callback,
+                                             channel_type, channel_id));
 
   std::ranges::sort(_nodes, {}, &Node::object_id);
 

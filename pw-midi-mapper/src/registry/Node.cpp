@@ -2,9 +2,22 @@
 
 #include "pw_utils/set_pw_node_volumes.h"
 
-void registry::Node::set_channel_volumes(
-    const std::array<float, 2> volumes) const {
+#include <ranges>
+
+void registry::Node::set_channel_volumes(const std::array<float, 2> volumes) {
   logging::log<logging::LogLevel::Trace>("Node::set_channel_volumes");
+  if (!_volume_catch_up_handler.should_update(volumes[0], _left)) {
+
+    logging::log<logging::LogLevel::Debug>(
+        "Node {} needs to catch up from {} to {}", _object_id, volumes[0],
+        _left.load());
+
+    _controller_update_callback(_channel_type, _channel_id, _object_id,
+                                "send_channel_volumes", volumes[0],
+                                _left.load(), false);
+
+    return;
+  }
 
   pw_utils::set_pw_node_volume(_loop, _node, volumes);
 }
@@ -30,15 +43,32 @@ std::optional<audio::pan::PanAndVolume> registry::Node::pan_and_volume() const {
   return audio::pan::get_pan_and_volume_from_gains(*channel_volumes());
 }
 
-void registry::Node::set_volume(const double value) const {
+void registry::Node::set_volume(const double value) {
   logging::log<logging::LogLevel::Trace>("Node::set_volume");
 
-  if (value == 0) {
-    set_channel_volumes({0.0f, 0.0f});
+  const auto current_pan_and_volume = pan_and_volume();
+
+  if (!_volume_catch_up_handler.should_update(static_cast<float>(value),
+                                              current_pan_and_volume->volume)) {
+
+    logging::log<logging::LogLevel::Debug>(
+        "Node {} needs to catch up from {} to {}", _object_id, value,
+        current_pan_and_volume->volume);
+
+    logging::log<logging::LogLevel::Debug>(
+        "Calling controller update callback");
+
+    _controller_update_callback(_channel_type, _channel_id, _object_id,
+                                "channel_volumes", static_cast<float>(value),
+                                current_pan_and_volume->volume, true);
+
     return;
   }
 
-  const auto current_pan_and_volume = pan_and_volume();
+  if (value == 0) {
+    pw_utils::set_pw_node_volume(_loop, _node, {0.0f, 0.0f});
+    return;
+  }
 
   if (!current_pan_and_volume) {
     logging::log<logging::LogLevel::Error>("Couldn't calculate pan and volume");
@@ -53,7 +83,13 @@ void registry::Node::set_volume(const double value) const {
       "Calculated left {} and right {} gain for node {}", gains[0], gains[1],
       _object_id);
 
-  set_channel_volumes(gains);
+  pw_utils::set_pw_node_volume(_loop, _node, gains);
+
+  logging::log<logging::LogLevel::Debug>("Calling controller update callback");
+
+  _controller_update_callback(_channel_type, _channel_id, _object_id,
+                              "channel_volumes", static_cast<float>(value),
+                              current_pan_and_volume->volume, false);
 }
 
 void registry::Node::subscribe_to_param_updates() {
@@ -70,6 +106,11 @@ void registry::Node::subscribe_to_param_updates() {
   pw_node_enum_params(_node, 0, PW_ID_ANY, 0, 0, nullptr);
 
   _subscribed_to_param_updates = true;
+}
+
+spa_pod *get_pod_body(const spa_pod *source_pod) {
+  return reinterpret_cast<spa_pod *>(reinterpret_cast<uintptr_t>(source_pod) +
+                                     static_cast<ptrdiff_t>(sizeof(spa_pod)));
 }
 
 void registry::Node::on_channel_playback_node_params_changed(
@@ -119,5 +160,73 @@ void registry::Node::on_channel_playback_node_params_changed(
 
     node->_left = channel_volumes[0];
     node->_right = channel_volumes[1];
+
+    if (node->_plugins == nullptr) {
+      logging::log<logging::LogLevel::Debug>(
+          "Parameters array ptr not set, ignoring");
+
+      return;
+    }
+
+    const auto params_pod = spa_pod_find_prop(pod, nullptr, SPA_PROP_params);
+
+    auto pod_body_pointer = get_pod_body(&params_pod->value);
+
+    spa_pod *child = nullptr;
+    size_t child_index = 0;
+
+    controllers::Parameter *found_parameter = nullptr;
+    SPA_POD_FOREACH(pod_body_pointer, SPA_POD_BODY_SIZE(params_pod), child) {
+      if (child_index % 2 == 0) {
+        const char *name_c = nullptr;
+        spa_pod_get_string(child, &name_c);
+
+        if (name_c == nullptr) {
+          logging::log<logging::LogLevel::Warning>(
+              "Spa pod struct entry without name");
+          child_index++;
+          continue;
+        }
+
+        std::string_view name(name_c);
+
+        if (name.find_first_of(':') == std::string::npos) {
+          logging::log<logging::LogLevel::Debug>(
+              "Parameter {} is not filter chain param, ignoring", name);
+
+          child_index++;
+          continue;
+        }
+
+        auto flattened_parameters = *node->_plugins | std::views::join;
+
+        auto parameter = std::ranges::find_if(flattened_parameters,
+                                              [&name](auto &parameter) {
+                                                if (!parameter)
+                                                  return false;
+                                                return parameter->name == name;
+                                              });
+
+        if (parameter == flattened_parameters.end()) {
+          logging::log<logging::LogLevel::Debug>(
+              "Parameter {} not found in parameters array, ignoring", name);
+
+          child_index++;
+          continue;
+        }
+
+        found_parameter = &parameter->value();
+      } else if (found_parameter != nullptr) {
+        spa_pod_get_float(child, &found_parameter->value);
+
+        logging::log<logging::LogLevel::Debug>("Updated parameter {} to {}",
+                                               found_parameter->name,
+                                               found_parameter->value);
+
+        found_parameter = nullptr;
+      }
+
+      child_index++;
+    }
   }
 }

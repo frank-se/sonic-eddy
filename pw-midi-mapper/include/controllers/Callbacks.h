@@ -1,7 +1,9 @@
 #pragma once
 
-#include "Channel.h"
+#include "DialMode.h"
+#include "ChannelType.h"
 
+#include <cstdint>
 #include <functional>
 
 namespace controllers {
@@ -21,5 +23,10 @@ using FilterParamsSectionMovePagesRightCallback =
 
 using FilterParamsSectionMovePagesLeftCallback =
     std::function<void(uint64_t step_count)>;
+
+using MidiControlChangeUpdateCallback = std::function<void(
+    ChannelType channel_type, ulong channel_id, ulong object_id,
+    const char *parameter_name, float normalized_controller_value,
+    float normalized_known_value, bool catching_up)>;
 
 } // namespace controllers

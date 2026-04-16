@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Fr.Pw.Midi.Mappings;
 using Fr.Pw.Midi.MidiPorts;
 using Fr.Pw.Midi.MidiPorts.Implementation;
@@ -24,6 +25,15 @@ public record FilterParamsSectionSelectEventArgs(
 
 public record FilterParamsSectionMovePagesEventArgs(ulong StepCount);
 
+public record MidiControlChangeUpdateEventArgs(
+    ChannelType ChannelType,
+    ulong ChannelId,
+    ulong ObjectId,
+    string ParameterNamePtr,
+    float NormalizedControllerValue,
+    float NormalizedKnownValue,
+    bool CatchingUp);
+
 public static class FrPwMidi
 {
     public static IMidiPortRegistry? MidiPortRegistry { get; private set; }
@@ -39,9 +49,10 @@ public static class FrPwMidi
         MidiPortFactory = new MidiPortFactory(nodeRegistry, midiPortRegistry,
             linkFactory, portRegistry, OnLayerSelect, OnChannelSelect,
             OnDialSectionModeSelect, OnFilterParamsSectionSelect,
-            OnFilterParamsSectionMoveRight, OnFilterParamsSectionMoveLeft);
+            OnFilterParamsSectionMoveRight, OnFilterParamsSectionMoveLeft,
+            OnMidiControlChangeUpdateCallback);
 
-        FrPwMidiLib.Init();
+        FrPwMidiLib.Init(OnMidiControlChangeUpdateCallback);
         FrPwMidiLib.Start();
     }
 
@@ -60,6 +71,9 @@ public static class FrPwMidi
     public static event Action<FilterParamsSectionMovePagesEventArgs>?
         FilterParamsSectionMovedLeft;
 
+    public static event Action<MidiControlChangeUpdateEventArgs>?
+        MidiControlChangeUpdate;
+
     public static void
         SetSelectedPluginPage(ulong pluginId, ulong pageNumber) =>
         FrPwMidiLib.SetSelectedPluginPage(pluginId, pageNumber);
@@ -70,7 +84,7 @@ public static class FrPwMidi
 
     public static void ClearSelectedChannel() =>
         FrPwMidiLib.ClearSelectedChannel();
-    
+
     public static void SetSelectedLayer(ulong layerId) =>
         FrPwMidiLib.SetSelectedLayer(layerId);
 
@@ -133,5 +147,19 @@ public static class FrPwMidi
     private static void OnFilterParamsSectionMoveLeft(ulong stepCount)
     {
         FilterParamsSectionMovedLeft?.Invoke(new(stepCount));
+    }
+
+    private static void OnMidiControlChangeUpdateCallback(
+        ChannelType channelType, ulong channelId, ulong objectId,
+        IntPtr parameterNamePtr, float normalizedControllerValue,
+        float normalizedKnownValue, bool catchingUp)
+    {
+        var parameterName = parameterNamePtr == IntPtr.Zero
+            ? string.Empty
+            : Marshal.PtrToStringUTF8(parameterNamePtr) ?? string.Empty;
+
+        MidiControlChangeUpdate?.Invoke(new(channelType, channelId, objectId,
+            parameterName, normalizedControllerValue, normalizedKnownValue,
+            catchingUp));
     }
 }

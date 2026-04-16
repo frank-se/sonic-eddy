@@ -591,7 +591,8 @@ void controllers::CmdMm1::set_channel_node(const ChannelType channel_type,
     return;
   }
 
-  const auto node = _registry.get_node_by_object_id(object_id);
+  const auto node = _registry.get_node_by_object_id(
+      object_id, ChannelType::GROUP_CHANNEL, channel_id);
 
   if (!node) {
     logging::log<logging::LogLevel::Error>("Couldn't find node {}", object_id);
@@ -614,7 +615,8 @@ void controllers::CmdMm1::set_channel_filter_node(
     return;
   }
 
-  const auto node = _registry.get_node_by_object_id(object_id);
+  const auto node = _registry.get_node_by_object_id(
+      object_id, ChannelType::GROUP_CHANNEL, channel_id);
 
   if (!node) {
     logging::log<logging::LogLevel::Error>("Couldn't find node {}", object_id);
@@ -644,7 +646,8 @@ void controllers::CmdMm1::set_channel_send_node(const ChannelType channel_type,
     return;
   }
 
-  const auto node = _registry.get_node_by_object_id(object_id);
+  const auto node = _registry.get_node_by_object_id(
+      object_id, ChannelType::GROUP_CHANNEL, channel_id);
 
   if (!node) {
     logging::log<logging::LogLevel::Error>("Couldn't find node {}", object_id);

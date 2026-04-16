@@ -29,7 +29,8 @@ using ControllerPtr = std::shared_ptr<::controllers::IController>;
 
 class Processor {
 public:
-  explicit Processor() = default;
+  explicit Processor(controllers::MidiControlChangeUpdateCallback callback)
+      : _controller_update_callback(std::move(callback)) {};
 
   std::optional<size_t> create_midi_mix_port(
       const char *pmx_purpose, const char *pmx_tag,
@@ -89,6 +90,8 @@ public:
                             float min, float max);
 
 private:
+  controllers::MidiControlChangeUpdateCallback _controller_update_callback;
+
   std::mutex _controllers_mutex;
   std::vector<ControllerPtr> _controllers{};
 

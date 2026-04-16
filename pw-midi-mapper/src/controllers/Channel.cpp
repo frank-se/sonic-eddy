@@ -39,7 +39,8 @@ uint8_t controllers::Channel::selected_filter_params_section() const {
   return _selected_filter_params_section;
 }
 
-void controllers::Channel::set_volume(const double value) const {
+void controllers::Channel::set_volume(
+    const double normalized_controller_value) const {
   logging::log<logging::LogLevel::Trace>("Channel::set_volume");
 
   if (_playback_node == nullptr) {
@@ -47,7 +48,7 @@ void controllers::Channel::set_volume(const double value) const {
     return;
   }
 
-  _playback_node->set_volume(value);
+  _playback_node->set_volume(normalized_controller_value);
 }
 
 void controllers::Channel::set_send_trim(size_t send_id, double value) const {
@@ -71,7 +72,7 @@ void controllers::Channel::set_send_trim(size_t send_id, double value) const {
 }
 
 void controllers::Channel::set_parameter_for_selected_section(
-    size_t parameter_id, const double value) const {
+    size_t parameter_id, const double normalized_controller_value) const {
   logging::log<logging::LogLevel::Trace>(
       "Channel::set_parameter_for_selected_section");
 
@@ -97,14 +98,38 @@ void controllers::Channel::set_parameter_for_selected_section(
   logging::log<logging::LogLevel::Debug>("Processing parameter {}",
                                          parameter->name);
 
-  const auto new_value =
-      parameter->min + value * (parameter->max - parameter->min);
+  const auto normalized_current_parameter_value =
+      (parameter->value - parameter->min) / (parameter->max - parameter->min);
+
+  const auto new_value = parameter->min + normalized_controller_value *
+                                              (parameter->max - parameter->min);
+
+  if (!parameter->catch_up_handler->should_update(
+          static_cast<float>(normalized_controller_value),
+          normalized_current_parameter_value)) {
+
+    logging::log<logging::LogLevel::Debug>(
+        "Parameter {} for channel {} needs to catch up from {} to {}",
+        parameter->name, _channel_id, new_value, parameter->value);
+
+    _controller_update_callback(
+        _channel_type, _channel_id, _filter_node->object_id(),
+        parameter->name.c_str(), static_cast<float>(new_value),
+        normalized_current_parameter_value, true);
+
+    return;
+  }
 
   logging::log<logging::LogLevel::Debug>(
       "Setting section {}, parameter {} to value {}",
       _selected_filter_params_section.load(), parameter_id, new_value);
 
-  _filter_node->set_param(parameter->name, new_value);
+  _filter_node->set_param(parameter->name, static_cast<float>(new_value));
+
+  _controller_update_callback(
+      _channel_type, _channel_id, _filter_node->object_id(),
+      parameter->name.c_str(), static_cast<float>(new_value),
+      normalized_current_parameter_value, false);
 }
 
 void controllers::Channel::set_send_node(size_t send_id, registry::Node *node) {
@@ -157,6 +182,7 @@ void controllers::Channel::add_parameter(const size_t plugin_id, char *name,
           .max = max,
           .min = min,
       };
+
       return;
     }
   }

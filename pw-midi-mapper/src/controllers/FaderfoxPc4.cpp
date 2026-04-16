@@ -240,7 +240,8 @@ void controllers::FaderfoxPc4::set_channel_filter_node(ChannelType channel_type,
     return;
   }
 
-  const auto node = _registry.get_node_by_object_id(object_id);
+  const auto node =
+      _registry.get_node_by_object_id(object_id, channel_type, channel_id);
 
   if (!node) {
     logging::log<logging::LogLevel::Error>("Couldn't find node {}", object_id);

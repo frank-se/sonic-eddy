@@ -8,7 +8,10 @@ namespace pipewire {
 
 class Pipewire {
 public:
-  Pipewire() { setup_pipewire(); };
+  explicit Pipewire(
+      const controllers::MidiControlChangeUpdateCallback &callback) {
+    setup_pipewire(callback);
+  };
 
   ~Pipewire() {
     _registry.reset();
@@ -49,7 +52,7 @@ private:
 
   static void do_quit(void *user_data, int signal_number);
 
-  void setup_pipewire();
+  void setup_pipewire(controllers::MidiControlChangeUpdateCallback callback);
 };
 
 } // namespace pipewire
