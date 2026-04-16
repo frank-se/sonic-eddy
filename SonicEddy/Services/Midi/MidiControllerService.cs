@@ -1,13 +1,15 @@
 using System;
 using Fr.Pw.Midi;
 using Fr.Pw.Midi.PInvoke;
+using Microsoft.Extensions.Logging;
 
 namespace SonicEddy.Services.Midi;
 
 public class MidiControllerService : IMidiControllerService, IDisposable
 {
-    public MidiControllerService()
+    public MidiControllerService(ILogger<MidiControllerService> logger)
     {
+        _logger = logger;
         FrPwMidi.LayerChanged += OnLayerChanged;
         FrPwMidi.SelectedChannelChanged += OnSelectedChannelChanged;
         FrPwMidi.DialSelectionModeChanged += OnDialSelectionModeSelect;
@@ -18,7 +20,11 @@ public class MidiControllerService : IMidiControllerService, IDisposable
             OnFilterParamsSectionMoveRight;
 
         FrPwMidi.FilterParamsSectionMovedLeft += OnFilterParamsSectionMoveLeft;
+
+        FrPwMidi.MidiControlChangeUpdate += OnMidiControlChangeUpdate;
     }
+
+    private readonly ILogger<MidiControllerService> _logger;
 
     public void SetSelectedPluginPage(ulong pluginId, ulong pageNumber) =>
         FrPwMidi.SetSelectedPluginPage(pluginId, pageNumber);
@@ -47,6 +53,9 @@ public class MidiControllerService : IMidiControllerService, IDisposable
     public event Action<FilterParamsSectionMovePagesEventArgs>?
         FilterParamsSectionMovedLeft;
 
+    public event Action<MidiControlChangeUpdateEventArgs>?
+        MidiControlChangeUpdate;
+
     private void OnLayerChanged(LayerSelectEventArgs eventArgs) =>
         LayerChanged?.Invoke(eventArgs);
 
@@ -69,6 +78,16 @@ public class MidiControllerService : IMidiControllerService, IDisposable
         FilterParamsSectionMovePagesEventArgs eventArgs) =>
         FilterParamsSectionMovedLeft?.Invoke(eventArgs);
 
+    private void OnMidiControlChangeUpdate(
+        MidiControlChangeUpdateEventArgs eventArgs)
+    {
+        if (_logger.IsEnabled(LogLevel.Trace))
+            _logger.LogTrace("Midi ControlChangeUpdate: {eventArgs}",
+                eventArgs);
+
+        MidiControlChangeUpdate?.Invoke(eventArgs);
+    }
+
     public void Dispose()
     {
         FrPwMidi.LayerChanged -= OnLayerChanged;
@@ -81,6 +100,8 @@ public class MidiControllerService : IMidiControllerService, IDisposable
             OnFilterParamsSectionMoveRight;
 
         FrPwMidi.FilterParamsSectionMovedLeft -= OnFilterParamsSectionMoveLeft;
+
+        FrPwMidi.MidiControlChangeUpdate -= OnMidiControlChangeUpdate;
 
         GC.SuppressFinalize(this);
     }

@@ -1,0 +1,32 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:midiParameterChangeMonitorViewModels="clr-namespace:SonicEddy.ViewModels.MidiParameterChangeMonitorViewModels"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        Width="800" Height="450"
+        x:Class="SonicEddy.Views.MidiParameterChangeMonitorView.MidiParameterChangeMonitorWindow"
+        x:DataType="midiParameterChangeMonitorViewModels:MidiParameterChangeMonitorViewModel"
+        Title="Midi Parameter Change Monitor">
+    <DataGrid ItemsSource="{Binding MidiParameters}">
+        <DataGrid.Columns>
+            <DataGridTextColumn Binding="{Binding ObjectId}"
+                                Header="Object Id" />
+
+            <DataGridTextColumn Binding="{Binding NodeName}"
+                                Header="Node" />
+
+            <DataGridTextColumn Binding="{Binding Name}"
+                                Header="Parameter" />
+
+            <DataGridTextColumn Binding="{Binding CurrentValue}"
+                                Header="Current" />
+
+            <DataGridTextColumn Binding="{Binding TargetValue}"
+                                Header="Target" />
+
+            <DataGridCheckBoxColumn Binding="{Binding CatchingUp}"
+                                    Header="Catching Up" />
+        </DataGrid.Columns>
+    </DataGrid>
+</Window>

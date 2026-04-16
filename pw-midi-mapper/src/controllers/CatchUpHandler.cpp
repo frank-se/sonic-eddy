@@ -22,13 +22,13 @@ bool controllers::CatchUpHandler::should_update(
           "Currently catching up from below, new: {}, old: {}",
           normalized_value, normalized_current_value);
 
-      caught_up = normalized_value > normalized_current_value;
+      caught_up = normalized_value >= normalized_current_value;
     } else {
       logging::log<logging::LogLevel::Debug>(
           "Currently catching up from above, new: {}, old: {}",
           normalized_value, normalized_current_value);
 
-      caught_up = normalized_value < normalized_current_value;
+      caught_up = normalized_value <= normalized_current_value;
     }
 
     if (caught_up) {

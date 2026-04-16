@@ -70,7 +70,7 @@ private:
   spa_hook _node_listener{};
 
   static void
-  on_channel_playback_node_params_changed(void *user_data, int sequence_number,
+  on_node_params_changed(void *user_data, int sequence_number,
                                           uint32_t id, uint32_t index,
                                           uint32_t next, const spa_pod *pod);
 
@@ -78,7 +78,7 @@ private:
 
   static constexpr pw_node_events _node_events = {
       .version = PW_VERSION_NODE_EVENTS,
-      .param = on_channel_playback_node_params_changed};
+      .param = on_node_params_changed};
 };
 
 } // namespace registry

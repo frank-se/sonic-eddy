@@ -29,7 +29,7 @@ public record MidiControlChangeUpdateEventArgs(
     ChannelType ChannelType,
     ulong ChannelId,
     ulong ObjectId,
-    string ParameterNamePtr,
+    string ParameterName,
     float NormalizedControllerValue,
     float NormalizedKnownValue,
     bool CatchingUp);

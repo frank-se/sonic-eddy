@@ -50,6 +50,8 @@
             </MenuItem>
 
             <MenuItem Header="Tools">
+                <MenuItem Header="Midi Parameter Change Monitor ..."
+                          Command="{Binding ShowMidiParameterChangeMonitorWindow}" />
                 <MenuItem Header="Filter Graphs ..."
                           Command="{Binding ShowFilterGraphManagerWindow}" />
                 <MenuItem Header="Modules ..."

@@ -14,6 +14,7 @@ using SonicEddy.Services.VirtualInputs;
 using SonicEddy.Services.Wireplumber;
 using SonicEddy.ViewModels.FilterGraphManagerViewModels;
 using SonicEddy.ViewModels.MetadataViewModels;
+using SonicEddy.ViewModels.MidiParameterChangeMonitorViewModels;
 using SonicEddy.ViewModels.MixerViewModelsV2;
 using SonicEddy.ViewModels.ModuleManagerViewModels;
 using SonicEddy.ViewModels.ObjectBrowserViewModels;
@@ -21,6 +22,7 @@ using SonicEddy.ViewModels.PreferencesViewModels;
 using SonicEddy.ViewModels.VirtualInputsViewModels;
 using SonicEddy.Views.FilterGraphManagerViews;
 using SonicEddy.Views.MetadataViews;
+using SonicEddy.Views.MidiParameterChangeMonitorView;
 using SonicEddy.Views.ModuleManagerViews;
 using SonicEddy.Views.ObjectBrowserViews;
 using SonicEddy.Views.PreferencesViews;
@@ -32,10 +34,11 @@ namespace SonicEddy.ViewModels;
 public class MainWindowViewModel : ViewModelBase, IDisposable
 {
     public MainWindowViewModel(IMidiControllerService midiControllerService,
-        ILogger<MainWindowViewModel> logger)
+        ILogger<MainWindowViewModel> logger, ILoggerFactory loggerFactory)
     {
         _midiControllerService = midiControllerService;
         _logger = logger;
+        _loggerFactory = loggerFactory;
 
         _midiControllerService.LayerChanged += OnLayerSelected;
         _midiControllerService.FilterParamsSectionMovedRight +=
@@ -52,7 +55,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
 
         _midiControllerService.SelectedFilterParamsSectionChanged +=
             OnFilterMidiControlSectionIdChanged;
-        
+
         _ = NavigateToMixerV2ViewLayerA();
     }
 
@@ -61,6 +64,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     private const int NumberOfChannels = 16;
     private const int NumberOfChannelsPerLayer = NumberOfChannels / 2;
 
+    private Window? _midiParameterMonitorWindow;
     private Window? _objectBrowserWindow;
     private Window? _metadataManagerWindow;
     private Window? _moduleManagerWindow;
@@ -94,6 +98,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
 
     private readonly IMidiControllerService _midiControllerService;
     private readonly ILogger<MainWindowViewModel> _logger;
+    private readonly ILoggerFactory _loggerFactory;
 
     private void OnFilterMidiControlSectionIdChanged(
         FilterParamsSectionSelectEventArgs eventArgs)
@@ -262,6 +267,25 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
 
         LayerAViewModel?.ActivatePreviousPluginPage();
         LayerBViewModel?.ActivatePreviousPluginPage();
+    }
+
+    public void ShowMidiParameterChangeMonitorWindow()
+    {
+        if (_midiParameterMonitorWindow is not null &&
+            _midiParameterMonitorWindow.IsVisible) return;
+
+        var logger = _loggerFactory
+            .CreateLogger<MidiParameterChangeMonitorViewModel>();
+
+        var viewModel = new MidiParameterChangeMonitorViewModel(logger,
+            _midiControllerService, Fr.Wireplumber.Wireplumber.NodeRegistry);
+
+        _midiParameterMonitorWindow = new MidiParameterChangeMonitorWindow()
+        {
+            DataContext = viewModel
+        };
+
+        _midiParameterMonitorWindow.Show();
     }
 
     public void ShowVirtualInputsWindow()
@@ -465,7 +489,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
 
         _midiControllerService.SelectedFilterParamsSectionChanged -=
             OnFilterMidiControlSectionIdChanged;
-        
+
         GC.SuppressFinalize(this);
     }
 }

@@ -14,12 +14,16 @@ void registry::Node::set_channel_volumes(const std::array<float, 2> volumes) {
 
     _controller_update_callback(_channel_type, _channel_id, _object_id,
                                 "send_channel_volumes", volumes[0],
-                                _left.load(), false);
+                                _left.load(), true);
 
     return;
   }
 
   pw_utils::set_pw_node_volume(_loop, _node, volumes);
+
+  _controller_update_callback(_channel_type, _channel_id, _object_id,
+                              "send_channel_volumes", volumes[0], _left.load(),
+                              false);
 }
 
 void registry::Node::set_param(const std::string &name,
@@ -101,6 +105,7 @@ void registry::Node::subscribe_to_param_updates() {
   pw_node_add_listener(_node, &_node_listener, &_node_events, this);
 
   std::array<uint32_t, 1> parameter_ids = {SPA_PARAM_Props};
+
   pw_node_subscribe_params(_node, parameter_ids.data(), parameter_ids.size());
 
   pw_node_enum_params(_node, 0, PW_ID_ANY, 0, 0, nullptr);
@@ -113,11 +118,11 @@ spa_pod *get_pod_body(const spa_pod *source_pod) {
                                      static_cast<ptrdiff_t>(sizeof(spa_pod)));
 }
 
-void registry::Node::on_channel_playback_node_params_changed(
-    void *user_data, int sequence_number, uint32_t id, uint32_t index,
-    uint32_t next, const spa_pod *pod) {
-  logging::log<logging::LogLevel::Trace>(
-      "Node::on_channel_playback_node_params_changed");
+void registry::Node::on_node_params_changed(void *user_data,
+                                            int sequence_number, uint32_t id,
+                                            uint32_t index, uint32_t next,
+                                            const spa_pod *pod) {
+  logging::log<logging::LogLevel::Trace>("Node::on_node_params_changed");
 
   auto *node = static_cast<Node *>(user_data);
 
@@ -129,37 +134,35 @@ void registry::Node::on_channel_playback_node_params_changed(
 
     if (channel_volumes_property == nullptr) {
       logging::log<logging::LogLevel::Trace>(
-          "No channel volume message in updates");
+          "No channel volume message in updates, skipping to parameters");
+    } else {
+      const auto channel_volumes_array = &channel_volumes_property->value;
+      if (!spa_pod_is_array(channel_volumes_array))
+        return;
 
-      return;
+      const auto number_of_channels =
+          SPA_POD_ARRAY_N_VALUES(channel_volumes_array);
+
+      if (number_of_channels != 2) {
+        logging::log<logging::LogLevel::Debug>(
+            "Unexpected number of channels {}", number_of_channels);
+
+        return;
+      }
+
+      if (SPA_POD_ARRAY_VALUE_TYPE(channel_volumes_array) != SPA_TYPE_Float)
+        return;
+
+      const auto channel_volumes =
+          static_cast<float *>(SPA_POD_ARRAY_VALUES(channel_volumes_array));
+
+      logging::log<logging::LogLevel::Debug>(
+          "Channel volumes: left {}, right {} for node {}", channel_volumes[0],
+          channel_volumes[1], node->object_id());
+
+      node->_left = channel_volumes[0];
+      node->_right = channel_volumes[1];
     }
-
-    const auto channel_volumes_array = &channel_volumes_property->value;
-    if (!spa_pod_is_array(channel_volumes_array))
-      return;
-
-    const auto number_of_channels =
-        SPA_POD_ARRAY_N_VALUES(channel_volumes_array);
-
-    if (number_of_channels != 2) {
-      logging::log<logging::LogLevel::Debug>("Unexpected number of channels {}",
-                                             number_of_channels);
-
-      return;
-    }
-
-    if (SPA_POD_ARRAY_VALUE_TYPE(channel_volumes_array) != SPA_TYPE_Float)
-      return;
-
-    const auto channel_volumes =
-        static_cast<float *>(SPA_POD_ARRAY_VALUES(channel_volumes_array));
-
-    logging::log<logging::LogLevel::Debug>(
-        "Channel volumes: left {}, right {} for node {}", channel_volumes[0],
-        channel_volumes[1], node->object_id());
-
-    node->_left = channel_volumes[0];
-    node->_right = channel_volumes[1];
 
     if (node->_plugins == nullptr) {
       logging::log<logging::LogLevel::Debug>(
@@ -172,11 +175,14 @@ void registry::Node::on_channel_playback_node_params_changed(
 
     auto pod_body_pointer = get_pod_body(&params_pod->value);
 
+    spa_debug_pod(4, nullptr, &params_pod->value);
+
     spa_pod *child = nullptr;
     size_t child_index = 0;
 
     controllers::Parameter *found_parameter = nullptr;
-    SPA_POD_FOREACH(pod_body_pointer, SPA_POD_BODY_SIZE(params_pod), child) {
+    SPA_POD_FOREACH(pod_body_pointer, SPA_POD_BODY_SIZE(&params_pod->value),
+                    child) {
       if (child_index % 2 == 0) {
         const char *name_c = nullptr;
         spa_pod_get_string(child, &name_c);
@@ -189,6 +195,8 @@ void registry::Node::on_channel_playback_node_params_changed(
         }
 
         std::string_view name(name_c);
+
+        logging::log<logging::LogLevel::Trace>("Processing parameter {}", name);
 
         if (name.find_first_of(':') == std::string::npos) {
           logging::log<logging::LogLevel::Debug>(

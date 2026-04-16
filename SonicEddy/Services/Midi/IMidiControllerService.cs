@@ -9,7 +9,7 @@ public interface IMidiControllerService
     void SetSelectedPluginPage(ulong pluginId, ulong pageNumber);
 
     void ClearSelectedChannel();
-    
+
     void SetSelectedChannel(ChannelType channelType, ulong channelId);
 
     void SetSelectedLayer(ulong layerId);
@@ -27,4 +27,6 @@ public interface IMidiControllerService
 
     event Action<FilterParamsSectionMovePagesEventArgs>?
         FilterParamsSectionMovedLeft;
+
+    event Action<MidiControlChangeUpdateEventArgs>? MidiControlChangeUpdate;
 }
