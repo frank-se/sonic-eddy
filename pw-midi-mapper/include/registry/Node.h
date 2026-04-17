@@ -41,8 +41,8 @@ public:
   [[nodiscard]] std::optional<std::array<float, 2>> channel_volumes() const;
   [[nodiscard]] std::optional<audio::pan::PanAndVolume> pan_and_volume() const;
 
-  void set_param(const controllers::Parameter & parameter, float normalized_controller_value);
-  void set_param(const std::string &name, float value) const;
+  void set_param(const controllers::Parameter &parameter,
+                 float normalized_controller_value);
 
   std::optional<float> parameter_value(const std::string &name);
 
@@ -66,6 +66,8 @@ private:
 
   std::mutex _param_values_mutex{};
   std::unordered_map<std::string, float> _param_values{};
+
+  void set_param(const std::string &name, float value) const;
 
   static void on_node_params_changed(void *user_data, int sequence_number,
                                      uint32_t id, uint32_t index, uint32_t next,

@@ -19,8 +19,8 @@ void controllers::FaderfoxPc4::process(const midi::Message &message) {
       message);
 }
 
-void controllers::FaderfoxPc4::handle_normalized_control_change(size_t index,
-                                                                double value) {
+void controllers::FaderfoxPc4::handle_normalized_control_change(
+    size_t index, const double value) {
   logging::log<logging::LogLevel::Trace>(
       "FaderfoxPc4::handle_normalized_control_change");
 
@@ -29,6 +29,7 @@ void controllers::FaderfoxPc4::handle_normalized_control_change(size_t index,
 
     return;
   }
+
   const size_t parameter_id = index - 1;
   const size_t row = parameter_id / 4;
   const size_t column = parameter_id - (row * 4);
@@ -55,15 +56,7 @@ void controllers::FaderfoxPc4::handle_normalized_control_change(size_t index,
     return;
   }
 
-  auto param_value = parameter->min + (parameter->max - parameter->min) * value;
-
-  logging::log<logging::LogLevel::Debug>(
-      "Setting channel {}, plugin {}, parameter page {}, index {}, row {}, "
-      "column {} to {}, normalized: {}",
-      _selected_channel_id.load(), _selected_plugin_id.load(),
-      _selected_parameter_page.load(), index, row, column, param_value, value);
-
-  filter_node->set_param(parameter->name, static_cast<float>(param_value));
+  filter_node->set_param(*parameter, static_cast<float>(value));
 }
 
 void controllers::FaderfoxPc4::set_layer_from_processor(
