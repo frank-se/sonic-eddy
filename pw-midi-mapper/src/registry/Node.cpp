@@ -58,9 +58,9 @@ void registry::Node::set_param(const controllers::Parameter &parameter,
         "Parameter {} for channel {} needs to catch up from {} to {}",
         parameter.name, _channel_id, new_value, *parameter_value);
 
-    _controller_update_callback(_channel_type, _channel_id, object_id(),
-                                parameter.name.c_str(), new_value,
-                                normalized_current_parameter_value, true);
+    _controller_update_callback(
+        _channel_type, _channel_id, object_id(), parameter.name.c_str(),
+        normalized_controller_value, normalized_current_parameter_value, true);
 
     return;
   }
@@ -70,9 +70,9 @@ void registry::Node::set_param(const controllers::Parameter &parameter,
 
   set_param(parameter.name, new_value);
 
-  _controller_update_callback(_channel_type, _channel_id, object_id(),
-                              parameter.name.c_str(), new_value,
-                              normalized_current_parameter_value, false);
+  _controller_update_callback(
+      _channel_type, _channel_id, object_id(), parameter.name.c_str(),
+      normalized_controller_value, normalized_current_parameter_value, false);
 }
 
 std::optional<std::array<float, 2>> registry::Node::channel_volumes() const {
@@ -245,7 +245,7 @@ void registry::Node::on_node_params_changed(void *user_data,
 
         parameter_name = name;
       } else if (parameter_name) {
-        float value;
+        float value{0.0f};
         spa_pod_get_float(child, &value);
         node->_param_values[parameter_name.value()] = value;
 
