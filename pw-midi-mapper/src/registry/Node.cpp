@@ -164,13 +164,6 @@ void registry::Node::on_node_params_changed(void *user_data,
       node->_right = channel_volumes[1];
     }
 
-    if (node->_plugins == nullptr) {
-      logging::log<logging::LogLevel::Debug>(
-          "Parameters array ptr not set, ignoring");
-
-      return;
-    }
-
     const auto params_pod = spa_pod_find_prop(pod, nullptr, SPA_PROP_params);
 
     auto pod_body_pointer = get_pod_body(&params_pod->value);
@@ -180,7 +173,9 @@ void registry::Node::on_node_params_changed(void *user_data,
     spa_pod *child = nullptr;
     size_t child_index = 0;
 
-    controllers::Parameter *found_parameter = nullptr;
+    std::lock_guard params_lock{node->_param_values_mutex};
+
+    std::optional<std::string> parameter_name = std::nullopt;
     SPA_POD_FOREACH(pod_body_pointer, SPA_POD_BODY_SIZE(&params_pod->value),
                     child) {
       if (child_index % 2 == 0) {
@@ -206,35 +201,27 @@ void registry::Node::on_node_params_changed(void *user_data,
           continue;
         }
 
-        auto flattened_parameters = *node->_plugins | std::views::join;
-
-        auto parameter = std::ranges::find_if(flattened_parameters,
-                                              [&name](auto &parameter) {
-                                                if (!parameter)
-                                                  return false;
-                                                return parameter->name == name;
-                                              });
-
-        if (parameter == flattened_parameters.end()) {
-          logging::log<logging::LogLevel::Debug>(
-              "Parameter {} not found in parameters array, ignoring", name);
-
-          child_index++;
-          continue;
-        }
-
-        found_parameter = &parameter->value();
-      } else if (found_parameter != nullptr) {
-        spa_pod_get_float(child, &found_parameter->value);
+        parameter_name = name;
+      } else if (parameter_name) {
+        float value;
+        spa_pod_get_float(child, &value);
+        node->_param_values[parameter_name.value()] = value;
 
         logging::log<logging::LogLevel::Debug>("Updated parameter {} to {}",
-                                               found_parameter->name,
-                                               found_parameter->value);
+                                               parameter_name.value(), value);
 
-        found_parameter = nullptr;
+        parameter_name = std::nullopt;
       }
 
       child_index++;
     }
   }
+}
+
+std::optional<float> registry::Node::get_param(const std::string &name) {
+  std::lock_guard params_lock{_param_values_mutex};
+  if (const auto it = _param_values.find(name); it != _param_values.end())
+    return it->second;
+
+  return std::nullopt;
 }

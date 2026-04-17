@@ -38,7 +38,6 @@ public:
 
   void set_filter_node(registry::Node *node) {
     _filter_node = node;
-    _filter_node->set_plugins_array(&_plugins);
   }
 
   void set_send_node(size_t send_id, registry::Node *node);

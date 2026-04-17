@@ -43,11 +43,7 @@ public:
 
   void set_param(const std::string &name, float value) const;
 
-  void set_plugins_array(
-      std::array<std::array<std::optional<controllers::Parameter>, 4>, 3>
-          *plugins) {
-    _plugins = plugins;
-  };
+  std::optional<float> get_param(const std::string &name);
 
 private:
   pw_main_loop *_loop;
@@ -56,8 +52,6 @@ private:
   controllers::MidiControlChangeUpdateCallback _controller_update_callback;
   controllers::ChannelType _channel_type;
   size_t _channel_id;
-  std::array<std::array<std::optional<controllers::Parameter>, 4>, 3>
-      *_plugins = nullptr;
 
   std::atomic<bool> _subscribed_to_param_updates = false;
 
@@ -69,16 +63,17 @@ private:
 
   spa_hook _node_listener{};
 
-  static void
-  on_node_params_changed(void *user_data, int sequence_number,
-                                          uint32_t id, uint32_t index,
-                                          uint32_t next, const spa_pod *pod);
+  std::mutex _param_values_mutex{};
+  std::unordered_map<std::string, float> _param_values{};
+
+  static void on_node_params_changed(void *user_data, int sequence_number,
+                                     uint32_t id, uint32_t index, uint32_t next,
+                                     const spa_pod *pod);
 
   void subscribe_to_param_updates();
 
   static constexpr pw_node_events _node_events = {
-      .version = PW_VERSION_NODE_EVENTS,
-      .param = on_node_params_changed};
+      .version = PW_VERSION_NODE_EVENTS, .param = on_node_params_changed};
 };
 
 } // namespace registry

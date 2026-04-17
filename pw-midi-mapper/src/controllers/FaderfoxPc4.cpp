@@ -115,7 +115,6 @@ void controllers::FaderfoxPc4::set_parameter(size_t channel_id,
   if (!parameter) {
     parameter = Parameter{
         .name = name,
-        .value = 0.0f,
         .max = max,
         .min = min,
     };
@@ -126,7 +125,6 @@ void controllers::FaderfoxPc4::set_parameter(size_t channel_id,
   parameter->name = name;
   parameter->max = max;
   parameter->min = min;
-  parameter->value = 0;
 }
 
 void controllers::FaderfoxPc4::set_filter_node(size_t channel_id,

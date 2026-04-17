@@ -8,7 +8,6 @@ namespace controllers {
 
 struct Parameter {
   std::string name;
-  float value;
   float max;
   float min;
   std::shared_ptr<CatchUpHandler> catch_up_handler =
