@@ -98,47 +98,8 @@ void controllers::Channel::set_parameter_for_selected_section(
   logging::log<logging::LogLevel::Debug>("Processing parameter {}",
                                          parameter->name);
 
-  const auto parameter_value = _filter_node->get_param(parameter->name);
-
-  if (!parameter_value) {
-    logging::log<logging::LogLevel::Error>("Parameter {} set but value unknown",
-                                           parameter->name);
-
-    return;
-  }
-
-  const auto normalized_current_parameter_value =
-      (*parameter_value - parameter->min) / (parameter->max - parameter->min);
-
-  const auto new_value = parameter->min + normalized_controller_value *
-                                              (parameter->max - parameter->min);
-
-  if (!parameter->catch_up_handler->should_update(
-          static_cast<float>(normalized_controller_value),
-          normalized_current_parameter_value)) {
-
-    logging::log<logging::LogLevel::Debug>(
-        "Parameter {} for channel {} needs to catch up from {} to {}",
-        parameter->name, _channel_id, new_value, *parameter_value);
-
-    _controller_update_callback(
-        _channel_type, _channel_id, _filter_node->object_id(),
-        parameter->name.c_str(), static_cast<float>(new_value),
-        normalized_current_parameter_value, true);
-
-    return;
-  }
-
-  logging::log<logging::LogLevel::Debug>(
-      "Setting section {}, parameter {} to value {}",
-      _selected_filter_params_section.load(), parameter_id, new_value);
-
-  _filter_node->set_param(parameter->name, static_cast<float>(new_value));
-
-  _controller_update_callback(
-      _channel_type, _channel_id, _filter_node->object_id(),
-      parameter->name.c_str(), static_cast<float>(new_value),
-      normalized_current_parameter_value, false);
+  _filter_node->set_param(*parameter,
+                          static_cast<float>(normalized_controller_value));
 }
 
 void controllers::Channel::set_send_node(size_t send_id, registry::Node *node) {

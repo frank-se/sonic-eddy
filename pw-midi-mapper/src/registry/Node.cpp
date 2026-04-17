@@ -33,6 +33,48 @@ void registry::Node::set_param(const std::string &name,
   pw_utils::set_pw_node_param(_loop, _node, name, value);
 }
 
+void registry::Node::set_param(const controllers::Parameter &parameter,
+                               const float normalized_controller_value) {
+  logging::log<logging::LogLevel::Trace>("Node::set_param");
+
+  const auto parameter_value = this->parameter_value(parameter.name);
+
+  if (!parameter_value) {
+    logging::log<logging::LogLevel::Error>("Parameter {} set but value unknown",
+                                           parameter.name);
+
+    return;
+  }
+
+  const auto normalized_current_parameter_value =
+      (*parameter_value - parameter.min) / (parameter.max - parameter.min);
+
+  const auto new_value = parameter.min + normalized_controller_value *
+                                             (parameter.max - parameter.min);
+
+  if (!parameter.catch_up_handler->should_update(
+          normalized_controller_value, normalized_current_parameter_value)) {
+    logging::log<logging::LogLevel::Debug>(
+        "Parameter {} for channel {} needs to catch up from {} to {}",
+        parameter.name, _channel_id, new_value, *parameter_value);
+
+    _controller_update_callback(_channel_type, _channel_id, object_id(),
+                                parameter.name.c_str(), new_value,
+                                normalized_current_parameter_value, true);
+
+    return;
+  }
+
+  logging::log<logging::LogLevel::Debug>("Setting parameter {} to value {}",
+                                         parameter.name, new_value);
+
+  set_param(parameter.name, new_value);
+
+  _controller_update_callback(_channel_type, _channel_id, object_id(),
+                              parameter.name.c_str(), new_value,
+                              normalized_current_parameter_value, false);
+}
+
 std::optional<std::array<float, 2>> registry::Node::channel_volumes() const {
   if (_subscribed_to_param_updates == false)
     return std::nullopt;
@@ -218,7 +260,7 @@ void registry::Node::on_node_params_changed(void *user_data,
   }
 }
 
-std::optional<float> registry::Node::get_param(const std::string &name) {
+std::optional<float> registry::Node::parameter_value(const std::string &name) {
   std::lock_guard params_lock{_param_values_mutex};
   if (const auto it = _param_values.find(name); it != _param_values.end())
     return it->second;

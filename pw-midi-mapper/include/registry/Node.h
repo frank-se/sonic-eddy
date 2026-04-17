@@ -41,9 +41,10 @@ public:
   [[nodiscard]] std::optional<std::array<float, 2>> channel_volumes() const;
   [[nodiscard]] std::optional<audio::pan::PanAndVolume> pan_and_volume() const;
 
+  void set_param(const controllers::Parameter & parameter, float normalized_controller_value);
   void set_param(const std::string &name, float value) const;
 
-  std::optional<float> get_param(const std::string &name);
+  std::optional<float> parameter_value(const std::string &name);
 
 private:
   pw_main_loop *_loop;
