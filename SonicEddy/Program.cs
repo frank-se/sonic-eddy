@@ -34,9 +34,33 @@ internal static class Program
          */
         Thread.Sleep(TimeSpan.FromSeconds(1));
         var midiPortFactory = FrPwMidi.MidiPortFactory;
-        var midiMixPort = midiPortFactory!.CreateMidiMixPort().Result;
-        var cmdMm1Port = midiPortFactory.CreateCmdMm1Port().Result;
-        var faderFoxPort = midiPortFactory.CreateFaderFoxPc4Port().Result;
+
+        try
+        {
+            var midiMixPort = midiPortFactory!.CreateMidiMixPort().Result;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+        }
+
+        try
+        {
+            var cmdMm1Port = midiPortFactory!.CreateCmdMm1Port().Result;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+        }
+
+        try
+        {
+            var faderFoxPort = midiPortFactory!.CreateFaderFoxPc4Port().Result;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+        }
 
         BuildAvaloniaApp()
             .StartWithClassicDesktopLifetime(args);

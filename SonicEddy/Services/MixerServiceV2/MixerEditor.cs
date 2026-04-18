@@ -15,9 +15,9 @@ namespace SonicEddy.Services.MixerServiceV2;
 
 public class MixerEditor(IWireplumberService wireplumberService)
 {
-    private const int InitialChannelCount = 1;
-    private const int SendChannelCount = 1;
-    private const int InitialGroupChannelCount = 1;
+    private const int InitialChannelCount = 8;
+    private const int SendChannelCount = 4;
+    private const int InitialGroupChannelCount = 4;
 
     public async Task<MixerLayer> AddFilterToChannelStrip(
         MixerLayer mixerLayer,
