@@ -177,14 +177,15 @@ public class MixerLayerViewModel : ViewModelBase,
 
         if (channelType == ChannelType.GroupChannel)
         {
-            if ((int)channelId > GroupChannels?.Count)
+            var channelIdInt = (int)channelId;
+            if (channelIdInt >= GroupChannels?.Count)
             {
                 _logger.LogError("Group Channel {GroupChannelId} out of bounds",
                     channelId);
                 return;
             }
 
-            var channel = GroupChannels?[(int)channelId];
+            var channel = GroupChannels?[channelIdInt];
             channel?.SetMidiControlledSectionId(sectionId);
 
             if (_logger.IsEnabled(LogLevel.Debug))

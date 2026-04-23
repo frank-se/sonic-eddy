@@ -8,7 +8,7 @@
 
     <Panel Background="Indigo">
         <Grid ColumnDefinitions="120"
-              RowDefinitions="Auto,112,Auto,100,100,100,*,Auto"
+              RowDefinitions="Auto,132,Auto,100,100,100,*,Auto"
               Margin="2">
 
             <mixerControls:ChannelHeader Grid.Row="0"

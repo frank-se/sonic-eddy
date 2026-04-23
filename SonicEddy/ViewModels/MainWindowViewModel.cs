@@ -28,6 +28,7 @@ using SonicEddy.Views.ObjectBrowserViews;
 using SonicEddy.Views.PreferencesViews;
 using SonicEddy.Views.VirtualInputsViews;
 using Splat;
+using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace SonicEddy.ViewModels;
 
@@ -103,11 +104,16 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     private void OnFilterMidiControlSectionIdChanged(
         FilterParamsSectionSelectEventArgs eventArgs)
     {
+        if (_logger.IsEnabled(LogLevel.Trace))
+            _logger.LogTrace(
+                "OnFilterMidiControlSectionIdChanged, event args={eventArgs}",
+                eventArgs);
+
         if (eventArgs.ChannelType == ChannelType.Channel)
         {
             var channelId = eventArgs.ChannelId;
             var layerId = 0;
-            if (channelId > NumberOfChannelsPerLayer)
+            if (channelId >= NumberOfChannelsPerLayer)
             {
                 channelId = channelId - NumberOfChannelsPerLayer;
                 layerId = 1;
@@ -126,7 +132,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         {
             var channelId = eventArgs.ChannelId;
             var layerId = 0;
-            if (channelId > NumberOfGroupChannelsPerLayer)
+            if (channelId >= NumberOfGroupChannelsPerLayer)
             {
                 channelId = channelId - NumberOfGroupChannelsPerLayer;
                 layerId = 1;
@@ -145,11 +151,16 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     private void OnDialSelectionModeChanged(
         DialSelectionModeSelectEventArgs eventArgs)
     {
+        if (_logger.IsEnabled(LogLevel.Trace))
+            _logger.LogTrace(
+                "OnDialSelectionModeChanged, event args={eventArgs}",
+                eventArgs);
+
         if (eventArgs.ChannelType == ChannelType.Channel)
         {
             var channelId = eventArgs.ChannelId;
             var layerId = 0;
-            if (channelId > NumberOfChannelsPerLayer)
+            if (channelId >= NumberOfChannelsPerLayer)
             {
                 channelId = channelId - NumberOfChannelsPerLayer;
                 layerId = 1;
@@ -168,7 +179,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         {
             var channelId = eventArgs.ChannelId;
             var layerId = 0;
-            if (channelId > NumberOfGroupChannelsPerLayer)
+            if (channelId >= NumberOfGroupChannelsPerLayer)
             {
                 channelId = channelId - NumberOfGroupChannelsPerLayer;
                 layerId = 1;
@@ -186,7 +197,10 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
 
     private void OnSelectedChannelChanged(ChannelSelectEventArgs eventArgs)
     {
-        _logger.LogTrace("OnSelectedChannelChanged");
+        if (_logger.IsEnabled(LogLevel.Trace))
+            _logger.LogTrace(
+                "OnSelectedChannelChanged, event args={eventArgs}",
+                eventArgs);
 
         var (channelId, layerId) = eventArgs.ChannelType switch
         {
@@ -238,7 +252,10 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
 
     private void OnLayerSelected(LayerSelectEventArgs eventArgs)
     {
-        _logger.LogTrace("OnLayerSelected");
+        if (_logger.IsEnabled(LogLevel.Trace))
+            _logger.LogTrace(
+                "OnLayerSelected, event args={eventArgs}",
+                eventArgs);
 
         switch (eventArgs.LayerId)
         {
@@ -254,7 +271,10 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     private void OnMoveFilterParamsPageRight(
         FilterParamsSectionMovePagesEventArgs eventArgs)
     {
-        _logger.LogTrace("OnMoveFilterParamsPageRight");
+        if (_logger.IsEnabled(LogLevel.Trace))
+            _logger.LogTrace(
+                "OnMoveFilterParamsPageRight, event args={eventArgs}",
+                eventArgs);
 
         LayerAViewModel?.ActivateNextPluginPage();
         LayerBViewModel?.ActivateNextPluginPage();
@@ -263,7 +283,10 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     private void OnMoveFilterParamsPageLeft(
         FilterParamsSectionMovePagesEventArgs eventArgs)
     {
-        _logger.LogTrace("OnMoveFilterParamsPageLeft");
+        if (_logger.IsEnabled(LogLevel.Trace))
+            _logger.LogTrace(
+                "OnMoveFilterParamsPageLeft, event args={eventArgs}",
+                eventArgs);
 
         LayerAViewModel?.ActivatePreviousPluginPage();
         LayerBViewModel?.ActivatePreviousPluginPage();
@@ -271,6 +294,8 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
 
     public void ShowMidiParameterChangeMonitorWindow()
     {
+        _logger.LogTrace("ShowMidiParameterChangeMonitorWindow");
+
         if (_midiParameterMonitorWindow is not null &&
             _midiParameterMonitorWindow.IsVisible) return;
 
@@ -290,6 +315,8 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
 
     public void ShowVirtualInputsWindow()
     {
+        _logger.LogTrace("ShowVirtualInputsWindow");
+
         if (_virtualInputsWindow is not null &&
             _virtualInputsWindow.IsVisible) return;
 
@@ -314,6 +341,8 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
 
     public void ShowFilterGraphManagerWindow()
     {
+        _logger.LogTrace("ShowFilterGraphManagerWindow");
+
         if (_filterGraphWindow is not null &&
             _filterGraphWindow.IsVisible) return;
 
@@ -331,6 +360,8 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
 
     public void ShowModuleManagerWindow()
     {
+        _logger.LogTrace("ShowModuleManagerWindow");
+
         if (_moduleManagerWindow is not null &&
             _moduleManagerWindow.IsVisible) return;
 
@@ -348,6 +379,8 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
 
     public void ShowObjectBrowserWindow()
     {
+        _logger.LogTrace("ShowObjectBrowserWindow");
+
         if (_objectBrowserWindow is not null &&
             _objectBrowserWindow.IsVisible) return;
 
@@ -365,6 +398,8 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
 
     public void ShowMetadataBrowserWindow()
     {
+        _logger.LogTrace("ShowMetadataBrowserWindow");
+
         if (_metadataManagerWindow is not null &&
             _metadataManagerWindow.IsVisible) return;
 
@@ -382,6 +417,8 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
 
     public void ShowPreferencesWindow()
     {
+        _logger.LogTrace("ShowPreferencesWindow");
+
         if (_preferencesWindow is not null &&
             _preferencesWindow.IsVisible) return;
 
@@ -404,72 +441,86 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
 
     public Task NavigateToMixerV2ViewLayerA()
     {
+        _logger.LogTrace("NavigateToMixerV2ViewLayerA");
+
         _midiControllerService.SetSelectedLayer(0);
         return ActivateLayerA();
     }
 
     private async Task ActivateLayerA()
     {
+        _logger.LogTrace("ActivateLayerA");
+
         MixerViewV2LayerAViewSelected = true;
         MixerViewV2LayerBViewSelected = false;
 
-        if (LayerAViewModel == null)
+        if (LayerAViewModel is not null)
         {
-            var mixerService = Locator.Current.GetService<IMixerService>();
-
-            var mixerViewModelService =
-                Locator.Current.GetService<IMixerViewModelService>();
-
-            if (mixerService is null || mixerViewModelService is null) return;
-
-            if (mixerService.CurrentMixer is null)
-                await mixerService.NewCurrentMixer("Default Mixer");
-
-            Avalonia.Threading.Dispatcher.UIThread.Post(async () =>
-            {
-                var mixerView =
-                    await mixerViewModelService
-                        .ConvertCurrentMixerToViewModel(0);
-
-                if (mixerView is not null)
-                    LayerAViewModel = mixerView;
-            });
+            _logger.LogTrace("Layer A model already exists, done!");
+            return;
         }
+
+        var mixerService = Locator.Current.GetService<IMixerService>();
+
+        var mixerViewModelService =
+            Locator.Current.GetService<IMixerViewModelService>();
+
+        if (mixerService is null || mixerViewModelService is null) return;
+
+        if (mixerService.CurrentMixer is null)
+            await mixerService.NewCurrentMixer("Default Mixer");
+
+        Avalonia.Threading.Dispatcher.UIThread.Post(async () =>
+        {
+            var mixerView =
+                await mixerViewModelService
+                    .ConvertCurrentMixerToViewModel(0);
+
+            if (mixerView is not null)
+                LayerAViewModel = mixerView;
+        });
     }
 
     public Task NavigateToMixerV2ViewLayerB()
     {
+        _logger.LogTrace("NavigateToMixerV2ViewLayerB");
+
         _midiControllerService.SetSelectedLayer(1);
         return ActivateLayerB();
     }
 
     private async Task ActivateLayerB()
     {
+        _logger.LogTrace("ActivateLayerB");
+
         MixerViewV2LayerAViewSelected = false;
         MixerViewV2LayerBViewSelected = true;
 
-        if (LayerBViewModel == null)
+        if (LayerBViewModel is not null)
         {
-            var mixerService = Locator.Current.GetService<IMixerService>();
-
-            var mixerViewModelService =
-                Locator.Current.GetService<IMixerViewModelService>();
-
-            if (mixerService is null || mixerViewModelService is null) return;
-
-            if (mixerService.CurrentMixer is null)
-                await mixerService.NewCurrentMixer("Default Mixer");
-
-            Avalonia.Threading.Dispatcher.UIThread.Post(async () =>
-            {
-                var mixerView =
-                    await mixerViewModelService
-                        .ConvertCurrentMixerToViewModel(1);
-
-                if (mixerView is not null)
-                    LayerBViewModel = mixerView;
-            });
+            _logger.LogTrace("Layer B model already exists, done!");
+            return;
         }
+
+        var mixerService = Locator.Current.GetService<IMixerService>();
+
+        var mixerViewModelService =
+            Locator.Current.GetService<IMixerViewModelService>();
+
+        if (mixerService is null || mixerViewModelService is null) return;
+
+        if (mixerService.CurrentMixer is null)
+            await mixerService.NewCurrentMixer("Default Mixer");
+
+        Avalonia.Threading.Dispatcher.UIThread.Post(async () =>
+        {
+            var mixerView =
+                await mixerViewModelService
+                    .ConvertCurrentMixerToViewModel(1);
+
+            if (mixerView is not null)
+                LayerBViewModel = mixerView;
+        });
     }
 
     public void Dispose()

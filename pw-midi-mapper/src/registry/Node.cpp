@@ -210,8 +210,6 @@ void registry::Node::on_node_params_changed(void *user_data,
 
     auto pod_body_pointer = get_pod_body(&params_pod->value);
 
-    spa_debug_pod(4, nullptr, &params_pod->value);
-
     spa_pod *child = nullptr;
     size_t child_index = 0;
 

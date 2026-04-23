@@ -29,10 +29,6 @@ inline void set_pw_node_volume(pw_main_loop *loop, pw_node *node,
         logging::log<logging::LogLevel::Debug>(
             "Calling pw_node_set_param in pipewire loop");
 
-        if constexpr (logging::LOG_LEVEL >= logging::LogLevel::Debug) {
-          spa_debug_pod(2, nullptr, set_props_data->pod);
-        }
-
         pw_node_set_param(set_props_data->node, SPA_PARAM_Props, 0,
                           set_props_data->pod);
 

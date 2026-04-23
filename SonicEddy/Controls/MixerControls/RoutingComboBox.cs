@@ -57,13 +57,13 @@ public class RoutingComboBox : Grid
     public RoutingComboBox()
     {
         ColumnDefinitions = ColumnDefinitions.Parse("*,40");
-        RowDefinitions = RowDefinitions.Parse("20,40");
+        RowDefinitions = RowDefinitions.Parse("28,40");
 
         var textBlock = new TextBlock
         {
             FontSize = 10,
             [!TextBlock.TextProperty] = this[!TextProperty],
-            Margin = new Thickness(6)
+            Margin = new Thickness(6),
         };
 
         SetRow(textBlock, 0);
