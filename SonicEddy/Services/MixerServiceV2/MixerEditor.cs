@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Fr.Pw.Midi.PInvoke;
+using Fr.Wireplumber.Model.Config;
 using Fr.Wireplumber.Model.Config.FilterChain;
 using Fr.Wireplumber.Model.Objects;
 using Fr.Wireplumber.Modules.Models;
@@ -15,9 +16,9 @@ namespace SonicEddy.Services.MixerServiceV2;
 
 public class MixerEditor(IWireplumberService wireplumberService)
 {
-    private const int InitialChannelCount = 8;
+    private const int InitialChannelCount = 2;
     private const int SendChannelCount = 4;
-    private const int InitialGroupChannelCount = 4;
+    private const int InitialGroupChannelCount = 1;
 
     public async Task<MixerLayer> AddFilterToChannelStrip(
         MixerLayer mixerLayer,
@@ -107,7 +108,7 @@ public class MixerEditor(IWireplumberService wireplumberService)
 
         var masterChannel = await CreateMasterChannel(layerId, defaultOutput);
 
-        var returns = await CreateReturnChannels(masterChannel);
+        var returns = await CreateReturnChannels(masterChannel, layerId);
 
         var groupChannels =
             await CreateGroupChannels(layerId, masterChannel, returns);
@@ -129,60 +130,77 @@ public class MixerEditor(IWireplumberService wireplumberService)
     private const string PlaybackNodeMediaClass = "Stream/Output/Audio";
     private static readonly List<string> StereoAudioPosition = ["FL", "FR"];
 
+    private static NodePropertiesConfig CaptureBaseProps(bool autoConnect,
+        string name,
+        string? description = null) => new()
+    {
+        Linger = true,
+        Name = name,
+        Description = description ?? name,
+        MediaClass = CaptureNodeMediaClass,
+        DontFallback = true,
+        AutoConnect = autoConnect,
+        Passive = true
+    };
+
+    private static NodePropertiesConfig CaptureBasePropsWithTargetObject(
+        bool autoConnect,
+        string targetObject,
+        string name,
+        string? description = null)
+    {
+        var props = CaptureBaseProps(autoConnect, name, description);
+        props.TargetObject = targetObject;
+        return props;
+    }
+
+    private static NodePropertiesConfig PlaybackBaseProps(bool autoConnect,
+        string name,
+        string? description = null) => new()
+    {
+        Linger = true,
+        Name = name,
+        Description = description ?? name,
+        AudioPosition = StereoAudioPosition,
+        MediaClass = PlaybackNodeMediaClass,
+        DontFallback = true,
+        AutoConnect = autoConnect,
+        Passive = true
+    };
+
+    private static NodePropertiesConfig PlaybackBasePropsWithTargetObject(
+        bool autoConnect,
+        string targetObject, string name,
+        string? description = null)
+    {
+        var props = PlaybackBaseProps(autoConnect, name, description);
+        props.TargetObject = targetObject;
+        return props;
+    }
+
     private async Task<MasterChannel> CreateMasterChannel(ulong layerId,
         OutputChannel defaultOutput)
     {
         var inputLoopback = await wireplumberService.CreateLoopbackModule(
             "input-loopback-master", new()
             {
-                CaptureProps = new()
-                {
-                    Linger = true,
-                    Name = "master-input-loopback-capture",
-                    Description = $"master-input-loopback-capture",
-                    MediaClass = CaptureNodeMediaClass,
-                    DontFallback = true,
-                    AutoConnect = false
-                },
-                PlaybackProps = new()
-                {
-                    Linger = true,
-                    Name = "master-input-loopback-playback",
-                    Description = "master-input-loopback-playback",
-                    AudioPosition = StereoAudioPosition,
-                    MediaClass = PlaybackNodeMediaClass,
-                    DontFallback = true,
-                    AutoConnect = false
-                }
+                CaptureProps =
+                    CaptureBaseProps(false,
+                        $"master-input-loopback-capture-{layerId}"),
+                PlaybackProps =
+                    PlaybackBaseProps(false,
+                        $"master-input-loopback-playback-{layerId}"),
             });
 
         var outputLoopback = await wireplumberService.CreateLoopbackModule(
             $"output-loopback-master", new()
             {
-                CaptureProps = new()
-                {
-                    Linger = true,
-                    Name = "master-output-loopback-capture",
-                    Description =
-                        "master-output-loopback-capture",
-                    DontFallback = true,
-                    MediaClass = CaptureNodeMediaClass,
-                    AutoConnect = true,
-                    TargetObject =
-                        inputLoopback.PlaybackNode.ObjectSerial.ToString(),
-                },
-                PlaybackProps = new()
-                {
-                    Linger = true,
-                    Name = "master-output-loopback-playback",
-                    Description = "master-output-loopback-playback",
-                    AudioPosition = StereoAudioPosition,
-                    MediaClass = PlaybackNodeMediaClass,
-                    DontFallback = true,
-                    AutoConnect = true,
-                    TargetObject =
-                        defaultOutput.CaptureNode.ObjectSerial.ToString()
-                }
+                CaptureProps = CaptureBasePropsWithTargetObject(true,
+                    inputLoopback.PlaybackNode.ObjectSerial.ToString(),
+                    $"master-output-loopback-capture-{layerId}"),
+                PlaybackProps = PlaybackBasePropsWithTargetObject(true,
+                    defaultOutput.CaptureNode.ObjectSerial.ToString(),
+                    $"master-output-loopback-playback-{layerId}"),
             });
 
         return new(
@@ -209,53 +227,22 @@ public class MixerEditor(IWireplumberService wireplumberService)
         var inputLoopback = await wireplumberService.CreateLoopbackModule(
             $"input-loopback-group-{index}", new()
             {
-                CaptureProps = new()
-                {
-                    Linger = true,
-                    Name = $"group-{index}-input-loopback-capture",
-                    Description = $"group-{index}-input-loopback-capture",
-                    MediaClass = CaptureNodeMediaClass,
-                    DontFallback = true,
-                    AutoConnect = false
-                },
-                PlaybackProps = new()
-                {
-                    Linger = true,
-                    Name = $"group-{index}-input-loopback-playback",
-                    Description = $"group-{index}-input-loopback-playback",
-                    AudioPosition = StereoAudioPosition,
-                    MediaClass = PlaybackNodeMediaClass,
-                    DontFallback = true,
-                    AutoConnect = false
-                }
+                CaptureProps = CaptureBaseProps(false,
+                    $"group-{index}-input-loopback-capture-{layerId}"),
+                PlaybackProps = PlaybackBaseProps(false,
+                    $"group-{index}-input-loopback-playback-{layerId}"),
             });
 
         var outputLoopback = await wireplumberService.CreateLoopbackModule(
             $"output-loopback-master", new()
             {
-                CaptureProps = new()
-                {
-                    Linger = true,
-                    Name = $"group-{index}-output-loopback-capture",
-                    Description = $"group-{index}-output-loopback-capture",
-                    DontFallback = true,
-                    MediaClass = CaptureNodeMediaClass,
-                    AutoConnect = true,
-                    TargetObject =
-                        inputLoopback.PlaybackNode.ObjectSerial.ToString(),
-                },
-                PlaybackProps = new()
-                {
-                    Linger = true,
-                    Name = $"group-{index}-output-loopback-playback",
-                    Description = $"group-{index}-output-loopback-playback",
-                    AudioPosition = StereoAudioPosition,
-                    MediaClass = PlaybackNodeMediaClass,
-                    DontFallback = true,
-                    AutoConnect = true,
-                    TargetObject = masterChannel.InputLoopback.CaptureNode
-                        .ObjectSerial.ToString()
-                }
+                CaptureProps = CaptureBasePropsWithTargetObject(true,
+                    inputLoopback.PlaybackNode.ObjectSerial.ToString(),
+                    $"group-{index}-output-loopback-capture-{layerId}"),
+                PlaybackProps = PlaybackBasePropsWithTargetObject(true,
+                    masterChannel.InputLoopback.CaptureNode
+                        .ObjectSerial.ToString(),
+                    $"group-{index}-output-loopback-playback-{layerId}"),
             });
 
         var channelId =
@@ -267,36 +254,18 @@ public class MixerEditor(IWireplumberService wireplumberService)
                 wireplumberService.CreateLoopbackModule(
                     $"send-loopback-group-{index}-send-{i}", new()
                     {
-                        CaptureProps = new()
-                        {
-                            Linger = true,
-                            Name =
-                                $"group-{index}-send-{i}-loopback-capture",
-                            Description =
-                                $"group-{index}-send-{i}-loopback-capture",
-                            MediaClass = CaptureNodeMediaClass,
-                            TargetObject =
-                                inputLoopback.PlaybackNode.ObjectSerial
-                                    .ToString(),
-                            DontFallback = true,
-                        },
-                        PlaybackProps = new()
-                        {
-                            Linger = true,
-                            Name =
-                                $"group-{index}-send-{i}-loopback-playback",
-                            Description =
-                                $"group-{index}-send-{i}-loopback-playback",
-                            AudioPosition = StereoAudioPosition,
-                            MediaClass = PlaybackNodeMediaClass,
-                            TargetObject = returnChannels[i - 1].InputLoopback
+                        CaptureProps = CaptureBasePropsWithTargetObject(true,
+                            inputLoopback.PlaybackNode.ObjectSerial
+                                .ToString(),
+                            $"group-{index}-send-{i}-loopback-capture-{layerId}"),
+                        PlaybackProps = PlaybackBasePropsWithTargetObject(true,
+                            returnChannels[i - 1].InputLoopback
                                 .CaptureNode.ObjectSerial.ToString(),
-                            DontFallback = true,
-                        }
+                            $"group-{index}-send-{i}-loopback-playback-{layerId}"),
                     })))).ToList();
 
         var id = index - 1 + (int)layerId * InitialGroupChannelCount;
-        
+
         return new(
             $"Group {index}",
             (ulong)id,
@@ -328,67 +297,34 @@ public class MixerEditor(IWireplumberService wireplumberService)
         new InputChannel(playbackNode.Description ?? "Unknown", playbackNode);
 
     private async Task<List<ReturnChannel>> CreateReturnChannels(
-        MasterChannel master) =>
+        MasterChannel master, ulong layerId) =>
         (await Task.WhenAll(
             Enumerable.Range(1, SendChannelCount)
-                .Select(i => CreateReturnChannel(i, master))))
+                .Select(i => CreateReturnChannel(i, master, layerId))))
         .ToList();
 
     private async Task<ReturnChannel> CreateReturnChannel(int sendId,
-        MasterChannel master)
+        MasterChannel master, ulong layerId)
     {
         var inputLoopback = await wireplumberService.CreateLoopbackModule(
             $"return-input-loopback-{sendId}", new()
             {
-                CaptureProps = new()
-                {
-                    Linger = true,
-                    Name = $"return-{sendId}-input-loopback-capture",
-                    Description = $"return-{sendId}-input-loopback-capture",
-                    MediaClass = CaptureNodeMediaClass,
-                    AutoConnect = false
-                },
-                PlaybackProps = new()
-                {
-                    Linger = true,
-                    Name = $"return-{sendId}-input-loopback-playback",
-                    Description =
-                        $"return-{sendId}-input-loopback-playback",
-                    AudioPosition = StereoAudioPosition,
-                    MediaClass = PlaybackNodeMediaClass,
-                    AutoConnect = false,
-                    DontFallback = true,
-                }
+                CaptureProps = CaptureBaseProps(false,
+                    $"return-{sendId}-input-loopback-capture-{layerId}"),
+                PlaybackProps = PlaybackBaseProps(false,
+                    $"return-{sendId}-input-loopback-playback-{layerId}"),
             });
 
         var outputLoopback = await wireplumberService.CreateLoopbackModule(
             $"return-output-loopback-{sendId}", new()
             {
-                CaptureProps = new()
-                {
-                    Linger = true,
-                    Name = $"return-{sendId}-output-loopback-capture",
-                    Description =
-                        $"return-{sendId}-output-loopback-capture",
-                    MediaClass = CaptureNodeMediaClass,
-                    TargetObject =
-                        inputLoopback.PlaybackNode.ObjectSerial.ToString(),
-                    AutoConnect = true,
-                    DontFallback = true
-                },
-                PlaybackProps = new()
-                {
-                    Linger = true,
-                    Name = $"return-{sendId}-output-loopback-playback",
-                    Description =
-                        $"return-{sendId}-output-loopback-playback",
-                    AudioPosition = StereoAudioPosition,
-                    MediaClass = PlaybackNodeMediaClass,
-                    AutoConnect = true,
-                    DontFallback = true,
-                    TargetObject = master.InputLoopback.CaptureNode.ObjectSerial
-                        .ToString()
-                }
+                CaptureProps = CaptureBasePropsWithTargetObject(true,
+                    inputLoopback.PlaybackNode.ObjectSerial.ToString(),
+                    $"return-{sendId}-output-loopback-capture-{layerId}"),
+                PlaybackProps = PlaybackBasePropsWithTargetObject(true,
+                    master.InputLoopback.CaptureNode.ObjectSerial
+                        .ToString(),
+                    $"return-{sendId}-output-loopback-playback-{layerId}")
             });
 
         return new(
@@ -423,55 +359,23 @@ public class MixerEditor(IWireplumberService wireplumberService)
         var inputLoopback = await wireplumberService.CreateLoopbackModule(
             $"input-loopback-{channelId}", new()
             {
-                CaptureProps = new()
-                {
-                    Linger = true,
-                    Name = $"channel-{channelId}-input-loopback-capture",
-                    Description = $"channel-{channelId}-input-loopback-capture",
-                    MediaClass = CaptureNodeMediaClass,
-                    DontFallback = true,
-                    TargetObject = 0.ToString()
-                },
-                PlaybackProps = new()
-                {
-                    Linger = true,
-                    Name = $"channel-{channelId}-input-loopback-playback",
-                    Description =
-                        $"channel-{channelId}-input-loopback-playback",
-                    AudioPosition = StereoAudioPosition,
-                    MediaClass = PlaybackNodeMediaClass,
-                    DontFallback = true,
-                    AutoConnect = false
-                }
+                CaptureProps = CaptureBasePropsWithTargetObject(true,
+                    0.ToString(),
+                    $"channel-{channelId}-input-loopback-capture-{layerId}"),
+                PlaybackProps = PlaybackBaseProps(false,
+                    $"channel-{channelId}-input-loopback-playback-{layerId}"),
             });
 
         var outputLoopback = await wireplumberService.CreateLoopbackModule(
             $"output-loopback-{channelId}", new()
             {
-                CaptureProps = new()
-                {
-                    Linger = true,
-                    Name = $"channel-{channelId}-output-loopback-capture",
-                    Description =
-                        $"channel-{channelId}-output-loopback-capture",
-                    DontFallback = true,
-                    MediaClass = CaptureNodeMediaClass,
-                    TargetObject =
-                        inputLoopback.PlaybackNode.ObjectSerial.ToString(),
-                },
-                PlaybackProps = new()
-                {
-                    Linger = true,
-                    Name = $"channel-{channelId}-output-loopback-playback",
-                    Description =
-                        $"channel-{channelId}-output-loopback-playback",
-                    AudioPosition = StereoAudioPosition,
-                    MediaClass = PlaybackNodeMediaClass,
-                    DontFallback = true,
-                    AutoConnect = true,
-                    TargetObject = master.InputLoopback.CaptureNode.ObjectSerial
-                        .ToString()
-                }
+                CaptureProps = CaptureBasePropsWithTargetObject(true,
+                    inputLoopback.PlaybackNode.ObjectSerial.ToString(),
+                    $"channel-{channelId}-output-loopback-capture-{layerId}"),
+                PlaybackProps = PlaybackBasePropsWithTargetObject(true,
+                    master.InputLoopback.CaptureNode.ObjectSerial
+                        .ToString(),
+                    $"channel-{channelId}-output-loopback-playback-{layerId}"),
             });
 
         var sendLoopbacks = await Task.WhenAll(Enumerable
@@ -480,32 +384,14 @@ public class MixerEditor(IWireplumberService wireplumberService)
                 wireplumberService.CreateLoopbackModule(
                     $"send-loopback-{channelId}-send-{i}", new()
                     {
-                        CaptureProps = new()
-                        {
-                            Linger = true,
-                            Name =
-                                $"channel-{channelId}-send-{i}-loopback-capture",
-                            Description =
-                                $"channel-{channelId}-send-{i}-loopback-capture",
-                            MediaClass = CaptureNodeMediaClass,
-                            TargetObject =
-                                inputLoopback.PlaybackNode.ObjectSerial
-                                    .ToString(),
-                            DontFallback = true,
-                        },
-                        PlaybackProps = new()
-                        {
-                            Linger = true,
-                            Name =
-                                $"channel-{channelId}-send-{i}-loopback-playback",
-                            Description =
-                                $"channel-{channelId}-send-{i}-loopback-playback",
-                            AudioPosition = StereoAudioPosition,
-                            MediaClass = PlaybackNodeMediaClass,
-                            TargetObject = returnChannels[i - 1].InputLoopback
+                        CaptureProps = CaptureBasePropsWithTargetObject(true,
+                            inputLoopback.PlaybackNode.ObjectSerial
+                                .ToString(),
+                            $"channel-{channelId}-send-{i}-loopback-capture-{layerId}"),
+                        PlaybackProps = PlaybackBasePropsWithTargetObject(true,
+                            returnChannels[i - 1].InputLoopback
                                 .CaptureNode.ObjectSerial.ToString(),
-                            DontFallback = true,
-                        }
+                            $"channel-{channelId}-send-{i}-loopback-playback-{layerId}"),
                     })));
 
         var id = (channelId - 1) + layerId * InitialChannelCount;

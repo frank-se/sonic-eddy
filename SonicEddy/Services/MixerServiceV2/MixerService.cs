@@ -44,7 +44,8 @@ public class MixerService : IMixerService, IDisposable
     private readonly SemaphoreSlim _externalChange = new(1, 1);
     private readonly SemaphoreSlim _internalChange = new(1, 1);
 
-    public async Task<Mixer> NewCurrentMixer(string name)
+    public async Task<Mixer> NewCurrentMixer(string name,
+        bool createSecondLayer = true)
     {
         if (_logger.IsEnabled(LogLevel.Trace))
             _logger.LogTrace("NewCurrentMixer {Name}", name);
@@ -70,16 +71,24 @@ public class MixerService : IMixerService, IDisposable
                 var firstLayer = await _editor.Create(_preferenceService
                     .Preferences?.DefaultMasterOutputName, 0);
 
-                var layerOneIds = CollectMixerLayerNodeIds(firstLayer).ToArray();
+                var layerOneIds =
+                    CollectMixerLayerNodeIds(firstLayer).ToArray();
                 _myNodeIds.AddRange(layerOneIds);
 
-                var secondLayer = await _editor.Create(_preferenceService
-                        .Preferences?.DefaultMasterOutputName, 1,
-                    layerOneIds.ToArray());
+                if (createSecondLayer)
+                {
+                    var secondLayer = await _editor.Create(_preferenceService
+                            .Preferences?.DefaultMasterOutputName, 1,
+                        layerOneIds.ToArray());
 
-                _myNodeIds.AddRange(CollectMixerLayerNodeIds(secondLayer));
+                    _myNodeIds.AddRange(CollectMixerLayerNodeIds(secondLayer));
 
-                CurrentMixer = new([firstLayer, secondLayer]);
+                    CurrentMixer = new([firstLayer, secondLayer]);
+                }
+                else
+                {
+                    CurrentMixer = new([firstLayer]);
+                }
             }
             finally
             {

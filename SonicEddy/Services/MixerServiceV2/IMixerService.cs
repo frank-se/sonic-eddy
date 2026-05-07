@@ -9,7 +9,8 @@ public interface IMixerService
 {
     public Mixer? CurrentMixer { get; }
 
-    public Task<Mixer> NewCurrentMixer(string name);
+    public Task<Mixer> NewCurrentMixer(string name,
+        bool createSecondLayer = true);
 
     public Task<Mixer?> GetAndLock();
     public Task Unlock();

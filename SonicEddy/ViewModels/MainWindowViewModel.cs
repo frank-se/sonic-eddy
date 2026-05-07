@@ -468,7 +468,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         if (mixerService is null || mixerViewModelService is null) return;
 
         if (mixerService.CurrentMixer is null)
-            await mixerService.NewCurrentMixer("Default Mixer");
+            await CreateMixer();
 
         Avalonia.Threading.Dispatcher.UIThread.Post(async () =>
         {
@@ -479,6 +479,12 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
             if (mixerView is not null)
                 LayerAViewModel = mixerView;
         });
+    }
+
+    private static Task CreateMixer()
+    {
+        var mixerService = Locator.Current.GetService<IMixerService>();
+        return mixerService!.NewCurrentMixer("Default Mixer", false);
     }
 
     public Task NavigateToMixerV2ViewLayerB()
@@ -510,7 +516,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         if (mixerService is null || mixerViewModelService is null) return;
 
         if (mixerService.CurrentMixer is null)
-            await mixerService.NewCurrentMixer("Default Mixer");
+            await CreateMixer();
 
         Avalonia.Threading.Dispatcher.UIThread.Post(async () =>
         {
