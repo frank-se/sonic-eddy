@@ -16,9 +16,6 @@ namespace SonicEddy.Services.MixerServiceV2;
 
 public class MixerEditor(IWireplumberService wireplumberService)
 {
-    private const int InitialChannelCount = 2;
-    private const int SendChannelCount = 4;
-    private const int InitialGroupChannelCount = 1;
 
     public async Task<MixerLayer> AddFilterToChannelStrip(
         MixerLayer mixerLayer,
@@ -92,6 +89,9 @@ public class MixerEditor(IWireplumberService wireplumberService)
 
     public async Task<MixerLayer> Create(string? defaultMasterName,
         ulong layerId,
+        int numberOfChannels,
+        int numberOfGroupChannels,
+        int numberOfReturnChannels,
         ulong[]? ignoreSerials = null)
     {
         ignoreSerials ??= [];
@@ -108,12 +108,14 @@ public class MixerEditor(IWireplumberService wireplumberService)
 
         var masterChannel = await CreateMasterChannel(layerId, defaultOutput);
 
-        var returns = await CreateReturnChannels(masterChannel, layerId);
+        var returns = await CreateReturnChannels(masterChannel, layerId,
+            numberOfReturnChannels);
 
-        var groupChannels =
-            await CreateGroupChannels(layerId, masterChannel, returns);
+        var groupChannels = await CreateGroupChannels(layerId, masterChannel,
+            returns, numberOfGroupChannels, numberOfReturnChannels);
 
-        var channels = await CreateChannels(layerId, masterChannel, returns);
+        var channels = await CreateChannels(layerId, masterChannel, returns,
+            numberOfChannels, numberOfReturnChannels);
 
         return new(
             layerId,
@@ -214,15 +216,18 @@ public class MixerEditor(IWireplumberService wireplumberService)
     }
 
     private async Task<List<GroupChannel>> CreateGroupChannels(ulong layerId,
-        MasterChannel masterChannel, List<ReturnChannel> returnChannels) =>
-        (await Task.WhenAll(Enumerable.Range(1, InitialGroupChannelCount)
+        MasterChannel masterChannel, List<ReturnChannel> returnChannels,
+        int numberOfGroupChannels, int numberOfReturnChannels) =>
+        (await Task.WhenAll(Enumerable.Range(1, numberOfGroupChannels)
             .Select(i =>
-                CreateGroupChannel(i, layerId, masterChannel, returnChannels))))
+                CreateGroupChannel(i, layerId, masterChannel, returnChannels,
+                    numberOfGroupChannels, numberOfReturnChannels))))
         .ToList();
 
     private async Task<GroupChannel> CreateGroupChannel(int index,
         ulong layerId,
-        MasterChannel masterChannel, List<ReturnChannel> returnChannels)
+        MasterChannel masterChannel, List<ReturnChannel> returnChannels,
+        int numberOfGroupChannels, int numberOfReturnChannels)
     {
         var inputLoopback = await wireplumberService.CreateLoopbackModule(
             $"input-loopback-group-{index}", new()
@@ -246,10 +251,10 @@ public class MixerEditor(IWireplumberService wireplumberService)
             });
 
         var channelId =
-            (ulong)((index - 1) + InitialGroupChannelCount * (int)layerId);
+            (ulong)((index - 1) + numberOfGroupChannels * (int)layerId);
 
         var sendLoopbacks = (await Task.WhenAll(Enumerable
-            .Range(1, SendChannelCount)
+            .Range(1, numberOfReturnChannels)
             .Select(i =>
                 wireplumberService.CreateLoopbackModule(
                     $"send-loopback-group-{index}-send-{i}", new()
@@ -264,7 +269,7 @@ public class MixerEditor(IWireplumberService wireplumberService)
                             $"group-{index}-send-{i}-loopback-playback-{layerId}"),
                     })))).ToList();
 
-        var id = index - 1 + (int)layerId * InitialGroupChannelCount;
+        var id = index - 1 + (int)layerId * numberOfGroupChannels;
 
         return new(
             $"Group {index}",
@@ -297,9 +302,9 @@ public class MixerEditor(IWireplumberService wireplumberService)
         new InputChannel(playbackNode.Description ?? "Unknown", playbackNode);
 
     private async Task<List<ReturnChannel>> CreateReturnChannels(
-        MasterChannel master, ulong layerId) =>
+        MasterChannel master, ulong layerId, int numberOfReturnChannels) =>
         (await Task.WhenAll(
-            Enumerable.Range(1, SendChannelCount)
+            Enumerable.Range(1, numberOfReturnChannels)
                 .Select(i => CreateReturnChannel(i, master, layerId))))
         .ToList();
 
@@ -335,17 +340,17 @@ public class MixerEditor(IWireplumberService wireplumberService)
     }
 
     private async Task<List<ChannelStrip>> CreateChannels(ulong layerId,
-        MasterChannel master, List<ReturnChannel> returnChannels)
+        MasterChannel master, List<ReturnChannel> returnChannels,
+        int numberOfChannels, int numberOfReturnChannels)
     {
-        var channelIds = Enumerable.Range(1, InitialChannelCount);
         var channels = new List<ChannelStrip>();
-        foreach (var channelId in channelIds)
+        foreach (var channelId in Enumerable.Range(1, numberOfChannels))
         {
             var strip = await CreateChannelStrip(
                 layerId,
                 $"Channel {channelId}",
                 (ulong)channelId,
-                returnChannels, master);
+                returnChannels, master, numberOfChannels, numberOfReturnChannels);
             channels.Add(strip);
         }
 
@@ -354,7 +359,7 @@ public class MixerEditor(IWireplumberService wireplumberService)
 
     private async Task<ChannelStrip> CreateChannelStrip(ulong layerId,
         string name, ulong channelId, List<ReturnChannel> returnChannels,
-        MasterChannel master)
+        MasterChannel master, int numberOfChannels, int numberOfReturnChannels)
     {
         var inputLoopback = await wireplumberService.CreateLoopbackModule(
             $"input-loopback-{channelId}", new()
@@ -379,7 +384,7 @@ public class MixerEditor(IWireplumberService wireplumberService)
             });
 
         var sendLoopbacks = await Task.WhenAll(Enumerable
-            .Range(1, SendChannelCount)
+            .Range(1, numberOfReturnChannels)
             .Select(i =>
                 wireplumberService.CreateLoopbackModule(
                     $"send-loopback-{channelId}-send-{i}", new()
@@ -394,7 +399,7 @@ public class MixerEditor(IWireplumberService wireplumberService)
                             $"channel-{channelId}-send-{i}-loopback-playback-{layerId}"),
                     })));
 
-        var id = (channelId - 1) + layerId * InitialChannelCount;
+        var id = (channelId - 1) + layerId * (ulong)numberOfChannels;
 
         return new(
             name,

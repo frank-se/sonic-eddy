@@ -3,8 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:mixerControls="clr-namespace:SonicEddy.Controls.MixerControls"
-             xmlns:mixerViewsV2="clr-namespace:SonicEddy.Views.MixerViewsV2"
-             xmlns:mixerViewModelsV2="clr-namespace:SonicEddy.ViewModels.MixerViewModelsV2"
+             xmlns:vm="clr-namespace:SonicEddy.ViewModels.MixerViewModelsV2"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="SonicEddy.Controls.MixerControls.ChannelDetailsSection">
 
@@ -12,6 +11,10 @@
         <Style Selector="TabItem">
             <Setter Property="FontSize" Value="14" />
             <Setter Property="Margin" Value="4" />
+        </Style>
+        <Style Selector="TextBlock.section-header">
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Margin" Value="0,8,0,2" />
         </Style>
     </UserControl.Styles>
 
@@ -26,10 +29,125 @@
         </TabItem>
         <TabItem Header="Details">
             <ScrollViewer>
-                <Grid ColumnDefinitions="*,*">
-                    <StackPanel Grid.Column="0" x:Name="PART_DetailsLeftColumn" />
-                    <StackPanel Grid.Column="1" x:Name="PART_DetailsRightColumn" />
-                </Grid>
+                <ContentControl Content="{Binding $parent[mixerControls:ChannelDetailsSection].SelectedChannel}">
+                    <ContentControl.DataTemplates>
+
+                        <!-- Channel Strip -->
+                        <DataTemplate DataType="{x:Type vm:ChannelStripViewModel}">
+                            <StackPanel x:CompileBindings="False" Margin="8" Spacing="2">
+                                <TextBlock Text="{Binding Text}" FontWeight="Bold" FontSize="14" Margin="0,0,0,4" />
+                                <TextBlock Text="Input Module" Classes="section-header" />
+                                <TextBlock Text="{Binding InputLoopback.CaptureNode.ObjectSerial, StringFormat='Capture Serial: {0}'}" />
+                                <TextBlock Text="{Binding InputLoopback.CaptureNode.ObjectId, StringFormat='Capture Id: {0}'}" />
+                                <TextBlock Text="{Binding InputLoopback.PlaybackNode.ObjectSerial, StringFormat='Playback Serial: {0}'}" />
+                                <TextBlock Text="{Binding InputLoopback.PlaybackNode.ObjectId, StringFormat='Playback Id: {0}'}" />
+                                <TextBlock Text="Output Module" Classes="section-header" />
+                                <TextBlock Text="{Binding OutputLoopback.CaptureNode.ObjectSerial, StringFormat='Capture Serial: {0}'}" />
+                                <TextBlock Text="{Binding OutputLoopback.CaptureNode.ObjectId, StringFormat='Capture Id: {0}'}" />
+                                <TextBlock Text="{Binding OutputLoopback.PlaybackNode.ObjectSerial, StringFormat='Playback Serial: {0}'}" />
+                                <TextBlock Text="{Binding OutputLoopback.PlaybackNode.ObjectId, StringFormat='Playback Id: {0}'}" />
+                                <TextBlock Text="Sends" Classes="section-header" />
+                                <ItemsControl ItemsSource="{Binding SendLoopbacks}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel x:CompileBindings="False" Spacing="2" Margin="0,4,0,0">
+                                                <TextBlock Text="{Binding CaptureNode.ObjectSerial, StringFormat='Capture Serial: {0}'}" />
+                                                <TextBlock Text="{Binding CaptureNode.ObjectId, StringFormat='Capture Id: {0}'}" />
+                                                <TextBlock Text="{Binding PlaybackNode.ObjectSerial, StringFormat='Playback Serial: {0}'}" />
+                                                <TextBlock Text="{Binding PlaybackNode.ObjectId, StringFormat='Playback Id: {0}'}" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </DataTemplate>
+
+                        <!-- Group Channel -->
+                        <DataTemplate DataType="{x:Type vm:GroupChannelViewModel}">
+                            <StackPanel x:CompileBindings="False" Margin="8" Spacing="2">
+                                <TextBlock Text="{Binding Text}" FontWeight="Bold" FontSize="14" Margin="0,0,0,4" />
+                                <TextBlock Text="Input Module" Classes="section-header" />
+                                <TextBlock Text="{Binding InputLoopback.CaptureNode.ObjectSerial, StringFormat='Capture Serial: {0}'}" />
+                                <TextBlock Text="{Binding InputLoopback.CaptureNode.ObjectId, StringFormat='Capture Id: {0}'}" />
+                                <TextBlock Text="{Binding InputLoopback.PlaybackNode.ObjectSerial, StringFormat='Playback Serial: {0}'}" />
+                                <TextBlock Text="{Binding InputLoopback.PlaybackNode.ObjectId, StringFormat='Playback Id: {0}'}" />
+                                <TextBlock Text="Output Module" Classes="section-header" />
+                                <TextBlock Text="{Binding OutputLoopback.CaptureNode.ObjectSerial, StringFormat='Capture Serial: {0}'}" />
+                                <TextBlock Text="{Binding OutputLoopback.CaptureNode.ObjectId, StringFormat='Capture Id: {0}'}" />
+                                <TextBlock Text="{Binding OutputLoopback.PlaybackNode.ObjectSerial, StringFormat='Playback Serial: {0}'}" />
+                                <TextBlock Text="{Binding OutputLoopback.PlaybackNode.ObjectId, StringFormat='Playback Id: {0}'}" />
+                                <TextBlock Text="Sends" Classes="section-header" />
+                                <ItemsControl ItemsSource="{Binding SendLoopbacks}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel x:CompileBindings="False" Spacing="2" Margin="0,4,0,0">
+                                                <TextBlock Text="{Binding CaptureNode.ObjectSerial, StringFormat='Capture Serial: {0}'}" />
+                                                <TextBlock Text="{Binding CaptureNode.ObjectId, StringFormat='Capture Id: {0}'}" />
+                                                <TextBlock Text="{Binding PlaybackNode.ObjectSerial, StringFormat='Playback Serial: {0}'}" />
+                                                <TextBlock Text="{Binding PlaybackNode.ObjectId, StringFormat='Playback Id: {0}'}" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </DataTemplate>
+
+                        <!-- Master Channel -->
+                        <DataTemplate DataType="{x:Type vm:MasterChannelViewModel}">
+                            <StackPanel x:CompileBindings="False" Margin="8" Spacing="2">
+                                <TextBlock Text="{Binding Text}" FontWeight="Bold" FontSize="14" Margin="0,0,0,4" />
+                                <TextBlock Text="Input Module" Classes="section-header" />
+                                <TextBlock Text="{Binding InputLoopback.CaptureNode.ObjectSerial, StringFormat='Capture Serial: {0}'}" />
+                                <TextBlock Text="{Binding InputLoopback.CaptureNode.ObjectId, StringFormat='Capture Id: {0}'}" />
+                                <TextBlock Text="{Binding InputLoopback.PlaybackNode.ObjectSerial, StringFormat='Playback Serial: {0}'}" />
+                                <TextBlock Text="{Binding InputLoopback.PlaybackNode.ObjectId, StringFormat='Playback Id: {0}'}" />
+                                <TextBlock Text="Output Module" Classes="section-header" />
+                                <TextBlock Text="{Binding OutputLoopback.CaptureNode.ObjectSerial, StringFormat='Capture Serial: {0}'}" />
+                                <TextBlock Text="{Binding OutputLoopback.CaptureNode.ObjectId, StringFormat='Capture Id: {0}'}" />
+                                <TextBlock Text="{Binding OutputLoopback.PlaybackNode.ObjectSerial, StringFormat='Playback Serial: {0}'}" />
+                                <TextBlock Text="{Binding OutputLoopback.PlaybackNode.ObjectId, StringFormat='Playback Id: {0}'}" />
+                            </StackPanel>
+                        </DataTemplate>
+
+                        <!-- Return Channel -->
+                        <DataTemplate DataType="{x:Type vm:ReturnChannelViewModel}">
+                            <StackPanel x:CompileBindings="False" Margin="8" Spacing="2">
+                                <TextBlock Text="{Binding Text}" FontWeight="Bold" FontSize="14" Margin="0,0,0,4" />
+                                <TextBlock Text="Input Module" Classes="section-header" />
+                                <TextBlock Text="{Binding InputLoopback.CaptureNode.ObjectSerial, StringFormat='Capture Serial: {0}'}" />
+                                <TextBlock Text="{Binding InputLoopback.CaptureNode.ObjectId, StringFormat='Capture Id: {0}'}" />
+                                <TextBlock Text="{Binding InputLoopback.PlaybackNode.ObjectSerial, StringFormat='Playback Serial: {0}'}" />
+                                <TextBlock Text="{Binding InputLoopback.PlaybackNode.ObjectId, StringFormat='Playback Id: {0}'}" />
+                                <TextBlock Text="Output Module" Classes="section-header" />
+                                <TextBlock Text="{Binding OutputLoopback.CaptureNode.ObjectSerial, StringFormat='Capture Serial: {0}'}" />
+                                <TextBlock Text="{Binding OutputLoopback.CaptureNode.ObjectId, StringFormat='Capture Id: {0}'}" />
+                                <TextBlock Text="{Binding OutputLoopback.PlaybackNode.ObjectSerial, StringFormat='Playback Serial: {0}'}" />
+                                <TextBlock Text="{Binding OutputLoopback.PlaybackNode.ObjectId, StringFormat='Playback Id: {0}'}" />
+                            </StackPanel>
+                        </DataTemplate>
+
+                        <!-- Input Channel -->
+                        <DataTemplate DataType="{x:Type vm:InputChannelViewModel}">
+                            <StackPanel x:CompileBindings="False" Margin="8" Spacing="2">
+                                <TextBlock Text="{Binding Text}" FontWeight="Bold" FontSize="14" Margin="0,0,0,4" />
+                                <TextBlock Text="Playback Node" Classes="section-header" />
+                                <TextBlock Text="{Binding PlaybackNodeObjectSerial, StringFormat='Serial: {0}'}" />
+                                <TextBlock Text="{Binding PlaybackNodeObjectId, StringFormat='Id: {0}'}" />
+                            </StackPanel>
+                        </DataTemplate>
+
+                        <!-- Output Channel -->
+                        <DataTemplate DataType="{x:Type vm:OutputChannelViewModel}">
+                            <StackPanel x:CompileBindings="False" Margin="8" Spacing="2">
+                                <TextBlock Text="{Binding Text}" FontWeight="Bold" FontSize="14" Margin="0,0,0,4" />
+                                <TextBlock Text="Capture Node" Classes="section-header" />
+                                <TextBlock Text="{Binding CaptureNodeObjectSerial, StringFormat='Serial: {0}'}" />
+                                <TextBlock Text="{Binding CaptureNodeObjectId, StringFormat='Id: {0}'}" />
+                            </StackPanel>
+                        </DataTemplate>
+
+                    </ContentControl.DataTemplates>
+                </ContentControl>
             </ScrollViewer>
         </TabItem>
     </TabControl>

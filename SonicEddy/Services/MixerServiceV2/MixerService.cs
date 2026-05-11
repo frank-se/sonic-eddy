@@ -68,8 +68,21 @@ public class MixerService : IMixerService, IDisposable
             {
                 _myNodeIds.Clear();
 
-                var firstLayer = await _editor.Create(_preferenceService
-                    .Preferences?.DefaultMasterOutputName, 0);
+                var prefs = _preferenceService.Preferences ?? new();
+                var masterOutputName = prefs.DefaultMasterOutputName;
+                var numberOfChannels = prefs.NumberOfChannels;
+                var numberOfGroupChannels = prefs.NumberOfGroupChannels;
+                var numberOfReturnChannels = prefs.NumberOfReturnChannels;
+
+                NumberOfChannelsPerLayer = numberOfChannels;
+                NumberOfChannels = numberOfChannels * (createSecondLayer ? 2 : 1);
+                NumberOfGroupChannelsPerLayer = numberOfGroupChannels;
+                NumberOfGroupChannels =
+                    numberOfGroupChannels * (createSecondLayer ? 2 : 1);
+
+                var firstLayer = await _editor.Create(masterOutputName, 0,
+                    numberOfChannels, numberOfGroupChannels,
+                    numberOfReturnChannels);
 
                 var layerOneIds =
                     CollectMixerLayerNodeIds(firstLayer).ToArray();
@@ -77,9 +90,9 @@ public class MixerService : IMixerService, IDisposable
 
                 if (createSecondLayer)
                 {
-                    var secondLayer = await _editor.Create(_preferenceService
-                            .Preferences?.DefaultMasterOutputName, 1,
-                        layerOneIds.ToArray());
+                    var secondLayer = await _editor.Create(masterOutputName, 1,
+                        numberOfChannels, numberOfGroupChannels,
+                        numberOfReturnChannels, layerOneIds);
 
                     _myNodeIds.AddRange(CollectMixerLayerNodeIds(secondLayer));
 
@@ -309,10 +322,10 @@ public class MixerService : IMixerService, IDisposable
     public event Action<List<InputChannel>>? InputsChanged;
     public event Action<List<OutputChannel>>? OutputsChanged;
 
-    public int NumberOfChannelsPerLayer { get; } = 8;
-    public int NumberOfChannels { get; } = 16;
-    public int NumberOfGroupChannelsPerLayer { get; } = 4;
-    public int NumberOfGroupChannels { get; } = 8;
+    public int NumberOfChannelsPerLayer { get; private set; } = 8;
+    public int NumberOfChannels { get; private set; } = 16;
+    public int NumberOfGroupChannelsPerLayer { get; private set; } = 4;
+    public int NumberOfGroupChannels { get; private set; } = 8;
 
     private readonly Queue<Node> _pendingAddedNodes = [];
 

@@ -47,4 +47,5 @@ public class InputChannelViewModel(
     public string Name { get; } = text;
 
     public ulong PlaybackNodeObjectSerial => _playbackNode.ObjectSerial;
+    public ulong PlaybackNodeObjectId => _playbackNode.ObjectId;
 }

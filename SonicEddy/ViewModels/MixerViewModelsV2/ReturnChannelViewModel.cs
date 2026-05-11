@@ -19,6 +19,9 @@ public class ReturnChannelViewModel : ReactiveObject, IReturnChannel,
     private readonly LoopbackModule _inputLoopback;
     private readonly LoopbackModule _outbackLoopback;
 
+    public LoopbackModule InputLoopback => _inputLoopback;
+    public LoopbackModule OutputLoopback => _outbackLoopback;
+
     public ReturnChannelViewModel(string text, ICommand selectChannelCommand,
         LoopbackModule inputLoopback, LoopbackModule outbackLoopback,
         FilterChain? filterChain, IMonitoringService monitoringService)

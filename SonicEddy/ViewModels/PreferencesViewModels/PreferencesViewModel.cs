@@ -39,6 +39,30 @@ public class PreferencesViewModel : ViewModelBase
             })
             .DisposeWith(_disposable);
 
+        this.WhenAnyValue(x => x.NumberOfChannels)
+            .Subscribe(_ =>
+            {
+                _changed = true;
+                UpdateButtonStates();
+            })
+            .DisposeWith(_disposable);
+
+        this.WhenAnyValue(x => x.NumberOfGroupChannels)
+            .Subscribe(_ =>
+            {
+                _changed = true;
+                UpdateButtonStates();
+            })
+            .DisposeWith(_disposable);
+
+        this.WhenAnyValue(x => x.NumberOfReturnChannels)
+            .Subscribe(_ =>
+            {
+                _changed = true;
+                UpdateButtonStates();
+            })
+            .DisposeWith(_disposable);
+
         _ = FillFromPreferences();
     }
 
@@ -50,6 +74,24 @@ public class PreferencesViewModel : ViewModelBase
         set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
+    public int NumberOfChannels
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    } = 8;
+
+    public int NumberOfGroupChannels
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    } = 4;
+
+    public int NumberOfReturnChannels
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    } = 1;
+
     public bool IsSaveEnabled
     {
         get;
@@ -58,7 +100,14 @@ public class PreferencesViewModel : ViewModelBase
 
     public async Task Save()
     {
-        var preferences = new Preferences(SelectedDefaultMasterOutput?.Name);
+        var current = _preferenceService.Preferences ?? new Preferences();
+        var preferences = current with
+        {
+            DefaultMasterOutputName = SelectedDefaultMasterOutput?.Name,
+            NumberOfChannels = NumberOfChannels,
+            NumberOfGroupChannels = NumberOfGroupChannels,
+            NumberOfReturnChannels = NumberOfReturnChannels
+        };
         await _preferenceService.UpdateAndSave(preferences);
     }
 
@@ -89,6 +138,9 @@ public class PreferencesViewModel : ViewModelBase
             n.Name == preferences.DefaultMasterOutputName);
 
         SelectedDefaultMasterOutput = selectedNode;
+        NumberOfChannels = preferences.NumberOfChannels;
+        NumberOfGroupChannels = preferences.NumberOfGroupChannels;
+        NumberOfReturnChannels = preferences.NumberOfReturnChannels;
     }
 
     private void UpdateButtonStates()

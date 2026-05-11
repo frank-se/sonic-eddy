@@ -37,6 +37,8 @@
             </Grid>
         </SplitView.Pane>
 
+        <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Disabled">
         <StackPanel Orientation="Horizontal">
             <ItemsControl ItemsSource="{Binding ChannelStrips}">
 
@@ -170,5 +172,6 @@
             </ItemsControl>
 
         </StackPanel>
+        </ScrollViewer>
     </SplitView>
 </UserControl>

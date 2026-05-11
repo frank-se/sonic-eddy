@@ -72,7 +72,7 @@ public abstract class ChannelWithSendsViewModelBase : ChannelViewModelBase
                 OnSend4PropertiesChanged;
     }
 
-    protected readonly List<LoopbackModule> SendLoopbacks;
+    public List<LoopbackModule> SendLoopbacks { get; }
 
     public bool IsSendMidiControlled
     {

@@ -47,4 +47,5 @@ public class OutputChannelViewModel(
     }
 
     public ulong CaptureNodeObjectSerial => captureNode.ObjectSerial;
+    public ulong CaptureNodeObjectId => captureNode.ObjectId;
 }

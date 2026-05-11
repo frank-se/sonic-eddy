@@ -486,11 +486,19 @@ public class MixerLayerViewModel : ViewModelBase,
             outputChannels.Select(c => c.CaptureNode.ObjectSerial).ToArray();
 
         var deletedChannels = OutputChannels.Where(c =>
-            !newObjectSerials.Contains(c.CaptureNodeObjectSerial));
+            !newObjectSerials.Contains(c.CaptureNodeObjectSerial)).ToArray();
 
         foreach (var deletedChannel in deletedChannels)
         {
             OutputChannels.Remove(deletedChannel);
+
+            var routingTarget = AudioToRoutingTargetsMasterChannel.FirstOrDefault(
+                t => t.Channel is IOutputChannel output &&
+                     output.CaptureNodeObjectSerial ==
+                     deletedChannel.CaptureNodeObjectSerial);
+
+            if (routingTarget is not null)
+                AudioToRoutingTargetsMasterChannel.Remove(routingTarget);
         }
     }
 
@@ -507,9 +515,15 @@ public class MixerLayerViewModel : ViewModelBase,
 
         var newViewModels = newChannels.Select(c =>
             _mixerViewModelService.ConvertOutputChannel(c,
-                SelectChannelCommand));
+                SelectChannelCommand)).ToArray();
 
         OutputChannels.AddRange(newViewModels);
+
+        foreach (var channel in newViewModels)
+        {
+            AudioToRoutingTargetsMasterChannel.Add(
+                new RoutingTargetViewModel(channel.Name, channel));
+        }
     }
 
     public ObservableCollection<IChannelStrip>? ChannelStrips { get; set; }

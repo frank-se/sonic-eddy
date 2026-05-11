@@ -9,7 +9,7 @@
         Title="Preferences">
 
     <StackPanel>
-        <Grid RowDefinitions="Auto,*"
+        <Grid RowDefinitions="Auto,Auto,Auto,Auto,*"
               ColumnDefinitions="Auto,*">
 
             <Label Grid.Row="0"
@@ -23,6 +23,39 @@
                       ItemsSource="{Binding Nodes}"
                       DisplayMemberBinding="{Binding Description}"
                       SelectedItem="{Binding SelectedDefaultMasterOutput}" />
+
+            <Label Grid.Row="1"
+                   Grid.Column="0"
+                   Target="NumberOfChannelsUpDown"
+                   Content="Number of Channels" />
+
+            <NumericUpDown Grid.Row="1"
+                           Grid.Column="1"
+                           x:Name="NumberOfChannelsUpDown"
+                           Minimum="1"
+                           Value="{Binding NumberOfChannels}" />
+
+            <Label Grid.Row="2"
+                   Grid.Column="0"
+                   Target="NumberOfGroupChannelsUpDown"
+                   Content="Number of Group Channels" />
+
+            <NumericUpDown Grid.Row="2"
+                           Grid.Column="1"
+                           x:Name="NumberOfGroupChannelsUpDown"
+                           Minimum="1"
+                           Value="{Binding NumberOfGroupChannels}" />
+
+            <Label Grid.Row="3"
+                   Grid.Column="0"
+                   Target="NumberOfReturnChannelsUpDown"
+                   Content="Number of Return Channels" />
+
+            <NumericUpDown Grid.Row="3"
+                           Grid.Column="1"
+                           x:Name="NumberOfReturnChannelsUpDown"
+                           Minimum="1"
+                           Value="{Binding NumberOfReturnChannels}" />
 
         </Grid>
         

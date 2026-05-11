@@ -192,6 +192,9 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
 
     private readonly LoopbackModule _inputLoopback;
     private readonly LoopbackModule _outputLoopback;
+
+    public LoopbackModule InputLoopback => _inputLoopback;
+    public LoopbackModule OutputLoopback => _outputLoopback;
     private readonly IAppDataService _appDataService;
     private readonly IMixerService _mixerService;
     private readonly IMidiControllerSetupService _midiSetupService;
