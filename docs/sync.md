@@ -302,3 +302,112 @@ local_sample = current_sample + (beat_nsec - now_nsec) * sample_rate / 1_000_000
 ```
 
 This is as close to sample-accurate as possible without sharing a driver chain.
+
+## MIDI Clock Converter
+
+A PipeWire filter node with one MIDI output port that translates the sync
+protocol into MIDI 1 clock messages. No MIDI time code, no Song Position
+Pointer — the sync protocol has no timeline position, only a live beat clock,
+so those concepts do not apply.
+
+### Node
+
+A `pw_filter` with a single MIDI output port and a `se_sync_consumer_t`
+internally. In each process callback it calls `se_sync_get_beats` and emits
+MIDI events at the computed sample positions.
+
+### Clock pulses
+
+MIDI clock runs at 24 PPQN. Given beat B at sample `S_B` and beat B+1 at
+sample `S_{B+1}`, the 24 pulses are evenly spaced:
+
+```text
+pulse_sample[i] = S_B + i * (S_{B+1} - S_B) / 24   (i = 0..23)
+```
+
+The node tracks the current beat and pulse index across process callbacks,
+emitting `0xF8` (MIDI Clock) at each computed sample. Tempo changes require no
+special handling — the new beat timestamps already encode the new pulse spacing.
+
+### Transport messages
+
+`start_beat` is always the downbeat of a new playback, not a position in a
+longer timeline. Every start is a fresh start; Continue has no meaning in this
+model.
+
+| Event                                    | Message         |
+| ---------------------------------------- | --------------- |
+| `transport_state` becomes `start_scheduled` or `playing` | `0xFA` Start |
+| `transport_state` becomes `stopped`      | `0xFC` Stop     |
+
+The Start message is emitted at the sample position of `start_beat`. The Stop
+message is emitted immediately on the first process callback where the state is
+observed as `stopped`.
+
+## C# API
+
+The C# wrapper follows the same P/Invoke pattern as `Fr.Wireplumber` and
+`Fr.Pw.Monitoring`. A static facade class wraps `se_sync_consumer_t` and exposes
+a typed, reactive surface to the UI layer.
+
+### Change notification
+
+The wrapper needs to know when `SPA_PROP_params` changes so it can raise a C#
+event. Internally it registers a C-level callback with the native library at
+initialisation time. This callback is an implementation detail of the wrapper —
+it is not part of the public C API — and its design is driven by P/Invoke
+constraints rather than general C API ergonomics:
+
+- The callback must be a `static` method annotated with `[UnmanagedCallersOnly]`
+  to avoid a managed delegate allocation that the GC could collect.
+- Its signature is restricted to blittable types only.
+- It fires on the PipeWire main loop thread, not a managed thread, so any
+  interaction with managed state requires care.
+
+The callback captures two timestamps at the moment it fires:
+
+| Field               | Type     | Description                                                                 |
+| ------------------- | -------- | --------------------------------------------------------------------------- |
+| `pw_nsec`           | `ulong`  | PipeWire monotonic clock time at which the param update arrived.            |
+| `arrival_timestamp` | `long`   | `Stopwatch.GetTimestamp()` captured in the callback, on the same thread.    |
+
+Pairing both clocks at a single instant gives the C# layer a stable correlation
+point. After that, beat timestamps from `se_sync_get_beats` (in PipeWire nsec)
+can be converted to C# monotonic time without further clock synchronisation.
+
+### Public surface
+
+```csharp
+public record SyncBpmEntry(ulong Beat, double Bpm);
+
+public record SyncStateEntry(ulong Beat, SyncTransportState State);
+
+public record SyncParams(
+    SyncBpmEntry[]   Bpm,
+    SyncStateEntry[] TransportState
+);
+
+public record SyncParamsChangedArgs(
+    SyncParams Params,
+    ulong      PwNsec,
+    long       ArrivalTimestamp
+);
+
+public enum SyncTransportState { Stopped, StartScheduled, Playing }
+```
+
+```csharp
+public static class FrPwSync
+{
+    public static void Start(/* pw_loop, pw_registry handles */);
+    public static void Stop();
+
+    public static event EventHandler<SyncParamsChangedArgs> ParamsChanged;
+
+    public static void RequestBpm(ulong atBeat, double bpm);
+    public static void RequestTransportState(ulong atBeat, SyncTransportState state);
+}
+```
+
+`ParamsChanged` is raised on the PipeWire main loop thread. Subscribers that
+touch UI state must marshal to the UI thread in the usual way.
