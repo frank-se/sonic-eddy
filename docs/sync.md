@@ -51,31 +51,43 @@ signal without needing a timeline or external state.
 
 **Published in:** `SPA_PROP_params` JSON field `beat.params`
 
-**Value:** JSON object
+**Value:** JSON object with two arrays of `[beat, value]` tuples
 
 ```json
 {
-  "bpm": 120.0,
-  "transport_state": "start_scheduled",
-  "start_beat": 24
+  "bpm":             [[0, 120.0], [48, 144.0]],
+  "transport_state": [[0, "playing"]]
 }
 ```
 
+Each entry is valid from its beat onwards until superseded by the next entry in
+the array. Under normal operation both arrays contain a single entry. A scheduled
+tempo or state change appears as a second entry with a future beat.
+
 ### Fields
 
-| Field             | Type      | Description                                        |
-| ----------------- | --------- | -------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `bpm`             | `float64` | Current tempo in beats per minute.                 |
-| `transport_state` | `string`  | One of `stopped`, `start_scheduled`, or `playing`. |
-| `start_beat`      | `uint64   | null`                                              | Beat number where playback starts or started. `null` when `transport_state` is `stopped`. |
+| Field             | Type                          | Description                                                        |
+| ----------------- | ----------------------------- | ------------------------------------------------------------------ |
+| `bpm`             | `[[uint64, float64], ...]`    | Tempo changes. Each entry: `[valid_from_beat, bpm]`.               |
+| `transport_state` | `[[uint64, string], ...]`     | State changes. Each entry: `[valid_from_beat, state]`.             |
 
 ### Transport states
 
-| State             | `start_beat` | Meaning                                                                                |
-| ----------------- | ------------ | -------------------------------------------------------------------------------------- |
-| `stopped`         | `null`       | No playback. Consumers should not act on the beat schedule.                            |
-| `start_scheduled` | future beat  | Playback will begin at `start_beat`. Consumers prepare and fire together on that beat. |
-| `playing`         | past beat    | Playback is running. `start_beat` is the beat playback began at.                       |
+| State             | Meaning                                                                                              |
+| ----------------- | ---------------------------------------------------------------------------------------------------- |
+| `stopped`         | No playback. Consumers should not act on the beat schedule.                                          |
+| `start_scheduled` | Playback will begin at the entry's `valid_from_beat`. Consumers prepare and fire together on it.     |
+| `playing`         | Playback is running. The entry's `valid_from_beat` is the beat playback began at.                    |
+
+To determine when playback started or is scheduled to start, inspect the
+`transport_state` array — the `valid_from_beat` of the relevant entry is that
+beat.
+
+### Cleanup
+
+On each update, entries are removed when they have been superseded by a later
+entry AND their beat is older than the oldest beat remaining in the schedule.
+Each array always retains at least one entry (the currently active value).
 
 Beats always progress monotonically regardless of transport state. The schedule
 tells consumers _when_ each beat fires in wall-clock time; transport parameters
@@ -110,7 +122,10 @@ on `SPA_PARAM_Props`:
 ```json
 {
   "beat.schedule": [[42, 1234567890000], [43, 1234568390000]],
-  "beat.params":   {"bpm": 120.0, "transport_state": "playing", "start_beat": 0}
+  "beat.params": {
+    "bpm":             [[0, 120.0], [48, 144.0]],
+    "transport_state": [[0, "playing"]]
+  }
 }
 ```
 
@@ -156,10 +171,20 @@ typedef enum {
 } se_sync_transport_state_t;
 
 typedef struct {
-    double                    bpm;
-    se_sync_transport_state_t transport_state;
-    uint64_t                  start_beat; /* 0 when transport_state is SE_SYNC_STOPPED */
-    int                       start_beat_valid; /* 0 when transport_state is SE_SYNC_STOPPED */
+    uint64_t beat;
+    double   bpm;
+} se_sync_bpm_entry_t;
+
+typedef struct {
+    uint64_t                  beat;
+    se_sync_transport_state_t state;
+} se_sync_state_entry_t;
+
+typedef struct {
+    se_sync_bpm_entry_t   *bpm;         /* owned by consumer; do not free */
+    int                    bpm_count;
+    se_sync_state_entry_t *state;       /* owned by consumer; do not free */
+    int                    state_count;
 } se_sync_params_t;
 
 typedef struct {
@@ -205,10 +230,10 @@ int se_sync_get_beats(
 );
 ```
 
-The internal beat buffer is allocated at consumer creation, sized for N beats.
-If N changes it is reallocated on the `SPA_PROP_params` callback path, never
-inside `se_sync_get_beats`. `(*out)->params` is always populated regardless of
-beat count.
+All internal buffers (beat schedule, bpm entries, state entries) are allocated at
+consumer creation and reallocated only on the `SPA_PROP_params` callback path,
+never inside `se_sync_get_beats`. `(*out)->params` is always populated regardless
+of beat count.
 
 ## Cross-graph sync
 
