@@ -12,7 +12,12 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <None Include="runtimes/linux-x64/libfrmidimapper.so.0.0.2" Pack="true" PackagePath="runtimes/linux-x64/native/"/>
+        <None Include="..\Fr.Pw.Midi\runtimes\linux-x64\libfrmidimapper.so.0.0.4" CopyToOutputDirectory="PreserveNewest">
+            <Link>runtimes\linux-x64\native\libfrmidimapper.so.0.0.4</Link>
+        </None>
+        <None Include="..\Fr.Wireplumber\runtimes\linux-x64\libfrwireplumber.so.0.9.1" CopyToOutputDirectory="PreserveNewest">
+            <Link>runtimes\linux-x64\native\libfrwireplumber.so.0.9.1</Link>
+        </None>
     </ItemGroup>
 
 </Project>

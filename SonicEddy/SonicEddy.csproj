@@ -21,9 +21,6 @@
         <PackageReference Include="Avalonia.Desktop" Version="12.0.1" />
         <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.1" />
         <PackageReference Include="Avalonia.Fonts.Inter" Version="12.0.1" />
-        <PackageReference Include="FrLv2" Version="0.0.4" />
-        <PackageReference Include="FrPwMonitoring" Version="0.0.4" />
-        <PackageReference Include="FrWireplumber" Version="0.9.3" />
         <PackageReference Include="ReactiveUI.Avalonia" Version="11.4.12" />
         <PackageReference Include="Serilog" Version="4.3.1" />
         <PackageReference Include="Serilog.Extensions.Logging" Version="10.0.0" />
@@ -61,9 +58,23 @@
     <ItemGroup>
       <ProjectReference Include="..\SonicEddy.Contracts\SonicEddy.Contracts.csproj" />
       <ProjectReference Include="..\Fr.Pw.Midi\Fr.Pw.Midi.csproj" />
+      <ProjectReference Include="..\Fr.Wireplumber\Fr.Wireplumber.csproj" />
+      <ProjectReference Include="..\Fr.Pw.Monitoring\Fr.Pw.Monitoring.csproj" />
+      <ProjectReference Include="..\Fr.Lv2\Fr.Lv2.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-        <None Include="runtimes/linux-x64/libfrmidimapper.so.0.0.4" Pack="true" PackagePath="runtimes/linux-x64/native/" />
+        <None Include="..\Fr.Pw.Midi\runtimes\linux-x64\libfrmidimapper.so.0.0.4" CopyToOutputDirectory="PreserveNewest">
+            <Link>runtimes\linux-x64\native\libfrmidimapper.so.0.0.4</Link>
+        </None>
+        <None Include="..\Fr.Wireplumber\runtimes\linux-x64\libfrwireplumber.so.0.9.1" CopyToOutputDirectory="PreserveNewest">
+            <Link>runtimes\linux-x64\native\libfrwireplumber.so.0.9.1</Link>
+        </None>
+        <None Include="..\Fr.Pw.Monitoring\runtimes\linux-x64\libfrmonitoring.so.0.0.4" CopyToOutputDirectory="PreserveNewest">
+            <Link>runtimes\linux-x64\native\libfrmonitoring.so.0.0.4</Link>
+        </None>
+        <None Include="..\Fr.Lv2\runtimes\linux-x64\libfrlv2.so.0.0.3" CopyToOutputDirectory="PreserveNewest">
+            <Link>runtimes\linux-x64\native\libfrlv2.so.0.0.3</Link>
+        </None>
     </ItemGroup> 
 </Project>

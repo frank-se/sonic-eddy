@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="FrWireplumber" Version="0.9.3" />
+    <ProjectReference Include="..\Fr.Wireplumber\Fr.Wireplumber.csproj" />
   </ItemGroup>
 
 </Project>
