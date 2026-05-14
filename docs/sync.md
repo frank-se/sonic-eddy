@@ -151,6 +151,33 @@ PipeWire monotonic clock, then republishes `SPA_PROP_params`.
 
 All updates happen on the PipeWire main loop thread, never on an RT thread.
 
+### Controlling the master
+
+Clients change BPM or transport state by sending a `SPA_PARAM_Props` update to
+the master node via `pw_node_set_param`. The payload follows the same
+`[beat, value]` tuple format as the published data and is treated like an HTTP
+PATCH request: only the fields present in the payload are considered; omitted
+fields are left unchanged. The master is authoritative — it merges the incoming
+values with current state, validates them, and either applies and republishes or
+silently ignores. There is no acknowledgement; clients observe the outcome on the
+next `SPA_PROP_params` update.
+
+The master enforces a minimum lead-time rule before accepting a change:
+
+- **Stopped** — immediate changes (any beat ≤ current beat) are accepted.
+- **Playing or start_scheduled** — only changes with `valid_from_beat ≥
+  current_beat + K` are accepted. Default K is 4. This ensures all consumers
+  have enough schedule lookahead to react before the change takes effect.
+
+K is runtime-configurable alongside N and M.
+
+An immediate change sends the current beat as the validity anchor; a scheduled
+future change sends the target beat:
+
+```json
+{ "beat.params": { "bpm": [[48, 144.0]] } }
+```
+
 ### Consumer library
 
 `se_sync_consumer_create` watches the PipeWire registry for a node named
