@@ -262,6 +262,35 @@ consumer creation and reallocated only on the `SPA_PROP_params` callback path,
 never inside `se_sync_get_beats`. `(*out)->params` is always populated regardless
 of beat count.
 
+### Requesting changes
+
+```c
+/*
+ * Request a BPM change at the given beat. Fire-and-forget — the master may
+ * accept or ignore the request. Observe the outcome via se_sync_get_beats.
+ */
+void se_sync_request_bpm(
+    se_sync_consumer_t *consumer,
+    uint64_t            at_beat,
+    double              bpm
+);
+
+/*
+ * Request a transport state change at the given beat. Fire-and-forget — the
+ * master may accept or ignore the request. Observe the outcome via se_sync_get_beats.
+ */
+void se_sync_request_transport_state(
+    se_sync_consumer_t        *consumer,
+    uint64_t                   at_beat,
+    se_sync_transport_state_t  state
+);
+```
+
+Both functions send a partial `SPA_PROP_params` update (PATCH semantics) to the
+sync master via `pw_node_set_param`. The consumer already holds the master node
+proxy, so no additional setup is needed. Results are observed on the next
+`se_sync_get_beats` call.
+
 ## Cross-graph sync
 
 PipeWire nodes in different clock domains cannot share sample-accurate ticks
