@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <PackageId>FrSonic</PackageId>
+        <Version>0.1.0</Version>
+        <Authors>Frank Krick</Authors>
+        <Description>Unified native backend for Sonic Eddy (PipeWire, WirePlumber, MIDI, LV2)</Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="runtimes/linux-x64/libfrsonic.so.0.1.0"
+              Pack="true"
+              PackagePath="runtimes/linux-x64/native/" />
+    </ItemGroup>
+
+    <!-- Allow test assembly access to internals -->
+    <ItemGroup>
+        <InternalsVisibleTo Include="Fr.Sonic.Tests" />
+    </ItemGroup>
+</Project>

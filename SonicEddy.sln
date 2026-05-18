@@ -24,6 +24,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Fr.Wireplumber.Console", "F
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Fr.Wireplumber.Tests", "Fr.Wireplumber.Tests\Fr.Wireplumber.Tests.csproj", "{4963BB66-AFBE-4BBA-8AD4-51FFB3745A72}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Fr.Sonic", "Fr.Sonic\Fr.Sonic.csproj", "{7407A680-5982-450C-B07F-92208FD94002}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -178,6 +180,18 @@ Global
 		{4963BB66-AFBE-4BBA-8AD4-51FFB3745A72}.Release|x64.Build.0 = Release|Any CPU
 		{4963BB66-AFBE-4BBA-8AD4-51FFB3745A72}.Release|x86.ActiveCfg = Release|Any CPU
 		{4963BB66-AFBE-4BBA-8AD4-51FFB3745A72}.Release|x86.Build.0 = Release|Any CPU
+		{7407A680-5982-450C-B07F-92208FD94002}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7407A680-5982-450C-B07F-92208FD94002}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7407A680-5982-450C-B07F-92208FD94002}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{7407A680-5982-450C-B07F-92208FD94002}.Debug|x64.Build.0 = Debug|Any CPU
+		{7407A680-5982-450C-B07F-92208FD94002}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{7407A680-5982-450C-B07F-92208FD94002}.Debug|x86.Build.0 = Debug|Any CPU
+		{7407A680-5982-450C-B07F-92208FD94002}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7407A680-5982-450C-B07F-92208FD94002}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7407A680-5982-450C-B07F-92208FD94002}.Release|x64.ActiveCfg = Release|Any CPU
+		{7407A680-5982-450C-B07F-92208FD94002}.Release|x64.Build.0 = Release|Any CPU
+		{7407A680-5982-450C-B07F-92208FD94002}.Release|x86.ActiveCfg = Release|Any CPU
+		{7407A680-5982-450C-B07F-92208FD94002}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
