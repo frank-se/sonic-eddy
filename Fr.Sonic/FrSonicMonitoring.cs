@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+using Fr.Sonic.Monitoring.Messages;
 using Fr.Sonic.PInvoke;
 
 namespace Fr.Sonic;
@@ -14,12 +16,15 @@ public static class FrSonicMonitoring
 {
     public static event EventHandler<MonitoringUpdate>? PeakChanged;
 
+    internal static readonly BlockingCollection<ChannelMonitoringUpdateMessage>
+        MonitoringQueue = new();
+
     internal static void OnPeak(ulong objectSerial, float leftPeak, float rightPeak,
         float leftAverage, float rightAverage)
     {
         var update = new MonitoringUpdate(objectSerial, leftPeak, rightPeak,
             leftAverage, rightAverage);
-        FrSonic.MonitoringEvents.Add(update);
+        MonitoringQueue.Add(new(objectSerial, leftPeak, rightPeak, leftAverage, rightAverage));
         PeakChanged?.Invoke(null, update);
     }
 

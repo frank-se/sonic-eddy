@@ -3,6 +3,11 @@ using Fr.Sonic.PInvoke;
 
 namespace Fr.Sonic;
 
+public record LayerSelectEventArgs(ulong LayerId);
+public record ChannelSelectEventArgs(ChannelType ChannelType, ulong ChannelId);
+public record DialModeEventArgs(ChannelType ChannelType, ulong ChannelId, DialMode DialMode);
+public record FilterSectionEventArgs(ChannelType ChannelType, ulong ChannelId, ulong SectionId);
+
 public record MidiCcUpdate(
     ChannelType ChannelType, ulong ChannelId, ulong ObjectId,
     string ParameterName, float NormalizedValue, float NormalizedKnownValue,
@@ -24,6 +29,39 @@ public static class FrSonicMidi
             normalizedValue, normalizedKnownValue, catchingUp);
         ControlChangeUpdate?.Invoke(null, update);
     }
+
+    /* ── internal callbacks forwarded to MidiPortFactory ──────────────── */
+
+    internal static void OnLayerSelect(ulong layerId) =>
+        LayerChanged?.Invoke(null, new LayerSelectEventArgs(layerId));
+
+    internal static void OnChannelSelect(ChannelType channelType, ulong channelId) =>
+        ChannelChanged?.Invoke(null, new ChannelSelectEventArgs(channelType, channelId));
+
+    internal static void OnDialSectionModeSelect(ChannelType channelType,
+        ulong channelId, DialMode dialMode) =>
+        DialModeChanged?.Invoke(null,
+            new DialModeEventArgs(channelType, channelId, dialMode));
+
+    internal static void OnFilterParamsSectionSelect(ChannelType channelType,
+        ulong channelId, ulong sectionId) =>
+        FilterSectionChanged?.Invoke(null,
+            new FilterSectionEventArgs(channelType, channelId, sectionId));
+
+    internal static void OnFilterParamsSectionMoveRight(ulong stepCount) =>
+        FilterSectionMovedRight?.Invoke(null, stepCount);
+
+    internal static void OnFilterParamsSectionMoveLeft(ulong stepCount) =>
+        FilterSectionMovedLeft?.Invoke(null, stepCount);
+
+    /* ── events ───────────────────────────────────────────────────────── */
+
+    public static event EventHandler<LayerSelectEventArgs>? LayerChanged;
+    public static event EventHandler<ChannelSelectEventArgs>? ChannelChanged;
+    public static event EventHandler<DialModeEventArgs>? DialModeChanged;
+    public static event EventHandler<FilterSectionEventArgs>? FilterSectionChanged;
+    public static event EventHandler<ulong>? FilterSectionMovedRight;
+    public static event EventHandler<ulong>? FilterSectionMovedLeft;
 
     public const string PmxPurpose = "midi-controller";
 

@@ -1,6 +1,4 @@
-using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
-using System.Text.Json;
 using Fr.Sonic.Model;
 
 // ReSharper disable InconsistentNaming
@@ -11,7 +9,7 @@ namespace Fr.Sonic.PInvoke;
 
 public enum ChannelType { Channel = 0, GroupChannel = 1 }
 public enum DialMode    { Sends = 1, FilterParams = 2 }
-public enum WireplumberObjectType : int { Node, Port, Link, Device, Client }
+/* WireplumberObjectType removed — wireplumber_object_type from WireplumberData.cs is used instead */
 
 /* ── callback delegates ──────────────────────────────────────────────────── */
 
@@ -28,7 +26,7 @@ public delegate void PropsEnumFailedCallback(ulong objectSerial);
 public delegate void PropInfoAddedCallback(IntPtr jsonPtr);
 
 [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-public delegate void ObjectDeletedCallback(ulong objectSerial, WireplumberObjectType objectType);
+public delegate void ObjectDeletedCallback(ulong objectSerial, wireplumber_object_type objectType);
 
 [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 public delegate void MetadataAddedCallback(IntPtr metadataName);

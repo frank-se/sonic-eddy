@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Fr.Sonic\Fr.Sonic.csproj"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="..\Fr.Sonic\runtimes\linux-x64\libfrsonic.so.0.1.0"
+              CopyToOutputDirectory="PreserveNewest">
+            <Link>runtimes\linux-x64\native\libfrsonic.so.0.1.0</Link>
+        </None>
+    </ItemGroup>
+
+</Project>
