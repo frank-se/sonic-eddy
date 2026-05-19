@@ -5,7 +5,8 @@ using System.Reactive.Disposables;
 using System.Reactive.Disposables.Fluent;
 using System.Threading.Tasks;
 using DynamicData;
-using Fr.Wireplumber.Modules.Models;
+using Fr.Sonic;
+using Fr.Sonic.Modules.Models;
 using ReactiveUI;
 using SonicEddy.Services.AppData;
 using SonicEddy.Services.Wireplumber;
@@ -85,7 +86,7 @@ public class ModuleManagerViewModel : ViewModelBase, IDisposable
 
     private void LoadModules()
     {
-        var modules = Fr.Wireplumber.Wireplumber.ModuleRegistry.Modules;
+        var modules = FrSonic.ModuleRegistry.Modules;
         Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
             Modules.Clear();
@@ -118,7 +119,7 @@ public class ModuleManagerViewModel : ViewModelBase, IDisposable
                             dialogViewModel.SelectedFilterGraph!.Id);
                     var config =
                         dialogViewModel.ToFilterChainConfig(filterGraph);
-                    await Fr.Wireplumber.Wireplumber.ModuleFactory
+                    await Fr.Sonic.FrSonic.ModuleFactory
                         .CreateFilterChainAsync(dialogViewModel.Name, config);
                     _ = Task.Run(LoadModules);
                 }

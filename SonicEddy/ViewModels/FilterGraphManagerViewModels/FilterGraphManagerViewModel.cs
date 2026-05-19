@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using DynamicData;
+using Fr.Sonic;
 using SonicEddy.Services.AppData;
 using SonicEddy.ViewModels.FilterGraphBuilderViewModels;
 using SonicEddy.Views.FilterGraphBuilderViews;
@@ -60,7 +61,7 @@ public class FilterGraphManagerViewModel : ViewModelBase
         var filterGraph = await _appDataService.GetFilterGraph(id);
 
         var viewModel = new FilterGraphParameterEditorViewModel(filterGraph,
-            Fr.Lv2.Lv2.PluginDescriptions(), _appDataService);
+            FrSonicLv2.PluginDescriptions(), _appDataService);
 
         _filterGraphParameterEditor = new FilterGraphParameterEditorWindow()
         {
@@ -78,8 +79,8 @@ public class FilterGraphManagerViewModel : ViewModelBase
         var appDataService = Locator.Current.GetService<IAppDataService>();
 
         var viewModel = new FilterGraphBuilderViewModel(appDataService!,
-            Fr.Lv2.Lv2.ClassDescriptions(),
-            Fr.Lv2.Lv2.PluginDescriptions());
+            FrSonicLv2.ClassDescriptions(),
+            FrSonicLv2.PluginDescriptions());
 
         _filterGraphBuilder = new FilterGraphBuilderWindow()
         {

@@ -1,4 +1,4 @@
-using Fr.Wireplumber.Model.Config.FilterChain;
+using Fr.Sonic.Model.Config.FilterChain;
 using SonicEddy.Contracts.FilterGraph;
 using SonicEddy.Conversions;
 

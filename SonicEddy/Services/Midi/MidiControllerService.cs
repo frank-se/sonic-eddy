@@ -1,6 +1,6 @@
 using System;
-using Fr.Pw.Midi;
-using Fr.Pw.Midi.PInvoke;
+using Fr.Sonic;
+using Fr.Sonic.PInvoke;
 using Microsoft.Extensions.Logging;
 
 namespace SonicEddy.Services.Midi;
@@ -10,32 +10,32 @@ public class MidiControllerService : IMidiControllerService, IDisposable
     public MidiControllerService(ILogger<MidiControllerService> logger)
     {
         _logger = logger;
-        FrPwMidi.LayerChanged += OnLayerChanged;
-        FrPwMidi.SelectedChannelChanged += OnSelectedChannelChanged;
-        FrPwMidi.DialSelectionModeChanged += OnDialSelectionModeSelect;
-        FrPwMidi.SelectedFilterParamsSectionChanged +=
+        FrSonicMidi.LayerChanged += OnLayerChanged;
+        FrSonicMidi.SelectedChannelChanged += OnSelectedChannelChanged;
+        FrSonicMidi.DialSelectionModeChanged += OnDialSelectionModeSelect;
+        FrSonicMidi.SelectedFilterParamsSectionChanged +=
             OnSelectedFilterParamsSectionChanged;
 
-        FrPwMidi.FilterParamsSectionMovedRight +=
+        FrSonicMidi.FilterParamsSectionMovedRight +=
             OnFilterParamsSectionMoveRight;
 
-        FrPwMidi.FilterParamsSectionMovedLeft += OnFilterParamsSectionMoveLeft;
+        FrSonicMidi.FilterParamsSectionMovedLeft += OnFilterParamsSectionMoveLeft;
 
-        FrPwMidi.MidiControlChangeUpdate += OnMidiControlChangeUpdate;
+        FrSonicMidi.MidiControlChangeUpdate += OnMidiControlChangeUpdate;
     }
 
     private readonly ILogger<MidiControllerService> _logger;
 
     public void SetSelectedPluginPage(ulong pluginId, ulong pageNumber) =>
-        FrPwMidi.SetSelectedPluginPage(pluginId, pageNumber);
+        FrSonicMidi.SetSelectedPluginPage(pluginId, pageNumber);
 
-    public void ClearSelectedChannel() => FrPwMidi.ClearSelectedChannel();
+    public void ClearSelectedChannel() => FrSonicMidi.ClearSelectedChannel();
 
     public void SetSelectedChannel(ChannelType channelType, ulong channelId) =>
-        FrPwMidi.SetSelectedChannel(channelType, channelId);
+        FrSonicMidi.SetSelectedChannel(channelType, channelId);
 
     public void SetSelectedLayer(ulong layerId) =>
-        FrPwMidi.SetSelectedLayer(layerId);
+        FrSonicMidi.SetSelectedLayer(layerId);
 
     public event Action<LayerSelectEventArgs>? LayerChanged;
 
@@ -90,18 +90,18 @@ public class MidiControllerService : IMidiControllerService, IDisposable
 
     public void Dispose()
     {
-        FrPwMidi.LayerChanged -= OnLayerChanged;
-        FrPwMidi.SelectedChannelChanged -= OnSelectedChannelChanged;
-        FrPwMidi.DialSelectionModeChanged -= OnDialSelectionModeSelect;
-        FrPwMidi.SelectedFilterParamsSectionChanged -=
+        FrSonicMidi.LayerChanged -= OnLayerChanged;
+        FrSonicMidi.SelectedChannelChanged -= OnSelectedChannelChanged;
+        FrSonicMidi.DialSelectionModeChanged -= OnDialSelectionModeSelect;
+        FrSonicMidi.SelectedFilterParamsSectionChanged -=
             OnSelectedFilterParamsSectionChanged;
 
-        FrPwMidi.FilterParamsSectionMovedRight -=
+        FrSonicMidi.FilterParamsSectionMovedRight -=
             OnFilterParamsSectionMoveRight;
 
-        FrPwMidi.FilterParamsSectionMovedLeft -= OnFilterParamsSectionMoveLeft;
+        FrSonicMidi.FilterParamsSectionMovedLeft -= OnFilterParamsSectionMoveLeft;
 
-        FrPwMidi.MidiControlChangeUpdate -= OnMidiControlChangeUpdate;
+        FrSonicMidi.MidiControlChangeUpdate -= OnMidiControlChangeUpdate;
 
         GC.SuppressFinalize(this);
     }

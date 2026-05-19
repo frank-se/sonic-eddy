@@ -1,4 +1,7 @@
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Text.Json;
+using Fr.Sonic.Model.Lv2;
 using Fr.Sonic.PInvoke;
 
 namespace Fr.Sonic;
@@ -18,4 +21,12 @@ public static class FrSonicLv2
 
     public static string? PluginClassesJson() =>
         Marshal.PtrToStringUTF8(FrSonicLib.Lv2PluginClassesJsonC());
+
+    public static List<PluginDescription> PluginDescriptions() =>
+        JsonSerializer.Deserialize<List<PluginDescription>>(
+            PluginDescriptionsJson() ?? "[]") ?? [];
+
+    public static List<ClassDescription> ClassDescriptions() =>
+        JsonSerializer.Deserialize<List<ClassDescription>>(
+            PluginClassesJson() ?? "[]") ?? [];
 }

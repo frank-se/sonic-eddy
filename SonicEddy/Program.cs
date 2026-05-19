@@ -1,11 +1,8 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
-using Fr.Lv2;
-using Fr.Pw.Midi;
-using Fr.Pw.Monitoring;
-using Fr.Wireplumber;
+using Fr.Sonic;
 using ReactiveUI.Avalonia;
 
 namespace SonicEddy;
@@ -18,22 +15,15 @@ internal static class Program
     [STAThread]
     public static void Main(string[] args)
     {
-        Wireplumber.Start();
-        Lv2.Init();
-        FrPwMonitoring.Start(TimeSpan.FromMilliseconds(250));
-
-        var nodeRegistry = Wireplumber.NodeRegistry;
-        var portRegistry = Wireplumber.PortRegistry;
-        var linkFactory = Wireplumber.LinkFactory;
-
-        FrPwMidi.Start(nodeRegistry, linkFactory, portRegistry);
+        FrSonic.Init(TimeSpan.FromMilliseconds(250));
+        FrSonic.Start();
 
         /*
          * TODO: Update to wait for the availability of the midi bridge directly
          * instead
          */
         Thread.Sleep(TimeSpan.FromSeconds(1));
-        var midiPortFactory = FrPwMidi.MidiPortFactory;
+        var midiPortFactory = FrSonic.MidiPortFactory;
 
         try
         {
@@ -65,10 +55,7 @@ internal static class Program
         BuildAvaloniaApp()
             .StartWithClassicDesktopLifetime(args);
 
-        FrPwMidi.Stop();
-        FrPwMonitoring.Stop();
-        Lv2.Destroy();
-        Wireplumber.Stop();
+        FrSonic.Stop();
     }
 
     // Avalonia configuration, don't remove; also used by visual designer.

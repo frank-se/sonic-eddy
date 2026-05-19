@@ -1,6 +1,6 @@
 using System;
-using Fr.Pw.Monitoring.Monitoring;
-using Fr.Wireplumber.Model.Objects;
+using Fr.Sonic.Monitoring;
+using Fr.Sonic.Model.Objects;
 
 namespace SonicEddy.Services.Monitoring;
 

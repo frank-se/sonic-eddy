@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
-using Fr.Wireplumber.Model.Objects;
-using Fr.Wireplumber.Model.Params;
+using Fr.Sonic.Model.Objects;
+using Fr.Sonic.Model.Params;
 using ReactiveUI;
 using IParameter = SonicEddy.Controls.MixerControls.IParameter;
 
@@ -26,7 +26,7 @@ public class ParameterViewModel : ReactiveObject, IParameter, IDisposable
     }
 
     private void OnParameterChanged(
-        Dictionary<string, Fr.Wireplumber.Model.Params.IParameter>?
+        Dictionary<string, Fr.Sonic.Model.Params.IParameter>?
             parameters)
     {
         if (!(parameters?.TryGetValue(FullyQualifiedName, out var value) ??

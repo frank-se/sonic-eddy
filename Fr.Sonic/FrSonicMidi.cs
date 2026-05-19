@@ -3,14 +3,27 @@ using Fr.Sonic.PInvoke;
 
 namespace Fr.Sonic;
 
-public record LayerSelectEventArgs(ulong LayerId);
-public record ChannelSelectEventArgs(ChannelType ChannelType, ulong ChannelId);
-public record DialModeEventArgs(ChannelType ChannelType, ulong ChannelId, DialMode DialMode);
-public record FilterSectionEventArgs(ChannelType ChannelType, ulong ChannelId, ulong SectionId);
+/* ── event arg types (matching Fr.Pw.Midi.FrPwMidi API surface) ─────────── */
 
-public record MidiCcUpdate(
-    ChannelType ChannelType, ulong ChannelId, ulong ObjectId,
-    string ParameterName, float NormalizedValue, float NormalizedKnownValue,
+public record LayerSelectEventArgs(ulong LayerId);
+
+public record ChannelSelectEventArgs(ChannelType ChannelType, ulong ChannelId);
+
+public record DialSelectionModeSelectEventArgs(
+    ChannelType ChannelType, ulong ChannelId, DialMode DialMode);
+
+public record FilterParamsSectionSelectEventArgs(
+    ChannelType ChannelType, ulong ChannelId, ulong SectionId);
+
+public record FilterParamsSectionMovePagesEventArgs(ulong StepCount);
+
+public record MidiControlChangeUpdateEventArgs(
+    ChannelType ChannelType,
+    ulong ChannelId,
+    ulong ObjectId,
+    string ParameterName,
+    float NormalizedControllerValue,
+    float NormalizedKnownValue,
     bool CatchingUp);
 
 /// <summary>
@@ -18,68 +31,49 @@ public record MidiCcUpdate(
 /// </summary>
 public static class FrSonicMidi
 {
-    public static event EventHandler<MidiCcUpdate>? ControlChangeUpdate;
+    /* ── events (Action<T>, matching Fr.Pw.Midi.FrPwMidi names) ─────────── */
+
+    public static event Action<LayerSelectEventArgs>? LayerChanged;
+    public static event Action<ChannelSelectEventArgs>? SelectedChannelChanged;
+    public static event Action<DialSelectionModeSelectEventArgs>? DialSelectionModeChanged;
+    public static event Action<FilterParamsSectionSelectEventArgs>? SelectedFilterParamsSectionChanged;
+    public static event Action<FilterParamsSectionMovePagesEventArgs>? FilterParamsSectionMovedRight;
+    public static event Action<FilterParamsSectionMovePagesEventArgs>? FilterParamsSectionMovedLeft;
+    public static event Action<MidiControlChangeUpdateEventArgs>? MidiControlChangeUpdate;
+
+    /* ── internal callbacks ──────────────────────────────────────────────── */
 
     internal static void OnMidiCcUpdate(ChannelType channelType, ulong channelId,
         ulong objectId, IntPtr parameterName, float normalizedValue,
-        float normalizedKnownValue, bool catchingUp)
-    {
-        var update = new MidiCcUpdate(channelType, channelId, objectId,
+        float normalizedKnownValue, bool catchingUp) =>
+        MidiControlChangeUpdate?.Invoke(new(channelType, channelId, objectId,
             Marshal.PtrToStringUTF8(parameterName) ?? string.Empty,
-            normalizedValue, normalizedKnownValue, catchingUp);
-        ControlChangeUpdate?.Invoke(null, update);
-    }
-
-    /* ── internal callbacks forwarded to MidiPortFactory ──────────────── */
+            normalizedValue, normalizedKnownValue, catchingUp));
 
     internal static void OnLayerSelect(ulong layerId) =>
-        LayerChanged?.Invoke(null, new LayerSelectEventArgs(layerId));
+        LayerChanged?.Invoke(new(layerId));
 
     internal static void OnChannelSelect(ChannelType channelType, ulong channelId) =>
-        ChannelChanged?.Invoke(null, new ChannelSelectEventArgs(channelType, channelId));
+        SelectedChannelChanged?.Invoke(new(channelType, channelId));
 
     internal static void OnDialSectionModeSelect(ChannelType channelType,
         ulong channelId, DialMode dialMode) =>
-        DialModeChanged?.Invoke(null,
-            new DialModeEventArgs(channelType, channelId, dialMode));
+        DialSelectionModeChanged?.Invoke(new(channelType, channelId, dialMode));
 
     internal static void OnFilterParamsSectionSelect(ChannelType channelType,
         ulong channelId, ulong sectionId) =>
-        FilterSectionChanged?.Invoke(null,
-            new FilterSectionEventArgs(channelType, channelId, sectionId));
+        SelectedFilterParamsSectionChanged?.Invoke(
+            new(channelType, channelId, sectionId));
 
     internal static void OnFilterParamsSectionMoveRight(ulong stepCount) =>
-        FilterSectionMovedRight?.Invoke(null, stepCount);
+        FilterParamsSectionMovedRight?.Invoke(new(stepCount));
 
     internal static void OnFilterParamsSectionMoveLeft(ulong stepCount) =>
-        FilterSectionMovedLeft?.Invoke(null, stepCount);
+        FilterParamsSectionMovedLeft?.Invoke(new(stepCount));
 
-    /* ── events ───────────────────────────────────────────────────────── */
-
-    public static event EventHandler<LayerSelectEventArgs>? LayerChanged;
-    public static event EventHandler<ChannelSelectEventArgs>? ChannelChanged;
-    public static event EventHandler<DialModeEventArgs>? DialModeChanged;
-    public static event EventHandler<FilterSectionEventArgs>? FilterSectionChanged;
-    public static event EventHandler<ulong>? FilterSectionMovedRight;
-    public static event EventHandler<ulong>? FilterSectionMovedLeft;
+    /* ── public API ──────────────────────────────────────────────────────── */
 
     public const string PmxPurpose = "midi-controller";
-
-    public static ulong CreateMidiMixPort(string pmxTag,
-        LayerSelectCallback layerCb, ChannelSelectCallback channelCb,
-        DialModeCallback dialModeCb, FilterSectionCallback filterSectionCb) =>
-        FrSonicLib.CreateMidiMixPortC(PmxPurpose, pmxTag, layerCb, channelCb,
-            dialModeCb, filterSectionCb);
-
-    public static ulong CreateMm1Port(string pmxTag,
-        LayerSelectCallback layerCb, ChannelSelectCallback channelCb,
-        DialModeCallback dialModeCb, FilterSectionCallback filterSectionCb,
-        PagesRightCallback pagesRightCb, PagesLeftCallback pagesLeftCb) =>
-        FrSonicLib.CreateMm1PortC(PmxPurpose, pmxTag, layerCb, channelCb,
-            dialModeCb, filterSectionCb, pagesRightCb, pagesLeftCb);
-
-    public static ulong CreateFaderFoxPc4Port(string pmxTag) =>
-        FrSonicLib.CreateFaderFoxPc4PortC(PmxPurpose, pmxTag);
 
     public static void SetSelectedPluginPage(ulong pluginId, ulong pageNumber) =>
         FrSonicLib.SetSelectedPluginPageC(pluginId, pageNumber);
@@ -87,8 +81,7 @@ public static class FrSonicMidi
     public static void SetSelectedChannel(ChannelType channelType, ulong channelId) =>
         FrSonicLib.SetSelectedChannelC(channelType, channelId);
 
-    public static void ClearSelectedChannel() =>
-        FrSonicLib.ClearSelectedChannelC();
+    public static void ClearSelectedChannel() => FrSonicLib.ClearSelectedChannelC();
 
     public static void SetSelectedLayer(ulong layerId) =>
         FrSonicLib.SetSelectedLayerC(layerId);
@@ -114,6 +107,5 @@ public static class FrSonicMidi
 
     public static void AddFilterParameter(ChannelType channelType, ulong channelId,
         ulong pluginId, string name, float min, float max) =>
-        FrSonicLib.AddFilterParameterC(channelType, channelId, pluginId,
-            name, min, max);
+        FrSonicLib.AddFilterParameterC(channelType, channelId, pluginId, name, min, max);
 }

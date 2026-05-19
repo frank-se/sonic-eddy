@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
-using Fr.Wireplumber.Model;
-using Fr.Wireplumber.Model.Objects;
+using Fr.Sonic.Model;
+using Fr.Sonic.Model.Objects;
 using ReactiveUI;
 using SonicEddy.ViewModels.ModuleManagerViewModels;
 

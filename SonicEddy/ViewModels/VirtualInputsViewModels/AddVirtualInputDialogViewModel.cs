@@ -7,7 +7,7 @@ using System.Reactive.Disposables.Fluent;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
 using DynamicData;
-using Fr.Wireplumber.Model.Objects;
+using Fr.Sonic.Model.Objects;
 using ReactiveUI;
 using SonicEddy.Services.Wireplumber;
 

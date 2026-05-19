@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Fr.Wireplumber.Model.Config.FilterChain;
+using Fr.Sonic.Model.Config.FilterChain;
 using SonicEddy.Contracts.FilterGraph;
 
 namespace SonicEddy.Conversions;

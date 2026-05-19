@@ -1,5 +1,5 @@
-using Fr.Wireplumber.Model;
-using Fr.Wireplumber.Model.Objects;
+using Fr.Sonic.Model;
+using Fr.Sonic.Model.Objects;
 using ReactiveUI;
 
 namespace SonicEddy.ViewModels.ObjectDetailsViewModels;

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Fr.Wireplumber.Model.Objects;
+using Fr.Sonic.Model.Objects;
 using SonicEddy.Services.AppData;
 using SonicEddy.Services.Wireplumber;
 

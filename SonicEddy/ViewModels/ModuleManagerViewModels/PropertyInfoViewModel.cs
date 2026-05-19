@@ -1,6 +1,6 @@
 using System;
 using System.Globalization;
-using Fr.Wireplumber.Model.PropInfo;
+using Fr.Sonic.Model.PropInfo;
 
 namespace SonicEddy.ViewModels.ModuleManagerViewModels;
 

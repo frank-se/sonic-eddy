@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Fr.Wireplumber.Model.Objects;
+using Fr.Sonic.Model.Objects;
 
 namespace SonicEddy.Services.VirtualInputs;
 

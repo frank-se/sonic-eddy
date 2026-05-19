@@ -6,8 +6,8 @@ using System.Reactive.Disposables;
 using System.Reactive.Disposables.Fluent;
 using System.Reactive.Linq;
 using Avalonia.Threading;
-using Fr.Wireplumber;
-using Fr.Wireplumber.Model.Objects;
+using Fr.Sonic;
+using Fr.Sonic.Model.Objects;
 using ReactiveUI;
 using SonicEddy.Models.ObjectBrowser;
 using SonicEddy.Services.AppData;
@@ -23,7 +23,7 @@ public class ObjectBrowserViewModel : ViewModelBase, IActivatableViewModel
     public ObjectBrowserViewModel(IAppDataService appDataService)
     {
         _appDataService = appDataService;
-        var clients = Wireplumber.ClientRegistry.Objects;
+        var clients = FrSonic.ClientRegistry.Objects;
         Objects = new(clients.Select(PipewireObject.FromClient));
 
         ProcessDevices();
@@ -37,29 +37,29 @@ public class ObjectBrowserViewModel : ViewModelBase, IActivatableViewModel
         {
             Observable
                 .FromEvent<Client>(
-                    handler => Wireplumber.ClientRegistry.Added += handler,
-                    handler => Wireplumber.ClientRegistry.Added -= handler)
+                    handler => FrSonic.ClientRegistry.Added += handler,
+                    handler => FrSonic.ClientRegistry.Added -= handler)
                 .Subscribe(HandleClientAddedEvent)
                 .DisposeWith(disposables);
 
             Observable
                 .FromEvent<Device>(
-                    handler => Wireplumber.DeviceRegistry.Added += handler,
-                    handler => Wireplumber.DeviceRegistry.Added -= handler)
+                    handler => FrSonic.DeviceRegistry.Added += handler,
+                    handler => FrSonic.DeviceRegistry.Added -= handler)
                 .Subscribe(HandleDeviceAddedEvent)
                 .DisposeWith(disposables);
 
             Observable
                 .FromEvent<Node>(
-                    handler => Wireplumber.NodeRegistry.Added += handler,
-                    handler => Wireplumber.NodeRegistry.Added -= handler)
+                    handler => FrSonic.NodeRegistry.Added += handler,
+                    handler => FrSonic.NodeRegistry.Added -= handler)
                 .Subscribe(HandleNodeAddedEvent)
                 .DisposeWith(disposables);
 
             Observable
                 .FromEvent<Port>(
-                    handler => Wireplumber.PortRegistry.Added += handler,
-                    handler => Wireplumber.PortRegistry.Added -= handler)
+                    handler => FrSonic.PortRegistry.Added += handler,
+                    handler => FrSonic.PortRegistry.Added -= handler)
                 .Subscribe(HandlePortAddedEvent)
                 .DisposeWith(disposables);
         });
@@ -88,7 +88,7 @@ public class ObjectBrowserViewModel : ViewModelBase, IActivatableViewModel
         }
         else if (pipewireObject.Type == PipewireObjectType.Client)
         {
-            var client = Wireplumber.ClientRegistry.Objects.FirstOrDefault(c =>
+            var client = FrSonic.ClientRegistry.Objects.FirstOrDefault(c =>
                 c.ObjectId == pipewireObject.ObjectId);
             SelectedObjectViewModel = client != null
                 ? ClientDetailsViewModel.FromClient(client)
@@ -96,7 +96,7 @@ public class ObjectBrowserViewModel : ViewModelBase, IActivatableViewModel
         }
         else if (pipewireObject.Type == PipewireObjectType.Device)
         {
-            var device = Wireplumber.DeviceRegistry.Objects.FirstOrDefault(d =>
+            var device = FrSonic.DeviceRegistry.Objects.FirstOrDefault(d =>
                 d.ObjectId == pipewireObject.ObjectId);
             SelectedObjectViewModel = device != null
                 ? DeviceDetailsViewModel.FromDevice(device)
@@ -104,7 +104,7 @@ public class ObjectBrowserViewModel : ViewModelBase, IActivatableViewModel
         }
         else if (pipewireObject.Type == PipewireObjectType.Node)
         {
-            var node = Wireplumber.NodeRegistry.Objects.FirstOrDefault(n =>
+            var node = FrSonic.NodeRegistry.Objects.FirstOrDefault(n =>
                 n.ObjectId == pipewireObject.ObjectId);
             SelectedObjectViewModel = node != null
                 ? NodeDetailsViewModel.FromNode(node)
@@ -112,7 +112,7 @@ public class ObjectBrowserViewModel : ViewModelBase, IActivatableViewModel
         }
         else if (pipewireObject.Type == PipewireObjectType.Port)
         {
-            var port = Wireplumber.PortRegistry.Objects.FirstOrDefault(p =>
+            var port = FrSonic.PortRegistry.Objects.FirstOrDefault(p =>
                 p.ObjectId == pipewireObject.ObjectId);
             SelectedObjectViewModel = port != null
                 ? PortDetailsViewModel.FromPort(port)
@@ -135,7 +135,7 @@ public class ObjectBrowserViewModel : ViewModelBase, IActivatableViewModel
 
         if (_leftover.Count <= 0) return;
 
-        var potentiallyChangedDevices = Wireplumber.DeviceRegistry.Objects
+        var potentiallyChangedDevices = FrSonic.DeviceRegistry.Objects
             .Where(d =>
                 d.Client.Id == client.ObjectId &&
                 _leftover.Any(l => l.ObjectSerial == d.ObjectSerial))
@@ -147,7 +147,7 @@ public class ObjectBrowserViewModel : ViewModelBase, IActivatableViewModel
         foreach (var device in potentiallyChangedDevices)
             HandleDeviceAddedEvent(device);
 
-        var potentiallyChangedNodes = Wireplumber.NodeRegistry.Objects
+        var potentiallyChangedNodes = FrSonic.NodeRegistry.Objects
             .Where(n =>
                 n.Client != null &&
                 n.Client.Id == client.ObjectId &&
@@ -184,7 +184,7 @@ public class ObjectBrowserViewModel : ViewModelBase, IActivatableViewModel
 
         if (_leftover.Count <= 0) return;
 
-        var potentiallyChangedNodes = Wireplumber.NodeRegistry.Objects
+        var potentiallyChangedNodes = FrSonic.NodeRegistry.Objects
             .Where(n =>
                 n.DeviceAssignment?.Id == device.ObjectId &&
                 _leftover.Any(l => l.ObjectSerial == n.ObjectSerial))
@@ -244,7 +244,7 @@ public class ObjectBrowserViewModel : ViewModelBase, IActivatableViewModel
             device.Children.Add(PipewireObject.FromNode(node));
         }
 
-        var potentiallyChangedPorts = Wireplumber.PortRegistry.Objects
+        var potentiallyChangedPorts = FrSonic.PortRegistry.Objects
             .Where(p => p.Node.Id == node.ObjectId)
             .ToList();
         _leftover.RemoveAll(l =>
@@ -264,7 +264,7 @@ public class ObjectBrowserViewModel : ViewModelBase, IActivatableViewModel
 
     private void AddPort(Port port)
     {
-        var nodes = Wireplumber.NodeRegistry.Objects;
+        var nodes = FrSonic.NodeRegistry.Objects;
 
         var pipewireNode =
             nodes.FirstOrDefault(n => n.ObjectId == port.Node.Id);
@@ -335,13 +335,13 @@ public class ObjectBrowserViewModel : ViewModelBase, IActivatableViewModel
 
     private void ProcessPorts()
     {
-        var ports = Wireplumber.PortRegistry.Objects;
+        var ports = FrSonic.PortRegistry.Objects;
         foreach (var port in ports) AddPort(port);
     }
 
     private void ProcessNodes()
     {
-        var nodes = Wireplumber.NodeRegistry.Objects;
+        var nodes = FrSonic.NodeRegistry.Objects;
         foreach (var node in nodes)
             if (node.Client == null)
             {
@@ -377,7 +377,7 @@ public class ObjectBrowserViewModel : ViewModelBase, IActivatableViewModel
 
     private void ProcessDevices()
     {
-        var devices = Wireplumber.DeviceRegistry.Objects;
+        var devices = FrSonic.DeviceRegistry.Objects;
         foreach (var device in devices)
         {
             var client =

@@ -417,6 +417,16 @@ int Core::init() {
   setup_object_manager();
   setup_pipewire();
   register_signals();
+
+  // Signal readiness via idle source so it fires only after g_main_loop_run() iterates
+  auto *source = g_idle_source_new();
+  g_source_set_callback(source, [](gpointer data) -> gboolean {
+    static_cast<Core *>(data)->_pipewire_ready_promise.set_value();
+    return G_SOURCE_REMOVE;
+  }, this, nullptr);
+  g_source_attach(source, _main_context);
+  g_source_unref(source);
+
   return 0;
 }
 
@@ -426,6 +436,7 @@ void Core::start() {
       run();
     }
   });
+  _pipewire_ready_future.wait();
 }
 
 void Core::stop() const {

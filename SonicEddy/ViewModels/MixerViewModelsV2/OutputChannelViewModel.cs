@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Windows.Input;
-using Fr.Wireplumber.Model.Objects;
+using Fr.Sonic.Model.Objects;
 using ReactiveUI;
 using SonicEddy.Controls.MixerControls;
 using SonicEddy.Services.Monitoring;

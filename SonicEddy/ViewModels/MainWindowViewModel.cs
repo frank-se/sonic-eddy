@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Avalonia.Controls;
-using Fr.Pw.Midi;
-using Fr.Pw.Midi.PInvoke;
+using Fr.Sonic;
+using Fr.Sonic.PInvoke;
 using Microsoft.Extensions.Logging;
 using ReactiveUI;
 using SonicEddy.Services.AppData;
@@ -303,7 +303,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
             .CreateLogger<MidiParameterChangeMonitorViewModel>();
 
         var viewModel = new MidiParameterChangeMonitorViewModel(logger,
-            _midiControllerService, Fr.Wireplumber.Wireplumber.NodeRegistry);
+            _midiControllerService, Fr.Sonic.FrSonic.NodeRegistry);
 
         _midiParameterMonitorWindow = new MidiParameterChangeMonitorWindow()
         {
@@ -484,7 +484,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     private static Task CreateMixer()
     {
         var mixerService = Locator.Current.GetService<IMixerService>();
-        return mixerService!.NewCurrentMixer("Default Mixer", false);
+        return mixerService!.NewCurrentMixer("Default Mixer");
     }
 
     public Task NavigateToMixerV2ViewLayerB()

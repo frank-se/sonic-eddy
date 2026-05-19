@@ -1,4 +1,4 @@
-using Fr.Wireplumber.Modules.Models;
+using Fr.Sonic.Modules.Models;
 
 namespace SonicEddy.Services.MixerServiceV2;
 

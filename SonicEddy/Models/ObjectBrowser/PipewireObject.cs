@@ -1,5 +1,5 @@
 using System.Collections.ObjectModel;
-using Fr.Wireplumber.Model.Objects;
+using Fr.Sonic.Model.Objects;
 
 namespace SonicEddy.Models.ObjectBrowser;
 

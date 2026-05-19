@@ -1,4 +1,4 @@
-using Fr.Wireplumber.Model.Objects;
+using Fr.Sonic.Model.Objects;
 using SonicEddy.Controls.GraphEditorControl;
 
 namespace SonicEddy.ViewModels.MidiConnectionEditorViewModels.Graph;

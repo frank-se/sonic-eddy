@@ -4,7 +4,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using DynamicData;
-using Fr.Lv2.Model;
+using Fr.Sonic.Model.Lv2;
 using ReactiveUI;
 using SonicEddy.Controls.GraphEditorControl;
 using SonicEddy.Services.AppData;

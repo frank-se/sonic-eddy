@@ -4,7 +4,7 @@ using System.Collections.ObjectModel;
 using System.Reactive.Disposables;
 using System.Reactive.Disposables.Fluent;
 using System.Windows.Input;
-using Fr.Wireplumber.Modules.Models;
+using Fr.Sonic.Modules.Models;
 using ReactiveUI;
 using SonicEddy.Controls.MixerControls;
 using SonicEddy.Services.Monitoring;

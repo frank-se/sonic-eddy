@@ -1,7 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
-using Fr.Wireplumber;
+using Fr.Sonic;
 using ReactiveUI;
 using SonicEddy.Services.AppData;
 using SonicEddy.Tools;

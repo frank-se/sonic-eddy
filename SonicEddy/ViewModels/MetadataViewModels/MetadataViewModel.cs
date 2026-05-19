@@ -3,8 +3,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using DynamicData;
-using Fr.Wireplumber.Model.Metadata;
-using Fr.Wireplumber.Registries.Metadata;
+using Fr.Sonic.Model.Metadata;
+using Fr.Sonic.Registries.Metadata;
 using ReactiveUI;
 using SonicEddy.Services.AppData;
 using SonicEddy.Tools;
@@ -38,7 +38,7 @@ public class MetadataViewModel : ViewModelBase
     }
 
     private readonly MetadataRegistry _metadataRegistry =
-        Fr.Wireplumber.Wireplumber.MetadataRegistry;
+        Fr.Sonic.FrSonic.MetadataRegistry;
 
     private string _selectedMetadataName = "default";
 

@@ -8,6 +8,7 @@
 #include "wireplumber/params/params_handling.h"
 #include "wireplumber/modules/module_factory.h"
 
+#include <future>
 #include <memory>
 
 static std::shared_ptr<Core>                g_core    = nullptr;
@@ -50,26 +51,46 @@ void frsonic_init(
     g_midi_cc_cb       = midi_cc_update;
 }
 
+struct StartData {
+    std::promise<void> done;
+};
+
 void frsonic_start() {
-    g_core->start();
+    g_core->start();  // blocks until the GLib main loop is running
 
-    auto *loop        = g_core->pipewire_loop();
-    auto *pw_core_ptr = g_core->pipewire_core();
+    auto *data = new StartData{};
+    auto future = data->done.get_future();
 
-    g_monitor = std::make_shared<monitoring::Monitor>(
-        loop, g_peak_cb, g_peak_interval_ms);
-    g_monitor->start();
+    g_main_context_invoke(
+        g_core->wireplumber_context(),
+        [](gpointer user_data) -> gboolean {
+            auto *d           = static_cast<StartData *>(user_data);
+            auto *loop        = g_core->pipewire_loop();
+            auto *pw_core_ptr = g_core->pipewire_core();
 
-    g_midi = std::make_shared<midi::Processor>(loop, pw_core_ptr,
-        [](controllers::ChannelType ct, uint64_t channel_id, uint64_t object_id,
-           const char *parameter_name, float normalized_value,
-           float normalized_known_value, bool catching_up) {
-            if (g_midi_cc_cb)
-                g_midi_cc_cb(static_cast<ChannelType>(ct), channel_id, object_id,
-                             parameter_name, normalized_value,
-                             normalized_known_value, catching_up);
-        });
-    g_midi->start();
+            g_monitor = std::make_shared<monitoring::Monitor>(
+                loop, g_peak_cb, g_peak_interval_ms);
+            g_monitor->start();
+
+            g_midi = std::make_shared<midi::Processor>(loop, pw_core_ptr,
+                [](controllers::ChannelType ct, uint64_t channel_id,
+                   uint64_t object_id, const char *parameter_name,
+                   float normalized_value, float normalized_known_value,
+                   bool catching_up) {
+                    if (g_midi_cc_cb)
+                        g_midi_cc_cb(static_cast<ChannelType>(ct), channel_id,
+                                     object_id, parameter_name, normalized_value,
+                                     normalized_known_value, catching_up);
+                });
+            g_midi->start();
+
+            d->done.set_value();
+            delete d;
+            return G_SOURCE_REMOVE;
+        },
+        data);
+
+    future.wait();
 }
 
 void frsonic_stop() {

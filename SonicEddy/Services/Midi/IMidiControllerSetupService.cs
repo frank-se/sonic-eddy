@@ -1,4 +1,4 @@
-using Fr.Pw.Midi.PInvoke;
+using Fr.Sonic.PInvoke;
 
 namespace SonicEddy.Services.Midi;
 

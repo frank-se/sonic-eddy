@@ -57,24 +57,12 @@
 
     <ItemGroup>
       <ProjectReference Include="..\SonicEddy.Contracts\SonicEddy.Contracts.csproj" />
-      <ProjectReference Include="..\Fr.Pw.Midi\Fr.Pw.Midi.csproj" />
-      <ProjectReference Include="..\Fr.Wireplumber\Fr.Wireplumber.csproj" />
-      <ProjectReference Include="..\Fr.Pw.Monitoring\Fr.Pw.Monitoring.csproj" />
-      <ProjectReference Include="..\Fr.Lv2\Fr.Lv2.csproj" />
+      <ProjectReference Include="..\Fr.Sonic\Fr.Sonic.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-        <None Include="..\Fr.Pw.Midi\runtimes\linux-x64\libfrmidimapper.so.0.0.4" CopyToOutputDirectory="PreserveNewest">
-            <Link>runtimes\linux-x64\native\libfrmidimapper.so.0.0.4</Link>
+        <None Include="..\Fr.Sonic\runtimes\linux-x64\libfrsonic.so.0.1.0" CopyToOutputDirectory="PreserveNewest">
+            <Link>runtimes\linux-x64\native\libfrsonic.so.0.1.0</Link>
         </None>
-        <None Include="..\Fr.Wireplumber\runtimes\linux-x64\libfrwireplumber.so.0.9.1" CopyToOutputDirectory="PreserveNewest">
-            <Link>runtimes\linux-x64\native\libfrwireplumber.so.0.9.1</Link>
-        </None>
-        <None Include="..\Fr.Pw.Monitoring\runtimes\linux-x64\libfrmonitoring.so.0.0.4" CopyToOutputDirectory="PreserveNewest">
-            <Link>runtimes\linux-x64\native\libfrmonitoring.so.0.0.4</Link>
-        </None>
-        <None Include="..\Fr.Lv2\runtimes\linux-x64\libfrlv2.so.0.0.3" CopyToOutputDirectory="PreserveNewest">
-            <Link>runtimes\linux-x64\native\libfrlv2.so.0.0.3</Link>
-        </None>
-    </ItemGroup> 
+    </ItemGroup>
 </Project>

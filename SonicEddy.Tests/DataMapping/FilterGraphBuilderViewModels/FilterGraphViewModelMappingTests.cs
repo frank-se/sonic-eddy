@@ -1,4 +1,5 @@
-using Fr.Lv2.Model;
+using Fr.Sonic;
+using Fr.Sonic.Model.Lv2;
 using NSubstitute;
 using ReactiveUI;
 using SonicEddy.Contracts.FilterGraph;
@@ -16,7 +17,7 @@ public class FilterGraphViewModelMappingTests
     public void FromFilterGraphBuilderViewModel()
     {
         // Setup
-        var pluginDescription = Fr.Lv2.Lv2.PluginDescriptions().Find(x =>
+        var pluginDescription = FrSonicLv2.PluginDescriptions().Find(x =>
             x.Uri == "http://calf.sourceforge.net/plugins/Compressor");
 
         Assert.NotNull(pluginDescription);

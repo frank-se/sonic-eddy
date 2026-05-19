@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Fr.Pw.Midi.PInvoke;
-using Fr.Wireplumber.Model.Config;
-using Fr.Wireplumber.Model.Config.FilterChain;
-using Fr.Wireplumber.Model.Objects;
-using Fr.Wireplumber.Modules.Models;
+using Fr.Sonic.PInvoke;
+using Fr.Sonic.Model.Config;
+using Fr.Sonic.Model.Config.FilterChain;
+using Fr.Sonic.Model.Objects;
+using Fr.Sonic.Modules.Models;
 using SonicEddy.Contracts.FilterGraph;
 using SonicEddy.Conversions;
 using SonicEddy.Services.Midi;
@@ -59,7 +59,7 @@ public class MixerEditor(IWireplumberService wireplumberService)
         };
 
         var filterChain =
-            await Fr.Wireplumber.Wireplumber.ModuleFactory
+            await Fr.Sonic.FrSonic.ModuleFactory
                 .CreateFilterChainAsync(
                     $"mixer-fc-{channelId}", filterChainConfig);
 

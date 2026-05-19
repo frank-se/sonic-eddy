@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Fr.Lv2.Model;
+using Fr.Sonic.Model.Lv2;
 using ReactiveUI;
 using SonicEddy.Contracts.FilterGraph;
 using SonicEddy.Services.AppData;

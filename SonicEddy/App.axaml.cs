@@ -4,7 +4,7 @@ using System.Reflection;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
-using Fr.Pw.Monitoring;
+using Fr.Sonic;
 using Microsoft.Extensions.Logging;
 using ReactiveUI;
 using Serilog;
@@ -91,7 +91,7 @@ public class App : Application
         Locator.CurrentMutable.Register<IVirtualInputService>(() =>
             virtualInputService);
 
-        var monitoringService = new MonitoringService(FrPwMonitoring.Monitor);
+        var monitoringService = new MonitoringService(FrSonic.Monitor);
         Locator.CurrentMutable.Register<IMonitoringService>(() =>
             monitoringService);
 

@@ -1,5 +1,5 @@
 using System.Linq;
-using Fr.Lv2.Model;
+using Fr.Sonic.Model.Lv2;
 
 namespace SonicEddy.ViewModels.FilterGraphBuilderViewModels.Graph.Lv2;
 

@@ -1,6 +1,6 @@
 using System.Collections.Generic;
-using Fr.Wireplumber.Model.Objects;
-using Fr.Wireplumber.Modules.Models;
+using Fr.Sonic.Model.Objects;
+using Fr.Sonic.Modules.Models;
 
 namespace SonicEddy.Services.MixerServiceV2;
 

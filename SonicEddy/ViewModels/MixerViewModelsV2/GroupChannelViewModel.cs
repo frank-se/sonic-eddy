@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
-using Fr.Pw.Midi.PInvoke;
-using Fr.Wireplumber.Modules.Models;
+using Fr.Sonic.PInvoke;
+using Fr.Sonic.Modules.Models;
 using SonicEddy.Contracts.FilterGraph;
 using SonicEddy.Controls.MixerControls;
 using SonicEddy.Services.AppData;

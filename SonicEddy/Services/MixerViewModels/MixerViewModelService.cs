@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using DynamicData;
-using Fr.Pw.Midi.PInvoke;
+using Fr.Sonic.PInvoke;
 using Microsoft.Extensions.Logging;
 using SonicEddy.Controls.MixerControls;
 using SonicEddy.Services.AppData;

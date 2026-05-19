@@ -39,18 +39,18 @@ FrSonicMonitoring.PeakChanged += (_, update) =>
 
 /* ── midi ────────────────────────────────────────────────────────────────── */
 
-FrSonicMidi.LayerChanged += (_, args) =>
+FrSonicMidi.LayerChanged += args =>
     Console.WriteLine($"[midi] layer={args.LayerId}");
 
-FrSonicMidi.ChannelChanged += (_, args) =>
+FrSonicMidi.SelectedChannelChanged += args =>
     Console.WriteLine($"[midi] channel type={args.ChannelType} id={args.ChannelId}");
 
-FrSonicMidi.DialModeChanged += (_, args) =>
+FrSonicMidi.DialSelectionModeChanged += args =>
     Console.WriteLine($"[midi] dial mode={args.DialMode} ch={args.ChannelId}");
 
-FrSonicMidi.ControlChangeUpdate += (_, update) =>
+FrSonicMidi.MidiControlChangeUpdate += update =>
     Console.WriteLine($"[midi cc] ch={update.ChannelId} obj={update.ObjectId} " +
-                      $"param={update.ParameterName} val={update.NormalizedValue:F3}");
+                      $"param={update.ParameterName} val={update.NormalizedControllerValue:F3}");
 
 /* ── lv2 ─────────────────────────────────────────────────────────────────── */
 

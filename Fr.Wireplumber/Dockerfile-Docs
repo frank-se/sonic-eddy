@@ -1,7 +1,0 @@
-FROM docker.io/caddy:latest AS final
-
-RUN rm -rf /usr/share/caddy/*
-
-COPY _site /usr/share/caddy
-
-EXPOSE 8080

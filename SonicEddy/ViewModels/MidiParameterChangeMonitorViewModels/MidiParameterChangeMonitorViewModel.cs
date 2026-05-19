@@ -1,8 +1,8 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
-using Fr.Pw.Midi;
-using Fr.Wireplumber.Registries.Nodes;
+using Fr.Sonic;
+using Fr.Sonic.Registries.Nodes;
 using Microsoft.Extensions.Logging;
 using SonicEddy.Services.Midi;
 

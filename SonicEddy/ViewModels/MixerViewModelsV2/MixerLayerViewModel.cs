@@ -6,7 +6,7 @@ using System.Reactive.Disposables;
 using System.Reactive.Disposables.Fluent;
 using System.Windows.Input;
 using DynamicData;
-using Fr.Pw.Midi.PInvoke;
+using Fr.Sonic.PInvoke;
 using Microsoft.Extensions.Logging;
 using ReactiveUI;
 using SonicEddy.Controls.MixerControls;

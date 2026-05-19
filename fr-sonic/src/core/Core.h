@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <future>
 #include <memory>
 #include <thread>
 #include <utility>
@@ -88,6 +89,8 @@ private:
   core_object_deleted_callback_t _object_deleted_callback;
 
   std::shared_ptr<std::thread> _thread;
+  std::promise<void> _pipewire_ready_promise;
+  std::future<void>  _pipewire_ready_future{_pipewire_ready_promise.get_future()};
   GOptionContext *_options_context = nullptr;
   GMainLoop *_loop = nullptr;
   GMainContext *_main_context = nullptr;

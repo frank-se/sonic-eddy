@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Fr.Wireplumber.Model.Config.LoopbackModule;
-using Fr.Wireplumber.Model.Objects;
-using Fr.Wireplumber.Modules.Models;
+using Fr.Sonic.Model.Config.LoopbackModule;
+using Fr.Sonic.Model.Objects;
+using Fr.Sonic.Modules.Models;
 
 namespace SonicEddy.Services.Wireplumber;
 

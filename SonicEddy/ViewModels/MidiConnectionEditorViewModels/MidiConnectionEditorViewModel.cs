@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Input;
-using Fr.Wireplumber.Model.Objects;
+using Fr.Sonic.Model.Objects;
 using ReactiveUI;
 using SonicEddy.Controls.GraphEditorControl;
 using SonicEddy.ViewModels.MidiConnectionEditorViewModels.Graph;
@@ -31,8 +31,8 @@ public class MidiConnectionEditorViewModel : ViewModelBase,
         UrlPathSegment = urlPathSegment;
         HostScreen = hostScreen;
 
-        Fr.Wireplumber.Wireplumber.LinkRegistry.Added += OnLinkAdded;
-        Fr.Wireplumber.Wireplumber.LinkRegistry.Deleted += OnLinkDeleted;
+        Fr.Sonic.FrSonic.LinkRegistry.Added += OnLinkAdded;
+        Fr.Sonic.FrSonic.LinkRegistry.Deleted += OnLinkDeleted;
     }
 
     private void OnLinkAdded(Link link)
@@ -78,7 +78,7 @@ public class MidiConnectionEditorViewModel : ViewModelBase,
             if (edge.Item1 is not MidiPortViewModel outPort ||
                 edge.Item2 is not MidiPortViewModel inPort) return;
 
-            Fr.Wireplumber.Wireplumber.LinkFactory.CreateLink(outPort.Port,
+            Fr.Sonic.FrSonic.LinkFactory.CreateLink(outPort.Port,
                 inPort.Port);
         });
 

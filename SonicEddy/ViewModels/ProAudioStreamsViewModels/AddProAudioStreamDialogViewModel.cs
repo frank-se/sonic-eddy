@@ -8,9 +8,9 @@ using System.Reactive.Disposables.Fluent;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
 using DynamicData;
-using Fr.Wireplumber;
-using Fr.Wireplumber.Model;
-using Fr.Wireplumber.Model.Objects;
+using Fr.Sonic;
+using Fr.Sonic.Model;
+using Fr.Sonic.Model.Objects;
 using ReactiveUI;
 
 namespace SonicEddy.ViewModels.ProAudioStreamsViewModels;
@@ -26,8 +26,8 @@ public class AddProAudioStreamDialogViewModel : ViewModelBase, IDisposable
 
     public AddProAudioStreamDialogViewModel()
     {
-        var nodes = Wireplumber.DeviceRegistry.Objects.Select(device =>
-                Wireplumber.NodeRegistry.Objects.FirstOrDefault(n =>
+        var nodes = FrSonic.DeviceRegistry.Objects.Select(device =>
+                FrSonic.NodeRegistry.Objects.FirstOrDefault(n =>
                     n.DeviceAssignment?.Id == device.ObjectId &&
                     n.Media.Class == "Audio/Source"))
             .OfType<Node>()
