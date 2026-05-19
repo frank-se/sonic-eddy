@@ -62,22 +62,35 @@ public static class FrSonic
     private static readonly ConcurrentDictionary<ulong, ParamsUpdatedMessage> _params = [];
     private static readonly ConcurrentDictionary<ulong, PropertyInfoCollection> _propInfos = [];
 
+    /* ── pinned delegates (prevent GC while native callbacks are registered) */
+
+    private static readonly NodeAddedCallback            _cbNodeAdded            = FrSonicWireplumber.OnNodeAdded;
+    private static readonly PropsChangedCallback         _cbPropsChanged         = FrSonicWireplumber.OnPropsChanged;
+    private static readonly PropsEnumFailedCallback      _cbPropsEnumFailed      = FrSonicWireplumber.OnPropsEnumFailed;
+    private static readonly PropInfoAddedCallback        _cbPropInfoAdded        = FrSonicWireplumber.OnPropInfoAdded;
+    private static readonly ObjectDeletedCallback        _cbObjectDeleted        = FrSonicWireplumber.OnObjectDeleted;
+    private static readonly MetadataAddedCallback        _cbMetadataAdded        = FrSonicWireplumber.OnMetadataAdded;
+    private static readonly MetadataEntryUpdatedCallback _cbMetadataEntryUpdated = FrSonicWireplumber.OnMetadataEntryUpdated;
+    private static readonly MetadataEntryDeletedCallback _cbMetadataEntryDeleted = FrSonicWireplumber.OnMetadataEntryDeleted;
+    private static readonly PeakCallback                 _cbPeak                 = FrSonicMonitoring.OnPeak;
+    private static readonly MidiCcUpdateCallback         _cbMidiCcUpdate         = FrSonicMidi.OnMidiCcUpdate;
+
     /* ── lifecycle ───────────────────────────────────────────────────────── */
 
     public static void Init(TimeSpan peakUpdateInterval)
     {
         FrSonicLib.InitC(
-            FrSonicWireplumber.OnNodeAdded,
-            FrSonicWireplumber.OnPropsChanged,
-            FrSonicWireplumber.OnPropsEnumFailed,
-            FrSonicWireplumber.OnPropInfoAdded,
-            FrSonicWireplumber.OnObjectDeleted,
-            FrSonicWireplumber.OnMetadataAdded,
-            FrSonicWireplumber.OnMetadataEntryUpdated,
-            FrSonicWireplumber.OnMetadataEntryDeleted,
-            FrSonicMonitoring.OnPeak,
+            _cbNodeAdded,
+            _cbPropsChanged,
+            _cbPropsEnumFailed,
+            _cbPropInfoAdded,
+            _cbObjectDeleted,
+            _cbMetadataAdded,
+            _cbMetadataEntryUpdated,
+            _cbMetadataEntryDeleted,
+            _cbPeak,
             (ulong)peakUpdateInterval.TotalMilliseconds,
-            FrSonicMidi.OnMidiCcUpdate);
+            _cbMidiCcUpdate);
     }
 
     public static void Start()
