@@ -33,7 +33,7 @@ public class GroupChannelViewModel(
             inputLoopback, outputLoopback,
             sendLoopbacks, filterChain, filterGraph, audioToRoutingTargets,
             selectedAudioToRoutingTarget, appDataService, mixerService,
-            monitoringService, false, layerId, midiControllerSetupService,
+            monitoringService, true, layerId, midiControllerSetupService,
             ChannelType.GroupChannel),
         IGroupChannel
 {

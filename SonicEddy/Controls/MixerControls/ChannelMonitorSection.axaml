@@ -11,12 +11,14 @@
                                            Minimum="0.0"
                                            Maximum="1.0"
                                            Value="{Binding $parent[mixerControls:ChannelMonitorSection].LeftAverage}"
+                                           Peak="{Binding $parent[mixerControls:ChannelMonitorSection].LeftPeak}"
                                            IsVertical="True" />
 
         <mixerControls:ChannelMonitorValue Grid.Column="1"
                                            Minimum="0.0"
                                            Maximum="1.0"
                                            Value="{Binding $parent[mixerControls:ChannelMonitorSection].RightAverage}"
+                                           Peak="{Binding $parent[mixerControls:ChannelMonitorSection].RightPeak}"
                                            IsVertical="True" />
         
     </Grid>

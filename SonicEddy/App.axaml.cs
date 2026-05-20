@@ -91,7 +91,8 @@ public class App : Application
         Locator.CurrentMutable.Register<IVirtualInputService>(() =>
             virtualInputService);
 
-        var monitoringService = new MonitoringService(FrSonic.Monitor);
+        var monitoringService = new MonitoringService(FrSonic.Monitor,
+            loggerFactory.CreateLogger<MonitoringService>());
         Locator.CurrentMutable.Register<IMonitoringService>(() =>
             monitoringService);
 

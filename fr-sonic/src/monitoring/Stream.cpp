@@ -1,6 +1,7 @@
 #include "Stream.h"
 
 #include <algorithm>
+#include <spa/param/props.h>
 #include <cmath>
 #include <format>
 #include <iostream>
@@ -9,6 +10,18 @@
 static void on_process(void *user_data) {
   auto stream = static_cast<monitoring::Stream *>(user_data);
   stream->process();
+}
+
+static void on_state_changed(void *user_data,
+                             enum pw_stream_state old_state,
+                             enum pw_stream_state state,
+                             const char *error) {
+  (void)old_state; (void)error;
+  if (state != PW_STREAM_STATE_PAUSED)
+    return;
+  auto *stream = static_cast<monitoring::Stream *>(user_data);
+  float volumes[2] = {1.0f, 1.0f};
+  pw_stream_set_control(stream->get_stream(), SPA_PROP_channelVolumes, 2, volumes);
 }
 
 static void on_stream_param_changed(void *user_data, uint32_t id,
@@ -30,9 +43,10 @@ static void on_stream_param_changed(void *user_data, uint32_t id,
 }
 
 static const struct pw_stream_events stream_events = {
-    .version      = PW_VERSION_STREAM_EVENTS,
-    .param_changed= on_stream_param_changed,
-    .process      = on_process,
+    .version       = PW_VERSION_STREAM_EVENTS,
+    .state_changed = on_state_changed,
+    .param_changed = on_stream_param_changed,
+    .process       = on_process,
 };
 
 void monitoring::Stream::process() {

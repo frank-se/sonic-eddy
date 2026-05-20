@@ -36,7 +36,7 @@ public class ChannelStripViewModel : ChannelWithSendsViewModelBase,
         selectChannelCommand, inputLoopback, outputLoopback, sendLoopbacks,
         filterChain, filterGraph, audioToRoutingTargets,
         selectedAudioToRoutingTarget,
-        appDataService, mixerService, monitoringService, false, layerId,
+        appDataService, mixerService, monitoringService, true, layerId,
         midiControllerSetupService, ChannelType.Channel)
     {
         AudioFromRoutingTargets = audioFromRoutingTargets;

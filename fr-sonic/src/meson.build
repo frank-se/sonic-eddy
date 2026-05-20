@@ -1,11 +1,12 @@
 public_inc  = include_directories('../include')
+src_inc     = include_directories('.')
 core_inc    = include_directories('core')
 wp_inc      = include_directories('wireplumber')
 mon_inc     = include_directories('monitoring')
 midi_inc    = include_directories('midi')
 lv2_inc     = include_directories('lv2')
 
-all_inc = [public_inc, core_inc, wp_inc, mon_inc, midi_inc, lv2_inc]
+all_inc = [public_inc, src_inc, core_inc, wp_inc, mon_inc, midi_inc, lv2_inc]
 
 libfrsonic = shared_library(
     'frsonic',

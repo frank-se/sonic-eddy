@@ -35,6 +35,7 @@ public:
   [[nodiscard]] uint64_t object_serial()const { return _object_serial; }
 
   void destroy() const { pw_stream_destroy(_stream); }
+  [[nodiscard]] pw_stream *get_stream() const { return _stream; }
 
 private:
   uint64_t _object_serial;

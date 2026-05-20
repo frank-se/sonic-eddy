@@ -139,6 +139,7 @@ public class MixerEditor(IWireplumberService wireplumberService)
         Linger = true,
         Name = name,
         Description = description ?? name,
+        AudioPosition = StereoAudioPosition,
         MediaClass = CaptureNodeMediaClass,
         DontFallback = true,
         AutoConnect = autoConnect,

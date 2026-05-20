@@ -9,7 +9,7 @@ public class ChannelMonitorValue : Panel
 {
     static ChannelMonitorValue()
     {
-        AffectsArrange<ChannelMonitorValue>(ValueProperty);
+        AffectsArrange<ChannelMonitorValue>(ValueProperty, PeakProperty);
     }
 
     public ChannelMonitorValue()
@@ -18,11 +18,17 @@ public class ChannelMonitorValue : Panel
         {
             Fill = Brushes.DarkGreen,
         };
-        
+        _peakRect = new()
+        {
+            Fill = Brushes.Red,
+        };
+
         Children.Add(_valueRect);
+        Children.Add(_peakRect);
     }
 
     private readonly Rectangle _valueRect;
+    private readonly Rectangle _peakRect;
 
     public static readonly StyledProperty<double> ValueProperty =
         AvaloniaProperty.Register<ValueSlider, double>(
@@ -32,6 +38,15 @@ public class ChannelMonitorValue : Panel
     {
         get => GetValue(ValueProperty);
         set => SetValue(ValueProperty, value);
+    }
+
+    public static readonly StyledProperty<double> PeakProperty =
+        AvaloniaProperty.Register<ValueSlider, double>(nameof(Peak));
+
+    public double Peak
+    {
+        get => GetValue(PeakProperty);
+        set => SetValue(PeakProperty, value);
     }
 
     public static readonly StyledProperty<double> MaximumProperty =
@@ -71,33 +86,38 @@ public class ChannelMonitorValue : Panel
         set => SetValue(IsVerticalProperty, value);
     }
 
+    private const double PeakThickness = 2.0;
+
     protected override Size ArrangeOverride(Size finalSize)
     {
         base.ArrangeOverride(finalSize);
 
+        var range = Maximum - Minimum;
+
         if (IsVertical)
         {
-            var valueRectHeight =
-                ((Value - Minimum) / (Maximum - Minimum)) * finalSize.Height;
+            var valueRectHeight = ((Value - Minimum) / range) * finalSize.Height;
             var y = finalSize.Height - valueRectHeight;
+            var valueRect = new Rect(0, y, finalSize.Width, valueRectHeight);
+            if (!valueRect.IsInvalidRect())
+                _valueRect.Arrange(valueRect);
 
-            var valueRectWidth = finalSize.Width;
-
-            var rect = new Rect(0, y, valueRectWidth, valueRectHeight);
-
-            if (!rect.IsInvalidRect())
-                _valueRect.Arrange(rect);
+            var peakY = finalSize.Height - ((Peak - Minimum) / range) * finalSize.Height;
+            var peakRect = new Rect(0, peakY, finalSize.Width, PeakThickness);
+            if (!peakRect.IsInvalidRect())
+                _peakRect.Arrange(peakRect);
         }
         else
         {
-            var valueRectWidth =
-                ((Value - Minimum) / (Maximum - Minimum)) * finalSize.Width;
-            var valueRectHeight = finalSize.Height;
+            var valueRectWidth = ((Value - Minimum) / range) * finalSize.Width;
+            var valueRect = new Rect(new(valueRectWidth, finalSize.Height));
+            if (!valueRect.IsInvalidRect())
+                _valueRect.Arrange(valueRect);
 
-            var rect = new Rect((new(valueRectWidth, valueRectHeight)));
-
-            if (!rect.IsInvalidRect())
-                _valueRect.Arrange(rect);
+            var peakX = ((Peak - Minimum) / range) * finalSize.Width;
+            var peakRect = new Rect(peakX, 0, PeakThickness, finalSize.Height);
+            if (!peakRect.IsInvalidRect())
+                _peakRect.Arrange(peakRect);
         }
 
         return finalSize;

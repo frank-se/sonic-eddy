@@ -32,7 +32,7 @@ public class MasterChannelViewModel(
             inputLoopback, outputLoopback, filterChain, filterGraph,
             audioToRoutingTargets,
             selectedAudioToRoutingTarget, appDataService, mixerService,
-            monitoringService, false, layerId, midiControllerSetupService,
+            monitoringService, true, layerId, midiControllerSetupService,
             ChannelType.Channel),
         IMasterChannel
 {
