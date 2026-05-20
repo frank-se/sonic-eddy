@@ -2,7 +2,9 @@
 
 #include "Stream.h"
 
+#include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -36,10 +38,13 @@ private:
   std::mutex _monitoring_streams_mutex;
 
   std::shared_ptr<std::thread> _update_thread;
+  std::atomic<bool>   _running{false};
+  std::mutex          _cv_mutex;
+  std::condition_variable _cv;
 
   void forward_measures();
   void start_updates_thread();
-  void stop_updates_thread() const;
+  void stop_updates_thread();
 };
 
 } // namespace monitoring

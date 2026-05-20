@@ -416,7 +416,6 @@ int Core::init() {
     return err;
   setup_object_manager();
   setup_pipewire();
-  _pipewire_ready_promise.set_value();
   register_signals();
 
   // Signal readiness via idle source so it fires only after g_main_loop_run() iterates

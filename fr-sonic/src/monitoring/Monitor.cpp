@@ -23,7 +23,6 @@ void monitoring::Monitor::start_monitor_node(uint64_t object_serial) {
 
   const auto stream = std::make_shared<Stream>(object_serial, _loop);
 
-  /* Post stream setup to the shared pw_loop */
   pw_loop_invoke(_loop, setup_stream_function, SPA_ID_INVALID,
                  nullptr, 0, false, stream.get());
 
@@ -49,25 +48,32 @@ void monitoring::Monitor::stop_monitor_node(uint64_t object_serial) {
 void monitoring::Monitor::forward_measures() {
   std::lock_guard lock(_monitoring_streams_mutex);
 
+  const auto window_ms = static_cast<uint32_t>(_update_interval.count());
+
   for (auto &&stream : _monitoring_streams) {
-    _callback(stream->object_serial(), stream->left_peak(),
-              stream->right_peak(), stream->left_average(),
-              stream->right_average());
+    stream->compute_metrics(window_ms);
+    _callback(stream->object_serial(),
+              stream->left_held_peak(),  stream->right_held_peak(),
+              stream->left_rms(),        stream->right_rms());
   }
 }
 
 void monitoring::Monitor::start_updates_thread() {
+  _running = true;
   _update_thread = std::make_shared<std::thread>([this]() {
-    while (true) {
+    while (_running) {
       forward_measures();
-      std::this_thread::sleep_for(_update_interval);
+      std::unique_lock lk(_cv_mutex);
+      _cv.wait_for(lk, _update_interval, [this] { return !_running.load(); });
     }
   });
 }
 
-void monitoring::Monitor::stop_updates_thread() const {
-  pthread_kill(_update_thread->native_handle(), SIGINT);
-  _update_thread->join();
+void monitoring::Monitor::stop_updates_thread() {
+  _running = false;
+  _cv.notify_one();
+  if (_update_thread && _update_thread->joinable())
+    _update_thread->join();
 }
 
 void monitoring::Monitor::start() { start_updates_thread(); }

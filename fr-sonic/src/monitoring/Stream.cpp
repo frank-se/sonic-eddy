@@ -1,5 +1,7 @@
 #include "Stream.h"
 
+#include <algorithm>
+#include <cmath>
 #include <format>
 #include <iostream>
 #include <string>
@@ -46,32 +48,80 @@ void monitoring::Stream::process() {
 
   if (samples == nullptr) {
     std::cerr << "ERROR: samples is nullptr!" << std::endl;
+    pw_stream_queue_buffer(_stream, pipewire_buffer);
     return;
   }
 
   const auto number_of_channels = format.info.raw.channels;
   constexpr uint32_t max_channels = 2;
   const auto number_of_samples = buffer->datas[0].chunk->size / sizeof(float);
+  const auto ch = std::min(number_of_channels, max_channels);
 
-  std::array<float, max_channels> max{};
-  std::array<float, max_channels> sum{};
+  BufferEntry entry{};
+  entry.timestamp = std::chrono::steady_clock::now();
+  entry.samples   = static_cast<uint32_t>(number_of_samples / (ch > 0 ? ch : 1));
 
-  for (auto c = 0; c < std::min(number_of_channels, max_channels); c++) {
+  for (uint32_t c = 0; c < ch; c++) {
     for (auto i = c; i < number_of_samples; i += number_of_channels) {
-      auto absolute_sample = std::abs(samples[i]);
-      max[c] = std::max(max[c], absolute_sample);
-      sum[c] = sum[c] + absolute_sample;
+      const float s = samples[i];
+      const float a = std::abs(s);
+      if (a > entry.peak[c]) entry.peak[c] = a;
+      entry.sum_sq[c] += s * s;
     }
   }
 
-  _left_peak  = max[0];
-  _right_peak = max[1];
-
-  const auto samples_per_channel = number_of_samples / number_of_channels;
-  _left_average  = sum[0] / samples_per_channel;
-  _right_average = sum[1] / samples_per_channel;
+  _queue.push(entry);  // wait-free; silently drops if queue is full
 
   pw_stream_queue_buffer(_stream, pipewire_buffer);
+}
+
+void monitoring::Stream::compute_metrics(uint32_t window_ms) {
+  using namespace std::chrono;
+  const auto now    = steady_clock::now();
+  const auto cutoff = now - milliseconds(window_ms);
+  const auto hold   = milliseconds(HOLD_DURATION_MS);
+
+  // Drain any new entries from the RT thread into the window vector.
+  _queue.consume_all([this](const BufferEntry &e) {
+    _window.push_back(e);
+  });
+
+  // Evict entries older than the window.
+  std::erase_if(_window, [&cutoff](const BufferEntry &e) {
+    return e.timestamp < cutoff;
+  });
+
+  float window_peak[2]   = {};
+  double total_sum_sq[2] = {};
+  uint64_t total_samples = 0;
+
+  for (const auto &e : _window) {
+    for (int c = 0; c < 2; c++) {
+      if (e.peak[c] > window_peak[c]) window_peak[c] = e.peak[c];
+      total_sum_sq[c] += e.sum_sq[c];
+    }
+    total_samples += e.samples;
+  }
+
+  _left_rms  = total_samples > 0
+      ? static_cast<float>(std::sqrt(total_sum_sq[0] / total_samples)) : 0.0f;
+  _right_rms = total_samples > 0
+      ? static_cast<float>(std::sqrt(total_sum_sq[1] / total_samples)) : 0.0f;
+
+  // Peak hold per channel.
+  if (window_peak[0] >= _left_held_peak) {
+    _left_held_peak      = window_peak[0];
+    _left_held_peak_time = now;
+  } else if (now - _left_held_peak_time > hold) {
+    _left_held_peak = window_peak[0];
+  }
+
+  if (window_peak[1] >= _right_held_peak) {
+    _right_held_peak      = window_peak[1];
+    _right_held_peak_time = now;
+  } else if (now - _right_held_peak_time > hold) {
+    _right_held_peak = window_peak[1];
+  }
 }
 
 void monitoring::Stream::setup() {
@@ -83,7 +133,6 @@ void monitoring::Stream::setup() {
                         "Capture", PW_KEY_MEDIA_ROLE, "DSP",
                         PW_KEY_TARGET_OBJECT, target_object.c_str(), NULL);
 
-  /* _loop is already pw_loop* — no pw_main_loop_get_loop() needed */
   _stream = pw_stream_new_simple(_loop, name.c_str(), properties,
                                  &stream_events, this);
 
