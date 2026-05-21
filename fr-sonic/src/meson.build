@@ -50,6 +50,7 @@ libfrsonic = shared_library(
         'lv2/lv2_wrapper.cpp',
         # Sync subsystem
         'sync/SyncMaster.cpp',
+        'sync/SyncClient.cpp',
     ],
     include_directories : all_inc,
     version : meson.project_version(),
