@@ -7,6 +7,8 @@
 #include <cmath>
 #include <ctime>
 #include <format>
+#include <regex>
+#include <string_view>
 
 #include <pipewire/core.h>
 #include <pipewire/extensions/client-node.h>
@@ -15,6 +17,7 @@
 #include <pipewire/properties.h>
 #include <spa/param/props.h>
 #include <spa/pod/builder.h>
+#include <spa/pod/iter.h>
 #include <spa/pod/parser.h>
 #include <spa/utils/defs.h>
 
@@ -25,6 +28,58 @@ constexpr auto SyncNodeName = "se.sync_master";
 uint64_t timespec_to_nsec(const timespec &ts) {
   return static_cast<uint64_t>(ts.tv_sec) * 1'000'000'000ull +
          static_cast<uint64_t>(ts.tv_nsec);
+}
+
+spa_pod *pod_body(const spa_pod *pod) {
+  return reinterpret_cast<spa_pod *>(reinterpret_cast<uintptr_t>(pod) +
+                                    sizeof(spa_pod));
+}
+
+const char *pod_type_name(const uint32_t type) {
+  switch (type) {
+  case SPA_TYPE_None:
+    return "None";
+  case SPA_TYPE_Bool:
+    return "Bool";
+  case SPA_TYPE_Id:
+    return "Id";
+  case SPA_TYPE_Int:
+    return "Int";
+  case SPA_TYPE_Long:
+    return "Long";
+  case SPA_TYPE_Float:
+    return "Float";
+  case SPA_TYPE_Double:
+    return "Double";
+  case SPA_TYPE_String:
+    return "String";
+  case SPA_TYPE_Bytes:
+    return "Bytes";
+  case SPA_TYPE_Rectangle:
+    return "Rectangle";
+  case SPA_TYPE_Fraction:
+    return "Fraction";
+  case SPA_TYPE_Bitmap:
+    return "Bitmap";
+  case SPA_TYPE_Array:
+    return "Array";
+  case SPA_TYPE_Struct:
+    return "Struct";
+  case SPA_TYPE_Object:
+    return "Object";
+  case SPA_TYPE_Sequence:
+    return "Sequence";
+  case SPA_TYPE_Pointer:
+    return "Pointer";
+  case SPA_TYPE_Fd:
+    return "Fd";
+  case SPA_TYPE_Choice:
+    return "Choice";
+  case SPA_TYPE_Pod:
+    return "Pod";
+  default:
+    return "Unknown";
+  }
 }
 
 const pw_client_node_events client_node_events = {
@@ -57,6 +112,8 @@ void sesync::SyncMaster::start() {
   setup_node_info();
   _anchor_nsec = now_nsec();
   _anchor_beat = 0;
+  _bpm_beat = 0;
+  _transport_state_beat = 0;
   recompute_schedule();
 
   auto *properties =
@@ -130,8 +187,12 @@ uint64_t sesync::SyncMaster::now_nsec() const {
 }
 
 uint64_t sesync::SyncMaster::beat_period_nsec() const {
+  return beat_period_nsec(_config.bpm);
+}
+
+uint64_t sesync::SyncMaster::beat_period_nsec(const double bpm) const {
   return static_cast<uint64_t>(
-      std::llround(60.0 * 1'000'000'000.0 / _config.bpm));
+      std::llround(60.0 * 1'000'000'000.0 / bpm));
 }
 
 uint64_t sesync::SyncMaster::current_beat(const uint64_t now) const {
@@ -142,16 +203,61 @@ uint64_t sesync::SyncMaster::current_beat(const uint64_t now) const {
   return _anchor_beat + ((now - _anchor_nsec) / period);
 }
 
+uint64_t sesync::SyncMaster::nsec_for_beat(const uint64_t beat) const {
+  if (_pending_bpm_beat && _pending_bpm && beat > *_pending_bpm_beat) {
+    const auto boundary_nsec =
+        _anchor_nsec +
+        ((*_pending_bpm_beat - _anchor_beat) * beat_period_nsec());
+    return boundary_nsec +
+           ((beat - *_pending_bpm_beat) * beat_period_nsec(*_pending_bpm));
+  }
+
+  return _anchor_nsec + ((beat - _anchor_beat) * beat_period_nsec());
+}
+
+bool sesync::SyncMaster::accepts_change(const uint64_t beat,
+                                        const uint64_t current) const {
+  if (_transport_state == "stopped")
+    return true;
+
+  return beat >= current + _config.lead_time_beats;
+}
+
+void sesync::SyncMaster::activate_due_changes(const uint64_t now) {
+  if (_pending_bpm_beat && _pending_bpm) {
+    const auto pending_nsec =
+        _anchor_nsec +
+        ((*_pending_bpm_beat - _anchor_beat) * beat_period_nsec());
+    if (now >= pending_nsec) {
+      _anchor_beat = *_pending_bpm_beat;
+      _anchor_nsec = pending_nsec;
+      _bpm_beat = *_pending_bpm_beat;
+      _config.bpm = *_pending_bpm;
+      _pending_bpm_beat.reset();
+      _pending_bpm.reset();
+    }
+  }
+
+  if (_pending_transport_state_beat && _pending_transport_state) {
+    const auto current = current_beat(now);
+    if (current >= *_pending_transport_state_beat) {
+      _transport_state_beat = *_pending_transport_state_beat;
+      _transport_state = *_pending_transport_state;
+      _pending_transport_state_beat.reset();
+      _pending_transport_state.reset();
+    }
+  }
+}
+
 void sesync::SyncMaster::recompute_schedule() {
   const auto now = now_nsec();
-  const auto period = beat_period_nsec();
+  activate_due_changes(now);
   const auto current = current_beat(now);
 
   _schedule.clear();
   for (uint32_t i = 0; i < _config.lookahead_beats; ++i) {
     const auto beat = current + 1 + i;
-    const auto nsec = _anchor_nsec + ((beat - _anchor_beat) * period);
-    _schedule.push_back(BeatEntry{.beat = beat, .nsec = nsec});
+    _schedule.push_back(BeatEntry{.beat = beat, .nsec = nsec_for_beat(beat)});
   }
 
   rebuild_json();
@@ -167,9 +273,21 @@ void sesync::SyncMaster::rebuild_json() {
   }
   _schedule_json += "]";
 
-  _params_json = std::format(
-      R"({{"bpm":[[0,{:.6f}]],"transport_state":[[0,"stopped"]]}})",
-      _config.bpm);
+  _params_json = std::format(R"({{"bpm":[[{}, {:.6f}])", _bpm_beat,
+                             _config.bpm);
+  if (_pending_bpm_beat && _pending_bpm) {
+    _params_json +=
+        std::format(R"(,[{}, {:.6f}])", *_pending_bpm_beat, *_pending_bpm);
+  }
+  _params_json += R"(],"transport_state":[)";
+  _params_json +=
+      std::format(R"([{},"{}"])", _transport_state_beat, _transport_state);
+  if (_pending_transport_state_beat && _pending_transport_state) {
+    _params_json += std::format(R"(,[{},"{}"])",
+                                *_pending_transport_state_beat,
+                                *_pending_transport_state);
+  }
+  _params_json += "]}";
 }
 
 spa_pod *sesync::SyncMaster::build_props_pod() {
@@ -197,7 +315,18 @@ void sesync::SyncMaster::publish_update() {
   if (_client_node == nullptr)
     return;
 
-  _params[0].flags |= SPA_PARAM_INFO_SERIAL;
+  ++_param_serial;
+  _params[0].flags = SPA_PARAM_INFO_READWRITE;
+  if ((_param_serial % 2) != 0)
+    _params[0].flags |= SPA_PARAM_INFO_SERIAL;
+  _params[0].user = _param_serial;
+  _params[0].seq = static_cast<int32_t>(_param_serial);
+  _info.change_mask =
+      SPA_NODE_CHANGE_MASK_FLAGS | SPA_NODE_CHANGE_MASK_PARAMS;
+
+  logging::log<logging::LogLevel::Info>(
+      "Sync master publishing params serial={} flags={} beat.params={}",
+      _param_serial, _params[0].flags, _params_json);
 
   const spa_pod *params[] = {build_props_pod()};
   const auto result = pw_client_node_update(
@@ -234,15 +363,200 @@ void sesync::SyncMaster::on_timer() {
 
 void sesync::SyncMaster::handle_set_param(const uint32_t id, uint32_t flags,
                                         const spa_pod *param) {
-  (void)flags;
-  if (id != SPA_PARAM_Props || param == nullptr)
+  logging::log<logging::LogLevel::Info>(
+      "Sync master set_param id={} flags={} param={}", id, flags,
+      param == nullptr ? "null" : pod_type_name(param->type));
+
+  if (id != SPA_PARAM_Props)
     return;
 
+  if (param == nullptr) {
+    logging::log<logging::LogLevel::Warning>(
+        "Sync master received null Props param; the set-param command did not "
+        "deliver a POD payload");
+    return;
+  }
+
+  const auto params_prop = spa_pod_find_prop(param, nullptr, SPA_PROP_params);
+  if (params_prop == nullptr) {
+    logging::log<logging::LogLevel::Warning>(
+        "Sync master received Props update without SPA_PROP_params");
+    return;
+  }
+
   logging::log<logging::LogLevel::Info>(
-      "Sync master received SPA_PARAM_Props update");
+      "Sync master Props params type={} size={}",
+      pod_type_name(params_prop->value.type), params_prop->value.size);
+
+  if (params_prop->value.type != SPA_TYPE_Struct) {
+    logging::log<logging::LogLevel::Warning>(
+        "Sync master expected SPA_PROP_params Struct, got {}",
+        pod_type_name(params_prop->value.type));
+    return;
+  }
+
+  bool changed = false;
+  const char *key = nullptr;
+  uint32_t index = 0;
+  spa_pod *child = nullptr;
+  SPA_POD_FOREACH(pod_body(&params_prop->value),
+                  SPA_POD_BODY_SIZE(&params_prop->value), child) {
+    logging::log<logging::LogLevel::Trace>(
+        "Sync master Props params child index={} type={} size={}", index,
+        pod_type_name(child->type), child->size);
+
+    if (index % 2 == 0) {
+      key = nullptr;
+      if (child->type == SPA_TYPE_String)
+        spa_pod_get_string(child, &key);
+      if (key == nullptr) {
+        logging::log<logging::LogLevel::Warning>(
+            "Sync master ignored params key at index {} with type {}", index,
+            pod_type_name(child->type));
+      }
+    } else if (key != nullptr && child->type == SPA_TYPE_String) {
+      const char *value = nullptr;
+      spa_pod_get_string(child, &value);
+      if (value != nullptr)
+        changed = handle_params_value(key, value) || changed;
+    } else if (key != nullptr) {
+      logging::log<logging::LogLevel::Warning>(
+          "Sync master ignored params value for '{}' with type {}", key,
+          pod_type_name(child->type));
+    }
+    ++index;
+  }
+
+  if (!changed) {
+    logging::log<logging::LogLevel::Info>(
+        "Sync master Props update did not change beat params");
+    return;
+  }
+
   recompute_schedule();
   publish_update();
   schedule_next_timer();
+}
+
+bool sesync::SyncMaster::handle_params_value(const char *key,
+                                             const char *value) {
+  logging::log<logging::LogLevel::Info>(
+      "Sync master received params '{}'='{}'", key, value);
+
+  if (std::string_view(key) == "beat.params") {
+    return apply_beat_params_patch(value);
+  }
+
+  logging::log<logging::LogLevel::Debug>(
+      "Sync master ignored unsupported params key '{}'", key);
+  return false;
+}
+
+bool sesync::SyncMaster::apply_beat_params_patch(const std::string &json) {
+  static const std::regex bpm_regex(
+      R"("bpm"\s*:\s*\[\s*\[\s*([0-9]+)\s*,\s*([0-9]+(?:\.[0-9]+)?)\s*\])");
+  static const std::regex state_regex(
+      R"STATE("transport_state"\s*:\s*\[\s*\[\s*([0-9]+)\s*,\s*"([^"]+)")STATE");
+
+  bool changed = false;
+  std::smatch match;
+  if (std::regex_search(json, match, bpm_regex)) {
+    changed =
+        apply_bpm_change(std::stoull(match[1].str()),
+                         std::stod(match[2].str())) ||
+        changed;
+  }
+
+  if (std::regex_search(json, match, state_regex)) {
+    changed =
+        apply_transport_state_change(std::stoull(match[1].str()),
+                                     match[2].str()) ||
+        changed;
+  }
+
+  if (!changed) {
+    logging::log<logging::LogLevel::Warning>(
+        "Sync master did not find an applicable beat.params patch in '{}'",
+        json);
+  }
+
+  return changed;
+}
+
+bool sesync::SyncMaster::apply_bpm_change(const uint64_t beat,
+                                          const double bpm) {
+  if (bpm <= 0.0) {
+    logging::log<logging::LogLevel::Warning>(
+        "Sync master rejected bpm change at beat {} with bpm {}", beat, bpm);
+    return false;
+  }
+
+  const auto now = now_nsec();
+  const auto current = current_beat(now);
+  if (!accepts_change(beat, current)) {
+    logging::log<logging::LogLevel::Warning>(
+        "Sync master rejected bpm change at beat {}; current beat is {}, "
+        "lead time is {}",
+        beat, current, _config.lead_time_beats);
+    return false;
+  }
+
+  if (beat <= current) {
+    const auto current_nsec = nsec_for_beat(current);
+    _anchor_beat = current;
+    _anchor_nsec = current_nsec;
+    _bpm_beat = current;
+    _config.bpm = bpm;
+    _pending_bpm_beat.reset();
+    _pending_bpm.reset();
+    logging::log<logging::LogLevel::Info>(
+        "Sync master applied bpm {} at current beat {}", bpm, current);
+    return true;
+  }
+
+  _pending_bpm_beat = beat;
+  _pending_bpm = bpm;
+  logging::log<logging::LogLevel::Info>(
+      "Sync master scheduled bpm {} at beat {}", bpm, beat);
+  return true;
+}
+
+bool sesync::SyncMaster::apply_transport_state_change(const uint64_t beat,
+                                                      std::string state) {
+  if (state != "stopped" && state != "start_scheduled" && state != "playing") {
+    logging::log<logging::LogLevel::Warning>(
+        "Sync master rejected unknown transport state '{}' at beat {}", state,
+        beat);
+    return false;
+  }
+
+  const auto now = now_nsec();
+  const auto current = current_beat(now);
+  if (!accepts_change(beat, current)) {
+    logging::log<logging::LogLevel::Warning>(
+        "Sync master rejected transport state '{}' at beat {}; current beat "
+        "is {}, lead time is {}",
+        state, beat, current, _config.lead_time_beats);
+    return false;
+  }
+
+  if (beat <= current) {
+    _transport_state_beat = current;
+    _transport_state = std::move(state);
+    _pending_transport_state_beat.reset();
+    _pending_transport_state.reset();
+    logging::log<logging::LogLevel::Info>(
+        "Sync master applied transport state '{}' at current beat {}",
+        _transport_state, current);
+    return true;
+  }
+
+  _pending_transport_state_beat = beat;
+  _pending_transport_state = std::move(state);
+  logging::log<logging::LogLevel::Info>(
+      "Sync master scheduled transport state '{}' at beat {}",
+      *_pending_transport_state, beat);
+  return true;
 }
 
 void sesync::SyncMaster::timer_callback(void *data) {
