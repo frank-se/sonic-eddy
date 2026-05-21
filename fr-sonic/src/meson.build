@@ -5,8 +5,9 @@ wp_inc      = include_directories('wireplumber')
 mon_inc     = include_directories('monitoring')
 midi_inc    = include_directories('midi')
 lv2_inc     = include_directories('lv2')
+sync_inc    = include_directories('sync')
 
-all_inc = [public_inc, src_inc, core_inc, wp_inc, mon_inc, midi_inc, lv2_inc]
+all_inc = [public_inc, src_inc, core_inc, wp_inc, mon_inc, midi_inc, lv2_inc, sync_inc]
 
 libfrsonic = shared_library(
     'frsonic',
@@ -47,6 +48,8 @@ libfrsonic = shared_library(
         # LV2 subsystem
         'lv2/frlv2.cpp',
         'lv2/lv2_wrapper.cpp',
+        # Sync subsystem
+        'sync/SyncMaster.cpp',
     ],
     include_directories : all_inc,
     version : meson.project_version(),

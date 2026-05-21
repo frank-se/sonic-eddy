@@ -4,6 +4,7 @@
 #include "monitoring/Monitor.h"
 #include "midi/Processor.h"
 #include "lv2/frlv2.h"
+#include "sync/SyncMaster.h"
 #include "wireplumber/props/props_handling.h"
 #include "wireplumber/params/params_handling.h"
 #include "wireplumber/modules/module_factory.h"
@@ -14,6 +15,7 @@
 static std::shared_ptr<Core>                g_core    = nullptr;
 static std::shared_ptr<monitoring::Monitor> g_monitor = nullptr;
 static std::shared_ptr<midi::Processor>     g_midi    = nullptr;
+static std::shared_ptr<sesync::SyncMaster>  g_sync_master = nullptr;
 
 static peak_callback_t          g_peak_cb           = nullptr;
 static uint64_t                 g_peak_interval_ms  = 0;
@@ -68,6 +70,10 @@ void frsonic_start() {
             auto *loop        = g_core->pipewire_loop();
             auto *pw_core_ptr = g_core->pipewire_core();
 
+            g_sync_master = std::make_shared<sesync::SyncMaster>(
+                pw_core_ptr, loop, sesync::SyncMasterConfig{});
+            g_sync_master->start();
+
             g_monitor = std::make_shared<monitoring::Monitor>(
                 loop, g_peak_cb, g_peak_interval_ms);
             g_monitor->start();
@@ -94,6 +100,7 @@ void frsonic_start() {
 }
 
 void frsonic_stop() {
+    if (g_sync_master) { g_sync_master->stop(); g_sync_master = nullptr; }
     if (g_monitor) { g_monitor->stop(); g_monitor = nullptr; }
     if (g_midi)    { g_midi->stop();    g_midi    = nullptr; }
     if (g_core)    { g_core->stop();    g_core    = nullptr; }
