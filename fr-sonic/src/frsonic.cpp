@@ -2,8 +2,10 @@
 
 #include "core/Core.h"
 #include "monitoring/Monitor.h"
+#include "midi/MidiSyncSender.h"
 #include "midi/Processor.h"
 #include "lv2/frlv2.h"
+#include "sync/SyncClient.h"
 #include "sync/SyncMaster.h"
 #include "wireplumber/props/props_handling.h"
 #include "wireplumber/params/params_handling.h"
@@ -16,6 +18,8 @@ static std::shared_ptr<Core>                g_core    = nullptr;
 static std::shared_ptr<monitoring::Monitor> g_monitor = nullptr;
 static std::shared_ptr<midi::Processor>     g_midi    = nullptr;
 static std::shared_ptr<sesync::SyncMaster>  g_sync_master = nullptr;
+static std::shared_ptr<sesync::SyncClient>  g_sync_client = nullptr;
+static std::shared_ptr<midi::MidiSyncSender> g_midi_sync_sender = nullptr;
 
 static peak_callback_t          g_peak_cb           = nullptr;
 static uint64_t                 g_peak_interval_ms  = 0;
@@ -74,6 +78,14 @@ void frsonic_start() {
                 pw_core_ptr, loop, sesync::SyncMasterConfig{});
             g_sync_master->start();
 
+            g_sync_client = std::make_shared<sesync::SyncClient>(
+                pw_core_ptr, loop);
+            g_sync_client->start();
+
+            g_midi_sync_sender =
+                std::make_shared<midi::MidiSyncSender>(loop, *g_sync_client);
+            g_midi_sync_sender->start();
+
             g_monitor = std::make_shared<monitoring::Monitor>(
                 loop, g_peak_cb, g_peak_interval_ms);
             g_monitor->start();
@@ -100,6 +112,8 @@ void frsonic_start() {
 }
 
 void frsonic_stop() {
+    if (g_midi_sync_sender) { g_midi_sync_sender->stop(); g_midi_sync_sender = nullptr; }
+    if (g_sync_client) { g_sync_client->stop(); g_sync_client = nullptr; }
     if (g_sync_master) { g_sync_master->stop(); g_sync_master = nullptr; }
     if (g_monitor) { g_monitor->stop(); g_monitor = nullptr; }
     if (g_midi)    { g_midi->stop();    g_midi    = nullptr; }
