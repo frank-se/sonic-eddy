@@ -70,6 +70,16 @@ using midi_cc_update_callback_t   = void (*)(ChannelType channel_type, uint64_t 
                                              float normalized_value, float normalized_known_value,
                                              bool catching_up);
 
+struct frsonic_looper_config {
+    const char *name;
+    const char *tag;
+    const char *description;
+    const char *capture_target_object;
+    const char *playback_target_object;
+    uint32_t channels;
+    uint32_t max_record_seconds;
+};
+
 extern "C" {
 
 /* ── lifecycle ───────────────────────────────────────────────────────────── */
@@ -87,6 +97,11 @@ FRSONIC_API void frsonic_init(
     midi_cc_update_callback_t           midi_cc_update);
 FRSONIC_API void frsonic_start();
 FRSONIC_API void frsonic_stop();
+
+/* ── loopers ─────────────────────────────────────────────────────────────── */
+FRSONIC_API bool frsonic_create_looper(const frsonic_looper_config *config,
+                                       size_t *out_handle);
+FRSONIC_API void frsonic_destroy_looper(size_t looper_handle);
 
 /* ── wireplumber / object model ──────────────────────────────────────────── */
 FRSONIC_API void frsonic_set_volumes(uint64_t object_id,

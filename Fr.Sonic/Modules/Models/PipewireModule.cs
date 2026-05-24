@@ -24,12 +24,15 @@ public abstract record PipewireModule(
 {
     internal ModuleRegistry? ModuleRegistry { private get; set; }
 
+    protected void DeleteFromModuleRegistry() =>
+        ModuleRegistry?.DeleteModule(Tag);
+
     /// <summary>
     /// Destroy the pipewire module.
     /// </summary>
     public void Destroy()
     {
         FrSonicLib.DestroyModuleC(ModuleHandle);
-        ModuleRegistry?.DeleteModule(Tag);
+        DeleteFromModuleRegistry();
     }
 };

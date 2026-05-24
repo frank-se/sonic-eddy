@@ -1,6 +1,7 @@
 #include "../include/frsonic.h"
 
 #include "core/Core.h"
+#include "looper/Looper.h"
 #include "monitoring/Monitor.h"
 #include "midi/MidiSyncSender.h"
 #include "midi/Processor.h"
@@ -14,6 +15,9 @@
 
 #include <iostream>
 #include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 #include <pipewire/pipewire.h>
 #include <pipewire/thread-loop.h>
 
@@ -23,6 +27,8 @@ static std::shared_ptr<midi::Processor>     g_midi    = nullptr;
 static std::shared_ptr<sesync::SyncMaster>  g_sync_master = nullptr;
 static std::shared_ptr<sesync::SyncClient>  g_sync_client = nullptr;
 static std::shared_ptr<midi::MidiSyncSender> g_midi_sync_sender = nullptr;
+static std::vector<std::shared_ptr<looper::Looper>> g_loopers;
+static std::vector<size_t> g_free_looper_handles;
 
 class OwnedPipewireRuntime {
 public:
@@ -147,6 +153,41 @@ static void invoke_owned_pipewire(void (*callback)()) {
         0, nullptr, 0, true, &data);
 }
 
+template <typename Callback>
+static void invoke_owned_pipewire_sync(Callback &callback) {
+    pw_loop_invoke(
+        g_owned_pipewire->loop(),
+        [](spa_loop *loop, bool async, std::uint32_t seq, const void *data,
+           size_t size, void *user_data) {
+            (*static_cast<Callback *>(user_data))();
+            return 0;
+        },
+        0, nullptr, 0, true, &callback);
+}
+
+static std::string optional_c_string(const char *value,
+                                     const char *fallback = "") {
+    return value == nullptr ? std::string(fallback) : std::string(value);
+}
+
+static std::optional<std::string> optional_target_object(const char *value) {
+    if (value == nullptr || value[0] == '\0')
+        return std::nullopt;
+    return std::string(value);
+}
+
+static size_t store_looper(std::shared_ptr<looper::Looper> looper) {
+    if (!g_free_looper_handles.empty()) {
+        const auto handle = g_free_looper_handles.back();
+        g_free_looper_handles.pop_back();
+        g_loopers[handle] = std::move(looper);
+        return handle;
+    }
+
+    g_loopers.push_back(std::move(looper));
+    return g_loopers.size() - 1;
+}
+
 void frsonic_start() {
     g_core->start();  // blocks until the GLib main loop is running
 
@@ -191,6 +232,12 @@ void frsonic_start() {
 void frsonic_stop() {
     if (g_owned_pipewire) {
         invoke_owned_pipewire([] {
+            for (auto &looper : g_loopers) {
+                if (looper)
+                    looper->stop();
+            }
+            g_loopers.clear();
+            g_free_looper_handles.clear();
             if (g_midi_sync_sender) { g_midi_sync_sender->stop(); g_midi_sync_sender = nullptr; }
             if (g_sync_client) { g_sync_client->stop(); g_sync_client = nullptr; }
             if (g_sync_master) { g_sync_master->stop(); g_sync_master = nullptr; }
@@ -202,6 +249,55 @@ void frsonic_stop() {
     }
 
     if (g_core)    { g_core->stop();    g_core    = nullptr; }
+}
+
+bool frsonic_create_looper(const frsonic_looper_config *config,
+                           size_t *out_handle) {
+    if (config == nullptr || out_handle == nullptr || !g_owned_pipewire)
+        return false;
+
+    bool result = false;
+    auto callback = [&] {
+        looper::LooperConfig looper_config{
+            .name = optional_c_string(config->name, "se.looper"),
+            .tag = optional_c_string(config->tag),
+            .description =
+                optional_c_string(config->description, "Sonic Eddy looper"),
+            .capture_target_object =
+                optional_target_object(config->capture_target_object),
+            .playback_target_object =
+                optional_target_object(config->playback_target_object),
+            .channels = config->channels == 0 ? 2u : config->channels,
+            .max_record_seconds = config->max_record_seconds == 0
+                                      ? 300u
+                                      : config->max_record_seconds,
+        };
+
+        auto looper = std::make_shared<looper::Looper>(
+            g_owned_pipewire->loop(), std::move(looper_config));
+        if (!looper->start())
+            return;
+
+        *out_handle = store_looper(std::move(looper));
+        result = true;
+    };
+    invoke_owned_pipewire_sync(callback);
+    return result;
+}
+
+void frsonic_destroy_looper(const size_t looper_handle) {
+    if (!g_owned_pipewire)
+        return;
+
+    auto callback = [&] {
+        if (looper_handle >= g_loopers.size() || !g_loopers[looper_handle])
+            return;
+
+        g_loopers[looper_handle]->stop();
+        g_loopers[looper_handle].reset();
+        g_free_looper_handles.push_back(looper_handle);
+    };
+    invoke_owned_pipewire_sync(callback);
 }
 
 /* ── wireplumber / object model ──────────────────────────────────────────── */

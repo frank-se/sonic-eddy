@@ -35,6 +35,9 @@ public static class FrSonic
     private static readonly ModuleFactory _moduleFactory = new(ModuleRegistry);
     public static IModuleFactory ModuleFactory => _moduleFactory;
 
+    private static readonly LooperFactory _looperFactory = new(ModuleRegistry);
+    public static ILooperFactory LooperFactory => _looperFactory;
+
     private static readonly LinkFactory _linkFactory = new();
     public static ILinkFactory LinkFactory => _linkFactory;
 
@@ -248,6 +251,7 @@ public static class FrSonic
 
                 NodeRegistry.Add(nodeMessage.Node, nodeMessage.TaskCompletionSources);
                 _moduleFactory.UpdateNodesForWaitingModules(nodeMessage.Node);
+                _looperFactory.UpdateNodesForWaitingLoopers(nodeMessage.Node);
 
                 var serial = nodeMessage.Node.ObjectSerial;
                 if (_propInfos.TryGetValue(serial, out var propInfos))

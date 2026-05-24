@@ -1,0 +1,9 @@
+namespace Fr.Sonic.Model.Config.Looper;
+
+public record LooperConfig(
+    string Name,
+    string Description,
+    string? CaptureTargetObject,
+    string? PlaybackTargetObject,
+    uint Channels = 2,
+    uint MaxRecordSeconds = 300);

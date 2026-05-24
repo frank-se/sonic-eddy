@@ -66,6 +66,20 @@ public delegate void MidiCcUpdateCallback(ChannelType channelType, ulong channel
     ulong objectId, IntPtr parameterName, float normalizedValue,
     float normalizedKnownValue, [MarshalAs(UnmanagedType.U1)] bool catchingUp);
 
+/* ── structs ─────────────────────────────────────────────────────────────── */
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct FrSonicLooperConfig
+{
+    internal IntPtr Name;
+    internal IntPtr Tag;
+    internal IntPtr Description;
+    internal IntPtr CaptureTargetObject;
+    internal IntPtr PlaybackTargetObject;
+    internal uint Channels;
+    internal uint MaxRecordSeconds;
+}
+
 /* ── P/Invoke declarations ───────────────────────────────────────────────── */
 
 internal static partial class FrSonicLib
@@ -92,6 +106,15 @@ internal static partial class FrSonicLib
 
     [LibraryImport(LIB, EntryPoint = "frsonic_stop")]
     internal static partial void StopC();
+
+    /* loopers */
+    [LibraryImport(LIB, EntryPoint = "frsonic_create_looper")]
+    [return: MarshalAs(UnmanagedType.U1)]
+    internal static partial bool CreateLooperC(
+        in FrSonicLooperConfig config, out UIntPtr handle);
+
+    [LibraryImport(LIB, EntryPoint = "frsonic_destroy_looper")]
+    internal static partial void DestroyLooperC(UIntPtr handle);
 
     /* wireplumber object model */
     [LibraryImport(LIB, EntryPoint = "frsonic_set_volumes")]
@@ -213,4 +236,3 @@ internal static partial class FrSonicLib
     [LibraryImport(LIB, EntryPoint = "frsonic_lv2_plugin_classes_json")]
     internal static partial IntPtr Lv2PluginClassesJsonC();
 }
-

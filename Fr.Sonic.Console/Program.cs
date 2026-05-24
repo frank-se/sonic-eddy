@@ -1,5 +1,7 @@
 using Fr.Sonic;
+using Fr.Sonic.Model.Config.Looper;
 using Fr.Sonic.Monitoring;
+using Fr.Sonic.Modules.Models;
 
 Console.WriteLine("Fr.Sonic Console — unified backend test");
 
@@ -60,6 +62,41 @@ var plugins = System.Text.Json.JsonSerializer.Deserialize<List<Fr.Sonic.Model.Lv
 Console.WriteLine($"[lv2] {plugins?.Count ?? 0} plugins discovered");
 FrSonicLv2.Destroy();
 
+/* ── loopers ─────────────────────────────────────────────────────────────── */
+
+var loopers = new List<Looper>();
+
+try
+{
+    var firstLooper = await FrSonic.LooperFactory.CreateLooperAsync(new(
+        Name: "se.console_looper.1",
+        Description: "Sonic Eddy console looper 1",
+        CaptureTargetObject: null,
+        PlaybackTargetObject: null));
+    loopers.Add(firstLooper);
+    Console.WriteLine(
+        $"[looper+] name={firstLooper.Name} tag={firstLooper.Tag} " +
+        $"handle={firstLooper.LooperHandle} " +
+        $"capture={firstLooper.CaptureNodeObjectSerial} " +
+        $"playback={firstLooper.PlaybackNodeObjectSerial}");
+
+    var secondLooper = await FrSonic.LooperFactory.CreateLooperAsync(new(
+        Name: "se.console_looper.2",
+        Description: "Sonic Eddy console looper 2",
+        CaptureTargetObject: null,
+        PlaybackTargetObject: null));
+    loopers.Add(secondLooper);
+    Console.WriteLine(
+        $"[looper+] name={secondLooper.Name} tag={secondLooper.Tag} " +
+        $"handle={secondLooper.LooperHandle} " +
+        $"capture={secondLooper.CaptureNodeObjectSerial} " +
+        $"playback={secondLooper.PlaybackNodeObjectSerial}");
+}
+catch (Exception e)
+{
+    Console.WriteLine($"[looper!] {e}");
+}
+
 /* ── run ─────────────────────────────────────────────────────────────────── */
 
 Console.WriteLine("Running — press Ctrl+C to stop");
@@ -68,6 +105,12 @@ Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
 try { await Task.Delay(Timeout.Infinite, cts.Token); }
 catch (OperationCanceledException) { }
+
+foreach (var looper in loopers)
+{
+    Console.WriteLine($"[looper-] name={looper.Name} handle={looper.LooperHandle}");
+    looper.Destroy();
+}
 
 FrSonic.Stop();
 Console.WriteLine("Stopped.");
