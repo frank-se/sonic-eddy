@@ -134,7 +134,8 @@ public class MixerEditor(IWireplumberService wireplumberService)
 
     private static NodePropertiesConfig CaptureBaseProps(bool autoConnect,
         string name,
-        string? description = null) => new()
+        string? description = null,
+        bool passive = true) => new()
     {
         Linger = true,
         Name = name,
@@ -143,16 +144,17 @@ public class MixerEditor(IWireplumberService wireplumberService)
         MediaClass = CaptureNodeMediaClass,
         DontFallback = true,
         AutoConnect = autoConnect,
-        Passive = true
+        Passive = passive
     };
 
     private static NodePropertiesConfig CaptureBasePropsWithTargetObject(
         bool autoConnect,
         string targetObject,
         string name,
-        string? description = null)
+        string? description = null,
+        bool passive = true)
     {
-        var props = CaptureBaseProps(autoConnect, name, description);
+        var props = CaptureBaseProps(autoConnect, name, description, passive);
         props.TargetObject = targetObject;
         return props;
     }
@@ -234,7 +236,8 @@ public class MixerEditor(IWireplumberService wireplumberService)
             $"input-loopback-group-{index}", new()
             {
                 CaptureProps = CaptureBaseProps(false,
-                    $"group-{index}-input-loopback-capture-{layerId}"),
+                    $"group-{index}-input-loopback-capture-{layerId}",
+                    passive: false),
                 PlaybackProps = PlaybackBaseProps(false,
                     $"group-{index}-input-loopback-playback-{layerId}"),
             });
@@ -367,7 +370,8 @@ public class MixerEditor(IWireplumberService wireplumberService)
             {
                 CaptureProps = CaptureBasePropsWithTargetObject(true,
                     0.ToString(),
-                    $"channel-{channelId}-input-loopback-capture-{layerId}"),
+                    $"channel-{channelId}-input-loopback-capture-{layerId}",
+                    passive: false),
                 PlaybackProps = PlaybackBaseProps(false,
                     $"channel-{channelId}-input-loopback-playback-{layerId}"),
             });
