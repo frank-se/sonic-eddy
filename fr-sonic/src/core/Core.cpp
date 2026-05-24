@@ -12,17 +12,17 @@
 #include <thread>
 #include <wp/wp.h>
 
+#include "Core.h"
 #include "models/prop_info/prop_info.h"
 #include "models/props/props.h"
-#include "Core.h"
 
 #include "spa_helpers/mapping_helper.h"
 #include "spa_helpers/spa_pod_helpers.h"
 
 std::tuple<bool, Core *, WpIterator *>
 Core::finish_callback_and_prepare_iterator(GObject *source_object,
-                                                        GAsyncResult *res,
-                                                        gpointer user_data) {
+                                           GAsyncResult *res,
+                                           gpointer user_data) {
   const auto this_ = static_cast<Core *>(user_data);
   g_autoptr(WpIterator) it = nullptr;
   g_autoptr(GError) error = nullptr;
@@ -50,8 +50,9 @@ static inline const char *get_prop_key_name(uint32_t key) {
   }
 }
 
-void Core::wp_process_object_enum_props_callback(
-    GObject *source_object, GAsyncResult *result, gpointer user_data) {
+void Core::wp_process_object_enum_props_callback(GObject *source_object,
+                                                 GAsyncResult *result,
+                                                 gpointer user_data) {
   auto [success, this_, iterator_pointer] =
       finish_callback_and_prepare_iterator(source_object, result, user_data);
 
@@ -99,8 +100,9 @@ void Core::wp_process_object_enum_props_callback(
   }
 }
 
-void Core::wp_process_object_enum_prop_info_callback(
-    GObject *source_object, GAsyncResult *result, gpointer user_data) {
+void Core::wp_process_object_enum_prop_info_callback(GObject *source_object,
+                                                     GAsyncResult *result,
+                                                     gpointer user_data) {
   auto [success, this_, iterator_pointer] =
       finish_callback_and_prepare_iterator(source_object, result, user_data);
 
@@ -273,8 +275,8 @@ void Core::wp_process_object_enum_prop_info_callback(
   }
 }
 
-void Core::g_signal_object_added_callback(
-    WpObjectManager *object_manager, gpointer object, gpointer user_data) {
+void Core::g_signal_object_added_callback(WpObjectManager *object_manager,
+                                          gpointer object, gpointer user_data) {
   const auto this_ = static_cast<Core *>(user_data);
 
   const auto wireplumber_object = static_cast<WpPipewireObject *>(object);
@@ -303,8 +305,9 @@ void Core::g_signal_object_added_callback(
   }
 }
 
-void Core::g_signal_object_removed_callback(
-    WpObjectManager *object_manager, gpointer object, gpointer user_data) {
+void Core::g_signal_object_removed_callback(WpObjectManager *object_manager,
+                                            gpointer object,
+                                            gpointer user_data) {
   const auto this_ = static_cast<Core *>(user_data);
 
   const auto wireplumber_object = static_cast<WpPipewireObject *>(object);
@@ -418,12 +421,16 @@ int Core::init() {
   setup_pipewire();
   register_signals();
 
-  // Signal readiness via idle source so it fires only after g_main_loop_run() iterates
+  // Signal readiness via idle source so it fires only after g_main_loop_run()
+  // iterates
   auto *source = g_idle_source_new();
-  g_source_set_callback(source, [](gpointer data) -> gboolean {
-    static_cast<Core *>(data)->_pipewire_ready_promise.set_value();
-    return G_SOURCE_REMOVE;
-  }, this, nullptr);
+  g_source_set_callback(
+      source,
+      [](gpointer data) -> gboolean {
+        static_cast<Core *>(data)->_pipewire_ready_promise.set_value();
+        return G_SOURCE_REMOVE;
+      },
+      this, nullptr);
   g_source_attach(source, _main_context);
   g_source_unref(source);
 
@@ -507,8 +514,8 @@ void Core::trigger_object_deleted_callback(
 }
 
 void Core::g_signal_params_changed_callback(WpPipewireObject *self,
-                                                         const gchar *key,
-                                                         gpointer user_data) {
+                                            const gchar *key,
+                                            gpointer user_data) {
   const auto this_ = static_cast<Core *>(user_data);
   uint64_t object_serial;
   fill_uint64(object_serial, self, PW_KEY_OBJECT_SERIAL);
@@ -571,8 +578,7 @@ void Core::register_signals() {
   g_source_unref(sigterm_source);
 }
 
-WpPipewireObject *
-Core::get_object_by_object_id(uint64_t object_id) const {
+WpPipewireObject *Core::get_object_by_object_id(uint64_t object_id) const {
   auto proxy = wp_object_manager_lookup(_object_manager, WP_TYPE_PROXY,
                                         WP_CONSTRAINT_TYPE_G_PROPERTY,
                                         "bound-id", "=u", object_id, nullptr);
@@ -586,9 +592,7 @@ Core::get_object_by_object_id(uint64_t object_id) const {
 
 pw_core *Core::pipewire_core() const { return _pipewire_core; }
 
-pw_context *Core::pipewire_context() const {
-  return _pipewire_context;
-}
+pw_context *Core::pipewire_context() const { return _pipewire_context; }
 
 pw_loop *Core::pipewire_loop() const { return _pipewire_loop; }
 
@@ -598,10 +602,9 @@ void Core::setup_pipewire() {
   _pipewire_loop = pw_context_get_main_loop(_pipewire_context);
 }
 
-void Core::set_metadata_entry(const char *metadata_name,
-                                           uint64_t subject, const char *key,
-                                           const char *type,
-                                           const char *value) {
+void Core::set_metadata_entry(const char *metadata_name, uint64_t subject,
+                              const char *key, const char *type,
+                              const char *value) {
   const auto metadata =
       _metadata_collection.get_metadata_by_name(metadata_name);
 
@@ -613,9 +616,8 @@ void Core::set_metadata_entry(const char *metadata_name,
   metadata->set_metadata_value(subject, key, type, value);
 }
 
-void Core::delete_metadata_entry(const char *metadata_name,
-                                              uint64_t subject,
-                                              const char *key) {
+void Core::delete_metadata_entry(const char *metadata_name, uint64_t subject,
+                                 const char *key) {
   const auto metadata =
       _metadata_collection.get_metadata_by_name(metadata_name);
 
@@ -628,8 +630,8 @@ void Core::delete_metadata_entry(const char *metadata_name,
 }
 
 WpLink *Core::create_link_by_port_id(uint64_t output_port_id,
-                                                  uint64_t input_port_id,
-                                                  bool linger) const {
+                                     uint64_t input_port_id,
+                                     bool linger) const {
 
   const auto properties = wp_properties_new_empty();
   const auto output_port_string = std::format("{}", output_port_id);
@@ -676,12 +678,12 @@ void Core::delete_link(WpLink *link) const {
   auto data = new delete_link_data{.link = link};
 
   g_main_context_invoke(
-    wireplumber_context(),
-    [](gpointer data) -> gboolean {
+      wireplumber_context(),
+      [](gpointer data) -> gboolean {
         const auto user_data = static_cast<delete_link_data *>(data);
-      g_object_unref(user_data->link);
-      delete user_data;
-      return static_cast<gboolean>(false);
-    },
-    data);
+        g_object_unref(user_data->link);
+        delete user_data;
+        return static_cast<gboolean>(false);
+      },
+      data);
 }

@@ -65,6 +65,9 @@ void params::params_handling::build_set_params_pod(
   spa_pod_builder_pop(&builder, &struct_frame);
   auto pod =
       static_cast<spa_pod *>(spa_pod_builder_pop(&builder, &object_frame));
+
+  spa_debug_pod(0, nullptr, pod);
+
   data.pod = wp_spa_pod_new_wrap(pod);
 }
 
@@ -87,12 +90,15 @@ void params::params_handling::set_params(
 
   build_set_params_pod(keys, param_types, values, count, *data);
 
+  g_object_ref(data->proxy);
+
   g_main_context_invoke(
       wireplumber_thread->wireplumber_context(),
       [](gpointer data) {
         const auto inner_data = static_cast<set_params_data *>(data);
         wp_pipewire_object_set_param(inner_data->proxy, "Props", 0,
                                      inner_data->pod);
+        g_object_unref(inner_data->proxy);
         delete inner_data;
         return static_cast<gboolean>(false);
       },

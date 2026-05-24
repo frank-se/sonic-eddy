@@ -82,8 +82,7 @@ void midi::MidiSyncSender::setup_stream() {
 
   const auto result = pw_stream_connect(
       _stream, PW_DIRECTION_OUTPUT, PW_ID_ANY,
-      static_cast<pw_stream_flags>(PW_STREAM_FLAG_AUTOCONNECT |
-                                   PW_STREAM_FLAG_MAP_BUFFERS |
+      static_cast<pw_stream_flags>(PW_STREAM_FLAG_MAP_BUFFERS |
                                    PW_STREAM_FLAG_RT_PROCESS),
       params, 1);
   if (result < 0) {

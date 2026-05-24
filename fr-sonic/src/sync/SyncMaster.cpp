@@ -1,10 +1,12 @@
 #include "SyncMaster.h"
 
 #include "logging/log.h"
+#include "spa/debug/pod.h"
 
 #include <algorithm>
 #include <cerrno>
 #include <cmath>
+#include <cstddef>
 #include <ctime>
 #include <format>
 #include <regex>
@@ -32,7 +34,7 @@ uint64_t timespec_to_nsec(const timespec &ts) {
 
 spa_pod *pod_body(const spa_pod *pod) {
   return reinterpret_cast<spa_pod *>(reinterpret_cast<uintptr_t>(pod) +
-                                    sizeof(spa_pod));
+                                     sizeof(spa_pod));
 }
 
 const char *pod_type_name(const uint32_t type) {
@@ -121,9 +123,9 @@ void sesync::SyncMaster::start() {
                         "Sonic Eddy sync master", "media.class", "Midi/Bridge",
                         "se.role", "sync-master", nullptr);
 
-  _client_node = static_cast<pw_client_node *>(pw_core_create_object(
-      _core, "client-node", PW_TYPE_INTERFACE_ClientNode,
-      PW_VERSION_CLIENT_NODE, &properties->dict, 0));
+  _client_node = static_cast<pw_client_node *>(
+      pw_core_create_object(_core, "client-node", PW_TYPE_INTERFACE_ClientNode,
+                            PW_VERSION_CLIENT_NODE, &properties->dict, 0));
   pw_properties_free(properties);
 
   if (_client_node == nullptr) {
@@ -173,8 +175,7 @@ void sesync::SyncMaster::setup_node_info() {
   _info = SPA_NODE_INFO_INIT();
   _info.max_input_ports = 0;
   _info.max_output_ports = 0;
-  _info.change_mask =
-      SPA_NODE_CHANGE_MASK_FLAGS | SPA_NODE_CHANGE_MASK_PARAMS;
+  _info.change_mask = SPA_NODE_CHANGE_MASK_FLAGS | SPA_NODE_CHANGE_MASK_PARAMS;
   _info.flags = 0;
   _info.params = _params.data();
   _info.n_params = static_cast<uint32_t>(_params.size());
@@ -191,8 +192,7 @@ uint64_t sesync::SyncMaster::beat_period_nsec() const {
 }
 
 uint64_t sesync::SyncMaster::beat_period_nsec(const double bpm) const {
-  return static_cast<uint64_t>(
-      std::llround(60.0 * 1'000'000'000.0 / bpm));
+  return static_cast<uint64_t>(std::llround(60.0 * 1'000'000'000.0 / bpm));
 }
 
 uint64_t sesync::SyncMaster::current_beat(const uint64_t now) const {
@@ -273,8 +273,8 @@ void sesync::SyncMaster::rebuild_json() {
   }
   _schedule_json += "]";
 
-  _params_json = std::format(R"({{"bpm":[[{}, {:.6f}])", _bpm_beat,
-                             _config.bpm);
+  _params_json =
+      std::format(R"({{"bpm":[[{}, {:.6f}])", _bpm_beat, _config.bpm);
   if (_pending_bpm_beat && _pending_bpm) {
     _params_json +=
         std::format(R"(,[{}, {:.6f}])", *_pending_bpm_beat, *_pending_bpm);
@@ -283,8 +283,7 @@ void sesync::SyncMaster::rebuild_json() {
   _params_json +=
       std::format(R"([{},"{}"])", _transport_state_beat, _transport_state);
   if (_pending_transport_state_beat && _pending_transport_state) {
-    _params_json += std::format(R"(,[{},"{}"])",
-                                *_pending_transport_state_beat,
+    _params_json += std::format(R"(,[{},"{}"])", *_pending_transport_state_beat,
                                 *_pending_transport_state);
   }
   _params_json += "]}";
@@ -307,8 +306,7 @@ spa_pod *sesync::SyncMaster::build_props_pod() {
   spa_pod_builder_string(&builder, _params_json.c_str());
   spa_pod_builder_pop(&builder, &struct_frame);
 
-  return static_cast<spa_pod *>(
-      spa_pod_builder_pop(&builder, &object_frame));
+  return static_cast<spa_pod *>(spa_pod_builder_pop(&builder, &object_frame));
 }
 
 void sesync::SyncMaster::publish_update() {
@@ -321,14 +319,10 @@ void sesync::SyncMaster::publish_update() {
     _params[0].flags |= SPA_PARAM_INFO_SERIAL;
   _params[0].user = _param_serial;
   _params[0].seq = static_cast<int32_t>(_param_serial);
-  _info.change_mask =
-      SPA_NODE_CHANGE_MASK_FLAGS | SPA_NODE_CHANGE_MASK_PARAMS;
-
-  logging::log<logging::LogLevel::Info>(
-      "Sync master publishing params serial={} flags={} beat.params={}",
-      _param_serial, _params[0].flags, _params_json);
+  _info.change_mask = SPA_NODE_CHANGE_MASK_FLAGS | SPA_NODE_CHANGE_MASK_PARAMS;
 
   const spa_pod *params[] = {build_props_pod()};
+
   const auto result = pw_client_node_update(
       _client_node, PW_CLIENT_NODE_UPDATE_PARAMS | PW_CLIENT_NODE_UPDATE_INFO,
       1, params, &_info);
@@ -362,7 +356,7 @@ void sesync::SyncMaster::on_timer() {
 }
 
 void sesync::SyncMaster::handle_set_param(const uint32_t id, uint32_t flags,
-                                        const spa_pod *param) {
+                                          const spa_pod *param) {
   logging::log<logging::LogLevel::Info>(
       "Sync master set_param id={} flags={} param={}", id, flags,
       param == nullptr ? "null" : pod_type_name(param->type));
@@ -440,8 +434,8 @@ void sesync::SyncMaster::handle_set_param(const uint32_t id, uint32_t flags,
 
 bool sesync::SyncMaster::handle_params_value(const char *key,
                                              const char *value) {
-  logging::log<logging::LogLevel::Info>(
-      "Sync master received params '{}'='{}'", key, value);
+  logging::log<logging::LogLevel::Info>("Sync master received params '{}'='{}'",
+                                        key, value);
 
   if (std::string_view(key) == "beat.params") {
     return apply_beat_params_patch(value);
@@ -453,6 +447,7 @@ bool sesync::SyncMaster::handle_params_value(const char *key,
 }
 
 bool sesync::SyncMaster::apply_beat_params_patch(const std::string &json) {
+  logging::log<logging::LogLevel::Trace>("Received update string: {}", json);
   static const std::regex bpm_regex(
       R"("bpm"\s*:\s*\[\s*\[\s*([0-9]+)\s*,\s*([0-9]+(?:\.[0-9]+)?)\s*\])");
   static const std::regex state_regex(
@@ -461,17 +456,15 @@ bool sesync::SyncMaster::apply_beat_params_patch(const std::string &json) {
   bool changed = false;
   std::smatch match;
   if (std::regex_search(json, match, bpm_regex)) {
-    changed =
-        apply_bpm_change(std::stoull(match[1].str()),
-                         std::stod(match[2].str())) ||
-        changed;
+    changed = apply_bpm_change(std::stoull(match[1].str()),
+                               std::stod(match[2].str())) ||
+              changed;
   }
 
   if (std::regex_search(json, match, state_regex)) {
-    changed =
-        apply_transport_state_change(std::stoull(match[1].str()),
-                                     match[2].str()) ||
-        changed;
+    changed = apply_transport_state_change(std::stoull(match[1].str()),
+                                           match[2].str()) ||
+              changed;
   }
 
   if (!changed) {
@@ -564,7 +557,7 @@ void sesync::SyncMaster::timer_callback(void *data) {
 }
 
 int sesync::SyncMaster::set_param(void *object, const uint32_t id,
-                                const uint32_t flags, const spa_pod *param) {
+                                  const uint32_t flags, const spa_pod *param) {
   auto *self = static_cast<SyncMaster *>(object);
   self->handle_set_param(id, flags, param);
   return 0;

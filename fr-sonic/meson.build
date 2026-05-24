@@ -1,6 +1,6 @@
 project(
     'fr-sonic', 'cpp',
-    version : '0.1.0',
+    version : '0.4.0',
     license : 'MIT',
     default_options : ['cpp_std=c++26'])
 

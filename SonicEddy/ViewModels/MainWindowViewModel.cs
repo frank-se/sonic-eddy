@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Fr.Sonic;
@@ -19,6 +20,8 @@ using SonicEddy.ViewModels.MixerViewModelsV2;
 using SonicEddy.ViewModels.ModuleManagerViewModels;
 using SonicEddy.ViewModels.ObjectBrowserViewModels;
 using SonicEddy.ViewModels.PreferencesViewModels;
+using SonicEddy.ViewModels.MidiSyncViewModels;
+using SonicEddy.ViewModels.SynchronizationViewModels;
 using SonicEddy.ViewModels.VirtualInputsViewModels;
 using SonicEddy.Views.FilterGraphManagerViews;
 using SonicEddy.Views.MetadataViews;
@@ -26,6 +29,8 @@ using SonicEddy.Views.MidiParameterChangeMonitorView;
 using SonicEddy.Views.ModuleManagerViews;
 using SonicEddy.Views.ObjectBrowserViews;
 using SonicEddy.Views.PreferencesViews;
+using SonicEddy.Views.MidiSyncViews;
+using SonicEddy.Views.SynchronizationViews;
 using SonicEddy.Views.VirtualInputsViews;
 using Splat;
 using LogLevel = Microsoft.Extensions.Logging.LogLevel;
@@ -72,6 +77,8 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     private Window? _filterGraphWindow;
     private Window? _virtualInputsWindow;
     private Window? _preferencesWindow;
+    private Window? _synchronizationWindow;
+    private Window? _midiSyncWindow;
 
     public MixerLayerViewModel? LayerAViewModel
     {
@@ -311,6 +318,38 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         };
 
         _midiParameterMonitorWindow.Show();
+    }
+
+    public void ShowSynchronizationWindow()
+    {
+        _logger.LogTrace("ShowSynchronizationWindow");
+
+        if (_synchronizationWindow is not null &&
+            _synchronizationWindow.IsVisible) return;
+
+        _synchronizationWindow = new SynchronizationWindow()
+        {
+            DataContext = new SynchronizationViewModel(
+                Fr.Sonic.FrSonic.NodeRegistry.Objects
+                    .FirstOrDefault(node => node.Name == "se.sync_master"))
+        };
+
+        _synchronizationWindow.Show();
+    }
+
+    public void ShowMidiSyncWindow()
+    {
+        _logger.LogTrace("ShowMidiSyncWindow");
+
+        if (_midiSyncWindow is not null &&
+            _midiSyncWindow.IsVisible) return;
+
+        _midiSyncWindow = new MidiSyncWindow()
+        {
+            DataContext = new MidiSyncViewModel()
+        };
+
+        _midiSyncWindow.Show();
     }
 
     public void ShowVirtualInputsWindow()

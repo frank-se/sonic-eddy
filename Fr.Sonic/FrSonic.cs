@@ -17,7 +17,6 @@ using Fr.Sonic.Registries.Metadata;
 using Fr.Sonic.Registries.Modules;
 using Fr.Sonic.Registries.Nodes;
 using Fr.Sonic.Registries.Ports;
-using Fr.Sonic.Sync;
 
 namespace Fr.Sonic;
 
@@ -43,8 +42,6 @@ public static class FrSonic
 
     private static readonly Monitoring.Monitor _monitor = new();
     public static IMonitor Monitor => _monitor;
-
-    public static SyncClient SyncClient { get; } = new(NodeRegistry);
 
     /* ── midi ───────────────────────────────────────────────────────────── */
 
@@ -114,7 +111,6 @@ public static class FrSonic
 
         _processingThread = new(ProcessPipewireUpdatesThread);
         _processingThread.Start();
-        SyncClient.AttachExistingNodes();
     }
 
     public static void Stop()

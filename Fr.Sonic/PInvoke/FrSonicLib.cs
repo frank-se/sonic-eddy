@@ -70,7 +70,7 @@ public delegate void MidiCcUpdateCallback(ChannelType channelType, ulong channel
 
 internal static partial class FrSonicLib
 {
-    private const string LIB = "libfrsonic.so.0.1.0";
+    private const string LIB = "libfrsonic.so.0.4.0";
 
     /* lifecycle */
     [LibraryImport(LIB, EntryPoint = "frsonic_init")]

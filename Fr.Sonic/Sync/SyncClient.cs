@@ -1,21 +1,20 @@
 using Fr.Sonic.Model.Objects;
-using Fr.Sonic.Registries.Nodes;
+using System.Globalization;
+using Fr.Sonic.Model.Params;
 
 namespace Fr.Sonic.Sync;
 
-public sealed class SyncClient
+public sealed class SyncClient : IDisposable
 {
-    private const string SyncMasterNodeName = "se.sync_master";
-
-    private readonly NodeRegistry _nodeRegistry;
+    private readonly Node _masterNode;
     private readonly object _lock = new();
     private SyncSnapshot? _snapshot;
 
-    internal SyncClient(NodeRegistry nodeRegistry)
+    public SyncClient(Node masterNode)
     {
-        _nodeRegistry = nodeRegistry;
-        _nodeRegistry.Added += OnNodeAdded;
-        _nodeRegistry.Updated += OnNodeUpdated;
+        _masterNode = masterNode;
+        _masterNode.ParamsChanged += OnParamsChanged;
+        _ = UpdateFromNodeAsync();
     }
 
     public event Action<SyncSnapshot>? SnapshotChanged;
@@ -60,39 +59,56 @@ public sealed class SyncClient
             .ToList();
     }
 
-    internal void AttachExistingNodes()
+    public bool ScheduleBpm(ulong beat, double bpm)
     {
-        foreach (var node in _nodeRegistry.Objects)
-            AttachNode(node);
+        var snapshot = Snapshot;
+
+        Fr.Sonic.FrSonicWireplumber.SetParams(snapshot?.MasterObjectId ??
+                                             _masterNode.ObjectId,
+            [new("beat.params",
+                $$"""{"bpm":[[{{beat}},{{bpm.ToString(CultureInfo.InvariantCulture)}}]]}""")]);
+        return true;
     }
 
-    private void OnNodeAdded(Node node) => AttachNode(node);
-
-    private void OnNodeUpdated(Node node, NodeChangeType changeType)
+    public bool ScheduleTransportState(
+        ulong beat,
+        SyncTransportState transportState)
     {
-        if (changeType == NodeChangeType.Params)
-            AttachNode(node);
+        var snapshot = Snapshot;
+
+        Fr.Sonic.FrSonicWireplumber.SetParams(snapshot?.MasterObjectId ??
+                                             _masterNode.ObjectId,
+            [new("beat.params",
+                $$"""{"transport_state":[[{{beat}},"{{FormatTransportState(transportState)}}"]]}""")]);
+        return true;
     }
 
-    private void AttachNode(Node node)
-    {
-        if (node.Name != SyncMasterNodeName)
-            return;
+    private static string FormatTransportState(SyncTransportState state) =>
+        state switch
+        {
+            SyncTransportState.StartScheduled => "start_scheduled",
+            SyncTransportState.Playing => "playing",
+            _ => "stopped"
+        };
 
-        _ = UpdateFromNodeAsync(node);
+    private void OnParamsChanged(Dictionary<string, IParameter>? parameters) =>
+        UpdateFromParams(parameters);
+
+    private async Task UpdateFromNodeAsync()
+    {
+        var parameters = await _masterNode.Params.ConfigureAwait(false);
+        UpdateFromParams(parameters);
     }
 
-    private async Task UpdateFromNodeAsync(Node node)
+    private void UpdateFromParams(Dictionary<string, IParameter>? parameters)
     {
-        var parameters = await node.Params.ConfigureAwait(false);
-
         SyncSnapshot? previous;
         lock (_lock)
             previous = _snapshot;
 
         if (!SyncSnapshotParser.TryParse(
-                node.ObjectId,
-                node.ObjectSerial,
+                _masterNode.ObjectId,
+                _masterNode.ObjectSerial,
                 parameters,
                 previous?.BeatHistory ?? [],
                 out var snapshot))
@@ -102,5 +118,10 @@ public sealed class SyncClient
             _snapshot = snapshot;
 
         SnapshotChanged?.Invoke(snapshot);
+    }
+
+    public void Dispose()
+    {
+        _masterNode.ParamsChanged -= OnParamsChanged;
     }
 }

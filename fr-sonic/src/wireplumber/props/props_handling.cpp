@@ -1,5 +1,5 @@
-#include "core/Core.h"
 #include "props/props_handling.h"
+#include "core/Core.h"
 
 #include <iostream>
 #include <spa/debug/pod.h>
@@ -89,6 +89,8 @@ bool props::props_handling::build_set_props_pod(
 
   const auto pod =
       static_cast<struct spa_pod *>(spa_pod_builder_pop(&builder, &frame));
+
+  spa_debug_pod(0, nullptr, pod);
 
   props_data.pod = wp_spa_pod_new_wrap(pod);
   return true;

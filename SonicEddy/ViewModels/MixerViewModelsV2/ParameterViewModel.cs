@@ -34,13 +34,28 @@ public class ParameterViewModel : ReactiveObject, IParameter, IDisposable
             return;
 
         if (value is Parameter<float> floatValue)
+        {
+            _internalChanges = true;
             Value = floatValue.Value;
+            _internalChanges = false;
+        }
     }
+
+    private bool _internalChanges;
 
     public float Value
     {
         get;
-        set => this.RaiseAndSetIfChanged(ref field, value);
+        set
+        {
+            if (field.Equals(value))
+                return;
+
+            this.RaiseAndSetIfChanged(ref field, value);
+
+            if (!_internalChanges)
+                _node.SetParam(FullyQualifiedName, value);
+        }
     }
 
     public float Minimum { get; }

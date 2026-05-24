@@ -1,0 +1,43 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:midiSyncVm="clr-namespace:SonicEddy.ViewModels.MidiSyncViewModels"
+        mc:Ignorable="d" d:DesignWidth="520" d:DesignHeight="520"
+        Width="520" Height="520"
+        WindowStartupLocation="CenterOwner"
+        x:Class="SonicEddy.Views.MidiSyncViews.MidiSyncWindow"
+        x:DataType="midiSyncVm:MidiSyncViewModel"
+        Title="MIDI Sync">
+    <DockPanel Margin="16">
+        <StackPanel DockPanel.Dock="Top"
+                    Orientation="Horizontal"
+                    Spacing="8"
+                    Margin="0,0,0,12">
+            <Button Content="Refresh"
+                    Command="{Binding Refresh}" />
+            <Button Content="Select all"
+                    Command="{Binding SelectAll}" />
+            <Button Content="Clear"
+                    Command="{Binding Clear}" />
+            <Button Content="Apply"
+                    Command="{Binding Apply}" />
+        </StackPanel>
+
+        <TextBlock DockPanel.Dock="Bottom"
+                   Margin="0,12,0,0"
+                   Text="{Binding Status}" />
+
+        <ScrollViewer>
+            <ItemsControl ItemsSource="{Binding Ports}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="midiSyncVm:MidiSyncPortViewModel">
+                        <CheckBox Margin="0,4"
+                                  IsChecked="{Binding ReceivesSync}"
+                                  Content="{Binding Name}" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </DockPanel>
+</Window>

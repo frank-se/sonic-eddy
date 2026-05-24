@@ -1,0 +1,92 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:syncVm="clr-namespace:SonicEddy.ViewModels.SynchronizationViewModels"
+        mc:Ignorable="d" d:DesignWidth="480" d:DesignHeight="420"
+        Width="480" Height="420"
+        WindowStartupLocation="CenterOwner"
+        x:Class="SonicEddy.Views.SynchronizationViews.SynchronizationWindow"
+        x:DataType="syncVm:SynchronizationViewModel"
+        Title="Synchronization">
+    <Grid RowDefinitions="Auto,Auto,*"
+          RowSpacing="14"
+          Margin="16">
+        <Grid ColumnDefinitions="Auto,*,Auto"
+              RowDefinitions="Auto,Auto"
+              ColumnSpacing="10"
+              RowSpacing="10">
+            <TextBlock Grid.Row="0"
+                       Grid.Column="0"
+                       VerticalAlignment="Center"
+                       Text="BPM" />
+            <NumericUpDown Grid.Row="0"
+                           Grid.Column="1"
+                           Minimum="20"
+                           Maximum="300"
+                           Increment="1"
+                           FormatString="0.##"
+                           Value="{Binding Bpm}" />
+            <Button Grid.Row="0"
+                    Grid.Column="2"
+                    Padding="16,6"
+                    Command="{Binding ApplyBpm}"
+                    Content="Apply" />
+
+            <TextBlock Grid.Row="1"
+                       Grid.Column="0"
+                       VerticalAlignment="Center"
+                       Text="Apply at" />
+            <ComboBox Grid.Row="1"
+                      Grid.Column="1"
+                      ItemsSource="{Binding ApplyModes}"
+                      SelectedItem="{Binding ApplyMode}" />
+            <NumericUpDown Grid.Row="1"
+                           Grid.Column="2"
+                           Width="96"
+                           Minimum="0"
+                           Maximum="999999"
+                           Increment="1"
+                           IsVisible="{Binding IsCustomBeatSelected}"
+                           Value="{Binding CustomBeat}" />
+        </Grid>
+
+        <StackPanel Grid.Row="1"
+                    Orientation="Horizontal"
+                    Spacing="8">
+            <Button Padding="20,8"
+                    Command="{Binding StartPlayback}"
+                    Content="Start" />
+            <Button Padding="20,8"
+                    Command="{Binding StopPlayback}"
+                    Content="Stop" />
+        </StackPanel>
+
+        <Grid Grid.Row="2"
+              ColumnDefinitions="Auto,*"
+              RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto"
+              ColumnSpacing="12"
+              RowSpacing="8">
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="Transport" />
+            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding TransportState}" />
+
+            <TextBlock Grid.Row="1" Grid.Column="0" Text="Current beat" />
+            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding CurrentBeat}" />
+
+            <TextBlock Grid.Row="2" Grid.Column="0" Text="Bar.beat" />
+            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding CurrentBarBeat}" />
+
+            <TextBlock Grid.Row="3" Grid.Column="0" Text="Active BPM" />
+            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding ActiveBpm}" />
+
+            <TextBlock Grid.Row="4" Grid.Column="0" Text="Target beat" />
+            <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding TargetBeat}" />
+
+            <TextBlock Grid.Row="5" Grid.Column="0" Text="Pending" />
+            <TextBlock Grid.Row="5"
+                       Grid.Column="1"
+                       Text="{Binding PendingChanges}"
+                       TextWrapping="Wrap" />
+        </Grid>
+    </Grid>
+</Window>

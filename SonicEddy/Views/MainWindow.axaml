@@ -50,6 +50,11 @@
             </MenuItem>
 
             <MenuItem Header="Tools">
+                <MenuItem Header="Synchronization ..."
+                          Command="{Binding ShowSynchronizationWindow}" />
+                <MenuItem Header="MIDI Sync ..."
+                          Command="{Binding ShowMidiSyncWindow}" />
+                <Separator />
                 <MenuItem Header="Midi Parameter Change Monitor ..."
                           Command="{Binding ShowMidiParameterChangeMonitorWindow}" />
                 <MenuItem Header="Filter Graphs ..."

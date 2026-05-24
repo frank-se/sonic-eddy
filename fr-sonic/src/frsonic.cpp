@@ -11,8 +11,10 @@
 #include "wireplumber/params/params_handling.h"
 #include "wireplumber/modules/module_factory.h"
 
-#include <future>
+#include <iostream>
 #include <memory>
+#include <pipewire/pipewire.h>
+#include <pipewire/thread-loop.h>
 
 static std::shared_ptr<Core>                g_core    = nullptr;
 static std::shared_ptr<monitoring::Monitor> g_monitor = nullptr;
@@ -20,6 +22,77 @@ static std::shared_ptr<midi::Processor>     g_midi    = nullptr;
 static std::shared_ptr<sesync::SyncMaster>  g_sync_master = nullptr;
 static std::shared_ptr<sesync::SyncClient>  g_sync_client = nullptr;
 static std::shared_ptr<midi::MidiSyncSender> g_midi_sync_sender = nullptr;
+
+class OwnedPipewireRuntime {
+public:
+    bool start() {
+        if (_thread_loop != nullptr)
+            return true;
+
+        _thread_loop = pw_thread_loop_new("fr-sonic-owned-nodes", nullptr);
+        if (_thread_loop == nullptr) {
+            std::cerr << "Failed to create owned PipeWire thread loop" << std::endl;
+            return false;
+        }
+
+        _loop = pw_thread_loop_get_loop(_thread_loop);
+        _context = pw_context_new(_loop, nullptr, 0);
+        if (_context == nullptr) {
+            std::cerr << "Failed to create owned PipeWire context" << std::endl;
+            stop();
+            return false;
+        }
+
+        _core = pw_context_connect(_context, nullptr, 0);
+        if (_core == nullptr) {
+            std::cerr << "Failed to connect owned PipeWire core" << std::endl;
+            stop();
+            return false;
+        }
+
+        if (pw_thread_loop_start(_thread_loop) < 0) {
+            std::cerr << "Failed to start owned PipeWire thread loop" << std::endl;
+            stop();
+            return false;
+        }
+
+        return true;
+    }
+
+    void stop() {
+        if (_thread_loop != nullptr)
+            pw_thread_loop_stop(_thread_loop);
+
+        if (_core != nullptr) {
+            pw_core_disconnect(_core);
+            _core = nullptr;
+        }
+
+        if (_context != nullptr) {
+            pw_context_destroy(_context);
+            _context = nullptr;
+        }
+
+        if (_thread_loop != nullptr) {
+            pw_thread_loop_destroy(_thread_loop);
+            _thread_loop = nullptr;
+        }
+
+        _loop = nullptr;
+    }
+
+    [[nodiscard]] pw_loop *loop() const { return _loop; }
+    [[nodiscard]] pw_core *core() const { return _core; }
+    [[nodiscard]] pw_context *context() const { return _context; }
+
+private:
+    pw_thread_loop *_thread_loop = nullptr;
+    pw_loop *_loop = nullptr;
+    pw_context *_context = nullptr;
+    pw_core *_core = nullptr;
+};
+
+static std::unique_ptr<OwnedPipewireRuntime> g_owned_pipewire = nullptr;
 
 static peak_callback_t          g_peak_cb           = nullptr;
 static uint64_t                 g_peak_interval_ms  = 0;
@@ -57,66 +130,76 @@ void frsonic_init(
     g_midi_cc_cb       = midi_cc_update;
 }
 
-struct StartData {
-    std::promise<void> done;
+struct OwnedInvokeData {
+    void (*callback)();
 };
+
+static void invoke_owned_pipewire(void (*callback)()) {
+    OwnedInvokeData data{.callback = callback};
+    pw_loop_invoke(
+        g_owned_pipewire->loop(),
+        [](spa_loop *loop, bool async, std::uint32_t seq, const void *data,
+           size_t size, void *user_data) {
+            static_cast<OwnedInvokeData *>(user_data)->callback();
+            return 0;
+        },
+        0, nullptr, 0, true, &data);
+}
 
 void frsonic_start() {
     g_core->start();  // blocks until the GLib main loop is running
 
-    auto *data = new StartData{};
-    auto future = data->done.get_future();
+    g_owned_pipewire = std::make_unique<OwnedPipewireRuntime>();
+    if (!g_owned_pipewire->start())
+        return;
 
-    g_main_context_invoke(
-        g_core->wireplumber_context(),
-        [](gpointer user_data) -> gboolean {
-            auto *d           = static_cast<StartData *>(user_data);
-            auto *loop        = g_core->pipewire_loop();
-            auto *pw_core_ptr = g_core->pipewire_core();
+    invoke_owned_pipewire([] {
+        auto *loop        = g_owned_pipewire->loop();
+        auto *pw_core_ptr = g_owned_pipewire->core();
 
-            g_sync_master = std::make_shared<sesync::SyncMaster>(
-                pw_core_ptr, loop, sesync::SyncMasterConfig{});
-            g_sync_master->start();
+        g_sync_master = std::make_shared<sesync::SyncMaster>(
+            pw_core_ptr, loop, sesync::SyncMasterConfig{});
+        g_sync_master->start();
 
-            g_sync_client = std::make_shared<sesync::SyncClient>(
-                pw_core_ptr, loop);
-            g_sync_client->start();
+        g_sync_client = std::make_shared<sesync::SyncClient>(
+            pw_core_ptr, loop);
+        g_sync_client->start();
 
-            g_midi_sync_sender =
-                std::make_shared<midi::MidiSyncSender>(loop, *g_sync_client);
-            g_midi_sync_sender->start();
+        g_midi_sync_sender =
+            std::make_shared<midi::MidiSyncSender>(loop, *g_sync_client);
+        g_midi_sync_sender->start();
 
-            g_monitor = std::make_shared<monitoring::Monitor>(
-                loop, g_peak_cb, g_peak_interval_ms);
-            g_monitor->start();
+        g_monitor = std::make_shared<monitoring::Monitor>(
+            loop, g_peak_cb, g_peak_interval_ms);
+        g_monitor->start();
 
-            g_midi = std::make_shared<midi::Processor>(loop, pw_core_ptr,
-                [](controllers::ChannelType ct, uint64_t channel_id,
-                   uint64_t object_id, const char *parameter_name,
-                   float normalized_value, float normalized_known_value,
-                   bool catching_up) {
-                    if (g_midi_cc_cb)
-                        g_midi_cc_cb(static_cast<ChannelType>(ct), channel_id,
-                                     object_id, parameter_name, normalized_value,
-                                     normalized_known_value, catching_up);
-                });
-            g_midi->start();
-
-            d->done.set_value();
-            delete d;
-            return G_SOURCE_REMOVE;
-        },
-        data);
-
-    future.wait();
+        g_midi = std::make_shared<midi::Processor>(loop, pw_core_ptr,
+            [](controllers::ChannelType ct, uint64_t channel_id,
+               uint64_t object_id, const char *parameter_name,
+               float normalized_value, float normalized_known_value,
+               bool catching_up) {
+                if (g_midi_cc_cb)
+                    g_midi_cc_cb(static_cast<ChannelType>(ct), channel_id,
+                                 object_id, parameter_name, normalized_value,
+                                 normalized_known_value, catching_up);
+            });
+        g_midi->start();
+    });
 }
 
 void frsonic_stop() {
-    if (g_midi_sync_sender) { g_midi_sync_sender->stop(); g_midi_sync_sender = nullptr; }
-    if (g_sync_client) { g_sync_client->stop(); g_sync_client = nullptr; }
-    if (g_sync_master) { g_sync_master->stop(); g_sync_master = nullptr; }
-    if (g_monitor) { g_monitor->stop(); g_monitor = nullptr; }
-    if (g_midi)    { g_midi->stop();    g_midi    = nullptr; }
+    if (g_owned_pipewire) {
+        invoke_owned_pipewire([] {
+            if (g_midi_sync_sender) { g_midi_sync_sender->stop(); g_midi_sync_sender = nullptr; }
+            if (g_sync_client) { g_sync_client->stop(); g_sync_client = nullptr; }
+            if (g_sync_master) { g_sync_master->stop(); g_sync_master = nullptr; }
+            if (g_monitor) { g_monitor->stop(); g_monitor = nullptr; }
+            if (g_midi)    { g_midi->stop();    g_midi    = nullptr; }
+        });
+        g_owned_pipewire->stop();
+        g_owned_pipewire = nullptr;
+    }
+
     if (g_core)    { g_core->stop();    g_core    = nullptr; }
 }
 

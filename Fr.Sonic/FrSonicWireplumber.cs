@@ -120,7 +120,7 @@ public static class FrSonicWireplumber
         var paramTypes = new ParamType[parameters.Count];
         var values = new ulong[parameters.Count];
         var keyPointers = new IntPtr[parameters.Count];
-        var handles = new GCHandle?[parameters.Count];
+        var handles = new GCHandle?[parameters.Count * 2];
         GCHandle? arrayHandle = null;
 
         try
@@ -135,6 +135,7 @@ public static class FrSonicWireplumber
                     long => ParamType.Long,
                     float => ParamType.Float,
                     double => ParamType.Double,
+                    string => ParamType.String,
                     _ => throw new ArgumentException(
                         $"Unsupported value type {value.GetType().Name}")
                 };
@@ -146,6 +147,7 @@ public static class FrSonicWireplumber
                     long v => (ulong)v,
                     float v => BitConverter.SingleToUInt32Bits(v),
                     double v => BitConverter.DoubleToUInt64Bits(v),
+                    string v => PinStringValue(v, handles, keyPointers.Length + i),
                     _ => throw new ArgumentException(
                         $"Unsupported value type {value.GetType().Name}")
                 };
@@ -166,6 +168,14 @@ public static class FrSonicWireplumber
                 handle?.Free();
             arrayHandle?.Free();
         }
+    }
+
+    private static ulong PinStringValue(string value, GCHandle?[] handles,
+        int index)
+    {
+        var utf8Bytes = Encoding.UTF8.GetBytes(value + '\0');
+        handles[index] = GCHandle.Alloc(utf8Bytes, GCHandleType.Pinned);
+        return (ulong)handles[index]!.Value.AddrOfPinnedObject();
     }
 
     public static void SetMetadataEntry(string metadataName, ulong subject,
