@@ -1,11 +1,13 @@
 #include "Looper.h"
 
 #include "logging/log.h"
+#include "sync/SyncClient.h"
 
 #include <algorithm>
 #include <array>
 #include <charconv>
 #include <cstring>
+#include <ctime>
 #include <format>
 #include <optional>
 #include <regex>
@@ -35,6 +37,13 @@ const pw_stream_events playback_stream_events = {
 };
 
 constexpr uint32_t PassthroughMaxFrames = 16384;
+
+uint64_t monotonic_nsec() {
+  timespec now{};
+  clock_gettime(CLOCK_MONOTONIC, &now);
+  return (static_cast<uint64_t>(now.tv_sec) * 1'000'000'000ull) +
+         static_cast<uint64_t>(now.tv_nsec);
+}
 
 std::string pod_type_name(const uint32_t type) {
   switch (type) {
@@ -139,8 +148,10 @@ uint32_t command_priority(const looper::CommandEvent &event) {
 
 } // namespace
 
-looper::Looper::Looper(pw_loop *loop, LooperConfig config)
+looper::Looper::Looper(pw_loop *loop, LooperConfig config,
+                       std::shared_ptr<sesync::SyncClient> sync_client)
     : _loop(loop), _config(std::move(config)),
+      _sync_client(std::move(sync_client)),
       _mix(std::clamp(_config.mix, 0.0f, 1.0f)) {}
 
 looper::Looper::~Looper() { stop(); }
@@ -289,19 +300,51 @@ void looper::Looper::process() {
 }
 
 void looper::Looper::drain_command_events() {
-  std::vector<CommandEvent> events;
   CommandEvent event{};
   while (_command_events.pop(event))
-    events.push_back(event);
+    queue_pending_command(event);
 
-  std::ranges::stable_sort(events, {}, [](const CommandEvent &event) {
+  process_pending_commands();
+}
+
+void looper::Looper::queue_pending_command(const CommandEvent &event) {
+  if (_pending_command_count >= _pending_commands.size()) {
+    logging::log<logging::LogLevel::Error>(
+        "Looper '{}' pending command queue full; dropped command kind={} "
+        "beat={} loop={}",
+        _config.name, static_cast<uint32_t>(event.kind), event.scheduled_beat,
+        event.loop_number);
+    return;
+  }
+
+  _pending_commands[_pending_command_count++] = event;
+}
+
+void looper::Looper::process_pending_commands() {
+  if (_pending_command_count == 0)
+    return;
+
+  std::ranges::stable_sort(_pending_commands.begin(),
+                           _pending_commands.begin() + _pending_command_count,
+                           {}, [](const CommandEvent &event) {
     return std::pair{event.scheduled_beat, command_priority(event)};
   });
 
-  for (const auto &queued_event : events) {
-    ++_processed_command_count;
-    apply_command_event(queued_event);
+  const auto current_beat = current_sync_beat();
+  size_t remaining_count = 0;
+  for (size_t index = 0; index < _pending_command_count; ++index) {
+    const auto &queued_event = _pending_commands[index];
+    const auto is_due =
+        queued_event.scheduled_beat == 0 ||
+        (current_beat && queued_event.scheduled_beat <= *current_beat);
+    if (is_due) {
+      ++_processed_command_count;
+      apply_command_event(queued_event);
+    } else {
+      _pending_commands[remaining_count++] = queued_event;
+    }
   }
+  _pending_command_count = remaining_count;
 }
 
 void looper::Looper::apply_command_event(const CommandEvent &event) {
@@ -761,6 +804,17 @@ pw_stream_flags looper::Looper::stream_flags(const bool autoconnect) const {
   if (autoconnect)
     flags = static_cast<pw_stream_flags>(flags | PW_STREAM_FLAG_AUTOCONNECT);
   return flags;
+}
+
+std::optional<uint64_t> looper::Looper::current_sync_beat() const {
+  if (!_sync_client)
+    return std::nullopt;
+
+  const auto current = _sync_client->current_beat(monotonic_nsec());
+  if (!current)
+    return std::nullopt;
+
+  return current->beat;
 }
 
 const spa_pod *looper::Looper::build_audio_format(spa_pod_builder &builder,

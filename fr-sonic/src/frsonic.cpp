@@ -276,7 +276,8 @@ bool frsonic_create_looper(const frsonic_looper_config *config,
         };
 
         auto looper = std::make_shared<looper::Looper>(
-            g_owned_pipewire->loop(), std::move(looper_config));
+            g_owned_pipewire->loop(), std::move(looper_config),
+            g_sync_client);
         if (!looper->start())
             return;
 

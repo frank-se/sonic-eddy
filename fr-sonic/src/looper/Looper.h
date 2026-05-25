@@ -3,6 +3,7 @@
 #include <atomic>
 #include <array>
 #include <cstdint>
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
@@ -12,6 +13,10 @@
 #include <pipewire/stream.h>
 #include <spa/param/audio/raw.h>
 #include <spa/pod/builder.h>
+
+namespace sesync {
+class SyncClient;
+}
 
 namespace looper {
 
@@ -56,7 +61,8 @@ struct LooperConfig {
 
 class Looper {
 public:
-  explicit Looper(pw_loop *loop, LooperConfig config = {});
+  explicit Looper(pw_loop *loop, LooperConfig config = {},
+                  std::shared_ptr<sesync::SyncClient> sync_client = {});
   ~Looper();
 
   Looper(const Looper &) = delete;
@@ -81,12 +87,15 @@ private:
   LooperConfig _config;
   pw_stream *_capture_stream = nullptr;
   pw_stream *_playback_stream = nullptr;
+  std::shared_ptr<sesync::SyncClient> _sync_client;
 
   spa_audio_info_raw _capture_format{};
   spa_audio_info_raw _playback_format{};
   std::atomic<float> _mix{0.0f};
   boost::lockfree::spsc_queue<CommandEvent, boost::lockfree::capacity<256>>
       _command_events;
+  std::array<CommandEvent, 256> _pending_commands{};
+  size_t _pending_command_count = 0;
   std::array<uint8_t, 4096> _params_buffer{};
   uint64_t _processed_command_count = 0;
   uint64_t _dropped_command_count = 0;
@@ -104,6 +113,8 @@ private:
   void capture_passthrough_input(pw_buffer *capture_buffer);
   void write_passthrough_output(pw_buffer *playback_buffer);
   void drain_command_events();
+  void queue_pending_command(const CommandEvent &event);
+  void process_pending_commands();
   void apply_command_event(const CommandEvent &event);
   void cut_length(uint64_t length_seconds, uint32_t loop_number);
   void play_loop(uint32_t loop_number);
@@ -121,6 +132,7 @@ private:
   [[nodiscard]] std::string playback_name() const;
   [[nodiscard]] const spa_audio_info_raw &active_format() const;
   [[nodiscard]] pw_stream_flags stream_flags(bool autoconnect) const;
+  [[nodiscard]] std::optional<uint64_t> current_sync_beat() const;
 
   static const spa_pod *build_audio_format(spa_pod_builder &builder,
                                            spa_audio_format format,
