@@ -210,6 +210,13 @@ wet loop playback signal is silence until loop playback exists:
 output = input * (1 - mix) + 0 * mix
 ```
 
+The first loop implementation records continuously into the fixed history
+buffer and supports process-time `cut <loop_length> <loop_number>` plus
+`play <loop_number>`. The `loop_length` value is interpreted as seconds until
+beat scheduling is wired into command execution. `cut <start_beat> <end_beat>
+<loop_number>` is parsed but rejected by processing until beat-to-sample mapping
+is implemented.
+
 If a beat boundary falls inside the current process buffer, all beat-scheduled
 state changes for that beat take effect at the corresponding sample offset, not
 at the beginning or end of the process cycle.
@@ -675,3 +682,8 @@ looper capture node to `CHANGED_MIX=0.5` halfway through the signal run using
 window RMS before and after the change. With equal time at `mix = 0` and
 `mix = 0.5`, total RMS is expected to be about `79%` of the source RMS, while
 average amplitude would be `75%`.
+
+`scripts/looper-cut-play-test.sh` uses a constant source, waits for the looper
+to accumulate history, sends `mix=1` and `[[0,"cut 1 0"],[0,"play 0"]]` through
+`pw-cli set-param`, and validates that later recorder windows contain the looped
+wet signal.

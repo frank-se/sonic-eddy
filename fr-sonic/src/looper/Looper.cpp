@@ -122,6 +122,21 @@ parse_command_text(uint64_t scheduled_beat, std::string_view text) {
   return std::nullopt;
 }
 
+uint32_t command_priority(const looper::CommandEvent &event) {
+  switch (event.kind) {
+  case looper::CommandKind::CutRange:
+  case looper::CommandKind::CutLength:
+    return 0;
+  case looper::CommandKind::Play:
+    return 1;
+  case looper::CommandKind::Stop:
+    return 2;
+  case looper::CommandKind::Archive:
+    return 3;
+  }
+  return 4;
+}
+
 } // namespace
 
 looper::Looper::Looper(pw_loop *loop, LooperConfig config)
@@ -139,6 +154,12 @@ bool looper::Looper::start() {
   _passthrough_channels = std::max(_config.channels, 1u);
   _passthrough_buffer.resize(PassthroughMaxFrames * _passthrough_channels);
   _passthrough_frames = 0;
+  const auto rate = std::max(active_format().rate, 1u);
+  _record_capacity_frames =
+      static_cast<uint64_t>(rate) * std::max(_config.max_record_seconds, 1u);
+  _record_buffer.assign(_record_capacity_frames * _passthrough_channels, 0.0f);
+  _record_write_frame = 0;
+  _recorded_frames = 0;
 
   if (!setup_capture_stream() || !setup_playback_stream()) {
     stop();
@@ -268,14 +289,150 @@ void looper::Looper::process() {
 }
 
 void looper::Looper::drain_command_events() {
+  std::vector<CommandEvent> events;
   CommandEvent event{};
-  while (_command_events.pop(event)) {
+  while (_command_events.pop(event))
+    events.push_back(event);
+
+  std::ranges::stable_sort(events, {}, [](const CommandEvent &event) {
+    return std::pair{event.scheduled_beat, command_priority(event)};
+  });
+
+  for (const auto &queued_event : events) {
     ++_processed_command_count;
-    logging::log<logging::LogLevel::Info>(
-        "Looper '{}' processed command event kind={} beat={} loop={}",
-        _config.name, static_cast<uint32_t>(event.kind), event.scheduled_beat,
-        event.loop_number);
+    apply_command_event(queued_event);
   }
+}
+
+void looper::Looper::apply_command_event(const CommandEvent &event) {
+  logging::log<logging::LogLevel::Info>(
+      "Looper '{}' processed command event kind={} beat={} loop={}",
+      _config.name, static_cast<uint32_t>(event.kind), event.scheduled_beat,
+      event.loop_number);
+
+  switch (event.kind) {
+  case CommandKind::CutLength:
+    cut_length(event.loop_length, event.loop_number);
+    break;
+  case CommandKind::Play:
+    play_loop(event.loop_number);
+    break;
+  case CommandKind::Stop:
+    stop_loops();
+    break;
+  case CommandKind::CutRange:
+    logging::log<logging::LogLevel::Warning>(
+        "Looper '{}' cut range command is not implemented yet", _config.name);
+    break;
+  case CommandKind::Archive:
+    logging::log<logging::LogLevel::Warning>(
+        "Looper '{}' archive command is not implemented yet", _config.name);
+    break;
+  }
+}
+
+void looper::Looper::cut_length(const uint64_t length_seconds,
+                                const uint32_t loop_number) {
+  if (loop_number >= _loop_slots.size()) {
+    logging::log<logging::LogLevel::Error>(
+        "Looper '{}' rejected cut for invalid loop {}", _config.name,
+        loop_number);
+    return;
+  }
+  if (length_seconds == 0) {
+    logging::log<logging::LogLevel::Error>(
+        "Looper '{}' rejected zero-length cut for loop {}", _config.name,
+        loop_number);
+    return;
+  }
+
+  const auto channels = _passthrough_channels;
+  const auto rate = std::max(active_format().rate, 1u);
+  const auto length_frames =
+      std::min<uint64_t>(length_seconds * static_cast<uint64_t>(rate),
+                         _record_capacity_frames);
+  logging::log<logging::LogLevel::Info>(
+      "Looper '{}' attempting cut length={}s loop={} recorded_frames={} "
+      "required_frames={} write_frame={}",
+      _config.name, length_seconds, loop_number, _recorded_frames,
+      length_frames, _record_write_frame);
+  if (length_frames == 0 || length_frames > _recorded_frames) {
+    logging::log<logging::LogLevel::Error>(
+        "Looper '{}' rejected cut length={}s loop={} recorded_frames={} "
+        "required_frames={}",
+        _config.name, length_seconds, loop_number, _recorded_frames,
+        length_frames);
+    return;
+  }
+
+  auto &slot = _loop_slots[loop_number];
+  slot.samples.resize(length_frames * channels);
+  slot.length_frames = length_frames;
+  slot.playhead_frame = 0;
+  slot.channels = channels;
+  slot.ready = true;
+  slot.playing = false;
+  ++slot.generation;
+
+  const auto start_frame =
+      (_record_write_frame + _record_capacity_frames - length_frames) %
+      _record_capacity_frames;
+  for (uint64_t frame = 0; frame < length_frames; ++frame) {
+    const auto source_frame = (start_frame + frame) % _record_capacity_frames;
+    const auto source_offset = source_frame * channels;
+    const auto dest_offset = frame * channels;
+    std::copy_n(_record_buffer.data() + source_offset, channels,
+                slot.samples.data() + dest_offset);
+  }
+
+  logging::log<logging::LogLevel::Info>(
+      "Looper '{}' cut loop={} generation={} length_frames={} channels={}",
+      _config.name, loop_number, slot.generation, slot.length_frames,
+      slot.channels);
+}
+
+void looper::Looper::play_loop(const uint32_t loop_number) {
+  if (loop_number >= _loop_slots.size()) {
+    logging::log<logging::LogLevel::Error>(
+        "Looper '{}' rejected play for invalid loop {}", _config.name,
+        loop_number);
+    return;
+  }
+
+  auto &slot = _loop_slots[loop_number];
+  if (!slot.ready || slot.length_frames == 0 || slot.samples.empty()) {
+    logging::log<logging::LogLevel::Error>(
+        "Looper '{}' rejected play for unready loop {}", _config.name,
+        loop_number);
+    return;
+  }
+
+  slot.playing = true;
+  slot.playhead_frame = 0;
+  logging::log<logging::LogLevel::Info>(
+      "Looper '{}' playing loop={} generation={}", _config.name, loop_number,
+      slot.generation);
+}
+
+void looper::Looper::stop_loops() {
+  for (auto &slot : _loop_slots)
+    slot.playing = false;
+  logging::log<logging::LogLevel::Info>("Looper '{}' stopped loops",
+                                        _config.name);
+}
+
+float looper::Looper::render_wet_sample(const uint32_t channel) {
+  float sample = 0.0f;
+  for (auto &slot : _loop_slots) {
+    if (!slot.playing || !slot.ready || slot.length_frames == 0 ||
+        slot.channels == 0)
+      continue;
+
+    const auto slot_channel = std::min<uint32_t>(channel, slot.channels - 1);
+    sample +=
+        slot.samples[(slot.playhead_frame * slot.channels) + slot_channel];
+  }
+  return sample;
 }
 
 void looper::Looper::publish_params() {
@@ -331,6 +488,19 @@ void looper::Looper::capture_passthrough_input(pw_buffer *capture_buffer) {
   }
 
   _passthrough_frames = frames;
+
+  if (!_record_buffer.empty() && channels == _passthrough_channels) {
+    for (uint32_t frame = 0; frame < frames; ++frame) {
+      const auto record_frame = _record_write_frame % _record_capacity_frames;
+      const auto record_offset = record_frame * channels;
+      const auto source_offset = frame * channels;
+      std::copy_n(_passthrough_buffer.data() + source_offset, channels,
+                  _record_buffer.data() + record_offset);
+      _record_write_frame = (_record_write_frame + 1) % _record_capacity_frames;
+      _recorded_frames = std::min<uint64_t>(_recorded_frames + 1,
+                                            _record_capacity_frames);
+    }
+  }
 }
 
 void looper::Looper::write_passthrough_output(pw_buffer *playback_buffer) {
@@ -348,25 +518,30 @@ void looper::Looper::write_passthrough_output(pw_buffer *playback_buffer) {
     const auto size = std::min<uint32_t>(data->maxsize, requested_size);
     const auto writable_frames =
         static_cast<uint32_t>(size / bytes_per_frame);
-    const auto copy_frames = std::min(writable_frames, _passthrough_frames);
-    const auto copy_size =
-        static_cast<uint32_t>(copy_frames * bytes_per_frame);
-
     auto *samples = static_cast<uint8_t *>(data->data);
-    const auto dry_gain = 1.0f - _mix.load(std::memory_order_relaxed);
     auto *output = reinterpret_cast<float *>(samples);
-    bool copied_dry_signal = false;
-    if (copy_size > 0 && _passthrough_channels == channels) {
-      const auto sample_count = copy_frames * channels;
-      for (uint32_t sample = 0; sample < sample_count; ++sample)
-        output[sample] = _passthrough_buffer[sample] * dry_gain;
-      copied_dry_signal = true;
+    const auto mix = _mix.load(std::memory_order_relaxed);
+    const auto dry_gain = 1.0f - mix;
+    const auto wet_gain = mix;
+    const auto dry_available = _passthrough_channels == channels;
+
+    for (uint32_t frame = 0; frame < writable_frames; ++frame) {
+      for (uint32_t channel = 0; channel < channels; ++channel) {
+        const auto sample = (frame * channels) + channel;
+        const auto dry_sample =
+            dry_available && frame < _passthrough_frames
+                ? _passthrough_buffer[sample]
+                : 0.0f;
+        output[sample] =
+            (dry_sample * dry_gain) + (render_wet_sample(channel) * wet_gain);
+      }
+
+      for (auto &slot : _loop_slots) {
+        if (slot.playing && slot.ready && slot.length_frames > 0)
+          slot.playhead_frame = (slot.playhead_frame + 1) % slot.length_frames;
+      }
     }
-    if (!copied_dry_signal) {
-      std::memset(samples, 0, size);
-    } else if (copy_size < size) {
-      std::memset(samples + copy_size, 0, size - copy_size);
-    }
+
     data->chunk->offset = 0;
     data->chunk->size = size;
     data->chunk->stride = static_cast<int32_t>(bytes_per_frame);
@@ -507,6 +682,7 @@ void looper::Looper::parse_commands_param(const char *value) {
 
   bool parsed_tuple = false;
   std::vector<std::pair<uint64_t, std::string>> seen_commands;
+  std::vector<CommandEvent> parsed_events;
   for (auto it = std::cregex_iterator(value, value + text.size(), tuple_regex);
        it != std::cregex_iterator{}; ++it) {
     parsed_tuple = true;
@@ -532,15 +708,21 @@ void looper::Looper::parse_commands_param(const char *value) {
 
     auto event = parse_command_text(*beat, command_text);
     if (event)
-      enqueue_command(*event);
+      parsed_events.push_back(*event);
     else
       logging::log<logging::LogLevel::Warning>(
           "Looper '{}' ignored invalid command '{}'", _config.name,
           command_text);
   }
 
-  if (parsed_tuple)
+  if (parsed_tuple) {
+    std::ranges::stable_sort(parsed_events, {}, [](const CommandEvent &event) {
+      return std::pair{event.scheduled_beat, command_priority(event)};
+    });
+    for (const auto &event : parsed_events)
+      enqueue_command(event);
     return;
+  }
 
   auto event = parse_command_text(0, text);
   if (event)

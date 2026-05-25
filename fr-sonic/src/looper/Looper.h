@@ -32,6 +32,16 @@ struct CommandEvent {
   uint32_t loop_number = 0;
 };
 
+struct LoopSlot {
+  std::vector<float> samples;
+  uint64_t generation = 0;
+  uint64_t length_frames = 0;
+  uint64_t playhead_frame = 0;
+  uint32_t channels = 0;
+  bool ready = false;
+  bool playing = false;
+};
+
 struct LooperConfig {
   std::string name = "se.looper";
   std::string tag;
@@ -80,6 +90,11 @@ private:
   std::array<uint8_t, 4096> _params_buffer{};
   uint64_t _processed_command_count = 0;
   uint64_t _dropped_command_count = 0;
+  uint64_t _record_write_frame = 0;
+  uint64_t _recorded_frames = 0;
+  uint64_t _record_capacity_frames = 0;
+  std::vector<float> _record_buffer;
+  std::array<LoopSlot, 10> _loop_slots;
   std::vector<float> _passthrough_buffer;
   uint32_t _passthrough_frames = 0;
   uint32_t _passthrough_channels = 0;
@@ -89,6 +104,11 @@ private:
   void capture_passthrough_input(pw_buffer *capture_buffer);
   void write_passthrough_output(pw_buffer *playback_buffer);
   void drain_command_events();
+  void apply_command_event(const CommandEvent &event);
+  void cut_length(uint64_t length_seconds, uint32_t loop_number);
+  void play_loop(uint32_t loop_number);
+  void stop_loops();
+  float render_wet_sample(uint32_t channel);
   void publish_params();
   void handle_capture_format(uint32_t id, const spa_pod *param);
   void handle_playback_format(uint32_t id, const spa_pod *param);

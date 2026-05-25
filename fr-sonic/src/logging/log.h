@@ -42,9 +42,11 @@ void log(std::format_string<Args...> fmt, Args &&...args) noexcept {
   if constexpr (level == LogLevel::Fatal || level == LogLevel::Error) {
     std::print(std::cerr, "[{}] {}\n", to_string(level),
                std::format(fmt, std::forward<Args>(args)...));
+    std::cerr << std::flush;
   } else {
     std::print(std::cout, "[{}] {}\n", to_string(level),
                std::format(fmt, std::forward<Args>(args)...));
+    std::cout << std::flush;
   }
 }
 
