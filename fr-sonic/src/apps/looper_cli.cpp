@@ -47,7 +47,7 @@ void on_node_added(const wireplumber_object *node) {
             << (node->media_class == nullptr ? "" : node->media_class)
             << " target.object="
             << (node->target_object == nullptr ? "" : node->target_object)
-            << "\n";
+            << std::endl;
 }
 
 void on_props_changed(const Props *, const ParamUpdate *) {}
@@ -169,7 +169,7 @@ int main(int argc, char **argv) {
   }
 
   std::cout << "created looper name=" << options.name << " tag=" << options.tag
-            << " handle=" << handle << "\n";
+            << " handle=" << handle << std::endl;
 
   if (options.duration_seconds == 0) {
     std::cout << "press Enter to stop\n";

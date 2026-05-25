@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include <pipewire/loop.h>
 #include <pipewire/stream.h>
@@ -52,9 +53,14 @@ private:
 
   spa_audio_info_raw _capture_format{};
   spa_audio_info_raw _playback_format{};
+  std::vector<float> _passthrough_buffer;
+  uint32_t _passthrough_frames = 0;
+  uint32_t _passthrough_channels = 0;
 
   bool setup_capture_stream();
   bool setup_playback_stream();
+  void capture_passthrough_input(pw_buffer *capture_buffer);
+  void write_passthrough_output(pw_buffer *playback_buffer);
   void handle_capture_format(uint32_t id, const spa_pod *param);
   void handle_playback_format(uint32_t id, const spa_pod *param);
 

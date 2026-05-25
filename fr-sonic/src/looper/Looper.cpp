@@ -27,6 +27,8 @@ const pw_stream_events playback_stream_events = {
     .process = looper::Looper::playback_process_callback,
 };
 
+constexpr uint32_t PassthroughMaxFrames = 16384;
+
 } // namespace
 
 looper::Looper::Looper(pw_loop *loop, LooperConfig config)
@@ -40,6 +42,10 @@ bool looper::Looper::start() {
 
   logging::log<logging::LogLevel::Info>("Starting looper '{}'",
                                         _config.name);
+  _passthrough_channels = std::max(_config.channels, 1u);
+  _passthrough_buffer.resize(PassthroughMaxFrames * _passthrough_channels);
+  _passthrough_frames = 0;
+
   if (!setup_capture_stream() || !setup_playback_stream()) {
     stop();
     return false;
@@ -147,8 +153,10 @@ bool looper::Looper::setup_playback_stream() {
 void looper::Looper::process() {
   if (_capture_stream != nullptr) {
     auto *capture_buffer = pw_stream_dequeue_buffer(_capture_stream);
-    if (capture_buffer != nullptr)
+    if (capture_buffer != nullptr) {
+      capture_passthrough_input(capture_buffer);
       pw_stream_queue_buffer(_capture_stream, capture_buffer);
+    }
   }
 
   if (_playback_stream == nullptr)
@@ -158,6 +166,41 @@ void looper::Looper::process() {
   if (playback_buffer == nullptr)
     return;
 
+  write_passthrough_output(playback_buffer);
+  pw_stream_queue_buffer(_playback_stream, playback_buffer);
+}
+
+void looper::Looper::capture_passthrough_input(pw_buffer *capture_buffer) {
+  auto *buffer = capture_buffer->buffer;
+  if (buffer->n_datas == 0 || buffer->datas[0].data == nullptr ||
+      buffer->datas[0].chunk == nullptr) {
+    _passthrough_frames = 0;
+    return;
+  }
+
+  const auto *data = &buffer->datas[0];
+  const auto channels = std::max(active_format().channels, 1u);
+  const auto bytes_per_frame = channels * sizeof(float);
+  const auto frames = std::min(
+      static_cast<uint32_t>(data->chunk->size / bytes_per_frame),
+      PassthroughMaxFrames);
+  const auto sample_count = frames * channels;
+  const auto *samples = static_cast<const float *>(data->data);
+  const auto offset_samples = data->chunk->offset / sizeof(float);
+
+  if (channels == _passthrough_channels &&
+      sample_count <= _passthrough_buffer.size()) {
+    std::copy_n(samples + offset_samples, sample_count,
+                _passthrough_buffer.data());
+  } else {
+    _passthrough_frames = 0;
+    return;
+  }
+
+  _passthrough_frames = frames;
+}
+
+void looper::Looper::write_passthrough_output(pw_buffer *playback_buffer) {
   auto *buffer = playback_buffer->buffer;
   if (buffer->n_datas > 0 && buffer->datas[0].data != nullptr &&
       buffer->datas[0].chunk != nullptr) {
@@ -170,14 +213,21 @@ void looper::Looper::process() {
     const auto requested_size =
         static_cast<uint32_t>(frames * bytes_per_frame);
     const auto size = std::min<uint32_t>(data->maxsize, requested_size);
+    const auto writable_frames =
+        static_cast<uint32_t>(size / bytes_per_frame);
+    const auto copy_frames = std::min(writable_frames, _passthrough_frames);
+    const auto copy_size =
+        static_cast<uint32_t>(copy_frames * bytes_per_frame);
 
-    std::memset(data->data, 0, size);
+    auto *samples = static_cast<uint8_t *>(data->data);
+    if (copy_size > 0 && _passthrough_channels == channels)
+      std::memcpy(samples, _passthrough_buffer.data(), copy_size);
+    if (copy_size < size)
+      std::memset(samples + copy_size, 0, size - copy_size);
     data->chunk->offset = 0;
     data->chunk->size = size;
     data->chunk->stride = static_cast<int32_t>(bytes_per_frame);
   }
-
-  pw_stream_queue_buffer(_playback_stream, playback_buffer);
 }
 
 void looper::Looper::handle_capture_format(const uint32_t id,

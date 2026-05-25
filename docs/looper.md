@@ -198,6 +198,11 @@ For each process cycle, the looper:
 8. Mixes input and loop playback according to `mix`.
 9. Writes the result to the playback side.
 
+The initial implementation supports the `mix = 0` case as live passthrough:
+capture samples are copied to the playback side and any missing playback frames
+are filled with silence. This provides a first end-to-end PipeWire graph test
+before loop recording and loop playback are implemented.
+
 If a beat boundary falls inside the current process buffer, all beat-scheduled
 state changes for that beat take effect at the corresponding sample offset, not
 at the beginning or end of the process cycle.
@@ -599,6 +604,8 @@ se-signal -n se.test_signal -p <target-object> -m sine -f 60 --value 0.8
 
 The alternating signal emits one second at `--value` followed by one second at
 `--high-value`, repeating. The default values are `0.7` and `0.9`.
+With `--json`, node identity and window/total statistics are emitted as JSON
+lines for automated comparisons.
 
 ### Recorder
 
@@ -610,4 +617,21 @@ se-record -n se.test_record -c <target-object>
 ```
 
 Like the other tools, the target is optional. Without a target, the recorder
-node is created unconnected for manual patching.
+node is created unconnected for manual patching. With `--json`, node identity
+and window/total statistics are emitted as JSON lines.
+
+### Passthrough Setup
+
+`scripts/looper-passthrough-test.sh` starts a signal source, one looper, and a
+recorder as a real PipeWire graph:
+
+```bash
+scripts/looper-passthrough-test.sh
+```
+
+The script connects `se-signal` to `<looper-name>.capture` and `se-record` to
+`<looper-name>.playback`, runs both tools with JSON stats, compares signal
+window `n` against record window `n + 1`, then prints the looper, signal, and
+recorder logs. Environment variables such as `LOOPER_NAME`, `DURATION`,
+`RECORD_DURATION`, `SIGNAL_MODE`, `SIGNAL_VALUE`, `SIGNAL_HIGH_VALUE`, and
+`RMS_TOLERANCE` can override the default setup.

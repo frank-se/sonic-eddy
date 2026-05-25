@@ -8,6 +8,7 @@
 #include <iostream>
 #include <limits>
 #include <optional>
+#include <sstream>
 #include <string>
 
 #include <pipewire/context.h>
@@ -31,6 +32,7 @@ struct Options {
   uint32_t rate = 48000;
   uint32_t channels = 2;
   uint32_t duration_seconds = 0;
+  bool json = false;
 };
 
 struct Stats {
@@ -62,7 +64,7 @@ App *g_app = nullptr;
 void print_usage(const char *argv0) {
   std::cerr << "Usage: " << argv0
             << " [-c target] [-n name] [-d seconds] [-r rate]"
-            << " [--channels n]\n";
+            << " [--channels n] [--json]\n";
 }
 
 bool parse_uint(const char *text, uint32_t &out) {
@@ -72,6 +74,33 @@ bool parse_uint(const char *text, uint32_t &out) {
     return false;
   out = static_cast<uint32_t>(value);
   return true;
+}
+
+std::string json_escape(const std::string_view value) {
+  std::ostringstream escaped;
+  for (const auto ch : value) {
+    switch (ch) {
+    case '"':
+      escaped << "\\\"";
+      break;
+    case '\\':
+      escaped << "\\\\";
+      break;
+    case '\n':
+      escaped << "\\n";
+      break;
+    case '\r':
+      escaped << "\\r";
+      break;
+    case '\t':
+      escaped << "\\t";
+      break;
+    default:
+      escaped << ch;
+      break;
+    }
+  }
+  return escaped.str();
 }
 
 bool parse_args(int argc, char **argv, Options &options) {
@@ -107,6 +136,8 @@ bool parse_args(int argc, char **argv, Options &options) {
       if (const auto *value = require_value(arg.c_str());
           value == nullptr || !parse_uint(value, options.channels))
         return false;
+    } else if (arg == "--json") {
+      options.json = true;
     } else if (arg == "-h" || arg == "--help") {
       print_usage(argv[0]);
       std::exit(0);
@@ -126,13 +157,23 @@ void add_sample(Stats &stats, const float sample) {
   stats.max = std::max(stats.max, sample);
 }
 
-void print_stats(const char *prefix, const Stats &stats) {
+void print_stats(const char *prefix, const Stats &stats, const bool json) {
   const auto rms =
       stats.frames == 0 ? 0.0 : std::sqrt(stats.sum_sq / stats.frames);
+  const auto min = stats.frames == 0 ? 0.0f : stats.min;
+  const auto max = stats.frames == 0 ? 0.0f : stats.max;
+  if (json) {
+    std::cout << "{\"type\":\"stats\",\"app\":\"record\",\"scope\":\""
+              << prefix << "\",\"frames\":" << stats.frames
+              << ",\"rms\":" << rms << ",\"peak\":" << stats.peak
+              << ",\"min\":" << min << ",\"max\":" << max << "}"
+              << std::endl;
+    return;
+  }
+
   std::cout << prefix << " frames=" << stats.frames << " rms=" << rms
-            << " peak=" << stats.peak
-            << " min=" << (stats.frames == 0 ? 0.0f : stats.min)
-            << " max=" << (stats.frames == 0 ? 0.0f : stats.max) << "\n";
+            << " peak=" << stats.peak << " min=" << min << " max=" << max
+            << "\n";
 }
 
 void on_process(void *data) {
@@ -165,7 +206,7 @@ void on_process(void *data) {
   if (app->next_report_frame == 0)
     app->next_report_frame = rate;
   if (app->total.frames >= app->next_report_frame) {
-    print_stats("window", app->window);
+    print_stats("window", app->window, app->options.json);
     app->window = {};
     app->next_report_frame += rate;
   }
@@ -220,11 +261,23 @@ void on_registry_global(void *data, uint32_t id, uint32_t, const char *type,
 
   const auto *serial = spa_dict_lookup(props, PW_KEY_OBJECT_SERIAL);
   const auto *target = spa_dict_lookup(props, PW_KEY_TARGET_OBJECT);
+  if (app->options.json) {
+    std::cout << "{\"type\":\"node\",\"app\":\"record\",\"object_id\":" << id
+              << ",\"object_serial\":\""
+              << json_escape(serial == nullptr ? "" : serial) << "\",\"name\":\""
+              << json_escape(name == nullptr ? "" : name)
+              << "\",\"target_object\":\""
+              << json_escape(target == nullptr ? "" : target) << "\"}"
+              << std::endl;
+    app->node_identity_printed = true;
+    return;
+  }
+
   std::cout << "record node object.id=" << id
             << " object.serial=" << (serial == nullptr ? "" : serial)
             << " name=" << (name == nullptr ? "" : name)
             << " target.object=" << (target == nullptr ? "" : target)
-            << "\n";
+            << std::endl;
   app->node_identity_printed = true;
 }
 
@@ -306,7 +359,7 @@ int main(int argc, char **argv) {
     return 1;
 
   pw_main_loop_run(app.main_loop);
-  print_stats("total", app.total);
+  print_stats("total", app.total, app.options.json);
 
   pw_stream_destroy(app.stream);
   pw_proxy_destroy(reinterpret_cast<pw_proxy *>(app.registry));
