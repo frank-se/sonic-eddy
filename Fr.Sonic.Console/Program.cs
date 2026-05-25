@@ -12,12 +12,12 @@ FrSonic.Start();
 
 FrSonic.NodeRegistry.Added += node =>
 {
-    Console.WriteLine($"[node+] serial={node.ObjectSerial} name={node.Name} class={node.Media.Class}");
+    Console.WriteLine($"[node+] object.id={node.ObjectId} object.serial={node.ObjectSerial} name={node.Name} class={node.Media.Class}");
 };
 
 FrSonic.NodeRegistry.Deleted += node =>
 {
-    Console.WriteLine($"[node-] serial={node.ObjectSerial} name={node.Name}");
+    Console.WriteLine($"[node-] object.id={node.ObjectId} object.serial={node.ObjectSerial} name={node.Name}");
 };
 
 FrSonic.DeviceRegistry.Added += device =>
@@ -77,8 +77,10 @@ try
     Console.WriteLine(
         $"[looper+] name={firstLooper.Name} tag={firstLooper.Tag} " +
         $"handle={firstLooper.LooperHandle} " +
-        $"capture={firstLooper.CaptureNodeObjectSerial} " +
-        $"playback={firstLooper.PlaybackNodeObjectSerial}");
+        $"capture.id={firstLooper.CaptureNode.ObjectId} " +
+        $"capture.serial={firstLooper.CaptureNodeObjectSerial} " +
+        $"playback.id={firstLooper.PlaybackNode.ObjectId} " +
+        $"playback.serial={firstLooper.PlaybackNodeObjectSerial}");
 
     var secondLooper = await FrSonic.LooperFactory.CreateLooperAsync(new(
         Name: "se.console_looper.2",
@@ -89,8 +91,10 @@ try
     Console.WriteLine(
         $"[looper+] name={secondLooper.Name} tag={secondLooper.Tag} " +
         $"handle={secondLooper.LooperHandle} " +
-        $"capture={secondLooper.CaptureNodeObjectSerial} " +
-        $"playback={secondLooper.PlaybackNodeObjectSerial}");
+        $"capture.id={secondLooper.CaptureNode.ObjectId} " +
+        $"capture.serial={secondLooper.CaptureNodeObjectSerial} " +
+        $"playback.id={secondLooper.PlaybackNode.ObjectId} " +
+        $"playback.serial={secondLooper.PlaybackNodeObjectSerial}");
 }
 catch (Exception e)
 {

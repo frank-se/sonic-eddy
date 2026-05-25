@@ -18,7 +18,8 @@ void on_node_added(const wireplumber_object *node) {
   if (!purpose.starts_with("looper-"))
     return;
 
-  std::cout << "node added: serial=" << node->object_serial
+  std::cout << "node added: object.id=" << node->object_id
+            << " object.serial=" << node->object_serial
             << " name=" << (node->node_name == nullptr ? "" : node->node_name)
             << " purpose=" << purpose
             << " tag=" << (node->pmx_tag == nullptr ? "" : node->pmx_tag)

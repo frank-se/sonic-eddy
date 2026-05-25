@@ -548,7 +548,7 @@ public sealed record Looper(
     string Tag,
     ulong LooperHandle,
     ulong CaptureNodeObjectSerial,
-    PlaybackNodeObjectSerial);
+    ulong PlaybackNodeObjectSerial);
 
 public static class FrSonicLoopers
 {
@@ -565,3 +565,49 @@ creation.
 
 `Destroy` passes `Looper.LooperHandle` back to native code and removes the
 looper from the managed registry.
+
+## Test Tools
+
+The looper is tested in a real PipeWire graph rather than by mocking
+`process()`. The native test tools are built with fr-sonic and create ordinary
+PipeWire streams that can be connected manually or through target-object
+properties.
+
+### Looper Node
+
+`se-looper` creates one looper and keeps it alive until Enter is pressed or the
+optional duration expires.
+
+```bash
+se-looper -n se.test_looper -t test-looper \
+  -c <capture-target-object> \
+  -p <playback-target-object>
+```
+
+Both `-c` and `-p` are optional. If either target is omitted, that side is
+created without autoconnect so it can be linked manually.
+
+### Signal Source
+
+`se-signal` creates a playback stream that emits deterministic test audio.
+
+```bash
+se-signal -n se.test_signal -p <target-object> -m alternating
+se-signal -n se.test_signal -p <target-object> -m constant --value 0.7
+se-signal -n se.test_signal -p <target-object> -m sine -f 60 --value 0.8
+```
+
+The alternating signal emits one second at `--value` followed by one second at
+`--high-value`, repeating. The default values are `0.7` and `0.9`.
+
+### Recorder
+
+`se-record` creates a capture stream and prints once-per-second RMS/peak/min/max
+statistics for the first channel, plus total statistics on exit.
+
+```bash
+se-record -n se.test_record -c <target-object>
+```
+
+Like the other tools, the target is optional. Without a target, the recorder
+node is created unconnected for manual patching.
