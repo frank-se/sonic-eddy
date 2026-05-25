@@ -1,13 +1,14 @@
-public_inc  = include_directories('../include')
-src_inc     = include_directories('.')
-core_inc    = include_directories('core')
-wp_inc      = include_directories('wireplumber')
-mon_inc     = include_directories('monitoring')
-midi_inc    = include_directories('midi')
-lv2_inc     = include_directories('lv2')
-sync_inc    = include_directories('sync')
+public_inc   = include_directories('../include')
+src_inc      = include_directories('.')
+core_inc     = include_directories('core')
+wp_inc       = include_directories('wireplumber')
+mon_inc      = include_directories('monitoring')
+midi_inc     = include_directories('midi')
+lv2_inc      = include_directories('lv2')
+sync_inc     = include_directories('sync')
+silence_inc  = include_directories('silence')
 
-all_inc = [public_inc, src_inc, core_inc, wp_inc, mon_inc, midi_inc, lv2_inc, sync_inc]
+all_inc = [public_inc, src_inc, core_inc, wp_inc, mon_inc, midi_inc, lv2_inc, sync_inc, silence_inc]
 
 libfrsonic = shared_library(
     'frsonic',
@@ -52,6 +53,8 @@ libfrsonic = shared_library(
         # Sync subsystem
         'sync/SyncMaster.cpp',
         'sync/SyncClient.cpp',
+        # Silence producers
+        'silence/SilenceProducer.cpp',
     ],
     include_directories : all_inc,
     version : meson.project_version(),

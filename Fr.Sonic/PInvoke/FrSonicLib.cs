@@ -193,6 +193,13 @@ internal static partial class FrSonicLib
     internal static partial void AddFilterParameterC(ChannelType channelType,
         ulong channelId, ulong pluginId, string name, float min, float max);
 
+    /* silence producers */
+    [LibraryImport(LIB, EntryPoint = "frsonic_create_silence_producer")]
+    internal static partial IntPtr CreateSilenceProducerC(ulong targetSerial);
+
+    [LibraryImport(LIB, EntryPoint = "frsonic_destroy_silence_producer")]
+    internal static partial void DestroySilenceProducerC(IntPtr handle);
+
     /* lv2 */
     [LibraryImport(LIB, EntryPoint = "frsonic_lv2_init")]
     internal static partial void Lv2InitC();

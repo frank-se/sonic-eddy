@@ -38,6 +38,14 @@ public static class FrSonic
     private static readonly LinkFactory _linkFactory = new();
     public static ILinkFactory LinkFactory => _linkFactory;
 
+    /* ── silence producers ──────────────────────────────────────────────── */
+
+    public static IntPtr CreateSilenceProducer(ulong targetSerial) =>
+        FrSonicLib.CreateSilenceProducerC(targetSerial);
+
+    public static void DestroySilenceProducer(IntPtr handle) =>
+        FrSonicLib.DestroySilenceProducerC(handle);
+
     /* ── monitoring ─────────────────────────────────────────────────────── */
 
     private static readonly Monitoring.Monitor _monitor = new();

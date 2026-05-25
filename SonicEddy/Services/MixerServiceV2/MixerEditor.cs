@@ -275,6 +275,9 @@ public class MixerEditor(IWireplumberService wireplumberService)
 
         var id = index - 1 + (int)layerId * numberOfGroupChannels;
 
+        var silenceHandle = Fr.Sonic.FrSonic.CreateSilenceProducer(
+            inputLoopback.CaptureNode.ObjectSerial);
+
         return new(
             $"Group {index}",
             (ulong)id,
@@ -282,7 +285,8 @@ public class MixerEditor(IWireplumberService wireplumberService)
             null,
             outputLoopback,
             sendLoopbacks,
-            masterChannel.InputLoopback.CaptureNode);
+            masterChannel.InputLoopback.CaptureNode,
+            silenceHandle);
     }
 
     private List<OutputChannel> CreateOutputChannels(ulong[] ignoreSerials)
@@ -406,6 +410,9 @@ public class MixerEditor(IWireplumberService wireplumberService)
 
         var id = (channelId - 1) + layerId * (ulong)numberOfChannels;
 
+        var silenceHandle = Fr.Sonic.FrSonic.CreateSilenceProducer(
+            inputLoopback.CaptureNode.ObjectSerial);
+
         return new(
             name,
             id,
@@ -415,6 +422,7 @@ public class MixerEditor(IWireplumberService wireplumberService)
             outputLoopback,
             sendLoopbacks.ToList(),
             null,
-            master.InputLoopback.CaptureNode);
+            master.InputLoopback.CaptureNode,
+            silenceHandle);
     }
 }

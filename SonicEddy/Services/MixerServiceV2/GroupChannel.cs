@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Fr.Sonic.Model.Objects;
 using Fr.Sonic.Modules.Models;
@@ -11,4 +12,5 @@ public record GroupChannel(
     FilterChain? FilterChain,
     LoopbackModule OutputLoopback,
     List<LoopbackModule> SendLoopbacks,
-    Node? OutputTargetObject);
+    Node? OutputTargetObject,
+    IntPtr SilenceProducerHandle);

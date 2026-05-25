@@ -164,4 +164,8 @@ FRSONIC_API void        frsonic_lv2_destroy();
 FRSONIC_API const char *frsonic_lv2_plugin_descriptions_json();
 FRSONIC_API const char *frsonic_lv2_plugin_classes_json();
 
+/* ── silence producers ───────────────────────────────────────────────────── */
+FRSONIC_API void *frsonic_create_silence_producer(uint64_t target_serial);
+FRSONIC_API void  frsonic_destroy_silence_producer(void *handle);
+
 } // extern "C"

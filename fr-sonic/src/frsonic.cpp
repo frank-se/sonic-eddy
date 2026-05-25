@@ -5,6 +5,7 @@
 #include "midi/MidiSyncSender.h"
 #include "midi/Processor.h"
 #include "lv2/frlv2.h"
+#include "silence/SilenceProducer.h"
 #include "sync/SyncClient.h"
 #include "sync/SyncMaster.h"
 #include "wireplumber/props/props_handling.h"
@@ -354,4 +355,42 @@ const char *frsonic_lv2_plugin_descriptions_json() {
 }
 const char *frsonic_lv2_plugin_classes_json() {
     return plugin_classes_json();
+}
+
+/* ── silence producers ───────────────────────────────────────────────────── */
+
+void *frsonic_create_silence_producer(uint64_t target_serial) {
+    auto *producer = new silence::SilenceProducer(
+        target_serial, g_owned_pipewire->loop());
+
+    struct InvokeData { silence::SilenceProducer *producer; };
+    InvokeData data{producer};
+
+    pw_loop_invoke(
+        g_owned_pipewire->loop(),
+        [](spa_loop *, bool, uint32_t, const void *, size_t,
+           void *user_data) -> int {
+            static_cast<InvokeData *>(user_data)->producer->setup();
+            return 0;
+        },
+        0, nullptr, 0, true, &data);
+
+    return producer;
+}
+
+void frsonic_destroy_silence_producer(void *handle) {
+    if (!handle)
+        return;
+
+    struct InvokeData { silence::SilenceProducer *producer; };
+    InvokeData data{static_cast<silence::SilenceProducer *>(handle)};
+
+    pw_loop_invoke(
+        g_owned_pipewire->loop(),
+        [](spa_loop *, bool, uint32_t, const void *, size_t,
+           void *user_data) -> int {
+            delete static_cast<InvokeData *>(user_data)->producer;
+            return 0;
+        },
+        0, nullptr, 0, true, &data);
 }
