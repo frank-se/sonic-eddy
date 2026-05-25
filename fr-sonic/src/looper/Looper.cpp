@@ -4,14 +4,21 @@
 
 #include <algorithm>
 #include <array>
+#include <charconv>
 #include <cstring>
 #include <format>
+#include <optional>
+#include <regex>
+#include <sstream>
+#include <string_view>
 #include <utility>
 
 #include <pipewire/keys.h>
 #include <pipewire/properties.h>
+#include <spa/param/props.h>
 #include <spa/param/audio/format-utils.h>
 #include <spa/pod/builder.h>
+#include <spa/pod/iter.h>
 
 namespace {
 
@@ -28,6 +35,92 @@ const pw_stream_events playback_stream_events = {
 };
 
 constexpr uint32_t PassthroughMaxFrames = 16384;
+
+std::string pod_type_name(const uint32_t type) {
+  switch (type) {
+  case SPA_TYPE_String:
+    return "String";
+  case SPA_TYPE_Float:
+    return "Float";
+  case SPA_TYPE_Double:
+    return "Double";
+  case SPA_TYPE_Int:
+    return "Int";
+  case SPA_TYPE_Long:
+    return "Long";
+  case SPA_TYPE_Struct:
+    return "Struct";
+  default:
+    return std::format("{}", type);
+  }
+}
+
+std::optional<uint64_t> parse_u64(std::string_view text) {
+  while (!text.empty() && text.front() == ' ')
+    text.remove_prefix(1);
+  while (!text.empty() && text.back() == ' ')
+    text.remove_suffix(1);
+  uint64_t value = 0;
+  const auto result =
+      std::from_chars(text.data(), text.data() + text.size(), value);
+  if (result.ec != std::errc{} || result.ptr != text.data() + text.size())
+    return std::nullopt;
+  return value;
+}
+
+std::optional<looper::CommandEvent>
+parse_command_text(uint64_t scheduled_beat, std::string_view text) {
+  std::istringstream stream{std::string{text}};
+  std::string command;
+  stream >> command;
+  if (command.empty())
+    return std::nullopt;
+
+  looper::CommandEvent event{.scheduled_beat = scheduled_beat};
+  if (command == "play") {
+    uint32_t loop_number = 0;
+    if (!(stream >> loop_number))
+      return std::nullopt;
+    event.kind = looper::CommandKind::Play;
+    event.loop_number = loop_number;
+    return event;
+  }
+
+  if (command == "stop") {
+    event.kind = looper::CommandKind::Stop;
+    return event;
+  }
+
+  if (command == "archive") {
+    uint32_t loop_number = 0;
+    if (!(stream >> loop_number))
+      return std::nullopt;
+    event.kind = looper::CommandKind::Archive;
+    event.loop_number = loop_number;
+    return event;
+  }
+
+  if (command == "cut") {
+    uint64_t first = 0;
+    uint64_t second = 0;
+    uint32_t loop_number = 0;
+    if (!(stream >> first >> second))
+      return std::nullopt;
+    if (stream >> loop_number) {
+      event.kind = looper::CommandKind::CutRange;
+      event.start_beat = first;
+      event.end_beat = second;
+      event.loop_number = loop_number;
+    } else {
+      event.kind = looper::CommandKind::CutLength;
+      event.loop_length = first;
+      event.loop_number = static_cast<uint32_t>(second);
+    }
+    return event;
+  }
+
+  return std::nullopt;
+}
 
 } // namespace
 
@@ -106,6 +199,7 @@ bool looper::Looper::setup_capture_stream() {
     return false;
   }
 
+  publish_params();
   return true;
 }
 
@@ -152,6 +246,8 @@ bool looper::Looper::setup_playback_stream() {
 }
 
 void looper::Looper::process() {
+  drain_command_events();
+
   if (_capture_stream != nullptr) {
     auto *capture_buffer = pw_stream_dequeue_buffer(_capture_stream);
     if (capture_buffer != nullptr) {
@@ -169,6 +265,42 @@ void looper::Looper::process() {
 
   write_passthrough_output(playback_buffer);
   pw_stream_queue_buffer(_playback_stream, playback_buffer);
+}
+
+void looper::Looper::drain_command_events() {
+  CommandEvent event{};
+  while (_command_events.pop(event)) {
+    ++_processed_command_count;
+    logging::log<logging::LogLevel::Info>(
+        "Looper '{}' processed command event kind={} beat={} loop={}",
+        _config.name, static_cast<uint32_t>(event.kind), event.scheduled_beat,
+        event.loop_number);
+  }
+}
+
+void looper::Looper::publish_params() {
+  if (_capture_stream == nullptr)
+    return;
+
+  spa_pod_builder builder{};
+  spa_pod_builder_init(&builder, _params_buffer.data(), _params_buffer.size());
+
+  spa_pod_frame object_frame{};
+  spa_pod_builder_push_object(&builder, &object_frame, SPA_TYPE_OBJECT_Props,
+                              SPA_PARAM_Props);
+  spa_pod_builder_prop(&builder, SPA_PROP_params, 0);
+
+  spa_pod_frame struct_frame{};
+  spa_pod_builder_push_struct(&builder, &struct_frame);
+  spa_pod_builder_string(&builder, "mix");
+  spa_pod_builder_float(&builder, _mix.load(std::memory_order_relaxed));
+  spa_pod_builder_string(&builder, "commands");
+  spa_pod_builder_string(&builder, "[]");
+  spa_pod_builder_pop(&builder, &struct_frame);
+
+  const spa_pod *params[] = {
+      static_cast<spa_pod *>(spa_pod_builder_pop(&builder, &object_frame))};
+  pw_stream_update_params(_capture_stream, params, 1);
 }
 
 void looper::Looper::capture_passthrough_input(pw_buffer *capture_buffer) {
@@ -243,6 +375,7 @@ void looper::Looper::write_passthrough_output(pw_buffer *playback_buffer) {
 
 void looper::Looper::handle_capture_format(const uint32_t id,
                                            const spa_pod *param) {
+  handle_params(id, param);
   if (param == nullptr || id != SPA_PARAM_Format)
     return;
 
@@ -260,6 +393,7 @@ void looper::Looper::handle_capture_format(const uint32_t id,
 
 void looper::Looper::handle_playback_format(const uint32_t id,
                                             const spa_pod *param) {
+  handle_params(id, param);
   if (param == nullptr || id != SPA_PARAM_Format)
     return;
 
@@ -273,6 +407,147 @@ void looper::Looper::handle_playback_format(const uint32_t id,
     return;
 
   spa_format_audio_raw_parse(param, &_playback_format);
+}
+
+void looper::Looper::handle_params(const uint32_t id, const spa_pod *param) {
+  if (param == nullptr || id != SPA_PARAM_Props)
+    return;
+
+  const auto params_prop = spa_pod_find_prop(param, nullptr, SPA_PROP_params);
+  if (params_prop == nullptr) {
+    logging::log<logging::LogLevel::Warning>(
+        "Looper '{}' received Props update without SPA_PROP_params",
+        _config.name);
+    return;
+  }
+
+  if (params_prop->value.type != SPA_TYPE_Struct) {
+    logging::log<logging::LogLevel::Warning>(
+        "Looper '{}' expected SPA_PROP_params Struct, got {}", _config.name,
+        pod_type_name(params_prop->value.type));
+    return;
+  }
+
+  const char *key = nullptr;
+  uint32_t index = 0;
+  spa_pod *child = nullptr;
+  SPA_POD_FOREACH(static_cast<spa_pod *>(SPA_POD_BODY(&params_prop->value)),
+                  SPA_POD_BODY_SIZE(&params_prop->value), child) {
+    if (index % 2 == 0) {
+      key = nullptr;
+      if (child->type == SPA_TYPE_String)
+        spa_pod_get_string(child, &key);
+    } else if (key != nullptr) {
+      handle_param_value(key, child);
+    }
+    ++index;
+  }
+
+  publish_params();
+}
+
+void looper::Looper::handle_param_value(const char *key,
+                                        const spa_pod *value) {
+  if (std::strcmp(key, "mix") == 0) {
+    float mix = _mix.load(std::memory_order_relaxed);
+    if (value->type == SPA_TYPE_Float) {
+      spa_pod_get_float(value, &mix);
+    } else if (value->type == SPA_TYPE_Double) {
+      double double_mix = 0.0;
+      spa_pod_get_double(value, &double_mix);
+      mix = static_cast<float>(double_mix);
+    } else if (value->type == SPA_TYPE_Int) {
+      int32_t int_mix = 0;
+      spa_pod_get_int(value, &int_mix);
+      mix = static_cast<float>(int_mix);
+    } else {
+      logging::log<logging::LogLevel::Warning>(
+          "Looper '{}' ignored mix param with type {}", _config.name,
+          pod_type_name(value->type));
+      return;
+    }
+
+    _mix.store(std::clamp(mix, 0.0f, 1.0f), std::memory_order_relaxed);
+    logging::log<logging::LogLevel::Info>("Looper '{}' mix set to {}",
+                                          _config.name,
+                                          _mix.load(std::memory_order_relaxed));
+    return;
+  }
+
+  if (std::strcmp(key, "commands") == 0 || std::strcmp(key, "command") == 0) {
+    if (value->type != SPA_TYPE_String) {
+      logging::log<logging::LogLevel::Warning>(
+          "Looper '{}' ignored commands param with type {}", _config.name,
+          pod_type_name(value->type));
+      return;
+    }
+    const char *commands = nullptr;
+    spa_pod_get_string(value, &commands);
+    if (commands != nullptr)
+      parse_commands_param(commands);
+  }
+}
+
+void looper::Looper::enqueue_command(const CommandEvent &event) {
+  if (_command_events.push(event))
+    return;
+
+  ++_dropped_command_count;
+  logging::log<logging::LogLevel::Error>(
+      "Looper '{}' command event queue full; dropped command kind={} beat={} "
+      "loop={} dropped_count={}",
+      _config.name, static_cast<uint32_t>(event.kind), event.scheduled_beat,
+      event.loop_number, _dropped_command_count);
+}
+
+void looper::Looper::parse_commands_param(const char *value) {
+  const std::string_view text{value};
+  static const std::regex tuple_regex{
+      R"re(\[\s*([0-9]+)\s*,\s*"([^"]+)"\s*\])re"};
+
+  bool parsed_tuple = false;
+  std::vector<std::pair<uint64_t, std::string>> seen_commands;
+  for (auto it = std::cregex_iterator(value, value + text.size(), tuple_regex);
+       it != std::cregex_iterator{}; ++it) {
+    parsed_tuple = true;
+    const auto beat = parse_u64((*it)[1].str());
+    if (!beat) {
+      logging::log<logging::LogLevel::Warning>(
+          "Looper '{}' ignored command with invalid beat '{}'", _config.name,
+          (*it)[1].str());
+      continue;
+    }
+    const auto command_text = (*it)[2].str();
+    const auto duplicate =
+        std::ranges::any_of(seen_commands, [&](const auto &seen) {
+          return seen.first == *beat && seen.second == command_text;
+        });
+    if (duplicate) {
+      logging::log<logging::LogLevel::Error>(
+          "Looper '{}' ignored duplicate command '{}' for beat {}",
+          _config.name, command_text, *beat);
+      continue;
+    }
+    seen_commands.emplace_back(*beat, command_text);
+
+    auto event = parse_command_text(*beat, command_text);
+    if (event)
+      enqueue_command(*event);
+    else
+      logging::log<logging::LogLevel::Warning>(
+          "Looper '{}' ignored invalid command '{}'", _config.name,
+          command_text);
+  }
+
+  if (parsed_tuple)
+    return;
+
+  auto event = parse_command_text(0, text);
+  if (event)
+    enqueue_command(*event);
+  else
+    logging::log<logging::LogLevel::Warning>(
+        "Looper '{}' ignored invalid commands param '{}'", _config.name, value);
 }
 
 std::string looper::Looper::capture_name() const {

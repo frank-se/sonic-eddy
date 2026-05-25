@@ -340,6 +340,26 @@ type CommandText =
   | "stop";
 ```
 
+The initial ingestion path accepts these params through the looper capture node
+`SPA_PARAM_Props` / `SPA_PROP_params`:
+
+- `mix`: float, double, or int. Values are clamped to `0 <= mix <= 1`.
+- `commands`: string containing `[beat, "command"]` tuples, for example
+  `[[0,"cut 4 0"],[0,"play 0"]]`.
+- `command`: string containing one command, treated as scheduled beat `0`.
+
+The param callback parses commands outside the processing loop and pushes fixed
+command events into a `boost::lockfree::spsc_queue`. The processing loop drains
+that queue at the start of each cycle. If the queue is full, the command is
+dropped and an error is logged.
+
+Example ad-hoc `pw-cli` calls:
+
+```bash
+pw-cli set-param <looper-capture-object-id> Props '{ params = [ "mix" 0.5 ] }'
+pw-cli set-param <looper-capture-object-id> Props '{ params = [ "commands" "[[0,\"cut 4 0\"],[0,\"play 0\"]]" ] }'
+```
+
 The `loops` array contains one element per loop slot.
 
 ```typescript
@@ -648,3 +668,10 @@ and `RMS_TOLERANCE` can override the default setup.
 `scripts/looper-mix-test.sh` runs the same setup with `MIX=0.5` by default.
 The validator expects record window `n + 1` to match signal window `n` scaled
 by `1 - MIX`.
+
+`scripts/looper-mix-change-test.sh` starts with `INITIAL_MIX=0`, changes the
+looper capture node to `CHANGED_MIX=0.5` halfway through the signal run using
+`pw-cli set-param`, skips the transition window, and validates the shifted
+window RMS before and after the change. With equal time at `mix = 0` and
+`mix = 0.5`, total RMS is expected to be about `79%` of the source RMS, while
+average amplitude would be `75%`.

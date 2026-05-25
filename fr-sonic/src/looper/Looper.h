@@ -1,17 +1,36 @@
 #pragma once
 
 #include <atomic>
+#include <array>
 #include <cstdint>
 #include <optional>
 #include <string>
 #include <vector>
 
+#include <boost/lockfree/spsc_queue.hpp>
 #include <pipewire/loop.h>
 #include <pipewire/stream.h>
 #include <spa/param/audio/raw.h>
 #include <spa/pod/builder.h>
 
 namespace looper {
+
+enum class CommandKind : uint32_t {
+  CutRange = 1,
+  CutLength = 2,
+  Play = 3,
+  Stop = 4,
+  Archive = 5,
+};
+
+struct CommandEvent {
+  CommandKind kind = CommandKind::Stop;
+  uint64_t scheduled_beat = 0;
+  uint64_t start_beat = 0;
+  uint64_t end_beat = 0;
+  uint64_t loop_length = 0;
+  uint32_t loop_number = 0;
+};
 
 struct LooperConfig {
   std::string name = "se.looper";
@@ -56,6 +75,11 @@ private:
   spa_audio_info_raw _capture_format{};
   spa_audio_info_raw _playback_format{};
   std::atomic<float> _mix{0.0f};
+  boost::lockfree::spsc_queue<CommandEvent, boost::lockfree::capacity<256>>
+      _command_events;
+  std::array<uint8_t, 4096> _params_buffer{};
+  uint64_t _processed_command_count = 0;
+  uint64_t _dropped_command_count = 0;
   std::vector<float> _passthrough_buffer;
   uint32_t _passthrough_frames = 0;
   uint32_t _passthrough_channels = 0;
@@ -64,8 +88,14 @@ private:
   bool setup_playback_stream();
   void capture_passthrough_input(pw_buffer *capture_buffer);
   void write_passthrough_output(pw_buffer *playback_buffer);
+  void drain_command_events();
+  void publish_params();
   void handle_capture_format(uint32_t id, const spa_pod *param);
   void handle_playback_format(uint32_t id, const spa_pod *param);
+  void handle_params(uint32_t id, const spa_pod *param);
+  void handle_param_value(const char *key, const spa_pod *value);
+  void enqueue_command(const CommandEvent &event);
+  void parse_commands_param(const char *value);
 
   [[nodiscard]] std::string capture_name() const;
   [[nodiscard]] std::string playback_name() const;
