@@ -2,6 +2,7 @@
 
 #include "wireplumber/models/objects/wireplumber_object.h"
 
+#include <algorithm>
 #include <chrono>
 #include <cstdlib>
 #include <iostream>
@@ -20,6 +21,7 @@ struct Options {
   uint32_t channels = 2;
   uint32_t max_record_seconds = 300;
   uint32_t duration_seconds = 0;
+  float mix = 0.0f;
 };
 
 const Options *g_options = nullptr;
@@ -66,7 +68,8 @@ void print_usage(const char *argv0) {
   std::cerr
       << "Usage: " << argv0
       << " [-n name] [-t tag] [-c capture-target] [-p playback-target]\n"
-      << "       [--channels n] [--max-record-seconds n] [-d seconds]\n";
+      << "       [--channels n] [--max-record-seconds n] [--mix value]"
+      << " [-d seconds]\n";
 }
 
 bool parse_uint(const char *text, uint32_t &out) {
@@ -75,6 +78,15 @@ bool parse_uint(const char *text, uint32_t &out) {
   if (end == text || *end != '\0')
     return false;
   out = static_cast<uint32_t>(value);
+  return true;
+}
+
+bool parse_float(const char *text, float &out) {
+  char *end = nullptr;
+  const auto value = std::strtof(text, &end);
+  if (end == text || *end != '\0')
+    return false;
+  out = value;
   return true;
 }
 
@@ -117,6 +129,11 @@ bool parse_args(int argc, char **argv, Options &options) {
       if (const auto *value = require_value(arg.c_str());
           value == nullptr || !parse_uint(value, options.max_record_seconds))
         return false;
+    } else if (arg == "--mix") {
+      if (const auto *value = require_value(arg.c_str());
+          value == nullptr || !parse_float(value, options.mix))
+        return false;
+      options.mix = std::clamp(options.mix, 0.0f, 1.0f);
     } else if (arg == "-d" || arg == "--duration") {
       if (const auto *value = require_value(arg.c_str());
           value == nullptr || !parse_uint(value, options.duration_seconds))
@@ -159,6 +176,7 @@ int main(int argc, char **argv) {
           options.playback_target ? options.playback_target->c_str() : nullptr,
       .channels = options.channels,
       .max_record_seconds = options.max_record_seconds,
+      .mix = options.mix,
   };
 
   size_t handle = 0;
@@ -169,7 +187,7 @@ int main(int argc, char **argv) {
   }
 
   std::cout << "created looper name=" << options.name << " tag=" << options.tag
-            << " handle=" << handle << std::endl;
+            << " handle=" << handle << " mix=" << options.mix << std::endl;
 
   if (options.duration_seconds == 0) {
     std::cout << "press Enter to stop\n";

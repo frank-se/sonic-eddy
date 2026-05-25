@@ -32,7 +32,8 @@ constexpr uint32_t PassthroughMaxFrames = 16384;
 } // namespace
 
 looper::Looper::Looper(pw_loop *loop, LooperConfig config)
-    : _loop(loop), _config(std::move(config)) {}
+    : _loop(loop), _config(std::move(config)),
+      _mix(std::clamp(_config.mix, 0.0f, 1.0f)) {}
 
 looper::Looper::~Looper() { stop(); }
 
@@ -220,10 +221,20 @@ void looper::Looper::write_passthrough_output(pw_buffer *playback_buffer) {
         static_cast<uint32_t>(copy_frames * bytes_per_frame);
 
     auto *samples = static_cast<uint8_t *>(data->data);
-    if (copy_size > 0 && _passthrough_channels == channels)
-      std::memcpy(samples, _passthrough_buffer.data(), copy_size);
-    if (copy_size < size)
+    const auto dry_gain = 1.0f - _mix.load(std::memory_order_relaxed);
+    auto *output = reinterpret_cast<float *>(samples);
+    bool copied_dry_signal = false;
+    if (copy_size > 0 && _passthrough_channels == channels) {
+      const auto sample_count = copy_frames * channels;
+      for (uint32_t sample = 0; sample < sample_count; ++sample)
+        output[sample] = _passthrough_buffer[sample] * dry_gain;
+      copied_dry_signal = true;
+    }
+    if (!copied_dry_signal) {
+      std::memset(samples, 0, size);
+    } else if (copy_size < size) {
       std::memset(samples + copy_size, 0, size - copy_size);
+    }
     data->chunk->offset = 0;
     data->chunk->size = size;
     data->chunk->stride = static_cast<int32_t>(bytes_per_frame);

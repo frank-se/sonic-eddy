@@ -13,6 +13,7 @@
 #include "wireplumber/params/params_handling.h"
 #include "wireplumber/modules/module_factory.h"
 
+#include <algorithm>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -271,6 +272,7 @@ bool frsonic_create_looper(const frsonic_looper_config *config,
             .max_record_seconds = config->max_record_seconds == 0
                                       ? 300u
                                       : config->max_record_seconds,
+            .mix = std::clamp(config->mix, 0.0f, 1.0f),
         };
 
         auto looper = std::make_shared<looper::Looper>(

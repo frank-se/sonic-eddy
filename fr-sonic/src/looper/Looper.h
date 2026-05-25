@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -20,6 +21,7 @@ struct LooperConfig {
   std::optional<std::string> playback_target_object;
   uint32_t channels = 2;
   uint32_t max_record_seconds = 300;
+  float mix = 0.0f;
   spa_audio_format format = SPA_AUDIO_FORMAT_F32;
 };
 
@@ -53,6 +55,7 @@ private:
 
   spa_audio_info_raw _capture_format{};
   spa_audio_info_raw _playback_format{};
+  std::atomic<float> _mix{0.0f};
   std::vector<float> _passthrough_buffer;
   uint32_t _passthrough_frames = 0;
   uint32_t _passthrough_channels = 0;

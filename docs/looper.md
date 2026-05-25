@@ -203,6 +203,13 @@ capture samples are copied to the playback side and any missing playback frames
 are filled with silence. This provides a first end-to-end PipeWire graph test
 before loop recording and loop playback are implemented.
 
+The initial `mix` implementation applies the normal dry/wet formula, but the
+wet loop playback signal is silence until loop playback exists:
+
+```text
+output = input * (1 - mix) + 0 * mix
+```
+
 If a beat boundary falls inside the current process buffer, all beat-scheduled
 state changes for that beat take effect at the corresponding sample offset, not
 at the beginning or end of the process cycle.
@@ -511,6 +518,7 @@ typedef struct {
     const char *playback_target_object; /* optional, may be NULL */
     uint32_t    channels;
     uint32_t    max_record_seconds;
+    float       mix;
 } se_looper_config_t;
 
 /*
@@ -546,7 +554,8 @@ public sealed record LooperConfig(
     string? CaptureTargetObject,
     string? PlaybackTargetObject,
     uint Channels,
-    uint MaxRecordSeconds);
+    uint MaxRecordSeconds,
+    float Mix);
 
 public sealed record Looper(
     string Name,
@@ -633,5 +642,9 @@ The script connects `se-signal` to `<looper-name>.capture` and `se-record` to
 `<looper-name>.playback`, runs both tools with JSON stats, compares signal
 window `n` against record window `n + 1`, then prints the looper, signal, and
 recorder logs. Environment variables such as `LOOPER_NAME`, `DURATION`,
-`RECORD_DURATION`, `SIGNAL_MODE`, `SIGNAL_VALUE`, `SIGNAL_HIGH_VALUE`, and
-`RMS_TOLERANCE` can override the default setup.
+`RECORD_DURATION`, `SIGNAL_MODE`, `SIGNAL_VALUE`, `SIGNAL_HIGH_VALUE`, `MIX`,
+and `RMS_TOLERANCE` can override the default setup.
+
+`scripts/looper-mix-test.sh` runs the same setup with `MIX=0.5` by default.
+The validator expects record window `n + 1` to match signal window `n` scaled
+by `1 - MIX`.

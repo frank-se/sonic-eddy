@@ -74,6 +74,7 @@ internal class LooperFactory(ModuleRegistry moduleRegistry) : ILooperFactory
                 PlaybackTargetObject = playbackTarget.Pointer,
                 Channels = config.Channels,
                 MaxRecordSeconds = config.MaxRecordSeconds,
+                Mix = Math.Clamp(config.Mix, 0.0f, 1.0f),
             };
 
             if (!FrSonicLib.CreateLooperC(nativeConfig, out looperHandle))

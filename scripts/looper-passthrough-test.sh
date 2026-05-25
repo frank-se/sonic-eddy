@@ -16,6 +16,7 @@ signal_mode="${SIGNAL_MODE:-alternating}"
 signal_value="${SIGNAL_VALUE:-0.7}"
 signal_high_value="${SIGNAL_HIGH_VALUE:-0.9}"
 rms_tolerance="${RMS_TOLERANCE:-0.03}"
+mix="${MIX:-0}"
 
 for binary in "${looper_bin}" "${signal_bin}" "${record_bin}"; do
   if [[ ! -x "${binary}" ]]; then
@@ -68,6 +69,7 @@ echo "starting looper: ${looper_name}"
 "${looper_bin}" \
   -n "${looper_name}" \
   -t "${looper_tag}" \
+  --mix "${mix}" \
   -d "${duration}" \
   >"${looper_log}" 2>&1 &
 pids+=("$!")
@@ -108,7 +110,7 @@ jq -Rr 'fromjson? | select(.type == "stats" and .scope == "window") | [.frames, 
 jq -Rr 'fromjson? | select(.type == "stats" and .scope == "window") | [.frames, .rms, .peak, .min, .max] | @tsv' \
   "${record_log}" >"${record_windows}"
 
-awk -v tolerance="${rms_tolerance}" '
+awk -v tolerance="${rms_tolerance}" -v mix="${mix}" '
   FNR == NR {
     signal_count += 1
     signal_rms[signal_count] = $2
@@ -127,17 +129,18 @@ awk -v tolerance="${rms_tolerance}" '
       exit 1
     }
     for (i = 1; i <= comparisons; ++i) {
-      diff = signal_rms[i] - record_rms[i + 1]
+      expected = signal_rms[i] * (1.0 - mix)
+      diff = expected - record_rms[i + 1]
       if (diff < 0)
         diff = -diff
       if (diff > tolerance) {
-        printf("validation failed: signal window %d rms %.9f vs record window %d rms %.9f diff %.9f tolerance %.9f\n",
-               i, signal_rms[i], i + 1, record_rms[i + 1], diff, tolerance) > "/dev/stderr"
+        printf("validation failed: signal window %d expected record rms %.9f from source rms %.9f mix %.6f vs record window %d rms %.9f diff %.9f tolerance %.9f\n",
+               i, expected, signal_rms[i], mix, i + 1, record_rms[i + 1], diff, tolerance) > "/dev/stderr"
         exit 1
       }
     }
-    printf("validation passed: compared %d shifted window RMS values with tolerance %.6f\n",
-           comparisons, tolerance)
+    printf("validation passed: compared %d shifted window RMS values with mix %.6f tolerance %.6f\n",
+           comparisons, mix, tolerance)
   }
 ' "${signal_windows}" "${record_windows}"
 
