@@ -6,13 +6,16 @@
 #include <algorithm>
 #include <array>
 #include <charconv>
+#include <chrono>
 #include <cstring>
 #include <ctime>
 #include <format>
+#include <memory>
 #include <optional>
 #include <regex>
 #include <sstream>
 #include <string_view>
+#include <thread>
 #include <utility>
 
 #include <pipewire/keys.h>
@@ -171,6 +174,7 @@ bool looper::Looper::start() {
   _record_buffer.assign(_record_capacity_frames * _passthrough_channels, 0.0f);
   _record_write_frame = 0;
   _recorded_frames = 0;
+  start_copy_thread();
 
   if (!setup_capture_stream() || !setup_playback_stream()) {
     stop();
@@ -190,6 +194,89 @@ void looper::Looper::stop() {
     pw_stream_destroy(_playback_stream);
     _playback_stream = nullptr;
   }
+
+  for (auto &slot : _loop_slots) {
+    retire_samples(std::move(slot.samples));
+    slot.samples.reset();
+    slot.ready = false;
+    slot.playing = false;
+    slot.owned = false;
+  }
+
+  stop_copy_thread();
+}
+
+void looper::Looper::start_copy_thread() {
+  if (_copy_thread_running.exchange(true))
+    return;
+
+  _copy_thread = std::thread([this] { copy_thread_main(); });
+}
+
+void looper::Looper::stop_copy_thread() {
+  if (!_copy_thread_running.exchange(false))
+    return;
+
+  _copy_wakeup.notify_one();
+  if (_copy_thread.joinable())
+    _copy_thread.join();
+}
+
+void looper::Looper::copy_thread_main() {
+  logging::log<logging::LogLevel::Info>(
+      "Looper '{}' background copy thread started", _config.name);
+
+  while (_copy_thread_running.load(std::memory_order_acquire)) {
+    drain_retired_sample_buffers();
+
+    LoopCopyJob job{};
+    if (!_copy_jobs.pop(job)) {
+      std::unique_lock lock{_copy_wakeup_mutex};
+      _copy_wakeup.wait_for(lock, std::chrono::milliseconds(20), [this] {
+        return !_copy_thread_running.load(std::memory_order_acquire) ||
+               !_copy_jobs.empty();
+      });
+      continue;
+    }
+
+    const auto started = monotonic_nsec();
+    auto samples = std::make_shared<std::vector<float>>();
+    samples->resize(job.length_frames * job.channels);
+    for (uint64_t frame = 0; frame < job.length_frames; ++frame) {
+      const auto source_frame =
+          (job.ring_start_frame + frame) % _record_capacity_frames;
+      const auto source_offset = source_frame * job.channels;
+      const auto dest_offset = frame * job.channels;
+      std::copy_n(_record_buffer.data() + source_offset, job.channels,
+                  samples->data() + dest_offset);
+    }
+
+    const auto elapsed_usec = (monotonic_nsec() - started) / 1000;
+    LoopCopyResult result{
+        .loop_number = job.loop_number,
+        .generation = job.generation,
+        .length_frames = job.length_frames,
+        .channels = job.channels,
+        .elapsed_usec = elapsed_usec,
+        .samples = std::move(samples),
+    };
+    if (!_copy_results.push(std::move(result))) {
+      logging::log<logging::LogLevel::Error>(
+          "Looper '{}' copy result queue full; dropped loop={} generation={}",
+          _config.name, job.loop_number, job.generation);
+    }
+  }
+
+  drain_retired_sample_buffers();
+
+  logging::log<logging::LogLevel::Info>(
+      "Looper '{}' background copy thread stopped", _config.name);
+}
+
+void looper::Looper::drain_retired_sample_buffers() {
+  std::shared_ptr<std::vector<float>> retired;
+  while (_retired_sample_buffers.pop(retired))
+    retired.reset();
 }
 
 bool looper::Looper::setup_capture_stream() {
@@ -278,6 +365,7 @@ bool looper::Looper::setup_playback_stream() {
 }
 
 void looper::Looper::process() {
+  drain_copy_results();
   drain_command_events();
 
   if (_capture_stream != nullptr) {
@@ -297,6 +385,34 @@ void looper::Looper::process() {
 
   write_passthrough_output(playback_buffer);
   pw_stream_queue_buffer(_playback_stream, playback_buffer);
+}
+
+void looper::Looper::drain_copy_results() {
+  LoopCopyResult result{};
+  while (_copy_results.pop(result)) {
+    if (result.loop_number >= _loop_slots.size() || !result.samples)
+      continue;
+
+    auto &slot = _loop_slots[result.loop_number];
+    if (slot.generation != result.generation) {
+      logging::log<logging::LogLevel::Info>(
+          "Looper '{}' ignored stale loop copy loop={} generation={} current={}",
+          _config.name, result.loop_number, result.generation,
+          slot.generation);
+      continue;
+    }
+
+    retire_samples(std::move(slot.samples));
+    slot.samples = std::move(result.samples);
+    slot.length_frames = result.length_frames;
+    slot.channels = result.channels;
+    slot.owned = true;
+    logging::log<logging::LogLevel::Info>(
+        "Looper '{}' copied loop={} generation={} frames={} channels={} in "
+        "{}us",
+        _config.name, result.loop_number, result.generation,
+        result.length_frames, result.channels, result.elapsed_usec);
+  }
 }
 
 void looper::Looper::drain_command_events() {
@@ -409,29 +525,61 @@ void looper::Looper::cut_length(const uint64_t length_seconds,
   }
 
   auto &slot = _loop_slots[loop_number];
-  slot.samples.resize(length_frames * channels);
+  retire_samples(std::move(slot.samples));
+  slot.samples.reset();
   slot.length_frames = length_frames;
   slot.playhead_frame = 0;
+  slot.ring_start_frame =
+      (_record_write_frame + _record_capacity_frames - length_frames) %
+      _record_capacity_frames;
   slot.channels = channels;
   slot.ready = true;
   slot.playing = false;
+  slot.owned = false;
   ++slot.generation;
 
-  const auto start_frame =
-      (_record_write_frame + _record_capacity_frames - length_frames) %
-      _record_capacity_frames;
-  for (uint64_t frame = 0; frame < length_frames; ++frame) {
-    const auto source_frame = (start_frame + frame) % _record_capacity_frames;
-    const auto source_offset = source_frame * channels;
-    const auto dest_offset = frame * channels;
-    std::copy_n(_record_buffer.data() + source_offset, channels,
-                slot.samples.data() + dest_offset);
-  }
+  enqueue_copy_job(slot, loop_number);
 
   logging::log<logging::LogLevel::Info>(
-      "Looper '{}' cut loop={} generation={} length_frames={} channels={}",
+      "Looper '{}' cut loop={} generation={} length_frames={} channels={} "
+      "source=ring",
       _config.name, loop_number, slot.generation, slot.length_frames,
       slot.channels);
+}
+
+void looper::Looper::enqueue_copy_job(const LoopSlot &slot,
+                                      const uint32_t loop_number) {
+  LoopCopyJob job{
+      .loop_number = loop_number,
+      .generation = slot.generation,
+      .ring_start_frame = slot.ring_start_frame,
+      .length_frames = slot.length_frames,
+      .channels = slot.channels,
+  };
+  if (_copy_jobs.push(job)) {
+    _copy_wakeup.notify_one();
+    return;
+  }
+
+  logging::log<logging::LogLevel::Error>(
+      "Looper '{}' copy job queue full; loop={} generation={} remains "
+      "ring-backed",
+      _config.name, loop_number, slot.generation);
+}
+
+void looper::Looper::retire_samples(
+    std::shared_ptr<std::vector<float>> samples) {
+  if (!samples)
+    return;
+
+  if (_retired_sample_buffers.push(std::move(samples))) {
+    _copy_wakeup.notify_one();
+    return;
+  }
+
+  logging::log<logging::LogLevel::Error>(
+      "Looper '{}' retired sample buffer queue full; freeing on process path",
+      _config.name);
 }
 
 void looper::Looper::play_loop(const uint32_t loop_number) {
@@ -443,7 +591,8 @@ void looper::Looper::play_loop(const uint32_t loop_number) {
   }
 
   auto &slot = _loop_slots[loop_number];
-  if (!slot.ready || slot.length_frames == 0 || slot.samples.empty()) {
+  if (!slot.ready || slot.length_frames == 0 ||
+      (slot.owned && (!slot.samples || slot.samples->empty()))) {
     logging::log<logging::LogLevel::Error>(
         "Looper '{}' rejected play for unready loop {}", _config.name,
         loop_number);
@@ -472,8 +621,15 @@ float looper::Looper::render_wet_sample(const uint32_t channel) {
       continue;
 
     const auto slot_channel = std::min<uint32_t>(channel, slot.channels - 1);
-    sample +=
-        slot.samples[(slot.playhead_frame * slot.channels) + slot_channel];
+    if (slot.owned && slot.samples) {
+      sample +=
+          (*slot.samples)[(slot.playhead_frame * slot.channels) + slot_channel];
+    } else if (!_record_buffer.empty()) {
+      const auto ring_frame =
+          (slot.ring_start_frame + slot.playhead_frame) %
+          _record_capacity_frames;
+      sample += _record_buffer[(ring_frame * slot.channels) + slot_channel];
+    }
   }
   return sample;
 }
