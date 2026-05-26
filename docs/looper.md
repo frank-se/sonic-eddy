@@ -58,8 +58,10 @@ corresponds to the beat where playback began.
 
 ## Stored Loops
 
-The looper can store 10 loops of different length internally. Loop slots are
-numbered `1` through `10`.
+The looper can store 10 loops of different length internally. Commands refer to
+loops by `loop_number`, which is an internal slot identifier. The looper does
+not require loop numbers to be presented directly in the UI, and the UI may map
+its own controls or labels to these slot identifiers.
 
 Each loop slot stores a loop descriptor. The descriptor contains the loop
 number, generation, start beat, end beat, length in samples, channel count,
@@ -107,7 +109,7 @@ first four beats.
 
 For the explicit beat range form, `start_beat` must be less than or equal to
 `end_beat`. For the loop length form, `loop_length` must be greater than zero.
-The `loop_number` must refer to one of the looper's stored loop slots.
+The `loop_number` must refer to one of the looper's 10 stored loop slots.
 
 The loop length form is relative to the beat where the command is scheduled.
 For a command scheduled at beat `B`, `cut <loop_length> <loop_number>` cuts the

@@ -19,6 +19,7 @@
 
 namespace sesync {
 class SyncClient;
+struct SyncSnapshot;
 }
 
 namespace looper {
@@ -130,6 +131,8 @@ private:
   uint64_t _dropped_command_count = 0;
   uint64_t _record_write_frame = 0;
   uint64_t _recorded_frames = 0;
+  uint64_t _last_capture_frames = 0;
+  std::optional<uint64_t> _command_record_write_frame;
   uint64_t _record_capacity_frames = 0;
   std::vector<float> _record_buffer;
   std::array<LoopSlot, 10> _loop_slots;
@@ -152,7 +155,8 @@ private:
   void drain_command_events();
   void drain_copy_results();
   void queue_pending_command(const CommandEvent &event);
-  void process_pending_commands();
+  void process_due_commands(uint32_t frame_offset, uint64_t buffer_start_nsec,
+                            uint32_t rate);
   void apply_command_event(const CommandEvent &event);
   void cut_length(uint64_t length_seconds, uint32_t loop_number);
   void enqueue_copy_job(const LoopSlot &slot, uint32_t loop_number);
@@ -173,6 +177,12 @@ private:
   [[nodiscard]] const spa_audio_info_raw &active_format() const;
   [[nodiscard]] pw_stream_flags stream_flags(bool autoconnect) const;
   [[nodiscard]] std::optional<uint64_t> current_sync_beat() const;
+  [[nodiscard]] std::optional<uint64_t>
+  scheduled_beat_nsec(const sesync::SyncSnapshot &snapshot,
+                      uint64_t beat) const;
+  [[nodiscard]] std::optional<int64_t>
+  command_frame_offset(const CommandEvent &event, uint64_t buffer_start_nsec,
+                       uint32_t rate) const;
 
   static const spa_pod *build_audio_format(spa_pod_builder &builder,
                                            spa_audio_format format,

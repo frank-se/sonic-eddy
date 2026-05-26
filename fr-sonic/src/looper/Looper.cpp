@@ -20,6 +20,7 @@
 
 #include <pipewire/keys.h>
 #include <pipewire/properties.h>
+#include <pipewire/stream.h>
 #include <spa/param/props.h>
 #include <spa/param/audio/format-utils.h>
 #include <spa/pod/builder.h>
@@ -174,6 +175,8 @@ bool looper::Looper::start() {
   _record_buffer.assign(_record_capacity_frames * _passthrough_channels, 0.0f);
   _record_write_frame = 0;
   _recorded_frames = 0;
+  _last_capture_frames = 0;
+  _command_record_write_frame.reset();
   start_copy_thread();
 
   if (!setup_capture_stream() || !setup_playback_stream()) {
@@ -367,6 +370,7 @@ bool looper::Looper::setup_playback_stream() {
 void looper::Looper::process() {
   drain_copy_results();
   drain_command_events();
+  _last_capture_frames = 0;
 
   if (_capture_stream != nullptr) {
     auto *capture_buffer = pw_stream_dequeue_buffer(_capture_stream);
@@ -420,7 +424,11 @@ void looper::Looper::drain_command_events() {
   while (_command_events.pop(event))
     queue_pending_command(event);
 
-  process_pending_commands();
+  std::ranges::stable_sort(_pending_commands.begin(),
+                           _pending_commands.begin() + _pending_command_count,
+                           {}, [](const CommandEvent &event) {
+    return std::pair{event.scheduled_beat, command_priority(event)};
+  });
 }
 
 void looper::Looper::queue_pending_command(const CommandEvent &event) {
@@ -436,26 +444,27 @@ void looper::Looper::queue_pending_command(const CommandEvent &event) {
   _pending_commands[_pending_command_count++] = event;
 }
 
-void looper::Looper::process_pending_commands() {
+void looper::Looper::process_due_commands(const uint32_t frame_offset,
+                                          const uint64_t buffer_start_nsec,
+                                          const uint32_t rate) {
   if (_pending_command_count == 0)
     return;
 
-  std::ranges::stable_sort(_pending_commands.begin(),
-                           _pending_commands.begin() + _pending_command_count,
-                           {}, [](const CommandEvent &event) {
-    return std::pair{event.scheduled_beat, command_priority(event)};
-  });
-
-  const auto current_beat = current_sync_beat();
   size_t remaining_count = 0;
   for (size_t index = 0; index < _pending_command_count; ++index) {
     const auto &queued_event = _pending_commands[index];
-    const auto is_due =
-        queued_event.scheduled_beat == 0 ||
-        (current_beat && queued_event.scheduled_beat <= *current_beat);
-    if (is_due) {
+    const auto scheduled_frame =
+        command_frame_offset(queued_event, buffer_start_nsec, rate);
+    if (scheduled_frame && *scheduled_frame <= frame_offset) {
+      const auto frame =
+          std::min<uint64_t>(frame_offset, _last_capture_frames);
+      _command_record_write_frame =
+          (_record_write_frame + _record_capacity_frames -
+           (_last_capture_frames - frame)) %
+          _record_capacity_frames;
       ++_processed_command_count;
       apply_command_event(queued_event);
+      _command_record_write_frame.reset();
     } else {
       _pending_commands[remaining_count++] = queued_event;
     }
@@ -510,11 +519,13 @@ void looper::Looper::cut_length(const uint64_t length_seconds,
   const auto length_frames =
       std::min<uint64_t>(length_seconds * static_cast<uint64_t>(rate),
                          _record_capacity_frames);
+  const auto cut_end_frame =
+      _command_record_write_frame.value_or(_record_write_frame);
   logging::log<logging::LogLevel::Info>(
       "Looper '{}' attempting cut length={}s loop={} recorded_frames={} "
       "required_frames={} write_frame={}",
       _config.name, length_seconds, loop_number, _recorded_frames,
-      length_frames, _record_write_frame);
+      length_frames, cut_end_frame);
   if (length_frames == 0 || length_frames > _recorded_frames) {
     logging::log<logging::LogLevel::Error>(
         "Looper '{}' rejected cut length={}s loop={} recorded_frames={} "
@@ -530,7 +541,7 @@ void looper::Looper::cut_length(const uint64_t length_seconds,
   slot.length_frames = length_frames;
   slot.playhead_frame = 0;
   slot.ring_start_frame =
-      (_record_write_frame + _record_capacity_frames - length_frames) %
+      (cut_end_frame + _record_capacity_frames - length_frames) %
       _record_capacity_frames;
   slot.channels = channels;
   slot.ready = true;
@@ -664,6 +675,7 @@ void looper::Looper::capture_passthrough_input(pw_buffer *capture_buffer) {
   if (buffer->n_datas == 0 || buffer->datas[0].data == nullptr ||
       buffer->datas[0].chunk == nullptr) {
     _passthrough_frames = 0;
+    _last_capture_frames = 0;
     return;
   }
 
@@ -683,10 +695,12 @@ void looper::Looper::capture_passthrough_input(pw_buffer *capture_buffer) {
                 _passthrough_buffer.data());
   } else {
     _passthrough_frames = 0;
+    _last_capture_frames = 0;
     return;
   }
 
   _passthrough_frames = frames;
+  _last_capture_frames = frames;
 
   if (!_record_buffer.empty() && channels == _passthrough_channels) {
     for (uint32_t frame = 0; frame < frames; ++frame) {
@@ -723,8 +737,18 @@ void looper::Looper::write_passthrough_output(pw_buffer *playback_buffer) {
     const auto dry_gain = 1.0f - mix;
     const auto wet_gain = mix;
     const auto dry_available = _passthrough_channels == channels;
+    pw_time stream_time{};
+    auto buffer_start_nsec = monotonic_nsec();
+    if (_playback_stream != nullptr &&
+        pw_stream_get_time_n(_playback_stream, &stream_time,
+                             sizeof(stream_time)) >= 0 &&
+        stream_time.now > 0) {
+      buffer_start_nsec = static_cast<uint64_t>(stream_time.now);
+    }
 
     for (uint32_t frame = 0; frame < writable_frames; ++frame) {
+      process_due_commands(frame, buffer_start_nsec,
+                           std::max(active_format().rate, 1u));
       for (uint32_t channel = 0; channel < channels; ++channel) {
         const auto sample = (frame * channels) + channel;
         const auto dry_sample =
@@ -971,6 +995,43 @@ std::optional<uint64_t> looper::Looper::current_sync_beat() const {
     return std::nullopt;
 
   return current->beat;
+}
+
+std::optional<uint64_t> looper::Looper::scheduled_beat_nsec(
+    const sesync::SyncSnapshot &snapshot, const uint64_t beat) const {
+  const auto find_beat = [beat](const auto &entries) -> std::optional<uint64_t> {
+    for (const auto &entry : entries) {
+      if (entry.beat == beat)
+        return entry.nsec;
+    }
+    return std::nullopt;
+  };
+
+  if (const auto scheduled = find_beat(snapshot.beat_schedule))
+    return scheduled;
+  return find_beat(snapshot.beat_history);
+}
+
+std::optional<int64_t> looper::Looper::command_frame_offset(
+    const CommandEvent &event, const uint64_t buffer_start_nsec,
+    const uint32_t rate) const {
+  if (event.scheduled_beat == 0)
+    return 0;
+  if (!_sync_client)
+    return std::nullopt;
+
+  const auto snapshot = _sync_client->snapshot();
+  if (!snapshot)
+    return std::nullopt;
+
+  const auto beat_nsec = scheduled_beat_nsec(*snapshot, event.scheduled_beat);
+  if (!beat_nsec)
+    return std::nullopt;
+
+  const auto delta_nsec = static_cast<int64_t>(*beat_nsec) -
+                          static_cast<int64_t>(buffer_start_nsec);
+  return (delta_nsec * static_cast<int64_t>(std::max(rate, 1u))) /
+         1'000'000'000ll;
 }
 
 const spa_pod *looper::Looper::build_audio_format(spa_pod_builder &builder,
