@@ -10,6 +10,7 @@
 #include <cstring>
 #include <ctime>
 #include <format>
+#include <iomanip>
 #include <memory>
 #include <optional>
 #include <regex>
@@ -207,6 +208,7 @@ void looper::Looper::stop() {
     slot.start_beat.reset();
     slot.end_beat.reset();
     slot.length_beats.reset();
+    slot.play_started_beat.reset();
     slot.bpm.reset();
   }
 
@@ -235,13 +237,15 @@ void looper::Looper::copy_thread_main() {
 
   while (_copy_thread_running.load(std::memory_order_acquire)) {
     drain_retired_sample_buffers();
+    drain_state_updates();
 
     LoopCopyJob job{};
     if (!_copy_jobs.pop(job)) {
       std::unique_lock lock{_copy_wakeup_mutex};
       _copy_wakeup.wait_for(lock, std::chrono::milliseconds(20), [this] {
         return !_copy_thread_running.load(std::memory_order_acquire) ||
-               !_copy_jobs.empty();
+               !_copy_jobs.empty() || !_state_updates.empty() ||
+               !_retired_sample_buffers.empty();
       });
       continue;
     }
@@ -275,6 +279,7 @@ void looper::Looper::copy_thread_main() {
   }
 
   drain_retired_sample_buffers();
+  drain_state_updates();
 
   logging::log<logging::LogLevel::Info>(
       "Looper '{}' background copy thread stopped", _config.name);
@@ -284,6 +289,42 @@ void looper::Looper::drain_retired_sample_buffers() {
   std::shared_ptr<std::vector<float>> retired;
   while (_retired_sample_buffers.pop(retired))
     retired.reset();
+}
+
+void looper::Looper::drain_state_updates() {
+  LooperStateUpdate update{};
+  bool has_update = false;
+  while (_state_updates.pop(update))
+    has_update = true;
+
+  if (has_update)
+    publish_state_update(format_state_json(update));
+}
+
+void looper::Looper::publish_state_update(std::string state_json) {
+  struct PublishData {
+    Looper *looper = nullptr;
+    std::string state_json;
+  };
+
+  auto *data =
+      new PublishData{.looper = this, .state_json = std::move(state_json)};
+  pw_loop_invoke(
+      _loop,
+      [](spa_loop *loop, bool async, uint32_t seq, const void *invoke_data,
+         size_t size, void *user_data) {
+        (void)loop;
+        (void)async;
+        (void)seq;
+        (void)invoke_data;
+        (void)size;
+        auto *data = static_cast<PublishData *>(user_data);
+        data->looper->_published_state_json = std::move(data->state_json);
+        data->looper->publish_params();
+        delete data;
+        return 0;
+      },
+      0, nullptr, 0, true, data);
 }
 
 bool looper::Looper::setup_capture_stream() {
@@ -415,6 +456,7 @@ void looper::Looper::drain_copy_results() {
     slot.length_frames = result.length_frames;
     slot.channels = result.channels;
     slot.owned = true;
+    enqueue_state_update();
     logging::log<logging::LogLevel::Info>(
         "Looper '{}' copied loop={} generation={} frames={} channels={} in "
         "{}us",
@@ -557,6 +599,7 @@ void looper::Looper::cut_length(const uint64_t length_seconds,
   slot.start_beat.reset();
   slot.end_beat.reset();
   slot.length_beats.reset();
+  slot.play_started_beat.reset();
   slot.bpm.reset();
   if (_active_command_event && _active_command_event->scheduled_beat > 0) {
     slot.length_beats = _active_command_event->loop_length;
@@ -571,6 +614,7 @@ void looper::Looper::cut_length(const uint64_t length_seconds,
   ++slot.generation;
 
   enqueue_copy_job(slot, loop_number);
+  enqueue_state_update();
 
   logging::log<logging::LogLevel::Info>(
       "Looper '{}' cut loop={} generation={} length_frames={} channels={} "
@@ -631,19 +675,34 @@ void looper::Looper::play_loop(const uint32_t loop_number) {
     return;
   }
 
-  for (auto &loop_slot : _loop_slots)
+  for (auto &loop_slot : _loop_slots) {
     loop_slot.playing = false;
+    loop_slot.play_started_beat.reset();
+  }
 
   slot.playing = true;
   slot.playhead_frame = 0;
+  slot.play_started_beat =
+      _active_command_event && _active_command_event->scheduled_beat > 0
+          ? std::optional<uint64_t>{_active_command_event->scheduled_beat}
+          : std::nullopt;
+  enqueue_state_update();
   logging::log<logging::LogLevel::Info>(
       "Looper '{}' playing loop={} generation={}", _config.name, loop_number,
       slot.generation);
 }
 
 void looper::Looper::stop_loops() {
+  bool stopped_any = false;
+  for (auto &slot : _loop_slots)
+    if (slot.playing) {
+      stopped_any = true;
+      slot.play_started_beat.reset();
+    }
   for (auto &slot : _loop_slots)
     slot.playing = false;
+  if (stopped_any)
+    enqueue_state_update();
   logging::log<logging::LogLevel::Info>("Looper '{}' stopped loops",
                                         _config.name);
 }
@@ -686,6 +745,8 @@ void looper::Looper::publish_params() {
   spa_pod_builder_float(&builder, _mix.load(std::memory_order_relaxed));
   spa_pod_builder_string(&builder, "commands");
   spa_pod_builder_string(&builder, "[]");
+  spa_pod_builder_string(&builder, "looper.state");
+  spa_pod_builder_string(&builder, _published_state_json.c_str());
   spa_pod_builder_pop(&builder, &struct_frame);
 
   const spa_pod *params[] = {
@@ -978,6 +1039,18 @@ void looper::Looper::parse_commands_param(const char *value) {
         "Looper '{}' ignored invalid commands param '{}'", _config.name, value);
 }
 
+void looper::Looper::enqueue_state_update() {
+  const auto update = capture_state_update();
+  if (_state_updates.push(update)) {
+    _copy_wakeup.notify_one();
+    return;
+  }
+
+  logging::log<logging::LogLevel::Error>(
+      "Looper '{}' state update queue full; dropped state update",
+      _config.name);
+}
+
 std::string looper::Looper::capture_name() const {
   return std::format("{}.capture", _config.name);
 }
@@ -1070,6 +1143,126 @@ std::optional<int64_t> looper::Looper::command_frame_offset(
                           static_cast<int64_t>(buffer_start_nsec);
   return (delta_nsec * static_cast<int64_t>(std::max(rate, 1u))) /
          1'000'000'000ll;
+}
+
+looper::LooperStateUpdate looper::Looper::capture_state_update() const {
+  LooperStateUpdate update{};
+  for (size_t index = 0; index < _loop_slots.size(); ++index) {
+    const auto &slot = _loop_slots[index];
+    auto &entry = update.loops[index];
+    entry.loop_number = static_cast<uint32_t>(index);
+    if (!slot.ready)
+      continue;
+
+    entry.populated = true;
+    entry.generation = slot.generation;
+    entry.length_frames = slot.length_frames;
+    entry.playhead_frame = slot.playhead_frame;
+    entry.sample_rate = slot.sample_rate;
+    entry.channels = slot.channels;
+    entry.playing = slot.playing;
+    entry.owned = slot.owned;
+    if (slot.start_beat) {
+      entry.start_beat = *slot.start_beat;
+      entry.has_start_beat = true;
+    }
+    if (slot.end_beat) {
+      entry.end_beat = *slot.end_beat;
+      entry.has_end_beat = true;
+    }
+    if (slot.length_beats) {
+      entry.length_beats = *slot.length_beats;
+      entry.has_length_beats = true;
+    }
+    if (slot.play_started_beat) {
+      entry.play_started_beat = *slot.play_started_beat;
+      entry.has_play_started_beat = true;
+    }
+    if (slot.bpm) {
+      entry.bpm = *slot.bpm;
+      entry.has_bpm = true;
+    }
+  }
+  return update;
+}
+
+std::string
+looper::Looper::format_state_json(const LooperStateUpdate &update) const {
+  std::ostringstream json;
+  json << std::setprecision(12);
+
+  auto append_optional_u64 = [&json](const bool has_value,
+                                    const uint64_t value) {
+    if (has_value)
+      json << value;
+    else
+      json << "null";
+  };
+  auto append_optional_double = [&json](const bool has_value,
+                                       const double value) {
+    if (has_value)
+      json << value;
+    else
+      json << "null";
+  };
+
+  const LoopStateEntry *active = nullptr;
+  for (const auto &loop : update.loops) {
+    if (loop.populated && loop.playing) {
+      active = &loop;
+      break;
+    }
+  }
+
+  json << R"({"version":1,"active_loop":)";
+  if (active != nullptr)
+    json << active->loop_number;
+  else
+    json << "null";
+
+  json << R"(,"loops":[)";
+  bool first_loop = true;
+  for (const auto &loop : update.loops) {
+    if (!loop.populated)
+      continue;
+    if (!first_loop)
+      json << ",";
+    first_loop = false;
+
+    json << R"({"loop_number":)" << loop.loop_number
+         << R"(,"generation":)" << loop.generation << R"(,"state":")"
+         << (loop.playing ? "playing" : "stopped") << R"(","source":")"
+         << (loop.owned ? "owned" : "ring") << R"(","start_beat":)";
+    append_optional_u64(loop.has_start_beat, loop.start_beat);
+    json << R"(,"end_beat":)";
+    append_optional_u64(loop.has_end_beat, loop.end_beat);
+    json << R"(,"length_beats":)";
+    append_optional_u64(loop.has_length_beats, loop.length_beats);
+    json << R"(,"length_frames":)" << loop.length_frames
+         << R"(,"sample_rate":)" << loop.sample_rate << R"(,"channels":)"
+         << loop.channels << R"(,"bpm":)";
+    append_optional_double(loop.has_bpm, loop.bpm);
+    json << "}";
+  }
+
+  json << R"(],"recording":true)"
+       << R"(,"transport_alignment":{"transport_start_beat":null)"
+       << R"(,"ring_buffer_zero_beat":null})";
+
+  json << R"(,"active_playback":)";
+  if (active != nullptr) {
+    json << R"({"loop_number":)" << active->loop_number
+         << R"(,"generation":)" << active->generation
+         << R"(,"started_at_beat":)";
+    append_optional_u64(active->has_play_started_beat,
+                        active->play_started_beat);
+    json << R"(,"playhead_samples":)" << active->playhead_frame << "}";
+  } else {
+    json << "null";
+  }
+
+  json << R"(,"pending_jobs":[],"last_command_failure":null})";
+  return json.str();
 }
 
 const spa_pod *looper::Looper::build_audio_format(spa_pod_builder &builder,

@@ -47,6 +47,7 @@ struct LoopSlot {
   std::optional<uint64_t> start_beat;
   std::optional<uint64_t> end_beat;
   std::optional<uint64_t> length_beats;
+  std::optional<uint64_t> play_started_beat;
   uint64_t length_frames = 0;
   uint64_t playhead_frame = 0;
   uint64_t ring_start_frame = 0;
@@ -73,6 +74,32 @@ struct LoopCopyResult {
   uint32_t channels = 0;
   uint64_t elapsed_usec = 0;
   std::shared_ptr<std::vector<float>> samples;
+};
+
+struct LoopStateEntry {
+  uint32_t loop_number = 0;
+  uint64_t generation = 0;
+  uint64_t start_beat = 0;
+  uint64_t end_beat = 0;
+  uint64_t length_beats = 0;
+  uint64_t length_frames = 0;
+  uint64_t playhead_frame = 0;
+  uint64_t play_started_beat = 0;
+  uint32_t sample_rate = 0;
+  uint32_t channels = 0;
+  double bpm = 0.0;
+  bool populated = false;
+  bool playing = false;
+  bool owned = false;
+  bool has_start_beat = false;
+  bool has_end_beat = false;
+  bool has_length_beats = false;
+  bool has_play_started_beat = false;
+  bool has_bpm = false;
+};
+
+struct LooperStateUpdate {
+  std::array<LoopStateEntry, 10> loops{};
 };
 
 struct LooperConfig {
@@ -131,7 +158,11 @@ private:
       _retired_sample_buffers;
   std::array<CommandEvent, 256> _pending_commands{};
   size_t _pending_command_count = 0;
-  std::array<uint8_t, 4096> _params_buffer{};
+  boost::lockfree::spsc_queue<LooperStateUpdate, boost::lockfree::capacity<32>>
+      _state_updates;
+  std::array<uint8_t, 16384> _params_buffer{};
+  std::string _published_state_json =
+      R"({"version":1,"active_loop":null,"loops":[],"recording":true,"transport_alignment":{"transport_start_beat":null,"ring_buffer_zero_beat":null},"active_playback":null,"pending_jobs":[],"last_command_failure":null})";
   uint64_t _processed_command_count = 0;
   uint64_t _dropped_command_count = 0;
   uint64_t _record_write_frame = 0;
@@ -156,6 +187,8 @@ private:
   void stop_copy_thread();
   void copy_thread_main();
   void drain_retired_sample_buffers();
+  void drain_state_updates();
+  void publish_state_update(std::string state_json);
   void capture_passthrough_input(pw_buffer *capture_buffer);
   void write_passthrough_output(pw_buffer *playback_buffer);
   void drain_command_events();
@@ -177,6 +210,7 @@ private:
   void handle_param_value(const char *key, const spa_pod *value);
   void enqueue_command(const CommandEvent &event);
   void parse_commands_param(const char *value);
+  void enqueue_state_update();
 
   [[nodiscard]] std::string capture_name() const;
   [[nodiscard]] std::string playback_name() const;
@@ -190,6 +224,9 @@ private:
   [[nodiscard]] std::optional<int64_t>
   command_frame_offset(const CommandEvent &event, uint64_t buffer_start_nsec,
                        uint32_t rate) const;
+  [[nodiscard]] LooperStateUpdate capture_state_update() const;
+  [[nodiscard]] std::string
+  format_state_json(const LooperStateUpdate &update) const;
 
   static const spa_pod *build_audio_format(spa_pod_builder &builder,
                                            spa_audio_format format,

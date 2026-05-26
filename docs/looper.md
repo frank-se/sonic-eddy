@@ -409,7 +409,7 @@ type TransportAlignment = {
 type ActivePlayback = {
   loop_number: LoopNumber;
   generation: LoopGeneration;
-  started_at_beat: BeatNumber;
+  started_at_beat: BeatNumber | null;
   playhead_samples: SampleCount;
 };
 
