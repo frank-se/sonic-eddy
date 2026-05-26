@@ -20,6 +20,7 @@
 namespace sesync {
 class SyncClient;
 struct SyncSnapshot;
+struct TransportStateEntry;
 }
 
 namespace looper {
@@ -100,6 +101,11 @@ struct LoopStateEntry {
 
 struct LooperStateUpdate {
   std::array<LoopStateEntry, 10> loops{};
+  uint64_t transport_start_beat = 0;
+  uint64_t ring_buffer_zero_beat = 0;
+  bool recording = false;
+  bool has_transport_start_beat = false;
+  bool has_ring_buffer_zero_beat = false;
 };
 
 struct LooperConfig {
@@ -162,11 +168,14 @@ private:
       _state_updates;
   std::array<uint8_t, 16384> _params_buffer{};
   std::string _published_state_json =
-      R"({"version":1,"active_loop":null,"loops":[],"recording":true,"transport_alignment":{"transport_start_beat":null,"ring_buffer_zero_beat":null},"active_playback":null,"pending_jobs":[],"last_command_failure":null})";
+      R"({"version":1,"active_loop":null,"loops":[],"recording":false,"transport_alignment":{"transport_start_beat":null,"ring_buffer_zero_beat":null},"active_playback":null,"pending_jobs":[],"last_command_failure":null})";
   uint64_t _processed_command_count = 0;
   uint64_t _dropped_command_count = 0;
   uint64_t _record_write_frame = 0;
   uint64_t _recorded_frames = 0;
+  bool _recording = false;
+  std::optional<uint64_t> _transport_start_beat;
+  std::optional<uint64_t> _ring_buffer_zero_beat;
   uint64_t _last_capture_frames = 0;
   std::optional<uint64_t> _command_record_write_frame;
   std::optional<CommandEvent> _active_command_event;
@@ -190,6 +199,9 @@ private:
   void drain_state_updates();
   void publish_state_update(std::string state_json);
   void capture_passthrough_input(pw_buffer *capture_buffer);
+  bool should_record_frame(const sesync::SyncSnapshot &snapshot,
+                           uint64_t frame_nsec, uint32_t rate);
+  void stop_recording();
   void write_passthrough_output(pw_buffer *playback_buffer);
   void drain_command_events();
   void drain_copy_results();
@@ -221,6 +233,9 @@ private:
   [[nodiscard]] std::optional<uint64_t>
   scheduled_beat_nsec(const sesync::SyncSnapshot &snapshot,
                       uint64_t beat) const;
+  [[nodiscard]] std::optional<sesync::TransportStateEntry>
+  transport_state_entry_at(const sesync::SyncSnapshot &snapshot,
+                           uint64_t beat) const;
   [[nodiscard]] std::optional<int64_t>
   command_frame_offset(const CommandEvent &event, uint64_t buffer_start_nsec,
                        uint32_t rate) const;

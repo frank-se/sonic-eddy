@@ -176,6 +176,9 @@ bool looper::Looper::start() {
   _record_buffer.assign(_record_capacity_frames * _passthrough_channels, 0.0f);
   _record_write_frame = 0;
   _recorded_frames = 0;
+  _recording = false;
+  _transport_start_beat.reset();
+  _ring_buffer_zero_beat.reset();
   _last_capture_frames = 0;
   _command_record_write_frame.reset();
   start_copy_thread();
@@ -786,8 +789,27 @@ void looper::Looper::capture_passthrough_input(pw_buffer *capture_buffer) {
   _passthrough_frames = frames;
   _last_capture_frames = frames;
 
-  if (!_record_buffer.empty() && channels == _passthrough_channels) {
+  pw_time stream_time{};
+  auto buffer_start_nsec = monotonic_nsec();
+  if (_capture_stream != nullptr &&
+      pw_stream_get_time_n(_capture_stream, &stream_time,
+                           sizeof(stream_time)) >= 0 &&
+      stream_time.now > 0) {
+    buffer_start_nsec = static_cast<uint64_t>(stream_time.now);
+  }
+
+  const auto snapshot = _sync_client ? _sync_client->snapshot() : nullptr;
+  const auto rate = std::max(active_format().rate, 1u);
+  const auto nsec_per_frame = 1'000'000'000ull / static_cast<uint64_t>(rate);
+
+  if (!_record_buffer.empty() && channels == _passthrough_channels &&
+      snapshot) {
     for (uint32_t frame = 0; frame < frames; ++frame) {
+      const auto frame_nsec =
+          buffer_start_nsec + (static_cast<uint64_t>(frame) * nsec_per_frame);
+      if (!should_record_frame(*snapshot, frame_nsec, rate))
+        continue;
+
       const auto record_frame = _record_write_frame % _record_capacity_frames;
       const auto record_offset = record_frame * channels;
       const auto source_offset = frame * channels;
@@ -797,7 +819,59 @@ void looper::Looper::capture_passthrough_input(pw_buffer *capture_buffer) {
       _recorded_frames = std::min<uint64_t>(_recorded_frames + 1,
                                             _record_capacity_frames);
     }
+  } else {
+    stop_recording();
   }
+}
+
+bool looper::Looper::should_record_frame(const sesync::SyncSnapshot &snapshot,
+                                         const uint64_t frame_nsec,
+                                         const uint32_t rate) {
+  const auto current = snapshot.current_beat(frame_nsec);
+  if (!current) {
+    stop_recording();
+    return false;
+  }
+
+  const auto transport = transport_state_entry_at(snapshot, current->beat);
+  if (!transport || transport->state == sesync::TransportState::Stopped) {
+    stop_recording();
+    return false;
+  }
+
+  if (!_recording || _transport_start_beat != transport->beat) {
+    const auto start_nsec = scheduled_beat_nsec(snapshot, transport->beat);
+    uint64_t elapsed_frames = 0;
+    if (start_nsec && frame_nsec > *start_nsec) {
+      const auto elapsed_nsec = frame_nsec - *start_nsec;
+      elapsed_frames =
+          (elapsed_nsec * static_cast<uint64_t>(std::max(rate, 1u))) /
+          1'000'000'000ull;
+    }
+
+    _record_write_frame =
+        _record_capacity_frames == 0 ? 0 : elapsed_frames % _record_capacity_frames;
+    _recorded_frames = std::min<uint64_t>(elapsed_frames, _record_capacity_frames);
+    _recording = true;
+    _transport_start_beat = transport->beat;
+    _ring_buffer_zero_beat = transport->beat;
+    enqueue_state_update();
+    logging::log<logging::LogLevel::Info>(
+        "Looper '{}' recording aligned to transport beat={} write_frame={}",
+        _config.name, transport->beat, _record_write_frame);
+  }
+
+  return true;
+}
+
+void looper::Looper::stop_recording() {
+  if (!_recording)
+    return;
+
+  _recording = false;
+  enqueue_state_update();
+  logging::log<logging::LogLevel::Info>("Looper '{}' recording stopped",
+                                        _config.name);
 }
 
 void looper::Looper::write_passthrough_output(pw_buffer *playback_buffer) {
@@ -1123,6 +1197,18 @@ std::optional<uint64_t> looper::Looper::scheduled_beat_nsec(
   return find_beat(snapshot.beat_history);
 }
 
+std::optional<sesync::TransportStateEntry>
+looper::Looper::transport_state_entry_at(
+    const sesync::SyncSnapshot &snapshot, const uint64_t beat) const {
+  std::optional<sesync::TransportStateEntry> current;
+  for (const auto &entry : snapshot.transport_states) {
+    if (entry.beat > beat)
+      break;
+    current = entry;
+  }
+  return current;
+}
+
 std::optional<int64_t> looper::Looper::command_frame_offset(
     const CommandEvent &event, const uint64_t buffer_start_nsec,
     const uint32_t rate) const {
@@ -1147,6 +1233,15 @@ std::optional<int64_t> looper::Looper::command_frame_offset(
 
 looper::LooperStateUpdate looper::Looper::capture_state_update() const {
   LooperStateUpdate update{};
+  update.recording = _recording;
+  if (_transport_start_beat) {
+    update.transport_start_beat = *_transport_start_beat;
+    update.has_transport_start_beat = true;
+  }
+  if (_ring_buffer_zero_beat) {
+    update.ring_buffer_zero_beat = *_ring_buffer_zero_beat;
+    update.has_ring_buffer_zero_beat = true;
+  }
   for (size_t index = 0; index < _loop_slots.size(); ++index) {
     const auto &slot = _loop_slots[index];
     auto &entry = update.loops[index];
@@ -1245,9 +1340,14 @@ looper::Looper::format_state_json(const LooperStateUpdate &update) const {
     json << "}";
   }
 
-  json << R"(],"recording":true)"
-       << R"(,"transport_alignment":{"transport_start_beat":null)"
-       << R"(,"ring_buffer_zero_beat":null})";
+  json << R"(],"recording":)" << (update.recording ? "true" : "false")
+       << R"(,"transport_alignment":{"transport_start_beat":)";
+  append_optional_u64(update.has_transport_start_beat,
+                      update.transport_start_beat);
+  json << R"(,"ring_buffer_zero_beat":)";
+  append_optional_u64(update.has_ring_buffer_zero_beat,
+                      update.ring_buffer_zero_beat);
+  json << "}";
 
   json << R"(,"active_playback":)";
   if (active != nullptr) {
