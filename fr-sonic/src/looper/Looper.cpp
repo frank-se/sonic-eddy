@@ -204,6 +204,10 @@ void looper::Looper::stop() {
     slot.ready = false;
     slot.playing = false;
     slot.owned = false;
+    slot.start_beat.reset();
+    slot.end_beat.reset();
+    slot.length_beats.reset();
+    slot.bpm.reset();
   }
 
   stop_copy_thread();
@@ -462,8 +466,10 @@ void looper::Looper::process_due_commands(const uint32_t frame_offset,
           (_record_write_frame + _record_capacity_frames -
            (_last_capture_frames - frame)) %
           _record_capacity_frames;
+      _active_command_event = queued_event;
       ++_processed_command_count;
       apply_command_event(queued_event);
+      _active_command_event.reset();
       _command_record_write_frame.reset();
     } else {
       _pending_commands[remaining_count++] = queued_event;
@@ -543,10 +549,25 @@ void looper::Looper::cut_length(const uint64_t length_seconds,
   slot.ring_start_frame =
       (cut_end_frame + _record_capacity_frames - length_frames) %
       _record_capacity_frames;
+  slot.sample_rate = rate;
   slot.channels = channels;
   slot.ready = true;
   slot.playing = false;
   slot.owned = false;
+  slot.start_beat.reset();
+  slot.end_beat.reset();
+  slot.length_beats.reset();
+  slot.bpm.reset();
+  if (_active_command_event && _active_command_event->scheduled_beat > 0) {
+    slot.length_beats = _active_command_event->loop_length;
+    if (_active_command_event->scheduled_beat >=
+        _active_command_event->loop_length) {
+      slot.start_beat = _active_command_event->scheduled_beat -
+                        _active_command_event->loop_length;
+      slot.end_beat = _active_command_event->scheduled_beat - 1;
+    }
+    slot.bpm = bpm_at_beat(_active_command_event->scheduled_beat);
+  }
   ++slot.generation;
 
   enqueue_copy_job(slot, loop_number);
@@ -610,6 +631,9 @@ void looper::Looper::play_loop(const uint32_t loop_number) {
     return;
   }
 
+  for (auto &loop_slot : _loop_slots)
+    loop_slot.playing = false;
+
   slot.playing = true;
   slot.playhead_frame = 0;
   logging::log<logging::LogLevel::Info>(
@@ -625,7 +649,6 @@ void looper::Looper::stop_loops() {
 }
 
 float looper::Looper::render_wet_sample(const uint32_t channel) {
-  float sample = 0.0f;
   for (auto &slot : _loop_slots) {
     if (!slot.playing || !slot.ready || slot.length_frames == 0 ||
         slot.channels == 0)
@@ -633,16 +656,16 @@ float looper::Looper::render_wet_sample(const uint32_t channel) {
 
     const auto slot_channel = std::min<uint32_t>(channel, slot.channels - 1);
     if (slot.owned && slot.samples) {
-      sample +=
-          (*slot.samples)[(slot.playhead_frame * slot.channels) + slot_channel];
+      return (*slot.samples)[(slot.playhead_frame * slot.channels) +
+                             slot_channel];
     } else if (!_record_buffer.empty()) {
       const auto ring_frame =
           (slot.ring_start_frame + slot.playhead_frame) %
           _record_capacity_frames;
-      sample += _record_buffer[(ring_frame * slot.channels) + slot_channel];
+      return _record_buffer[(ring_frame * slot.channels) + slot_channel];
     }
   }
-  return sample;
+  return 0.0f;
 }
 
 void looper::Looper::publish_params() {
@@ -995,6 +1018,21 @@ std::optional<uint64_t> looper::Looper::current_sync_beat() const {
     return std::nullopt;
 
   return current->beat;
+}
+
+std::optional<double> looper::Looper::bpm_at_beat(const uint64_t beat) const {
+  if (!_sync_client)
+    return std::nullopt;
+
+  const auto snapshot = _sync_client->snapshot();
+  if (!snapshot)
+    return std::nullopt;
+
+  const auto bpm = snapshot->bpm_at(beat);
+  if (bpm <= 0.0)
+    return std::nullopt;
+
+  return bpm;
 }
 
 std::optional<uint64_t> looper::Looper::scheduled_beat_nsec(

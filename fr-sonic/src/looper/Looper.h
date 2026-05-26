@@ -44,10 +44,15 @@ struct CommandEvent {
 struct LoopSlot {
   std::shared_ptr<std::vector<float>> samples;
   uint64_t generation = 0;
+  std::optional<uint64_t> start_beat;
+  std::optional<uint64_t> end_beat;
+  std::optional<uint64_t> length_beats;
   uint64_t length_frames = 0;
   uint64_t playhead_frame = 0;
   uint64_t ring_start_frame = 0;
+  uint32_t sample_rate = 0;
   uint32_t channels = 0;
+  std::optional<double> bpm;
   bool ready = false;
   bool playing = false;
   bool owned = false;
@@ -133,6 +138,7 @@ private:
   uint64_t _recorded_frames = 0;
   uint64_t _last_capture_frames = 0;
   std::optional<uint64_t> _command_record_write_frame;
+  std::optional<CommandEvent> _active_command_event;
   uint64_t _record_capacity_frames = 0;
   std::vector<float> _record_buffer;
   std::array<LoopSlot, 10> _loop_slots;
@@ -177,6 +183,7 @@ private:
   [[nodiscard]] const spa_audio_info_raw &active_format() const;
   [[nodiscard]] pw_stream_flags stream_flags(bool autoconnect) const;
   [[nodiscard]] std::optional<uint64_t> current_sync_beat() const;
+  [[nodiscard]] std::optional<double> bpm_at_beat(uint64_t beat) const;
   [[nodiscard]] std::optional<uint64_t>
   scheduled_beat_nsec(const sesync::SyncSnapshot &snapshot,
                       uint64_t beat) const;

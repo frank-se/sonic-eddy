@@ -174,6 +174,15 @@ scheduled. It does not implicitly align playback to a bar, loop boundary, or any
 other musical grid. If aligned playback is desired, the client schedules the
 `play` command at the aligned beat.
 
+Only one loop can play at a time. Starting playback for a loop stops any
+previously playing loop and makes the requested loop the active playback loop.
+The looper does not mix multiple stored loops together.
+
+- `stop`
+
+The `stop` command stops the active playback loop. If no loop is playing, it has
+no effect.
+
 ### Time Stretching
 
 Time stretching is not currently implemented. If the time master changes tempo,
@@ -292,22 +301,18 @@ The props params store the following data:
     - `play <loop_number>`
     - `archive <loop_number>`
     - `stop`
-  - `stop` stops all active loop playback.
+  - `stop` stops the active loop playback.
 - `mix`:
   - `mix` is a float, 0 <= mix <= 1, which describes how much of the playback
     versus the input is sent to the outputs.
     - 0 means inputs only,
     - 1 means playback signal only.
-- `loops`:
-  - A JSON array describing the current loop slots.
-  - Each element contains the loop number, generation, state, start beat, end
-    beat, length in samples, sample rate, channel count, BPM at cut time, and
-    whether the audio is backed by the recording ring buffer or owned loop
-    memory.
-- `status`:
-  - A JSON object containing looper-wide state such as transport alignment,
-    recording state, active playback loops, pending background jobs, and the
-    last command failure if one occurred.
+- `looper.state`:
+  - A read-only JSON string describing the current looper state.
+  - The looper publishes a new value when the state changes, not every process
+    cycle.
+  - The JSON contains populated loop slots, the active loop, loop metadata, and
+    lightweight diagnostics needed by the UI.
 
 ### Params Schema
 
@@ -327,11 +332,15 @@ type SampleRate = number;
 type ChannelCount = number;
 type Bpm = number;
 
-type LooperParams = {
-  commands: LooperCommand[];
-  mix: number;
-  loops: LoopSlot[];
-  status: LooperStatus;
+type LooperState = {
+  version: 1;
+  active_loop: LoopNumber | null;
+  loops: LoopState[];
+  recording: boolean;
+  transport_alignment: TransportAlignment;
+  active_playback: ActivePlayback | null;
+  pending_jobs: PendingJob[];
+  last_command_failure: LastCommandFailure;
 };
 ```
 
@@ -369,36 +378,27 @@ pw-cli set-param <looper-capture-object-id> Props '{ params = [ "mix" 0.5 ] }'
 pw-cli set-param <looper-capture-object-id> Props '{ params = [ "commands" "[[0,\"cut 4 0\"],[0,\"play 0\"]]" ] }'
 ```
 
-The `loops` array contains one element per loop slot.
+The `looper.state` JSON string contains one element per populated loop slot.
+Empty slots are omitted.
 
 ```typescript
-type LoopSlotState =
-  | "empty"
-  | "copying"
-  | "ready"
-  | "playing"
-  | "archiving"
-  | "archived"
-  | "failed";
-
-type LoopAudioLocation = "none" | "ring-buffer" | "owned-memory" | "archive";
-
-type LoopSlot = {
+type LoopState = {
   loop_number: LoopNumber;
   generation: LoopGeneration;
-  state: LoopSlotState;
+  state: "stopped" | "playing";
+  source: "ring" | "owned" | "archived";
   start_beat: BeatNumber | null;
   end_beat: BeatNumber | null;
-  length_samples: SampleCount | null;
-  sample_rate: SampleRate | null;
-  channel_count: ChannelCount | null;
+  length_beats: number | null;
+  length_frames: SampleCount;
+  sample_rate: SampleRate;
+  channels: ChannelCount;
   bpm: Bpm | null;
-  audio_location: LoopAudioLocation;
 };
 ```
 
-The `status` object contains looper-wide state and implementation diagnostics
-needed by the UI.
+The remaining `looper.state` fields contain looper-wide state and
+implementation diagnostics needed by the UI.
 
 ```typescript
 type TransportAlignment = {
@@ -425,13 +425,6 @@ type LastCommandFailure = {
   reason: string;
 } | null;
 
-type LooperStatus = {
-  recording: boolean;
-  transport_alignment: TransportAlignment;
-  active_playback: ActivePlayback[];
-  pending_jobs: PendingJob[];
-  last_command_failure: LastCommandFailure;
-};
 ```
 
 ### Command Parsing Examples
