@@ -80,6 +80,7 @@ private:
   pw_registry *_registry = nullptr;
   pw_node *_master_node = nullptr;
   uint32_t _master_object_id = 0;
+  uint64_t _master_object_serial = 0;
 
   spa_hook _registry_listener{};
   spa_hook _node_listener{};
@@ -90,7 +91,7 @@ private:
   void handle_global(uint32_t id, const char *type, uint32_t version,
                      const spa_dict *props);
   void handle_global_remove(uint32_t id);
-  void bind_master(uint32_t id, uint32_t version);
+  void bind_master(uint32_t id, uint32_t version, uint64_t serial);
   void destroy_master();
   void subscribe_master_params();
   void handle_param(uint32_t id, const spa_pod *pod);

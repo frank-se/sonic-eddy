@@ -93,11 +93,16 @@ extract_capture_id() {
 
 sync_master_id() {
   pw-dump | jq -r '
-    first(.[] |
+    [.[] |
       select(.type == "PipeWire:Interface:Node") |
       select(.info.props["node.name"] == "se.sync_master" or
              .info.props["se.role"] == "sync-master") |
-      .info.props["object.id"]) // empty'
+      {
+        id: .info.props["object.id"],
+        serial: (.info.props["object.serial"] | tonumber? // 0)
+      }]
+    | sort_by(.serial)
+    | last.id // empty'
 }
 
 sync_schedule_json() {

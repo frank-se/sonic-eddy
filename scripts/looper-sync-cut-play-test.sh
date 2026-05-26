@@ -14,7 +14,8 @@ duration="${DURATION:-14}"
 record_duration="${RECORD_DURATION:-10}"
 signal_value="${SIGNAL_VALUE:-0.7}"
 rms_tolerance="${RMS_TOLERANCE:-0.05}"
-schedule_index="${SCHEDULE_INDEX:-2}"
+start_schedule_index="${START_SCHEDULE_INDEX:-2}"
+cut_schedule_index="${CUT_SCHEDULE_INDEX:-3}"
 
 for binary in "${looper_bin}" "${signal_bin}" "${record_bin}"; do
   if [[ ! -x "${binary}" ]]; then
@@ -92,11 +93,16 @@ extract_capture_id() {
 
 sync_master_id() {
   pw-dump | jq -r '
-    first(.[] |
+    [.[] |
       select(.type == "PipeWire:Interface:Node") |
       select(.info.props["node.name"] == "se.sync_master" or
              .info.props["se.role"] == "sync-master") |
-      .info.props["object.id"]) // empty'
+      {
+        id: .info.props["object.id"],
+        serial: (.info.props["object.serial"] | tonumber? // 0)
+      }]
+    | sort_by(.serial)
+    | last.id // empty'
 }
 
 sync_schedule_json() {
@@ -112,6 +118,15 @@ sync_schedule_json() {
     }
     $0 ~ /String "beat\.schedule"/ { found = 1 }
   '
+}
+
+scheduled_beat_at() {
+  local object_id="$1"
+  local index="$2"
+  local schedule
+  schedule="$(sync_schedule_json "${object_id}")"
+  jq -r --argjson index "${index}" '.[$index][0] // .[-1][0] // empty' \
+    <<<"${schedule}"
 }
 
 echo "starting looper: ${looper_name}"
@@ -162,10 +177,23 @@ if [[ -z "${sync_id}" ]]; then
   exit 1
 fi
 
-schedule="$(sync_schedule_json "${sync_id}")"
-target_beat="$(jq -r --argjson index "${schedule_index}" '.[$index][0] // .[-1][0] // empty' <<<"${schedule}")"
+start_beat="$(scheduled_beat_at "${sync_id}" "${start_schedule_index}")"
+if [[ -z "${start_beat}" || "${start_beat}" == "null" ]]; then
+  echo "failed to choose transport start beat" >&2
+  exit 1
+fi
+
+echo "scheduling transport start at beat ${start_beat}"
+pw-cli set-param "${sync_id}" Props \
+  "{ params = [ \"beat.params\" \"{\\\"transport_state\\\":[[${start_beat},\\\"start_scheduled\\\"]]}\" ] }"
+
+wait_for_log "recording aligned to transport beat=${start_beat}" "${looper_log}" 8
+
+sleep 1
+
+target_beat="$(scheduled_beat_at "${sync_id}" "${cut_schedule_index}")"
 if [[ -z "${target_beat}" || "${target_beat}" == "null" ]]; then
-  echo "failed to choose target beat from schedule: ${schedule}" >&2
+  echo "failed to choose target beat" >&2
   exit 1
 fi
 

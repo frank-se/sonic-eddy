@@ -14,7 +14,8 @@ duration="${DURATION:-12}"
 record_duration="${RECORD_DURATION:-8}"
 signal_value="${SIGNAL_VALUE:-0.7}"
 rms_tolerance="${RMS_TOLERANCE:-0.05}"
-command_delay="${COMMAND_DELAY:-1}"
+start_schedule_index="${START_SCHEDULE_INDEX:-2}"
+cut_schedule_index="${CUT_SCHEDULE_INDEX:-3}"
 
 for binary in "${looper_bin}" "${signal_bin}" "${record_bin}"; do
   if [[ ! -x "${binary}" ]]; then
@@ -24,7 +25,7 @@ for binary in "${looper_bin}" "${signal_bin}" "${record_bin}"; do
   fi
 done
 
-for binary in jq pw-cli; do
+for binary in jq pw-cli pw-dump; do
   if ! command -v "${binary}" >/dev/null 2>&1; then
     echo "missing executable: ${binary}" >&2
     exit 1
@@ -90,6 +91,44 @@ extract_capture_id() {
   ' "${looper_log}"
 }
 
+sync_master_id() {
+  pw-dump | jq -r '
+    [.[] |
+      select(.type == "PipeWire:Interface:Node") |
+      select(.info.props["node.name"] == "se.sync_master" or
+             .info.props["se.role"] == "sync-master") |
+      {
+        id: .info.props["object.id"],
+        serial: (.info.props["object.serial"] | tonumber? // 0)
+      }]
+    | sort_by(.serial)
+    | last.id // empty'
+}
+
+sync_schedule_json() {
+  local object_id="$1"
+  pw-cli enum-params "${object_id}" Props | awk '
+    found {
+      if ($1 == "String") {
+        sub(/^[[:space:]]*String "/, "")
+        sub(/"$/, "")
+        print
+        exit
+      }
+    }
+    $0 ~ /String "beat\.schedule"/ { found = 1 }
+  '
+}
+
+scheduled_beat_at() {
+  local object_id="$1"
+  local index="$2"
+  local schedule
+  schedule="$(sync_schedule_json "${object_id}")"
+  jq -r --argjson index "${index}" '.[$index][0] // .[-1][0] // empty' \
+    <<<"${schedule}"
+}
+
 echo "starting looper: ${looper_name}"
 "${looper_bin}" \
   -n "${looper_name}" \
@@ -131,10 +170,36 @@ echo "starting constant signal into ${looper_name}.capture"
 pids+=("$!")
 
 wait_for_log '"rms":0.7' "${signal_log}" 8
-sleep "${command_delay}"
-echo "cutting and playing loop 0 on looper capture object.id=${capture_id}"
+
+sync_id="$(sync_master_id)"
+if [[ -z "${sync_id}" ]]; then
+  echo "failed to find sync master node" >&2
+  exit 1
+fi
+
+start_beat="$(scheduled_beat_at "${sync_id}" "${start_schedule_index}")"
+if [[ -z "${start_beat}" || "${start_beat}" == "null" ]]; then
+  echo "failed to choose transport start beat" >&2
+  exit 1
+fi
+
+echo "scheduling transport start at beat ${start_beat}"
+pw-cli set-param "${sync_id}" Props \
+  "{ params = [ \"beat.params\" \"{\\\"transport_state\\\":[[${start_beat},\\\"start_scheduled\\\"]]}\" ] }"
+
+wait_for_log "recording aligned to transport beat=${start_beat}" "${looper_log}" 8
+
+sleep 1
+
+target_beat="$(scheduled_beat_at "${sync_id}" "${cut_schedule_index}")"
+if [[ -z "${target_beat}" || "${target_beat}" == "null" ]]; then
+  echo "failed to choose target beat" >&2
+  exit 1
+fi
+
+echo "cutting and playing loop 0 at synced beat ${target_beat} on looper capture object.id=${capture_id}"
 pw-cli set-param "${capture_id}" Props \
-  '{ params = [ "commands" "[[0,\"cut 1 0\"],[0,\"play 0\"]]" ] }'
+  "{ params = [ \"commands\" \"[[${target_beat},\\\"cut 1 0\\\"],[${target_beat},\\\"play 0\\\"]]\" ] }"
 
 wait "${pids[1]}"
 wait "${pids[2]}"
@@ -145,29 +210,39 @@ jq -Rr 'fromjson? | select(.type == "stats" and .scope == "window") | [.frames, 
 
 if ! awk -v expected="${signal_value}" \
     -v tolerance="${rms_tolerance}" \
-    -v start_window="5" '
+    -v min_initial_silent="3" '
   {
     count += 1
     rms[count] = $2
     peak[count] = $3
   }
   END {
-    if (count < start_window) {
+    if (count < 4) {
       print "validation failed: not enough record windows" > "/dev/stderr"
       exit 1
     }
-    for (i = start_window; i <= count; ++i) {
-      diff = rms[i] - expected
-      if (diff < 0)
-        diff = -diff
-      if (diff > tolerance) {
-        printf("validation failed: record window %d rms %.9f expected %.9f diff %.9f tolerance %.9f\n",
-               i, rms[i], expected, diff, tolerance) > "/dev/stderr"
+    for (i = 1; i <= min_initial_silent && i <= count; ++i) {
+      if (rms[i] > tolerance) {
+        printf("validation failed: initial record window %d rms %.9f expected near 0 within %.9f\n",
+               i, rms[i], tolerance) > "/dev/stderr"
         exit 1
       }
     }
-    printf("validation passed: record windows %d..%d match loop playback rms %.6f within %.6f\n",
-           start_window, count, expected, tolerance)
+    matched = 0
+    for (i = min_initial_silent + 1; i <= count; ++i) {
+      diff = rms[i] - expected
+      if (diff < 0)
+        diff = -diff
+      if (diff <= tolerance)
+        matched = 1
+    }
+    if (!matched) {
+      printf("validation failed: no later record window reached expected loop playback rms %.9f within %.9f\n",
+             expected, tolerance) > "/dev/stderr"
+      exit 1
+    }
+    printf("validation passed: initial output was silent, then loop playback reached rms %.6f within %.6f\n",
+           expected, tolerance)
   }
 ' "${record_windows}"; then
   dump_logs

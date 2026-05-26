@@ -11,6 +11,7 @@
 #include <ctime>
 #include <format>
 #include <iomanip>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <regex>
@@ -176,11 +177,11 @@ bool looper::Looper::start() {
   _record_buffer.assign(_record_capacity_frames * _passthrough_channels, 0.0f);
   _record_write_frame = 0;
   _recorded_frames = 0;
+  _record_total_frames = 0;
   _recording = false;
   _transport_start_beat.reset();
   _ring_buffer_zero_beat.reset();
   _last_capture_frames = 0;
-  _command_record_write_frame.reset();
   start_copy_thread();
 
   if (!setup_capture_stream() || !setup_playback_stream()) {
@@ -505,17 +506,10 @@ void looper::Looper::process_due_commands(const uint32_t frame_offset,
     const auto scheduled_frame =
         command_frame_offset(queued_event, buffer_start_nsec, rate);
     if (scheduled_frame && *scheduled_frame <= frame_offset) {
-      const auto frame =
-          std::min<uint64_t>(frame_offset, _last_capture_frames);
-      _command_record_write_frame =
-          (_record_write_frame + _record_capacity_frames -
-           (_last_capture_frames - frame)) %
-          _record_capacity_frames;
       _active_command_event = queued_event;
       ++_processed_command_count;
       apply_command_event(queued_event);
       _active_command_event.reset();
-      _command_record_write_frame.reset();
     } else {
       _pending_commands[remaining_count++] = queued_event;
     }
@@ -533,15 +527,14 @@ void looper::Looper::apply_command_event(const CommandEvent &event) {
   case CommandKind::CutLength:
     cut_length(event.loop_length, event.loop_number);
     break;
+  case CommandKind::CutRange:
+    cut_range(event.start_beat, event.end_beat, event.loop_number);
+    break;
   case CommandKind::Play:
     play_loop(event.loop_number);
     break;
   case CommandKind::Stop:
     stop_loops();
-    break;
-  case CommandKind::CutRange:
-    logging::log<logging::LogLevel::Warning>(
-        "Looper '{}' cut range command is not implemented yet", _config.name);
     break;
   case CommandKind::Archive:
     logging::log<logging::LogLevel::Warning>(
@@ -550,39 +543,94 @@ void looper::Looper::apply_command_event(const CommandEvent &event) {
   }
 }
 
-void looper::Looper::cut_length(const uint64_t length_seconds,
+void looper::Looper::cut_length(const uint64_t length_beats,
                                 const uint32_t loop_number) {
+  if (!_active_command_event || _active_command_event->scheduled_beat == 0) {
+    logging::log<logging::LogLevel::Error>(
+        "Looper '{}' rejected cut length without scheduled beat", _config.name);
+    return;
+  }
+  if (length_beats == 0) {
+    logging::log<logging::LogLevel::Error>(
+        "Looper '{}' rejected zero-length cut for loop {}", _config.name,
+        loop_number);
+    return;
+  }
+  if (_active_command_event->scheduled_beat < length_beats) {
+    logging::log<logging::LogLevel::Error>(
+        "Looper '{}' rejected cut length={} at beat={} for loop {}",
+        _config.name, length_beats, _active_command_event->scheduled_beat,
+        loop_number);
+    return;
+  }
+
+  cut_range(_active_command_event->scheduled_beat - length_beats,
+            _active_command_event->scheduled_beat - 1, loop_number);
+}
+
+void looper::Looper::cut_range(const uint64_t start_beat,
+                               const uint64_t end_beat,
+                               const uint32_t loop_number) {
   if (loop_number >= _loop_slots.size()) {
     logging::log<logging::LogLevel::Error>(
         "Looper '{}' rejected cut for invalid loop {}", _config.name,
         loop_number);
     return;
   }
-  if (length_seconds == 0) {
+  if (start_beat > end_beat) {
     logging::log<logging::LogLevel::Error>(
-        "Looper '{}' rejected zero-length cut for loop {}", _config.name,
-        loop_number);
+        "Looper '{}' rejected cut range {}..{} for loop {}", _config.name,
+        start_beat, end_beat, loop_number);
+    return;
+  }
+  if (end_beat == std::numeric_limits<uint64_t>::max()) {
+    logging::log<logging::LogLevel::Error>(
+        "Looper '{}' rejected cut range ending at max beat for loop {}",
+        _config.name, loop_number);
+    return;
+  }
+
+  const auto snapshot = _sync_client ? _sync_client->snapshot() : nullptr;
+  if (!snapshot || !_ring_buffer_zero_beat) {
+    logging::log<logging::LogLevel::Error>(
+        "Looper '{}' rejected cut range {}..{} loop={} without sync recording "
+        "alignment",
+        _config.name, start_beat, end_beat, loop_number);
     return;
   }
 
   const auto channels = _passthrough_channels;
   const auto rate = std::max(active_format().rate, 1u);
-  const auto length_frames =
-      std::min<uint64_t>(length_seconds * static_cast<uint64_t>(rate),
-                         _record_capacity_frames);
-  const auto cut_end_frame =
-      _command_record_write_frame.value_or(_record_write_frame);
-  logging::log<logging::LogLevel::Info>(
-      "Looper '{}' attempting cut length={}s loop={} recorded_frames={} "
-      "required_frames={} write_frame={}",
-      _config.name, length_seconds, loop_number, _recorded_frames,
-      length_frames, cut_end_frame);
-  if (length_frames == 0 || length_frames > _recorded_frames) {
+  const auto start_frame_abs =
+      beat_frame_from_ring_zero(*snapshot, start_beat, rate);
+  const auto end_frame_abs =
+      beat_frame_from_ring_zero(*snapshot, end_beat + 1, rate);
+  if (!start_frame_abs || !end_frame_abs || *end_frame_abs <= *start_frame_abs) {
     logging::log<logging::LogLevel::Error>(
-        "Looper '{}' rejected cut length={}s loop={} recorded_frames={} "
-        "required_frames={}",
-        _config.name, length_seconds, loop_number, _recorded_frames,
-        length_frames);
+        "Looper '{}' rejected cut range {}..{} loop={} without beat timing",
+        _config.name, start_beat, end_beat, loop_number);
+    return;
+  }
+
+  const auto length_frames = *end_frame_abs - *start_frame_abs;
+  logging::log<logging::LogLevel::Info>(
+      "Looper '{}' attempting cut beats={}..{} loop={} recorded_frames={} "
+      "required_frames={} total_recorded_frames={}",
+      _config.name, start_beat, end_beat, loop_number, _recorded_frames,
+      length_frames, _record_total_frames);
+
+  const auto earliest_available =
+      _record_total_frames > _recorded_frames
+          ? _record_total_frames - _recorded_frames
+          : uint64_t{0};
+  if (length_frames == 0 || length_frames > _record_capacity_frames ||
+      *start_frame_abs < earliest_available ||
+      *end_frame_abs > _record_total_frames) {
+    logging::log<logging::LogLevel::Error>(
+        "Looper '{}' rejected cut beats={}..{} loop={} available_abs={}..{} "
+        "required_abs={}..{}",
+        _config.name, start_beat, end_beat, loop_number, earliest_available,
+        _record_total_frames, *start_frame_abs, *end_frame_abs);
     return;
   }
 
@@ -591,39 +639,31 @@ void looper::Looper::cut_length(const uint64_t length_seconds,
   slot.samples.reset();
   slot.length_frames = length_frames;
   slot.playhead_frame = 0;
-  slot.ring_start_frame =
-      (cut_end_frame + _record_capacity_frames - length_frames) %
-      _record_capacity_frames;
+  slot.ring_start_frame = *start_frame_abs % _record_capacity_frames;
   slot.sample_rate = rate;
   slot.channels = channels;
   slot.ready = true;
   slot.playing = false;
   slot.owned = false;
-  slot.start_beat.reset();
-  slot.end_beat.reset();
-  slot.length_beats.reset();
+  slot.start_beat = start_beat;
+  slot.end_beat = end_beat;
+  slot.length_beats = end_beat - start_beat + 1;
   slot.play_started_beat.reset();
   slot.bpm.reset();
-  if (_active_command_event && _active_command_event->scheduled_beat > 0) {
-    slot.length_beats = _active_command_event->loop_length;
-    if (_active_command_event->scheduled_beat >=
-        _active_command_event->loop_length) {
-      slot.start_beat = _active_command_event->scheduled_beat -
-                        _active_command_event->loop_length;
-      slot.end_beat = _active_command_event->scheduled_beat - 1;
-    }
-    slot.bpm = bpm_at_beat(_active_command_event->scheduled_beat);
-  }
+  slot.bpm =
+      _active_command_event && _active_command_event->scheduled_beat > 0
+          ? bpm_at_beat(_active_command_event->scheduled_beat)
+          : bpm_at_beat(start_beat);
   ++slot.generation;
 
   enqueue_copy_job(slot, loop_number);
   enqueue_state_update();
 
   logging::log<logging::LogLevel::Info>(
-      "Looper '{}' cut loop={} generation={} length_frames={} channels={} "
-      "source=ring",
-      _config.name, loop_number, slot.generation, slot.length_frames,
-      slot.channels);
+      "Looper '{}' cut loop={} generation={} beats={}..{} length_frames={} "
+      "channels={} source=ring",
+      _config.name, loop_number, slot.generation, start_beat, end_beat,
+      slot.length_frames, slot.channels);
 }
 
 void looper::Looper::enqueue_copy_job(const LoopSlot &slot,
@@ -816,6 +856,7 @@ void looper::Looper::capture_passthrough_input(pw_buffer *capture_buffer) {
       std::copy_n(_passthrough_buffer.data() + source_offset, channels,
                   _record_buffer.data() + record_offset);
       _record_write_frame = (_record_write_frame + 1) % _record_capacity_frames;
+      ++_record_total_frames;
       _recorded_frames = std::min<uint64_t>(_recorded_frames + 1,
                                             _record_capacity_frames);
     }
@@ -852,6 +893,7 @@ bool looper::Looper::should_record_frame(const sesync::SyncSnapshot &snapshot,
     _record_write_frame =
         _record_capacity_frames == 0 ? 0 : elapsed_frames % _record_capacity_frames;
     _recorded_frames = std::min<uint64_t>(elapsed_frames, _record_capacity_frames);
+    _record_total_frames = elapsed_frames;
     _recording = true;
     _transport_start_beat = transport->beat;
     _ring_buffer_zero_beat = transport->beat;
@@ -1207,6 +1249,22 @@ looper::Looper::transport_state_entry_at(
     current = entry;
   }
   return current;
+}
+
+std::optional<uint64_t> looper::Looper::beat_frame_from_ring_zero(
+    const sesync::SyncSnapshot &snapshot, const uint64_t beat,
+    const uint32_t rate) const {
+  if (!_ring_buffer_zero_beat)
+    return std::nullopt;
+
+  const auto zero_nsec = scheduled_beat_nsec(snapshot, *_ring_buffer_zero_beat);
+  const auto beat_nsec = scheduled_beat_nsec(snapshot, beat);
+  if (!zero_nsec || !beat_nsec || *beat_nsec < *zero_nsec)
+    return std::nullopt;
+
+  const auto delta_nsec = *beat_nsec - *zero_nsec;
+  return (delta_nsec * static_cast<uint64_t>(std::max(rate, 1u))) /
+         1'000'000'000ull;
 }
 
 std::optional<int64_t> looper::Looper::command_frame_offset(

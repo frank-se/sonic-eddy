@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <array>
+#include <charconv>
 #include <cstring>
 #include <map>
 #include <regex>
@@ -38,6 +39,18 @@ std::vector<sesync::BeatScheduleEntry> parse_schedule(const std::string &json) {
   }
 
   std::ranges::sort(result, {}, &sesync::BeatScheduleEntry::beat);
+  return result;
+}
+
+uint64_t parse_u64_prop(const char *value) {
+  if (value == nullptr)
+    return 0;
+
+  uint64_t result = 0;
+  const auto *end = value + std::strlen(value);
+  const auto parsed = std::from_chars(value, end, result);
+  if (parsed.ec != std::errc{} || parsed.ptr != end)
+    return 0;
   return result;
 }
 
@@ -215,9 +228,10 @@ void sesync::SyncClient::handle_global(const uint32_t id, const char *type,
 
   const auto *node_name = spa_dict_lookup(props, PW_KEY_NODE_NAME);
   const auto *role = spa_dict_lookup(props, "se.role");
+  const auto serial = parse_u64_prop(spa_dict_lookup(props, "object.serial"));
   if ((node_name != nullptr && std::strcmp(node_name, SyncNodeName) == 0) ||
       (role != nullptr && std::strcmp(role, SyncRole) == 0)) {
-    bind_master(id, version);
+    bind_master(id, version, serial);
   }
 }
 
@@ -231,15 +245,26 @@ void sesync::SyncClient::handle_global_remove(const uint32_t id) {
   std::atomic_store(&_snapshot, SnapshotPtr{});
 }
 
-void sesync::SyncClient::bind_master(const uint32_t id, const uint32_t version) {
+void sesync::SyncClient::bind_master(const uint32_t id, const uint32_t version,
+                                     const uint64_t serial) {
   if (_master_node != nullptr) {
     if (_master_object_id == id)
       return;
 
-    logging::log<logging::LogLevel::Warning>(
-        "Sync client found another sync master node {}; keeping {}", id,
-        _master_object_id);
-    return;
+    if (serial <= _master_object_serial) {
+      logging::log<logging::LogLevel::Warning>(
+          "Sync client found older sync master node {} serial {}; keeping {} "
+          "serial {}",
+          id, serial, _master_object_id, _master_object_serial);
+      return;
+    }
+
+    logging::log<logging::LogLevel::Info>(
+        "Sync client switching sync master from node {} serial {} to node {} "
+        "serial {}",
+        _master_object_id, _master_object_serial, id, serial);
+    destroy_master();
+    std::atomic_store(&_snapshot, SnapshotPtr{});
   }
 
   _master_node = static_cast<pw_node *>(pw_registry_bind(
@@ -253,8 +278,10 @@ void sesync::SyncClient::bind_master(const uint32_t id, const uint32_t version) 
   }
 
   _master_object_id = id;
+  _master_object_serial = serial;
   logging::log<logging::LogLevel::Info>(
-      "Sync client bound master node {}", _master_object_id);
+      "Sync client bound master node {} serial {}", _master_object_id,
+      _master_object_serial);
   subscribe_master_params();
 }
 
@@ -266,6 +293,7 @@ void sesync::SyncClient::destroy_master() {
   pw_proxy_destroy(reinterpret_cast<pw_proxy *>(_master_node));
   _master_node = nullptr;
   _master_object_id = 0;
+  _master_object_serial = 0;
 }
 
 void sesync::SyncClient::subscribe_master_params() {

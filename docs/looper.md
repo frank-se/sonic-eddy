@@ -221,12 +221,10 @@ wet loop playback signal is silence until loop playback exists:
 output = input * (1 - mix) + 0 * mix
 ```
 
-The first loop implementation records continuously into the fixed history
-buffer and supports process-time `cut <loop_length> <loop_number>` plus
-`play <loop_number>`. The `loop_length` value is interpreted as seconds until
-beat scheduling is wired into command execution. `cut <start_beat> <end_beat>
-<loop_number>` is parsed but rejected by processing until beat-to-sample mapping
-is implemented.
+The first loop implementation records into the fixed history buffer while the
+sync transport is playing and supports both `cut <loop_length> <loop_number>`
+and `cut <start_beat> <end_beat> <loop_number>`. Cut ranges are converted to
+recording ring buffer sample ranges using the sync beat schedule.
 
 If a beat boundary falls inside the current process buffer, all beat-scheduled
 state changes for that beat take effect at the corresponding sample offset, not

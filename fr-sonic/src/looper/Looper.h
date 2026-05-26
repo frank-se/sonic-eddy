@@ -173,11 +173,11 @@ private:
   uint64_t _dropped_command_count = 0;
   uint64_t _record_write_frame = 0;
   uint64_t _recorded_frames = 0;
+  uint64_t _record_total_frames = 0;
   bool _recording = false;
   std::optional<uint64_t> _transport_start_beat;
   std::optional<uint64_t> _ring_buffer_zero_beat;
   uint64_t _last_capture_frames = 0;
-  std::optional<uint64_t> _command_record_write_frame;
   std::optional<CommandEvent> _active_command_event;
   uint64_t _record_capacity_frames = 0;
   std::vector<float> _record_buffer;
@@ -209,7 +209,9 @@ private:
   void process_due_commands(uint32_t frame_offset, uint64_t buffer_start_nsec,
                             uint32_t rate);
   void apply_command_event(const CommandEvent &event);
-  void cut_length(uint64_t length_seconds, uint32_t loop_number);
+  void cut_length(uint64_t length_beats, uint32_t loop_number);
+  void cut_range(uint64_t start_beat, uint64_t end_beat,
+                 uint32_t loop_number);
   void enqueue_copy_job(const LoopSlot &slot, uint32_t loop_number);
   void retire_samples(std::shared_ptr<std::vector<float>> samples);
   void play_loop(uint32_t loop_number);
@@ -236,6 +238,9 @@ private:
   [[nodiscard]] std::optional<sesync::TransportStateEntry>
   transport_state_entry_at(const sesync::SyncSnapshot &snapshot,
                            uint64_t beat) const;
+  [[nodiscard]] std::optional<uint64_t>
+  beat_frame_from_ring_zero(const sesync::SyncSnapshot &snapshot,
+                            uint64_t beat, uint32_t rate) const;
   [[nodiscard]] std::optional<int64_t>
   command_frame_offset(const CommandEvent &event, uint64_t buffer_start_nsec,
                        uint32_t rate) const;
