@@ -1,18 +1,18 @@
 using System;
 using System.Windows.Input;
-using Fr.Sonic.Model.Objects;
 using ReactiveUI;
 
 namespace SonicEddy.ViewModels.MidiRouterViewModels;
 
 public sealed class MidiRouteLinkViewModel(
-    Link link,
+    ulong sourcePortId,
+    ulong targetPortId,
     string source,
     string target,
-    Action<Link> delete)
+    Action<ulong, ulong> delete)
 {
     public string Source { get; } = source;
     public string Target { get; } = target;
     public ICommand DeleteCommand { get; } =
-        ReactiveCommand.Create(() => delete(link));
+        ReactiveCommand.Create(() => delete(sourcePortId, targetPortId));
 }

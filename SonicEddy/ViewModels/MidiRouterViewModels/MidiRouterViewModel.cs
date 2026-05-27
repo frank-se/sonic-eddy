@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Input;
@@ -7,19 +6,14 @@ using Avalonia.Threading;
 using Fr.Sonic;
 using Fr.Sonic.Model.Objects;
 using ReactiveUI;
-using SonicEddy.Controls.GraphEditorControl;
 
 namespace SonicEddy.ViewModels.MidiRouterViewModels;
 
 public sealed class MidiRouterViewModel : ViewModelBase, IDisposable
 {
-    private readonly Dictionary<ulong, MidiRouterPortViewModel> _ports = [];
-
     public MidiRouterViewModel()
     {
-        CreateEdgeCommand =
-            ReactiveCommand.Create<(GraphPort Source, GraphPort Target)>(
-                CreateRoute);
+        ConnectCommand = ReactiveCommand.Create(Connect);
         RefreshCommand = ReactiveCommand.Create(Refresh);
 
         FrSonic.PortRegistry.Added += OnPortChanged;
@@ -30,23 +24,37 @@ public sealed class MidiRouterViewModel : ViewModelBase, IDisposable
         Refresh();
     }
 
-    public GraphNode? Sources
-    {
-        get;
-        private set => this.RaiseAndSetIfChanged(ref field, value);
-    }
-
-    public GraphNode? Targets
-    {
-        get;
-        private set => this.RaiseAndSetIfChanged(ref field, value);
-    }
-
-    public ObservableCollection<GraphEdge> Routes { get; } = [];
+    public ObservableCollection<MidiRouterPortOptionViewModel> Sources { get; } = [];
+    public ObservableCollection<MidiRouterPortOptionViewModel> Targets { get; } = [];
     public ObservableCollection<MidiRouteLinkViewModel> RouteLinks { get; } = [];
 
-    public ICommand CreateEdgeCommand { get; }
+    public ICommand ConnectCommand { get; }
     public ICommand RefreshCommand { get; }
+
+    public MidiRouterPortOptionViewModel? SelectedSource
+    {
+        get;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref field, value);
+            this.RaisePropertyChanged(nameof(CanConnect));
+        }
+    }
+
+    public MidiRouterPortOptionViewModel? SelectedTarget
+    {
+        get;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref field, value);
+            this.RaisePropertyChanged(nameof(CanConnect));
+        }
+    }
+
+    public bool CanConnect =>
+        SelectedSource is not null &&
+        SelectedTarget is not null &&
+        !HasLink(SelectedSource.Port.ObjectId, SelectedTarget.Port.ObjectId);
 
     public string Status
     {
@@ -56,8 +64,11 @@ public sealed class MidiRouterViewModel : ViewModelBase, IDisposable
 
     public void Refresh()
     {
-        _ports.Clear();
-        Routes.Clear();
+        var selectedSourceId = SelectedSource?.Port.ObjectId;
+        var selectedTargetId = SelectedTarget?.Port.ObjectId;
+
+        Sources.Clear();
+        Targets.Clear();
         RouteLinks.Clear();
 
         var controlPorts = FrSonic.PortRegistry.Objects
@@ -65,21 +76,24 @@ public sealed class MidiRouterViewModel : ViewModelBase, IDisposable
             .OrderBy(DisplayName)
             .ToList();
 
-        foreach (var port in controlPorts)
-            _ports[port.ObjectId] = new(port, DisplayName(port));
+        foreach (var source in controlPorts
+                     .Where(port => port.Direction == "out")
+                     .Select(port => new MidiRouterPortOptionViewModel(
+                         port, DisplayName(port))))
+            Sources.Add(source);
 
-        Sources = new("Sources",
-            new([]),
-            new(_ports.Values
-                .Where(port => port.Port.Direction == "out")
-                .OfType<GraphPort>()
-                .ToList()));
-        Targets = new("Targets",
-            new(_ports.Values
-                .Where(port => port.Port.Direction == "in")
-                .OfType<GraphPort>()
-                .ToList()),
-            new([]));
+        foreach (var target in controlPorts
+                     .Where(port => port.Direction == "in")
+                     .Select(port => new MidiRouterPortOptionViewModel(
+                         port, DisplayName(port))))
+            Targets.Add(target);
+
+        SelectedSource = Sources.FirstOrDefault(source =>
+                             source.Port.ObjectId == selectedSourceId) ??
+                         Sources.FirstOrDefault();
+        SelectedTarget = Targets.FirstOrDefault(target =>
+                             target.Port.ObjectId == selectedTargetId) ??
+                         Targets.FirstOrDefault();
 
         foreach (var link in FrSonic.LinkRegistry.Objects
                      .Where(IsVisibleRoute)
@@ -88,46 +102,56 @@ public sealed class MidiRouterViewModel : ViewModelBase, IDisposable
             AddRoute(link);
 
         Status =
-            $"{Sources.OutPorts.Count} source ports, {Targets.InPorts.Count} target ports, {Routes.Count} routes.";
+            $"{Sources.Count} source ports, {Targets.Count} target ports, {RouteLinks.Count} routes.";
+        this.RaisePropertyChanged(nameof(CanConnect));
     }
 
-    private void CreateRoute((GraphPort Source, GraphPort Target) edge)
+    private void Connect()
     {
-        if (edge.Source is not MidiRouterPortViewModel source ||
-            edge.Target is not MidiRouterPortViewModel target)
+        if (SelectedSource is null || SelectedTarget is null)
             return;
 
-        if (source.Port.Direction != "out" || target.Port.Direction != "in")
+        var source = SelectedSource.Port;
+        var target = SelectedTarget.Port;
+        if (source.Direction != "out" || target.Direction != "in")
+            return;
+        if (HasLink(source.ObjectId, target.ObjectId))
             return;
 
-        var existing = FrSonic.LinkRegistry.Objects.Any(link =>
-            link.OutputPortId == source.Port.ObjectId &&
-            link.InputPortId == target.Port.ObjectId);
-        if (existing)
-            return;
-
-        FrSonic.LinkFactory.CreateLink(source.Port, target.Port);
+        FrSonic.LinkFactory.CreateLink(source, target);
     }
 
-    private void DeleteRoute(Link link)
+    private static void DeleteRoute(ulong sourcePortId, ulong targetPortId)
     {
-        FrSonic.LinkFactory.DeleteLink(link);
+        foreach (var link in FrSonic.LinkRegistry.Objects
+                     .Where(link => link.OutputPortId == sourcePortId &&
+                                    link.InputPortId == targetPortId)
+                     .ToList())
+            FrSonic.LinkFactory.DeleteLink(link);
     }
 
     private void AddRoute(Link link)
     {
-        if (!_ports.TryGetValue(link.OutputPortId, out var source) ||
-            !_ports.TryGetValue(link.InputPortId, out var target))
+        var source = PortById(link.OutputPortId);
+        var target = PortById(link.InputPortId);
+        if (source is null || target is null)
             return;
 
-        Routes.Add(new MidiRouterEdgeViewModel("MIDI", source, target, link));
-        RouteLinks.Add(new(link, DisplayName(source.Port),
-            DisplayName(target.Port), DeleteRoute));
+        RouteLinks.Add(new(link.OutputPortId, link.InputPortId,
+            DisplayName(source), DisplayName(target), DeleteRoute));
     }
 
-    private bool IsVisibleRoute(Link link) =>
-        _ports.ContainsKey(link.OutputPortId) &&
-        _ports.ContainsKey(link.InputPortId);
+    private static bool HasLink(ulong sourcePortId, ulong targetPortId) =>
+        FrSonic.LinkRegistry.Objects.Any(link =>
+            link.OutputPortId == sourcePortId &&
+            link.InputPortId == targetPortId);
+
+    private static bool IsVisibleRoute(Link link) =>
+        IsControlPortId(link.OutputPortId) &&
+        IsControlPortId(link.InputPortId);
+
+    private static bool IsControlPortId(ulong objectId) =>
+        PortById(objectId) is { } port && IsControlPort(port);
 
     private static bool IsControlPort(Port port)
     {

@@ -667,6 +667,10 @@ WpLink *Core::create_link_by_port_id(uint64_t output_port_id,
 
 void Core::delete_link_object_id(const uint64_t object_id) const {
   const auto link = get_object_by_object_id(object_id);
+  if (link == nullptr) {
+    std::cerr << "Could not find link object " << object_id << std::endl;
+    return;
+  }
   delete_link(WP_LINK(link));
 }
 
@@ -681,7 +685,7 @@ void Core::delete_link(WpLink *link) const {
       wireplumber_context(),
       [](gpointer data) -> gboolean {
         const auto user_data = static_cast<delete_link_data *>(data);
-        g_object_unref(user_data->link);
+        wp_global_proxy_request_destroy(WP_GLOBAL_PROXY(user_data->link));
         delete user_data;
         return static_cast<gboolean>(false);
       },
