@@ -232,7 +232,7 @@ void frsonic_start() {
 
 void frsonic_stop() {
     if (g_owned_pipewire) {
-        invoke_owned_pipewire([] {
+        auto callback = [] {
             for (auto &looper : g_loopers) {
                 if (looper)
                     looper->stop();
@@ -244,7 +244,8 @@ void frsonic_stop() {
             if (g_sync_master) { g_sync_master->stop(); g_sync_master = nullptr; }
             if (g_monitor) { g_monitor->stop(); g_monitor = nullptr; }
             if (g_midi)    { g_midi->stop();    g_midi    = nullptr; }
-        });
+        };
+        invoke_owned_pipewire_sync(callback);
         g_owned_pipewire->stop();
         g_owned_pipewire = nullptr;
     }

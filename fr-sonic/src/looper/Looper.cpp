@@ -7,8 +7,11 @@
 #include <array>
 #include <charconv>
 #include <chrono>
+#include <cmath>
+#include <cstdlib>
 #include <cstring>
 #include <ctime>
+#include <filesystem>
 #include <format>
 #include <iomanip>
 #include <limits>
@@ -20,6 +23,8 @@
 #include <thread>
 #include <utility>
 
+#include <FLAC/metadata.h>
+#include <FLAC/stream_encoder.h>
 #include <pipewire/keys.h>
 #include <pipewire/properties.h>
 #include <pipewire/stream.h>
@@ -43,6 +48,7 @@ const pw_stream_events playback_stream_events = {
 };
 
 constexpr uint32_t PassthroughMaxFrames = 16384;
+constexpr uint32_t ArchiveBitsPerSample = 24;
 
 uint64_t monotonic_nsec() {
   timespec now{};
@@ -152,6 +158,42 @@ uint32_t command_priority(const looper::CommandEvent &event) {
   return 4;
 }
 
+std::string sanitize_path_part(std::string_view value) {
+  std::string result;
+  result.reserve(value.size());
+  for (const auto character : value) {
+    if ((character >= 'a' && character <= 'z') ||
+        (character >= 'A' && character <= 'Z') ||
+        (character >= '0' && character <= '9') || character == '-' ||
+        character == '_') {
+      result.push_back(character);
+    } else {
+      result.push_back('_');
+    }
+  }
+  return result.empty() ? "looper" : result;
+}
+
+int32_t float_to_flac_sample(const float value) {
+  const auto clamped = std::clamp(value, -1.0f, 1.0f);
+  constexpr auto scale =
+      static_cast<float>((int64_t{1} << (ArchiveBitsPerSample - 1)) - 1);
+  return static_cast<int32_t>(std::lrint(clamped * scale));
+}
+
+bool add_vorbis_comment(FLAC__StreamMetadata *metadata, const char *name,
+                        const std::string &value) {
+  FLAC__StreamMetadata_VorbisComment_Entry entry{};
+  if (!FLAC__metadata_object_vorbiscomment_entry_from_name_value_pair(
+          &entry, name, value.c_str()))
+    return false;
+  if (FLAC__metadata_object_vorbiscomment_append_comment(metadata, entry,
+                                                        /*copy=*/false))
+    return true;
+  std::free(entry.entry);
+  return false;
+}
+
 } // namespace
 
 looper::Looper::Looper(pw_loop *loop, LooperConfig config,
@@ -245,11 +287,17 @@ void looper::Looper::copy_thread_main() {
 
     LoopCopyJob job{};
     if (!_copy_jobs.pop(job)) {
+      LoopArchiveJob archive_job{};
+      if (_archive_jobs.pop(archive_job)) {
+        process_archive_job(archive_job);
+        continue;
+      }
+
       std::unique_lock lock{_copy_wakeup_mutex};
       _copy_wakeup.wait_for(lock, std::chrono::milliseconds(20), [this] {
         return !_copy_thread_running.load(std::memory_order_acquire) ||
-               !_copy_jobs.empty() || !_state_updates.empty() ||
-               !_retired_sample_buffers.empty();
+               !_copy_jobs.empty() || !_archive_jobs.empty() ||
+               !_state_updates.empty() || !_retired_sample_buffers.empty();
       });
       continue;
     }
@@ -280,6 +328,10 @@ void looper::Looper::copy_thread_main() {
           "Looper '{}' copy result queue full; dropped loop={} generation={}",
           _config.name, job.loop_number, job.generation);
     }
+
+    LoopArchiveJob archive_job{};
+    while (_archive_jobs.pop(archive_job))
+      process_archive_job(archive_job);
   }
 
   drain_retired_sample_buffers();
@@ -287,6 +339,130 @@ void looper::Looper::copy_thread_main() {
 
   logging::log<logging::LogLevel::Info>(
       "Looper '{}' background copy thread stopped", _config.name);
+}
+
+void looper::Looper::process_archive_job(const LoopArchiveJob &job) {
+  const auto started = monotonic_nsec();
+  LoopArchiveResult result{
+      .loop_number = job.loop_number,
+      .generation = job.generation,
+      .length_frames = job.length_frames,
+      .channels = job.channels,
+  };
+
+  if (!_config.archive_folder_path) {
+    result.error = "archive folder path is not configured";
+    _archive_results.push(std::move(result));
+    return;
+  }
+
+  std::vector<float> samples;
+  samples.resize(job.length_frames * job.channels);
+  if (job.samples) {
+    if (job.samples->size() < samples.size()) {
+      result.error = "owned sample buffer is shorter than loop metadata";
+      _archive_results.push(std::move(result));
+      return;
+    }
+    std::copy_n(job.samples->data(), samples.size(), samples.data());
+  } else {
+    for (uint64_t frame = 0; frame < job.length_frames; ++frame) {
+      const auto source_frame =
+          (job.ring_start_frame + frame) % _record_capacity_frames;
+      const auto source_offset = source_frame * job.channels;
+      const auto dest_offset = frame * job.channels;
+      std::copy_n(_record_buffer.data() + source_offset, job.channels,
+                  samples.data() + dest_offset);
+    }
+  }
+
+  const auto path = archive_file_path(job);
+  result.path = path;
+  try {
+    std::filesystem::create_directories(std::filesystem::path{path}.parent_path());
+  } catch (const std::exception &exception) {
+    result.error = std::format("failed to create archive directory: {}",
+                               exception.what());
+    _archive_results.push(std::move(result));
+    return;
+  }
+
+  FLAC__StreamEncoder *encoder = FLAC__stream_encoder_new();
+  if (encoder == nullptr) {
+    result.error = "failed to allocate FLAC encoder";
+    _archive_results.push(std::move(result));
+    return;
+  }
+
+  FLAC__stream_encoder_set_channels(encoder, job.channels);
+  FLAC__stream_encoder_set_sample_rate(encoder, job.sample_rate);
+  FLAC__stream_encoder_set_bits_per_sample(encoder, ArchiveBitsPerSample);
+  FLAC__stream_encoder_set_compression_level(encoder, 5);
+  FLAC__stream_encoder_set_total_samples_estimate(encoder, job.length_frames);
+
+  auto *metadata = FLAC__metadata_object_new(FLAC__METADATA_TYPE_VORBIS_COMMENT);
+  if (metadata != nullptr) {
+    add_vorbis_comment(metadata, "SE_LOOPER_NAME", _config.name);
+    add_vorbis_comment(metadata, "SE_LOOP_NUMBER",
+                       std::format("{}", job.loop_number));
+    add_vorbis_comment(metadata, "SE_LOOP_GENERATION",
+                       std::format("{}", job.generation));
+    add_vorbis_comment(metadata, "SE_LENGTH_FRAMES",
+                       std::format("{}", job.length_frames));
+    add_vorbis_comment(metadata, "SE_SAMPLE_RATE",
+                       std::format("{}", job.sample_rate));
+    add_vorbis_comment(metadata, "SE_CHANNELS", std::format("{}", job.channels));
+    if (job.start_beat)
+      add_vorbis_comment(metadata, "SE_START_BEAT",
+                         std::format("{}", *job.start_beat));
+    if (job.end_beat)
+      add_vorbis_comment(metadata, "SE_END_BEAT",
+                         std::format("{}", *job.end_beat));
+    if (job.length_beats)
+      add_vorbis_comment(metadata, "SE_LENGTH_BEATS",
+                         std::format("{}", *job.length_beats));
+    if (job.bpm)
+      add_vorbis_comment(metadata, "SE_BPM", std::format("{:.12g}", *job.bpm));
+    FLAC__StreamMetadata *metadata_blocks[] = {metadata};
+    FLAC__stream_encoder_set_metadata(encoder, metadata_blocks, 1);
+  }
+
+  const auto init_status =
+      FLAC__stream_encoder_init_file(encoder, path.c_str(), nullptr, nullptr);
+  if (init_status != FLAC__STREAM_ENCODER_INIT_STATUS_OK) {
+    result.error = std::format(
+        "failed to initialize FLAC encoder: {}",
+        FLAC__StreamEncoderInitStatusString[init_status]);
+    if (metadata != nullptr)
+      FLAC__metadata_object_delete(metadata);
+    FLAC__stream_encoder_delete(encoder);
+    _archive_results.push(std::move(result));
+    return;
+  }
+
+  std::vector<FLAC__int32> pcm;
+  pcm.resize(samples.size());
+  std::ranges::transform(samples, pcm.begin(), float_to_flac_sample);
+  const auto write_ok = FLAC__stream_encoder_process_interleaved(
+      encoder, pcm.data(), static_cast<uint32_t>(job.length_frames));
+  const auto finish_ok = FLAC__stream_encoder_finish(encoder);
+  if (metadata != nullptr)
+    FLAC__metadata_object_delete(metadata);
+  FLAC__stream_encoder_delete(encoder);
+
+  if (!write_ok || !finish_ok) {
+    result.error = "failed to write FLAC samples";
+    _archive_results.push(std::move(result));
+    return;
+  }
+
+  result.success = true;
+  result.elapsed_usec = (monotonic_nsec() - started) / 1000;
+  if (!_archive_results.push(std::move(result))) {
+    logging::log<logging::LogLevel::Error>(
+        "Looper '{}' archive result queue full; dropped loop={} generation={}",
+        _config.name, job.loop_number, job.generation);
+  }
 }
 
 void looper::Looper::drain_retired_sample_buffers() {
@@ -418,6 +594,7 @@ bool looper::Looper::setup_playback_stream() {
 
 void looper::Looper::process() {
   drain_copy_results();
+  drain_archive_results();
   drain_command_events();
   _last_capture_frames = 0;
 
@@ -438,6 +615,24 @@ void looper::Looper::process() {
 
   write_passthrough_output(playback_buffer);
   pw_stream_queue_buffer(_playback_stream, playback_buffer);
+}
+
+void looper::Looper::drain_archive_results() {
+  LoopArchiveResult result{};
+  while (_archive_results.pop(result)) {
+    if (result.success) {
+      logging::log<logging::LogLevel::Info>(
+          "Looper '{}' archived loop={} generation={} frames={} channels={} "
+          "path='{}' in {}us",
+          _config.name, result.loop_number, result.generation,
+          result.length_frames, result.channels, result.path,
+          result.elapsed_usec);
+    } else {
+      logging::log<logging::LogLevel::Error>(
+          "Looper '{}' failed to archive loop={} generation={}: {}",
+          _config.name, result.loop_number, result.generation, result.error);
+    }
+  }
 }
 
 void looper::Looper::drain_copy_results() {
@@ -537,8 +732,7 @@ void looper::Looper::apply_command_event(const CommandEvent &event) {
     stop_loops();
     break;
   case CommandKind::Archive:
-    logging::log<logging::LogLevel::Warning>(
-        "Looper '{}' archive command is not implemented yet", _config.name);
+    archive_loop(event.loop_number);
     break;
   }
 }
@@ -686,6 +880,87 @@ void looper::Looper::enqueue_copy_job(const LoopSlot &slot,
       _config.name, loop_number, slot.generation);
 }
 
+void looper::Looper::archive_loop(const uint32_t loop_number) {
+  if (!_config.archive_folder_path) {
+    logging::log<logging::LogLevel::Error>(
+        "Looper '{}' rejected archive for loop {} without archive folder path",
+        _config.name, loop_number);
+    return;
+  }
+  if (loop_number >= _loop_slots.size()) {
+    logging::log<logging::LogLevel::Error>(
+        "Looper '{}' rejected archive for invalid loop {}", _config.name,
+        loop_number);
+    return;
+  }
+
+  auto &slot = _loop_slots[loop_number];
+  if (!slot.ready || slot.length_frames == 0) {
+    logging::log<logging::LogLevel::Error>(
+        "Looper '{}' rejected archive for empty loop {}", _config.name,
+        loop_number);
+    return;
+  }
+  if (slot.playing) {
+    logging::log<logging::LogLevel::Error>(
+        "Looper '{}' rejected archive for playing loop {}", _config.name,
+        loop_number);
+    return;
+  }
+  if (slot.owned && (!slot.samples || slot.samples->empty())) {
+    logging::log<logging::LogLevel::Error>(
+        "Looper '{}' rejected archive for incomplete owned loop {}",
+        _config.name, loop_number);
+    return;
+  }
+
+  LoopArchiveJob job{
+      .loop_number = loop_number,
+      .generation = slot.generation,
+      .ring_start_frame = slot.ring_start_frame,
+      .length_frames = slot.length_frames,
+      .sample_rate = slot.sample_rate,
+      .channels = slot.channels,
+      .start_beat = slot.start_beat,
+      .end_beat = slot.end_beat,
+      .length_beats = slot.length_beats,
+      .bpm = slot.bpm,
+      .samples = slot.samples,
+  };
+
+  if (!_archive_jobs.push(job)) {
+    logging::log<logging::LogLevel::Error>(
+        "Looper '{}' archive job queue full; rejected archive loop={} "
+        "generation={}",
+        _config.name, loop_number, slot.generation);
+    return;
+  }
+
+  retire_samples(std::move(slot.samples));
+  slot.samples.reset();
+  slot.length_frames = 0;
+  slot.playhead_frame = 0;
+  slot.ring_start_frame = 0;
+  slot.sample_rate = 0;
+  slot.channels = 0;
+  slot.ready = false;
+  slot.playing = false;
+  slot.owned = false;
+  slot.start_beat.reset();
+  slot.end_beat.reset();
+  slot.length_beats.reset();
+  slot.play_started_beat.reset();
+  slot.bpm.reset();
+  ++slot.generation;
+  _copy_wakeup.notify_one();
+  enqueue_state_update();
+
+  logging::log<logging::LogLevel::Info>(
+      "Looper '{}' queued archive loop={} generation={} frames={} channels={}",
+      _config.name, loop_number, job.generation, job.length_frames,
+      job.channels);
+}
+
 void looper::Looper::retire_samples(
     std::shared_ptr<std::vector<float>> samples) {
   if (!samples)
@@ -744,8 +1019,10 @@ void looper::Looper::stop_loops() {
     }
   for (auto &slot : _loop_slots)
     slot.playing = false;
-  if (stopped_any)
-    enqueue_state_update();
+  if (!stopped_any)
+    return;
+
+  enqueue_state_update();
   logging::log<logging::LogLevel::Info>("Looper '{}' stopped loops",
                                         _config.name);
 }
@@ -1089,8 +1366,13 @@ void looper::Looper::handle_param_value(const char *key,
 }
 
 void looper::Looper::enqueue_command(const CommandEvent &event) {
-  if (_command_events.push(event))
+  if (_command_events.push(event)) {
+    logging::log<logging::LogLevel::Info>(
+        "Looper '{}' queued command event kind={} beat={} loop={}",
+        _config.name, static_cast<uint32_t>(event.kind),
+        event.scheduled_beat, event.loop_number);
     return;
+  }
 
   ++_dropped_command_count;
   logging::log<logging::LogLevel::Error>(
@@ -1423,6 +1705,17 @@ looper::Looper::format_state_json(const LooperStateUpdate &update) const {
 
   json << R"(,"pending_jobs":[],"last_command_failure":null})";
   return json.str();
+}
+
+std::string looper::Looper::archive_file_path(
+    const LoopArchiveJob &job) const {
+  const auto folder =
+      _config.archive_folder_path ? *_config.archive_folder_path : ".";
+  const auto filename =
+      std::format("{}-loop-{}-generation-{}.flac",
+                  sanitize_path_part(_config.name), job.loop_number,
+                  job.generation);
+  return (std::filesystem::path{folder} / filename).string();
 }
 
 const spa_pod *looper::Looper::build_audio_format(spa_pod_builder &builder,

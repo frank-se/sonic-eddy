@@ -155,6 +155,11 @@ archive root is provided by the looper creation config as
 `archive_folder_path`. If no archive folder path is configured, archive commands
 are rejected until the client creates a looper with an explicit archive folder.
 
+The looper accepts `archive <loop_number>` only when the target loop slot is
+populated and not currently playing. Once the archive job is queued, the loop
+slot is cleared and cannot be played again from memory. The background worker
+copies the loop data into archive-owned memory and writes it to disk as FLAC.
+
 The archive file must contain the loop audio and enough metadata to restore or
 inspect the loop later: loop number, generation, start beat, end beat, length in
 samples, sample rate, channel count, and BPM at cut time. The exact file format

@@ -77,6 +77,31 @@ struct LoopCopyResult {
   std::shared_ptr<std::vector<float>> samples;
 };
 
+struct LoopArchiveJob {
+  uint32_t loop_number = 0;
+  uint64_t generation = 0;
+  uint64_t ring_start_frame = 0;
+  uint64_t length_frames = 0;
+  uint32_t sample_rate = 0;
+  uint32_t channels = 0;
+  std::optional<uint64_t> start_beat;
+  std::optional<uint64_t> end_beat;
+  std::optional<uint64_t> length_beats;
+  std::optional<double> bpm;
+  std::shared_ptr<std::vector<float>> samples;
+};
+
+struct LoopArchiveResult {
+  uint32_t loop_number = 0;
+  uint64_t generation = 0;
+  uint64_t length_frames = 0;
+  uint32_t channels = 0;
+  uint64_t elapsed_usec = 0;
+  bool success = false;
+  std::string path;
+  std::string error;
+};
+
 struct LoopStateEntry {
   uint32_t loop_number = 0;
   uint64_t generation = 0;
@@ -160,6 +185,10 @@ private:
       _copy_jobs;
   boost::lockfree::spsc_queue<LoopCopyResult, boost::lockfree::capacity<32>>
       _copy_results;
+  boost::lockfree::spsc_queue<LoopArchiveJob, boost::lockfree::capacity<32>>
+      _archive_jobs;
+  boost::lockfree::spsc_queue<LoopArchiveResult, boost::lockfree::capacity<32>>
+      _archive_results;
   boost::lockfree::spsc_queue<std::shared_ptr<std::vector<float>>,
                               boost::lockfree::capacity<32>>
       _retired_sample_buffers;
@@ -196,6 +225,7 @@ private:
   void start_copy_thread();
   void stop_copy_thread();
   void copy_thread_main();
+  void process_archive_job(const LoopArchiveJob &job);
   void drain_retired_sample_buffers();
   void drain_state_updates();
   void publish_state_update(std::string state_json);
@@ -206,6 +236,7 @@ private:
   void write_passthrough_output(pw_buffer *playback_buffer);
   void drain_command_events();
   void drain_copy_results();
+  void drain_archive_results();
   void queue_pending_command(const CommandEvent &event);
   void process_due_commands(uint32_t frame_offset, uint64_t buffer_start_nsec,
                             uint32_t rate);
@@ -214,6 +245,7 @@ private:
   void cut_range(uint64_t start_beat, uint64_t end_beat,
                  uint32_t loop_number);
   void enqueue_copy_job(const LoopSlot &slot, uint32_t loop_number);
+  void archive_loop(uint32_t loop_number);
   void retire_samples(std::shared_ptr<std::vector<float>> samples);
   void play_loop(uint32_t loop_number);
   void stop_loops();
@@ -248,6 +280,7 @@ private:
   [[nodiscard]] LooperStateUpdate capture_state_update() const;
   [[nodiscard]] std::string
   format_state_json(const LooperStateUpdate &update) const;
+  [[nodiscard]] std::string archive_file_path(const LoopArchiveJob &job) const;
 
   static const spa_pod *build_audio_format(spa_pod_builder &builder,
                                            spa_audio_format format,
