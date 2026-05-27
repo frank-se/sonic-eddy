@@ -20,6 +20,7 @@ public class GraphEditorViewport : UserControl, IDisposable
     public GraphEditorViewport()
     {
         _canvas = new GraphEditorCanvas();
+        _canvas.CanvasUpdated += OnCanvasUpdated;
 
         _scrollViewer = new ScrollViewer
         {
@@ -109,6 +110,16 @@ public class GraphEditorViewport : UserControl, IDisposable
             _canvas.DeleteEdgeCommand = change.NewValue as ICommand;
     }
 
+    /* ── canvas shift compensation ───────────────────────────────────────── */
+
+    private void OnCanvasUpdated(object? sender, GraphEditorCanvas.CanvasUpdatedEventArgs e)
+    {
+        if (e.ShiftX == 0 && e.ShiftY == 0) return;
+        _scrollViewer.Offset = new Vector(
+            _scrollViewer.Offset.X + e.ShiftX,
+            _scrollViewer.Offset.Y + e.ShiftY);
+    }
+
     /* ── middle-button pan ────────────────────────────────────────────────── */
 
     private void OnPointerPressed(object? sender, PointerPressedEventArgs e)
@@ -149,6 +160,7 @@ public class GraphEditorViewport : UserControl, IDisposable
         _scrollViewer.PointerPressed -= OnPointerPressed;
         _scrollViewer.PointerMoved -= OnPointerMoved;
         _scrollViewer.PointerReleased -= OnPointerReleased;
+        _canvas.CanvasUpdated -= OnCanvasUpdated;
         _canvas.Dispose();
         GC.SuppressFinalize(this);
     }

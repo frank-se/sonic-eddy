@@ -200,28 +200,63 @@ public class GraphEditorCanvas : Canvas, IDisposable
 
     /* ── canvas sizing ────────────────────────────────────────────────────── */
 
-    public event EventHandler? CanvasSizeChanged;
+    public sealed class CanvasUpdatedEventArgs(double shiftX, double shiftY) : EventArgs
+    {
+        public double ShiftX { get; } = shiftX;
+        public double ShiftY { get; } = shiftY;
+    }
+
+    public event EventHandler<CanvasUpdatedEventArgs>? CanvasUpdated;
 
     public void UpdateCanvasSize()
     {
+        const double minPadding = 40.0;
+
+        double minX = double.MaxValue;
+        double minY = double.MaxValue;
         double maxX = InitialWidth - CanvasPadding;
         double maxY = InitialHeight - CanvasPadding;
 
         foreach (var child in Children)
         {
-            if (child is not Control c) continue;
+            if (child is Line || child is not Control c) continue;
             var x = GetLeft(c);
             var y = GetTop(c);
             if (double.IsNaN(x) || double.IsNaN(y)) continue;
             var w = c.Bounds.Width > 0 ? c.Bounds.Width : 200;
             var h = c.Bounds.Height > 0 ? c.Bounds.Height : 100;
+            minX = Math.Min(minX, x);
+            minY = Math.Min(minY, y);
             maxX = Math.Max(maxX, x + w);
             maxY = Math.Max(maxY, y + h);
         }
 
+        var shiftX = minX < minPadding && minX != double.MaxValue ? minPadding - minX : 0.0;
+        var shiftY = minY < minPadding && minY != double.MaxValue ? minPadding - minY : 0.0;
+
+        if (shiftX > 0 || shiftY > 0)
+        {
+            foreach (var child in Children)
+            {
+                if (child is Line line)
+                {
+                    line.StartPoint = new Point(line.StartPoint.X + shiftX, line.StartPoint.Y + shiftY);
+                    line.EndPoint = new Point(line.EndPoint.X + shiftX, line.EndPoint.Y + shiftY);
+                    continue;
+                }
+                if (child is not Control c) continue;
+                var x = GetLeft(c);
+                var y = GetTop(c);
+                if (!double.IsNaN(x)) SetLeft(c, x + shiftX);
+                if (!double.IsNaN(y)) SetTop(c, y + shiftY);
+            }
+            maxX += shiftX;
+            maxY += shiftY;
+        }
+
         Width = maxX + CanvasPadding;
         Height = maxY + CanvasPadding;
-        CanvasSizeChanged?.Invoke(this, EventArgs.Empty);
+        CanvasUpdated?.Invoke(this, new CanvasUpdatedEventArgs(shiftX, shiftY));
     }
 
     /* ── node positioning ─────────────────────────────────────────────────── */
