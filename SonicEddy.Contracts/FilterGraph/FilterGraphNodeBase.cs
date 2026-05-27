@@ -6,6 +6,7 @@ namespace SonicEddy.Contracts.FilterGraph;
 [ProtoInclude(100, typeof(FilterGraphInput))]
 [ProtoInclude(101, typeof(FilterGraphLv2Plugin))]
 [ProtoInclude(102, typeof(FilterGraphOutput))]
+[ProtoInclude(103, typeof(FilterGraphBuiltinNode))]
 public abstract record FilterGraphNodeBase(
     [property: ProtoMember(1)] Guid Id,
     [property: ProtoMember(2)] string Name)

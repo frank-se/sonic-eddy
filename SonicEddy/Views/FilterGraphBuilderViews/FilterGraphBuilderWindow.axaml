@@ -4,6 +4,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:graphEditorControl="clr-namespace:SonicEddy.Controls.GraphEditorControl"
         xmlns:filterGraphBuilderViewModels="clr-namespace:SonicEddy.ViewModels.FilterGraphBuilderViewModels"
+        xmlns:toolbox="clr-namespace:SonicEddy.ViewModels.FilterGraphBuilderViewModels.Toolbox"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="SonicEddy.Views.FilterGraphBuilderViews.FilterGraphBuilderWindow"
         x:DataType="filterGraphBuilderViewModels:FilterGraphBuilderViewModel"
@@ -24,29 +25,72 @@
                    PanePlacement="Right">
             <SplitView.Pane>
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <ItemsControl ItemsSource="{Binding AvailablePluginsByClass}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Expander VerticalAlignment="Top"
-                                          Header="{Binding Name}"
-                                          HorizontalAlignment="Stretch">
-                                    <StackPanel>
-                                        <ItemsControl ItemsSource="{Binding Plugins}">
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Button Content="{Binding Description.Name}"
-                                                            HorizontalAlignment="Stretch"
-                                                            Margin="4"
-                                                            Command="{Binding #MainControl.((filterGraphBuilderViewModels:FilterGraphBuilderViewModel)DataContext).AddPlugin}"
-                                                            CommandParameter="{Binding}" />
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </StackPanel>
-                                </Expander>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                    <StackPanel>
+
+                        <!-- Built-in filter nodes -->
+                        <Expander Header="Built-in"
+                                  HorizontalAlignment="Stretch"
+                                  IsExpanded="True">
+                            <ItemsControl ItemsSource="{Binding AvailableBuiltins}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="toolbox:BuiltinNodeGroupViewModel">
+                                        <Expander Header="{Binding Name}"
+                                                  HorizontalAlignment="Stretch">
+                                            <ItemsControl ItemsSource="{Binding Nodes}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="toolbox:AvailableBuiltinNode">
+                                                        <Grid ColumnDefinitions="*, Auto">
+                                                            <Button Grid.Column="0"
+                                                                    Content="{Binding DisplayName}"
+                                                                    HorizontalAlignment="Stretch"
+                                                                    Margin="4,2"
+                                                                    Command="{Binding #MainControl.((filterGraphBuilderViewModels:FilterGraphBuilderViewModel)DataContext).AddBuiltinNode}"
+                                                                    CommandParameter="{Binding}" />
+                                                            <NumericUpDown Grid.Column="1"
+                                                                           IsVisible="{Binding HasVariableChannelCount}"
+                                                                           Value="{Binding ChannelCount}"
+                                                                           Minimum="1" Maximum="8"
+                                                                           Increment="1"
+                                                                           FormatString="0"
+                                                                           Width="64"
+                                                                           Margin="0,2,4,2" />
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </Expander>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Expander>
+
+                        <!-- LV2 plugins -->
+                        <Expander Header="LV2 Plugins"
+                                  HorizontalAlignment="Stretch">
+                            <ItemsControl ItemsSource="{Binding AvailablePluginsByClass}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Expander VerticalAlignment="Top"
+                                                  Header="{Binding Name}"
+                                                  HorizontalAlignment="Stretch">
+                                            <ItemsControl ItemsSource="{Binding Plugins}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Button Content="{Binding Description.Name}"
+                                                                HorizontalAlignment="Stretch"
+                                                                Margin="4,2"
+                                                                Command="{Binding #MainControl.((filterGraphBuilderViewModels:FilterGraphBuilderViewModel)DataContext).AddPlugin}"
+                                                                CommandParameter="{Binding}" />
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </Expander>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Expander>
+
+                    </StackPanel>
                 </ScrollViewer>
             </SplitView.Pane>
 

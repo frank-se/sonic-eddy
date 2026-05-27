@@ -6,10 +6,12 @@ using System.Threading.Tasks;
 using DynamicData;
 using Fr.Sonic.Model.Lv2;
 using ReactiveUI;
+using SonicEddy.Contracts.FilterGraph;
 using SonicEddy.Controls.GraphEditorControl;
 using SonicEddy.Services.AppData;
 using SonicEddy.Tools;
 using SonicEddy.ViewModels.FilterGraphBuilderViewModels.Graph;
+using SonicEddy.ViewModels.FilterGraphBuilderViewModels.Graph.Builtin;
 using SonicEddy.ViewModels.FilterGraphBuilderViewModels.Graph.Graph;
 using SonicEddy.ViewModels.FilterGraphBuilderViewModels.Graph.Lv2;
 using SonicEddy.ViewModels.FilterGraphBuilderViewModels.Toolbox;
@@ -64,12 +66,21 @@ public class FilterGraphBuilderViewModel : ViewModelBase
 
     public ObservableCollection<GraphNode> Nodes { get; } = [];
 
-    public ObservableCollection<Lv2PluginClass>
-        AvailablePluginsByClass { get; } = [];
+    public ObservableCollection<Lv2PluginClass> AvailablePluginsByClass { get; } = [];
+
+    public ObservableCollection<BuiltinNodeGroupViewModel> AvailableBuiltins { get; } =
+        new(BuiltinNodeCatalog.Groups
+            .Select(g => new BuiltinNodeGroupViewModel(g.Name, g.Types)));
 
     public void AddPlugin(AvailableLv2Plugin plugin)
     {
         Nodes.Add(new Lv2PluginNodeViewModel(plugin.Description));
+    }
+
+    public void AddBuiltinNode(AvailableBuiltinNode available)
+    {
+        Nodes.Add(new BuiltinNodeViewModel(available.NodeType,
+            (int)available.ChannelCount));
     }
 
     private async Task BuildPluginClasses(
