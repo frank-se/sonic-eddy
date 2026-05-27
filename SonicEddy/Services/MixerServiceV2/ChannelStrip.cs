@@ -10,10 +10,14 @@ public record ChannelStrip(
     string Name,
     ulong ChannelId,
     LoopbackModule InputLoopback,
+    Looper PreFxLooper,
     FilterChain? FilterChain,
     FilterGraph? FilterGraph,
-    LoopbackModule OutputLoopback,
+    Looper PostFxLooper,
     List<LoopbackModule> SendLoopbacks,
     Node? InputTargetObject,
     Node? OutputTargetObject,
-    IntPtr SilenceProducerHandle);
+    IntPtr SilenceProducerHandle)
+{
+    public Looper OutputLoopback => PostFxLooper;
+}

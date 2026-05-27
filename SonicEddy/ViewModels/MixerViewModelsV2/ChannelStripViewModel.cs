@@ -21,7 +21,7 @@ public class ChannelStripViewModel : ChannelWithSendsViewModelBase,
 {
     public ChannelStripViewModel(ulong channelId, string text,
         ICommand selectChannelCommand, LoopbackModule inputLoopback,
-        LoopbackModule outputLoopback, List<LoopbackModule> sendLoopbacks,
+        TwoNodePipewireModule outputLoopback, List<LoopbackModule> sendLoopbacks,
         FilterChain? filterChain,
         FilterGraph? filterGraph,
         ObservableCollection<IRoutingTarget> audioFromRoutingTargets,
@@ -42,6 +42,7 @@ public class ChannelStripViewModel : ChannelWithSendsViewModelBase,
         AudioFromRoutingTargets = audioFromRoutingTargets;
         SelectedAudioToRoutingTarget = selectedAudioToRoutingTarget;
         ChannelStrip = channelStrip;
+        Looper = new(channelStrip.PreFxLooper, channelStrip.PostFxLooper);
 
         this.WhenAnyValue(x => x.SelectedAudioFromRoutingTarget)
             .Subscribe(routingTarget =>
@@ -55,6 +56,7 @@ public class ChannelStripViewModel : ChannelWithSendsViewModelBase,
     }
 
     public ChannelStrip ChannelStrip { get; }
+    public LooperSectionViewModel Looper { get; }
 
     public ObservableCollection<IRoutingTarget>
         AudioFromRoutingTargets { get; }
@@ -68,5 +70,11 @@ public class ChannelStripViewModel : ChannelWithSendsViewModelBase,
     {
         get;
         set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        Looper.Dispose();
+        base.Dispose(disposing);
     }
 }

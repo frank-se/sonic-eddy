@@ -17,7 +17,7 @@ public class MasterChannelViewModel(
     string text,
     ICommand selectChannelCommand,
     LoopbackModule inputLoopback,
-    LoopbackModule outputLoopback,
+    TwoNodePipewireModule outputLoopback,
     FilterChain? filterChain,
     FilterGraph? filterGraph,
     ObservableCollection<IRoutingTarget> audioToRoutingTargets,
@@ -37,4 +37,12 @@ public class MasterChannelViewModel(
         IMasterChannel
 {
     public MasterChannel MasterChannel { get; } = masterChannel;
+    public LooperSectionViewModel Looper { get; } =
+        new(masterChannel.PreFxLooper, masterChannel.PostFxLooper);
+
+    protected override void Dispose(bool disposing)
+    {
+        Looper.Dispose();
+        base.Dispose(disposing);
+    }
 }

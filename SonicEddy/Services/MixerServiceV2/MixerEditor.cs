@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Fr.Sonic.PInvoke;
 using Fr.Sonic.Model.Config;
 using Fr.Sonic.Model.Config.FilterChain;
+using Fr.Sonic.Model.Config.Looper;
 using Fr.Sonic.Model.Objects;
 using Fr.Sonic.Modules.Models;
 using SonicEddy.Contracts.FilterGraph;
@@ -36,7 +38,7 @@ public class MixerEditor(IWireplumberService wireplumberService)
                 AutoConnect = true,
                 DontFallback = true,
                 Passive = false,
-                TargetObject = channel.InputLoopback.PlaybackNode.ObjectSerial
+                TargetObject = channel.PreFxLooper.PlaybackNode.ObjectSerial
                     .ToString(),
                 MediaClass = "Stream/Input/Audio",
                 AudioPosition = ["FL", "FR"]
@@ -62,6 +64,9 @@ public class MixerEditor(IWireplumberService wireplumberService)
             await Fr.Sonic.FrSonic.ModuleFactory
                 .CreateFilterChainAsync(
                     $"mixer-fc-{channelId}", filterChainConfig);
+
+        channel.PreFxLooper.PlaybackNode.OverrideTargetObject(
+            filterChain.CaptureNode.ObjectSerial.ToString());
 
         channel.OutputLoopback.CaptureNode.OverrideTargetObject(
             filterChain.PlaybackNode.ObjectSerial.ToString());
@@ -197,24 +202,33 @@ public class MixerEditor(IWireplumberService wireplumberService)
                         $"master-input-loopback-playback-{layerId}"),
             });
 
-        var outputLoopback = await wireplumberService.CreateLoopbackModule(
-            $"output-loopback-master", new()
-            {
-                CaptureProps = CaptureBasePropsWithTargetObject(true,
-                    inputLoopback.PlaybackNode.ObjectSerial.ToString(),
-                    $"master-output-loopback-capture-{layerId}"),
-                PlaybackProps = PlaybackBasePropsWithTargetObject(true,
-                    defaultOutput.CaptureNode.ObjectSerial.ToString(),
-                    $"master-output-loopback-playback-{layerId}"),
-            });
+        var preFxLooper = await CreateLooper(
+            layerId,
+            0,
+            "master",
+            "pre",
+            inputLoopback.PlaybackNode.ObjectSerial.ToString(),
+            null);
+
+        var postFxLooper = await CreateLooper(
+            layerId,
+            0,
+            "master",
+            "post",
+            preFxLooper.PlaybackNode.ObjectSerial.ToString(),
+            defaultOutput.CaptureNode.ObjectSerial.ToString());
+
+        preFxLooper.PlaybackNode.OverrideTargetObject(
+            postFxLooper.CaptureNode.ObjectSerial.ToString());
 
         return new(
             "Master",
             0,
             inputLoopback,
+            preFxLooper,
             null,
             null,
-            outputLoopback,
+            postFxLooper,
             defaultOutput.CaptureNode);
     }
 
@@ -242,20 +256,27 @@ public class MixerEditor(IWireplumberService wireplumberService)
                     $"group-{index}-input-loopback-playback-{layerId}"),
             });
 
-        var outputLoopback = await wireplumberService.CreateLoopbackModule(
-            $"output-loopback-master", new()
-            {
-                CaptureProps = CaptureBasePropsWithTargetObject(true,
-                    inputLoopback.PlaybackNode.ObjectSerial.ToString(),
-                    $"group-{index}-output-loopback-capture-{layerId}"),
-                PlaybackProps = PlaybackBasePropsWithTargetObject(true,
-                    masterChannel.InputLoopback.CaptureNode
-                        .ObjectSerial.ToString(),
-                    $"group-{index}-output-loopback-playback-{layerId}"),
-            });
-
         var channelId =
             (ulong)((index - 1) + numberOfGroupChannels * (int)layerId);
+
+        var preFxLooper = await CreateLooper(
+            layerId,
+            channelId,
+            "group",
+            "pre",
+            inputLoopback.PlaybackNode.ObjectSerial.ToString(),
+            null);
+
+        var postFxLooper = await CreateLooper(
+            layerId,
+            channelId,
+            "group",
+            "post",
+            preFxLooper.PlaybackNode.ObjectSerial.ToString(),
+            masterChannel.InputLoopback.CaptureNode.ObjectSerial.ToString());
+
+        preFxLooper.PlaybackNode.OverrideTargetObject(
+            postFxLooper.CaptureNode.ObjectSerial.ToString());
 
         var sendLoopbacks = (await Task.WhenAll(Enumerable
             .Range(1, numberOfReturnChannels)
@@ -282,8 +303,9 @@ public class MixerEditor(IWireplumberService wireplumberService)
             $"Group {index}",
             (ulong)id,
             inputLoopback,
+            preFxLooper,
             null,
-            outputLoopback,
+            postFxLooper,
             sendLoopbacks,
             masterChannel.InputLoopback.CaptureNode,
             silenceHandle);
@@ -380,17 +402,24 @@ public class MixerEditor(IWireplumberService wireplumberService)
                     $"channel-{channelId}-input-loopback-playback-{layerId}"),
             });
 
-        var outputLoopback = await wireplumberService.CreateLoopbackModule(
-            $"output-loopback-{channelId}", new()
-            {
-                CaptureProps = CaptureBasePropsWithTargetObject(true,
-                    inputLoopback.PlaybackNode.ObjectSerial.ToString(),
-                    $"channel-{channelId}-output-loopback-capture-{layerId}"),
-                PlaybackProps = PlaybackBasePropsWithTargetObject(true,
-                    master.InputLoopback.CaptureNode.ObjectSerial
-                        .ToString(),
-                    $"channel-{channelId}-output-loopback-playback-{layerId}"),
-            });
+        var preFxLooper = await CreateLooper(
+            layerId,
+            channelId,
+            "channel",
+            "pre",
+            inputLoopback.PlaybackNode.ObjectSerial.ToString(),
+            null);
+
+        var postFxLooper = await CreateLooper(
+            layerId,
+            channelId,
+            "channel",
+            "post",
+            preFxLooper.PlaybackNode.ObjectSerial.ToString(),
+            master.InputLoopback.CaptureNode.ObjectSerial.ToString());
+
+        preFxLooper.PlaybackNode.OverrideTargetObject(
+            postFxLooper.CaptureNode.ObjectSerial.ToString());
 
         var sendLoopbacks = await Task.WhenAll(Enumerable
             .Range(1, numberOfReturnChannels)
@@ -417,12 +446,38 @@ public class MixerEditor(IWireplumberService wireplumberService)
             name,
             id,
             inputLoopback,
+            preFxLooper,
             null,
             null,
-            outputLoopback,
+            postFxLooper,
             sendLoopbacks.ToList(),
             null,
             master.InputLoopback.CaptureNode,
             silenceHandle);
+    }
+
+    private static async Task<Looper> CreateLooper(ulong layerId,
+        ulong channelId,
+        string ownerKind,
+        string position,
+        string? captureTargetObject,
+        string? playbackTargetObject)
+    {
+        var name = $"mixer-{ownerKind}-{channelId}-{position}-looper-{layerId}";
+        var archiveFolder = Path.Combine(
+            Environment.GetFolderPath(
+                Environment.SpecialFolder.LocalApplicationData),
+            "SonicEddy",
+            "loop_archives",
+            $"looper_{ownerKind}_{channelId}_{position}");
+
+        return await Fr.Sonic.FrSonic.LooperFactory.CreateLooperAsync(
+            new LooperConfig(
+                name,
+                $"Mixer {ownerKind} {channelId} {position}-FX looper",
+                captureTargetObject,
+                playbackTargetObject,
+                archiveFolder,
+                Mix: 0.0f));
     }
 }

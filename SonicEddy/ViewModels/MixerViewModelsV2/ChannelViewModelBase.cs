@@ -29,7 +29,7 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
 
     protected ChannelViewModelBase(ulong channelId, string text,
         ICommand selectChannelCommand, LoopbackModule inputLoopback,
-        LoopbackModule outputLoopback,
+        TwoNodePipewireModule outputLoopback,
         FilterChain? filterChain,
         FilterGraph? filterGraph,
         ObservableCollection<IRoutingTarget> audioToRoutingTargets,
@@ -191,10 +191,10 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
     }
 
     private readonly LoopbackModule _inputLoopback;
-    private readonly LoopbackModule _outputLoopback;
+    private readonly TwoNodePipewireModule _outputLoopback;
 
     public LoopbackModule InputLoopback => _inputLoopback;
-    public LoopbackModule OutputLoopback => _outputLoopback;
+    public TwoNodePipewireModule OutputLoopback => _outputLoopback;
     private readonly IAppDataService _appDataService;
     private readonly IMixerService _mixerService;
     private readonly IMidiControllerSetupService _midiSetupService;

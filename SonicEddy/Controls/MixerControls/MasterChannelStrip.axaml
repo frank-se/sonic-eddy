@@ -8,7 +8,7 @@
 
     <Panel Background="DarkRed">
         <Grid ColumnDefinitions="120"
-              RowDefinitions="Auto,Auto,100,100,100,*,Auto"
+              RowDefinitions="Auto,86,Auto,100,100,100,*,Auto"
               Margin="2">
 
             <mixerControls:ChannelHeader Grid.Row="0"
@@ -19,29 +19,32 @@
                                          SelectCommand="{Binding $parent[mixerControls:MasterChannelStrip].SelectCommand}"
                                          SelectCommandParameter="{Binding $parent[mixerControls:MasterChannelStrip].SelectCommandParameter}" />
 
-            <mixerControls:FilterSectionHeader Grid.Row="1"
+            <mixerControls:LooperCompactSection Grid.Row="1"
+                                                DataContext="{ReflectionBinding Looper}" />
+
+            <mixerControls:FilterSectionHeader Grid.Row="2"
                                                HasFilter="{Binding $parent[mixerControls:MasterChannelStrip].HasFilter}"
                                                AddCommand="{Binding $parent[mixerControls:MasterChannelStrip].AddFilterCommand}"
                                                AddCommandParameter="{Binding $parent[mixerControls:MasterChannelStrip].AddFilterCommandParameter}"
                                                DeleteCommand="{Binding $parent[mixerControls:MasterChannelStrip].DeleteFilterCommand}"
                                                DeleteCommandParameter="{Binding $parent[mixerControls:MasterChannelStrip].DeleteFilterCommandParameter}" />
 
-            <mixerControls:ParameterSection Grid.Row="2"
+            <mixerControls:ParameterSection Grid.Row="3"
                                             Margin="4"
                                             Parameters="{Binding $parent[mixerControls:MasterChannelStrip].FirstPluginParameters}"
                                             Text="{Binding $parent[mixerControls:MasterChannelStrip].FirstPluginText}" />
 
-            <mixerControls:ParameterSection Grid.Row="3"
+            <mixerControls:ParameterSection Grid.Row="4"
                                             Margin="4"
                                             Parameters="{Binding $parent[mixerControls:MasterChannelStrip].SecondPluginParameters}"
                                             Text="{Binding $parent[mixerControls:MasterChannelStrip].SecondPluginText}" />
 
-            <mixerControls:ParameterSection Grid.Row="4"
+            <mixerControls:ParameterSection Grid.Row="5"
                                             Margin="4"
                                             Parameters="{Binding $parent[mixerControls:MasterChannelStrip].ThirdPluginParameters}"
                                             Text="{Binding $parent[mixerControls:MasterChannelStrip].ThirdPluginText}" />
 
-            <mixerControls:PanAndVolumeSectionWithMonitor Grid.Row="5"
+            <mixerControls:PanAndVolumeSectionWithMonitor Grid.Row="6"
                                                           LeftAverage="{Binding $parent[mixerControls:MasterChannelStrip].LeftAverage}"
                                                           RightAverage="{Binding $parent[mixerControls:MasterChannelStrip].RightAverage}"
                                                           LeftPeak="{Binding $parent[mixerControls:MasterChannelStrip].LeftPeak}"
@@ -49,7 +52,7 @@
                                                           Volume="{Binding $parent[mixerControls:MasterChannelStrip].Volume}"
                                                           Pan="{Binding $parent[mixerControls:MasterChannelStrip].Pan}" />
 
-            <mixerControls:RoutingComboBox Grid.Row="6"
+            <mixerControls:RoutingComboBox Grid.Row="7"
                                            Text="Audio To"
                                            SelectedRoutingTarget="{Binding $parent[mixerControls:MasterChannelStrip].SelectedAudioToRoutingTarget}"
                                            RoutingTargets="{Binding $parent[mixerControls:MasterChannelStrip].AudioToRoutingTargets}" />

@@ -578,6 +578,16 @@ public record Node(
     }
 
     /// <summary>
+    /// Set a string parameter
+    /// </summary>
+    /// <param name="name">Name of the parameter</param>
+    /// <param name="value">Value of the parameter</param>
+    public void SetParam(string name, string value)
+    {
+        FrSonicWireplumber.SetParams(ObjectId, [new(name, value)]);
+    }
+
+    /// <summary>
     /// Override the target object with metadata
     /// </summary>
     /// <param name="targetObject">

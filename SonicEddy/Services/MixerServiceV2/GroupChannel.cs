@@ -9,8 +9,12 @@ public record GroupChannel(
     string Name,
     ulong ChannelId,
     LoopbackModule InputLoopback,
+    Looper PreFxLooper,
     FilterChain? FilterChain,
-    LoopbackModule OutputLoopback,
+    Looper PostFxLooper,
     List<LoopbackModule> SendLoopbacks,
     Node? OutputTargetObject,
-    IntPtr SilenceProducerHandle);
+    IntPtr SilenceProducerHandle)
+{
+    public Looper OutputLoopback => PostFxLooper;
+}

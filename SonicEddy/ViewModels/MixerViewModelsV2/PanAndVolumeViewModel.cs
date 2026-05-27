@@ -110,13 +110,13 @@ public class PanAndVolumeViewModel : ReactiveObject, IPanAndVolume, IDisposable
     {
         get;
         set => this.RaiseAndSetIfChanged(ref field, value);
-    }
+    } = 1.0;
 
     public double Pan
     {
         get;
         set => this.RaiseAndSetIfChanged(ref field, value);
-    }
+    } = 0.0;
 
     public float LeftAverage
     {

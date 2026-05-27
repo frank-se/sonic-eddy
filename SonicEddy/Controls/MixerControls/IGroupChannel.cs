@@ -1,11 +1,14 @@
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
+using SonicEddy.ViewModels.MixerViewModelsV2;
 
 namespace SonicEddy.Controls.MixerControls;
 
 public interface IGroupChannel : IChannel
 {
     Services.MixerServiceV2.GroupChannel GroupChannel { get; }
+
+    LooperSectionViewModel Looper { get; }
 
     ulong ChannelId { get; }
 

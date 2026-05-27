@@ -8,7 +8,7 @@
 
     <Panel Background="Indigo">
         <Grid ColumnDefinitions="120"
-              RowDefinitions="Auto,132,Auto,100,100,100,*,Auto"
+              RowDefinitions="Auto,132,86,Auto,100,100,100,*,Auto"
               Margin="2">
 
             <mixerControls:ChannelHeader Grid.Row="0"
@@ -27,7 +27,10 @@
                                        Send4Trim="{Binding $parent[mixerControls:GroupChannelStrip].Send4Trim}"
                                        IsMidiControlled="{Binding $parent[mixerControls:GroupChannelStrip].IsSendMidiControlled}" />
 
-            <mixerControls:FilterSectionHeader Grid.Row="2"
+            <mixerControls:LooperCompactSection Grid.Row="2"
+                                                DataContext="{ReflectionBinding Looper}" />
+
+            <mixerControls:FilterSectionHeader Grid.Row="3"
                                                HasFilter="{Binding $parent[mixerControls:GroupChannelStrip].HasFilter}"
                                                IsMidiControlled="{Binding $parent[mixerControls:GroupChannelStrip].IsFilterMidiControlled}"
                                                AddCommand="{Binding $parent[mixerControls:GroupChannelStrip].AddFilterCommand}"
@@ -35,25 +38,25 @@
                                                DeleteCommand="{Binding $parent[mixerControls:GroupChannelStrip].DeleteFilterCommand}"
                                                DeleteCommandParameter="{Binding $parent[mixerControls:GroupChannelStrip].DeleteFilterCommandParameter}" />
 
-            <mixerControls:ParameterSection Grid.Row="3"
+            <mixerControls:ParameterSection Grid.Row="4"
                                             Margin="4"
                                             IsMidiControlled="{Binding $parent[mixerControls:GroupChannelStrip].FirstPluginParametersMidiControlled}"
                                             Parameters="{Binding $parent[mixerControls:GroupChannelStrip].FirstPluginParameters}"
                                             Text="{Binding $parent[mixerControls:GroupChannelStrip].FirstPluginText}" />
 
-            <mixerControls:ParameterSection Grid.Row="4"
+            <mixerControls:ParameterSection Grid.Row="5"
                                             Margin="4"
                                             IsMidiControlled="{Binding $parent[mixerControls:GroupChannelStrip].SecondPluginParametersMidiControlled}"
                                             Parameters="{Binding $parent[mixerControls:GroupChannelStrip].SecondPluginParameters}"
                                             Text="{Binding $parent[mixerControls:GroupChannelStrip].SecondPluginText}" />
 
-            <mixerControls:ParameterSection Grid.Row="5"
+            <mixerControls:ParameterSection Grid.Row="6"
                                             Margin="4"
                                             IsMidiControlled="{Binding $parent[mixerControls:GroupChannelStrip].ThirdPluginParametersMidiControlled}"
                                             Parameters="{Binding $parent[mixerControls:GroupChannelStrip].ThirdPluginParameters}"
                                             Text="{Binding $parent[mixerControls:GroupChannelStrip].ThirdPluginText}" />
 
-            <mixerControls:PanAndVolumeSectionWithMonitor Grid.Row="6"
+            <mixerControls:PanAndVolumeSectionWithMonitor Grid.Row="7"
                                                           LeftAverage="{Binding $parent[mixerControls:GroupChannelStrip].LeftAverage}"
                                                           RightAverage="{Binding $parent[mixerControls:GroupChannelStrip].RightAverage}"
                                                           LeftPeak="{Binding $parent[mixerControls:GroupChannelStrip].LeftPeak}"
@@ -61,7 +64,7 @@
                                                           Volume="{Binding $parent[mixerControls:GroupChannelStrip].Volume}"
                                                           Pan="{Binding $parent[mixerControls:GroupChannelStrip].Pan}" />
 
-            <mixerControls:RoutingComboBox Grid.Row="7"
+            <mixerControls:RoutingComboBox Grid.Row="8"
                                            Text="Audio To"
                                            SelectedRoutingTarget="{Binding $parent[mixerControls:GroupChannelStrip].SelectedAudioToRoutingTarget}"
                                            RoutingTargets="{Binding $parent[mixerControls:GroupChannelStrip].AudioToRoutingTargets}" />

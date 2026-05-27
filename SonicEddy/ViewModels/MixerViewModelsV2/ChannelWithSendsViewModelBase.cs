@@ -21,7 +21,7 @@ public abstract class ChannelWithSendsViewModelBase : ChannelViewModelBase
 {
     protected ChannelWithSendsViewModelBase(ulong channelId, string text,
         ICommand selectChannelCommand, LoopbackModule inputLoopback,
-        LoopbackModule outputLoopback, List<LoopbackModule> sendLoopbacks,
+        TwoNodePipewireModule outputLoopback, List<LoopbackModule> sendLoopbacks,
         FilterChain? filterChain,
         FilterGraph? filterGraph,
         ObservableCollection<IRoutingTarget> audioToRoutingTargets,

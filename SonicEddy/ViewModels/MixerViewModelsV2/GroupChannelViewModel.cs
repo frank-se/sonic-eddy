@@ -17,7 +17,7 @@ public class GroupChannelViewModel(
     string text,
     ICommand selectChannelCommand,
     LoopbackModule inputLoopback,
-    LoopbackModule outputLoopback,
+    TwoNodePipewireModule outputLoopback,
     List<LoopbackModule> sendLoopbacks,
     FilterChain? filterChain,
     FilterGraph? filterGraph,
@@ -38,4 +38,12 @@ public class GroupChannelViewModel(
         IGroupChannel
 {
     public GroupChannel GroupChannel { get; } = groupChannel;
+    public LooperSectionViewModel Looper { get; } =
+        new(groupChannel.PreFxLooper, groupChannel.PostFxLooper);
+
+    protected override void Dispose(bool disposing)
+    {
+        Looper.Dispose();
+        base.Dispose(disposing);
+    }
 }

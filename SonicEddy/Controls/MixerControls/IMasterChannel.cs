@@ -1,11 +1,14 @@
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
+using SonicEddy.ViewModels.MixerViewModelsV2;
 
 namespace SonicEddy.Controls.MixerControls;
 
 public interface IMasterChannel : IChannel
 {
     Services.MixerServiceV2.MasterChannel MasterChannel { get; }
+
+    LooperSectionViewModel Looper { get; }
 
     ulong ChannelId { get; }
 

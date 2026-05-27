@@ -141,6 +141,10 @@ public class MixerService : IMixerService, IDisposable
             layer.Channels
                 .Select(c => c.InputLoopback.PlaybackNode.ObjectSerial),
             layer.Channels
+                .Select(c => c.PreFxLooper.CaptureNode.ObjectSerial),
+            layer.Channels
+                .Select(c => c.PreFxLooper.PlaybackNode.ObjectSerial),
+            layer.Channels
                 .Select(c => c.OutputLoopback.CaptureNode.ObjectSerial),
             layer.Channels
                 .Select(c =>
@@ -179,6 +183,10 @@ public class MixerService : IMixerService, IDisposable
             layer.GroupChannels
                 .Select(c => c.InputLoopback.PlaybackNode.ObjectSerial),
             layer.GroupChannels
+                .Select(c => c.PreFxLooper.CaptureNode.ObjectSerial),
+            layer.GroupChannels
+                .Select(c => c.PreFxLooper.PlaybackNode.ObjectSerial),
+            layer.GroupChannels
                 .Select(c => c.OutputLoopback.CaptureNode.ObjectSerial),
             layer.GroupChannels
                 .Select(c =>
@@ -205,6 +213,14 @@ public class MixerService : IMixerService, IDisposable
             ],
             [
                 layer.MasterChannel.InputLoopback.PlaybackNode
+                    .ObjectSerial
+            ],
+            [
+                layer.MasterChannel.PreFxLooper.CaptureNode
+                    .ObjectSerial
+            ],
+            [
+                layer.MasterChannel.PreFxLooper.PlaybackNode
                     .ObjectSerial
             ],
             [

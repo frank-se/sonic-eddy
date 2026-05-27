@@ -1,0 +1,82 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:SonicEddy.Controls"
+             xmlns:mixerControls="clr-namespace:SonicEddy.Controls.MixerControls"
+             x:CompileBindings="False"
+             x:Class="SonicEddy.Controls.MixerControls.LooperCompactSection">
+    <Grid ColumnDefinitions="42,*,42"
+          RowDefinitions="32,42"
+          Margin="4,4,4,8"
+          RowSpacing="4">
+        <ToggleButton Grid.Row="0"
+                      Grid.Column="0"
+                      Margin="0,0,2,2"
+                      Padding="0"
+                      Content="{Binding ActivePositionIcon}"
+                      FontFamily="{StaticResource FluentIconsRegular}"
+                      FontSize="18"
+                      Foreground="{Binding ActionForeground}"
+                      IsChecked="{Binding IsPostFxSelected}">
+            <ToolTip.Tip>Pre/post FX pickup</ToolTip.Tip>
+        </ToggleButton>
+
+        <ComboBox Grid.Row="0"
+                  Grid.Column="1"
+                  Margin="0,0,2,2"
+                  Padding="4,0"
+                  ItemsSource="{Binding BarLengths}"
+                  SelectedItem="{Binding SelectedBarLength}" />
+
+        <ToggleButton Grid.Row="0"
+                      Grid.Column="2"
+                      Margin="0,0,0,2"
+                      Padding="0"
+                      Content="&#xF3FC;"
+                      FontFamily="{StaticResource FluentIconsRegular}"
+                      FontSize="18"
+                      IsChecked="{Binding IsQuantized}">
+            <ToolTip.Tip>Quantize to phrase start</ToolTip.Tip>
+        </ToggleButton>
+
+        <controls:ValueSlider Grid.Row="1"
+                              Grid.Column="0"
+                              Grid.ColumnSpan="1"
+                              Margin="0,0,2,0"
+                              Minimum="0"
+                              Maximum="1"
+                              Background="Gray"
+                              Text="Mix"
+                              Value="{Binding Mix}" />
+
+        <UniformGrid Grid.Row="1"
+                     Grid.Column="1"
+                     Grid.ColumnSpan="2"
+                     Columns="3"
+                     Rows="1">
+            <Button Margin="0,0,2,0"
+                    Padding="0"
+                    Content="&#xF608;"
+                    FontFamily="{StaticResource FluentIconsRegular}"
+                    FontSize="18"
+                    Foreground="{Binding ActionForeground}"
+                    Command="{Binding CutPlayCommand}">
+                <ToolTip.Tip>Cut and play</ToolTip.Tip>
+            </Button>
+            <Button Margin="0,0,2,0"
+                    Padding="0"
+                    Content="&#xF759;"
+                    FontFamily="{StaticResource FluentIconsRegular}"
+                    FontSize="18"
+                    Command="{Binding StopCommand}">
+                <ToolTip.Tip>Stop</ToolTip.Tip>
+            </Button>
+            <Button Padding="0"
+                    Content="&#xF692;"
+                    FontFamily="{StaticResource FluentIconsRegular}"
+                    FontSize="18"
+                    Command="{Binding ShowDetailsCommand}">
+                <ToolTip.Tip>Details</ToolTip.Tip>
+            </Button>
+        </UniformGrid>
+    </Grid>
+</UserControl>
