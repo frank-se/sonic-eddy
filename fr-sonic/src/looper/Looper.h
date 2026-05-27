@@ -1,7 +1,7 @@
 #pragma once
 
-#include <atomic>
 #include <array>
+#include <atomic>
 #include <condition_variable>
 #include <cstdint>
 #include <memory>
@@ -21,7 +21,7 @@ namespace sesync {
 class SyncClient;
 struct SyncSnapshot;
 struct TransportStateEntry;
-}
+} // namespace sesync
 
 namespace looper {
 
@@ -240,10 +240,11 @@ private:
   void queue_pending_command(const CommandEvent &event);
   void process_due_commands(uint32_t frame_offset, uint64_t buffer_start_nsec,
                             uint32_t rate);
+  [[nodiscard]] bool command_waiting_for_recording(const CommandEvent &event,
+                                                   uint32_t rate) const;
   void apply_command_event(const CommandEvent &event);
   void cut_length(uint64_t length_beats, uint32_t loop_number);
-  void cut_range(uint64_t start_beat, uint64_t end_beat,
-                 uint32_t loop_number);
+  void cut_range(uint64_t start_beat, uint64_t end_beat, uint32_t loop_number);
   void enqueue_copy_job(const LoopSlot &slot, uint32_t loop_number);
   void archive_loop(uint32_t loop_number);
   void retire_samples(std::shared_ptr<std::vector<float>> samples);
@@ -272,8 +273,8 @@ private:
   transport_state_entry_at(const sesync::SyncSnapshot &snapshot,
                            uint64_t beat) const;
   [[nodiscard]] std::optional<uint64_t>
-  beat_frame_from_ring_zero(const sesync::SyncSnapshot &snapshot,
-                            uint64_t beat, uint32_t rate) const;
+  beat_frame_from_ring_zero(const sesync::SyncSnapshot &snapshot, uint64_t beat,
+                            uint32_t rate) const;
   [[nodiscard]] std::optional<int64_t>
   command_frame_offset(const CommandEvent &event, uint64_t buffer_start_nsec,
                        uint32_t rate) const;

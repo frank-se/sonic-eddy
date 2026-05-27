@@ -234,12 +234,14 @@ public sealed class LooperSectionViewModel : ReactiveObject, IDisposable
         if (state is null)
             return 0;
 
-        var empty = state.Loops
-            .FirstOrDefault(loop => !string.Equals(loop.State, "filled",
-                StringComparison.OrdinalIgnoreCase));
-
-        if (empty is not null)
-            return empty.LoopNumber;
+        for (uint loopNumber = 0; loopNumber < MaxLoopSlots; ++loopNumber)
+        {
+            var loop = state.Loops.FirstOrDefault(candidate =>
+                candidate.LoopNumber == loopNumber);
+            if (loop is null || !string.Equals(loop.State, "filled",
+                    StringComparison.OrdinalIgnoreCase))
+                return loopNumber;
+        }
 
         var last = MaxLoopSlots - 1;
         ActiveLooper.CaptureNode.SetParam("commands",

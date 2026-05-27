@@ -28,8 +28,8 @@
 #include <pipewire/keys.h>
 #include <pipewire/properties.h>
 #include <pipewire/stream.h>
-#include <spa/param/props.h>
 #include <spa/param/audio/format-utils.h>
+#include <spa/param/props.h>
 #include <spa/pod/builder.h>
 #include <spa/pod/iter.h>
 
@@ -89,8 +89,8 @@ std::optional<uint64_t> parse_u64(std::string_view text) {
   return value;
 }
 
-std::optional<looper::CommandEvent>
-parse_command_text(uint64_t scheduled_beat, std::string_view text) {
+std::optional<looper::CommandEvent> parse_command_text(uint64_t scheduled_beat,
+                                                       std::string_view text) {
   std::istringstream stream{std::string{text}};
   std::string command;
   stream >> command;
@@ -188,7 +188,7 @@ bool add_vorbis_comment(FLAC__StreamMetadata *metadata, const char *name,
           &entry, name, value.c_str()))
     return false;
   if (FLAC__metadata_object_vorbiscomment_append_comment(metadata, entry,
-                                                        /*copy=*/false))
+                                                         /*copy=*/false))
     return true;
   std::free(entry.entry);
   return false;
@@ -208,8 +208,7 @@ bool looper::Looper::start() {
   if (_capture_stream != nullptr || _playback_stream != nullptr)
     return true;
 
-  logging::log<logging::LogLevel::Info>("Starting looper '{}'",
-                                        _config.name);
+  logging::log<logging::LogLevel::Info>("Starting looper '{}'", _config.name);
   _passthrough_channels = std::max(_config.channels, 1u);
   _passthrough_buffer.resize(PassthroughMaxFrames * _passthrough_channels);
   _passthrough_frames = 0;
@@ -379,10 +378,11 @@ void looper::Looper::process_archive_job(const LoopArchiveJob &job) {
   const auto path = archive_file_path(job);
   result.path = path;
   try {
-    std::filesystem::create_directories(std::filesystem::path{path}.parent_path());
+    std::filesystem::create_directories(
+        std::filesystem::path{path}.parent_path());
   } catch (const std::exception &exception) {
-    result.error = std::format("failed to create archive directory: {}",
-                               exception.what());
+    result.error =
+        std::format("failed to create archive directory: {}", exception.what());
     _archive_results.push(std::move(result));
     return;
   }
@@ -400,7 +400,8 @@ void looper::Looper::process_archive_job(const LoopArchiveJob &job) {
   FLAC__stream_encoder_set_compression_level(encoder, 5);
   FLAC__stream_encoder_set_total_samples_estimate(encoder, job.length_frames);
 
-  auto *metadata = FLAC__metadata_object_new(FLAC__METADATA_TYPE_VORBIS_COMMENT);
+  auto *metadata =
+      FLAC__metadata_object_new(FLAC__METADATA_TYPE_VORBIS_COMMENT);
   if (metadata != nullptr) {
     add_vorbis_comment(metadata, "SE_LOOPER_NAME", _config.name);
     add_vorbis_comment(metadata, "SE_LOOP_NUMBER",
@@ -411,7 +412,8 @@ void looper::Looper::process_archive_job(const LoopArchiveJob &job) {
                        std::format("{}", job.length_frames));
     add_vorbis_comment(metadata, "SE_SAMPLE_RATE",
                        std::format("{}", job.sample_rate));
-    add_vorbis_comment(metadata, "SE_CHANNELS", std::format("{}", job.channels));
+    add_vorbis_comment(metadata, "SE_CHANNELS",
+                       std::format("{}", job.channels));
     if (job.start_beat)
       add_vorbis_comment(metadata, "SE_START_BEAT",
                          std::format("{}", *job.start_beat));
@@ -430,9 +432,9 @@ void looper::Looper::process_archive_job(const LoopArchiveJob &job) {
   const auto init_status =
       FLAC__stream_encoder_init_file(encoder, path.c_str(), nullptr, nullptr);
   if (init_status != FLAC__STREAM_ENCODER_INIT_STATUS_OK) {
-    result.error = std::format(
-        "failed to initialize FLAC encoder: {}",
-        FLAC__StreamEncoderInitStatusString[init_status]);
+    result.error =
+        std::format("failed to initialize FLAC encoder: {}",
+                    FLAC__StreamEncoderInitStatusString[init_status]);
     if (metadata != nullptr)
       FLAC__metadata_object_delete(metadata);
     FLAC__stream_encoder_delete(encoder);
@@ -538,8 +540,7 @@ bool looper::Looper::setup_capture_stream() {
 
   const auto result = pw_stream_connect(
       _capture_stream, PW_DIRECTION_INPUT, PW_ID_ANY,
-      stream_flags(_config.capture_target_object.has_value()),
-      params, 1);
+      stream_flags(_config.capture_target_object.has_value()), params, 1);
   if (result < 0) {
     logging::log<logging::LogLevel::Error>(
         "Failed to connect looper capture stream '{}': {}", name, result);
@@ -581,8 +582,7 @@ bool looper::Looper::setup_playback_stream() {
 
   const auto result = pw_stream_connect(
       _playback_stream, PW_DIRECTION_OUTPUT, PW_ID_ANY,
-      stream_flags(_config.playback_target_object.has_value()),
-      params, 1);
+      stream_flags(_config.playback_target_object.has_value()), params, 1);
   if (result < 0) {
     logging::log<logging::LogLevel::Error>(
         "Failed to connect looper playback stream '{}': {}", name, result);
@@ -644,9 +644,9 @@ void looper::Looper::drain_copy_results() {
     auto &slot = _loop_slots[result.loop_number];
     if (slot.generation != result.generation) {
       logging::log<logging::LogLevel::Info>(
-          "Looper '{}' ignored stale loop copy loop={} generation={} current={}",
-          _config.name, result.loop_number, result.generation,
-          slot.generation);
+          "Looper '{}' ignored stale loop copy loop={} generation={} "
+          "current={}",
+          _config.name, result.loop_number, result.generation, slot.generation);
       continue;
     }
 
@@ -672,8 +672,9 @@ void looper::Looper::drain_command_events() {
   std::ranges::stable_sort(_pending_commands.begin(),
                            _pending_commands.begin() + _pending_command_count,
                            {}, [](const CommandEvent &event) {
-    return std::pair{event.scheduled_beat, command_priority(event)};
-  });
+                             return std::pair{event.scheduled_beat,
+                                              command_priority(event)};
+                           });
 }
 
 void looper::Looper::queue_pending_command(const CommandEvent &event) {
@@ -701,6 +702,25 @@ void looper::Looper::process_due_commands(const uint32_t frame_offset,
     const auto scheduled_frame =
         command_frame_offset(queued_event, buffer_start_nsec, rate);
     if (scheduled_frame && *scheduled_frame <= frame_offset) {
+      if (command_waiting_for_recording(queued_event, rate)) {
+        _pending_commands[remaining_count++] = queued_event;
+        continue;
+      }
+
+      const auto deferred_cut = std::ranges::any_of(
+          _pending_commands.begin(),
+          _pending_commands.begin() + remaining_count,
+          [&queued_event](const CommandEvent &event) {
+            return event.scheduled_beat == queued_event.scheduled_beat &&
+                   event.loop_number == queued_event.loop_number &&
+                   (event.kind == CommandKind::CutLength ||
+                    event.kind == CommandKind::CutRange);
+          });
+      if (deferred_cut) {
+        _pending_commands[remaining_count++] = queued_event;
+        continue;
+      }
+
       _active_command_event = queued_event;
       ++_processed_command_count;
       apply_command_event(queued_event);
@@ -710,6 +730,52 @@ void looper::Looper::process_due_commands(const uint32_t frame_offset,
     }
   }
   _pending_command_count = remaining_count;
+}
+
+bool looper::Looper::command_waiting_for_recording(const CommandEvent &event,
+                                                   const uint32_t rate) const {
+  if (event.kind != CommandKind::CutLength &&
+      event.kind != CommandKind::CutRange)
+    return false;
+
+  if (event.scheduled_beat == 0 || event.loop_number >= _loop_slots.size())
+    return false;
+
+  uint64_t start_beat = event.start_beat;
+  uint64_t end_beat = event.end_beat;
+  if (event.kind == CommandKind::CutLength) {
+    if (event.loop_length == 0 || event.scheduled_beat < event.loop_length)
+      return false;
+
+    start_beat = event.scheduled_beat - event.loop_length;
+    end_beat = event.scheduled_beat - 1;
+  }
+
+  if (start_beat > end_beat || end_beat == std::numeric_limits<uint64_t>::max())
+    return false;
+
+  const auto snapshot = _sync_client ? _sync_client->snapshot() : nullptr;
+  if (!snapshot || !_ring_buffer_zero_beat)
+    return false;
+
+  const auto start_frame_abs =
+      beat_frame_from_ring_zero(*snapshot, start_beat, rate);
+  const auto end_frame_abs =
+      beat_frame_from_ring_zero(*snapshot, end_beat + 1, rate);
+  if (!start_frame_abs || !end_frame_abs || *end_frame_abs <= *start_frame_abs)
+    return false;
+
+  const auto length_frames = *end_frame_abs - *start_frame_abs;
+  if (length_frames == 0 || length_frames > _record_capacity_frames)
+    return false;
+
+  const auto earliest_available = _record_total_frames > _recorded_frames
+                                      ? _record_total_frames - _recorded_frames
+                                      : uint64_t{0};
+  if (*start_frame_abs < earliest_available)
+    return false;
+
+  return *end_frame_abs > _record_total_frames;
 }
 
 void looper::Looper::apply_command_event(const CommandEvent &event) {
@@ -799,7 +865,8 @@ void looper::Looper::cut_range(const uint64_t start_beat,
       beat_frame_from_ring_zero(*snapshot, start_beat, rate);
   const auto end_frame_abs =
       beat_frame_from_ring_zero(*snapshot, end_beat + 1, rate);
-  if (!start_frame_abs || !end_frame_abs || *end_frame_abs <= *start_frame_abs) {
+  if (!start_frame_abs || !end_frame_abs ||
+      *end_frame_abs <= *start_frame_abs) {
     logging::log<logging::LogLevel::Error>(
         "Looper '{}' rejected cut range {}..{} loop={} without beat timing",
         _config.name, start_beat, end_beat, loop_number);
@@ -813,10 +880,9 @@ void looper::Looper::cut_range(const uint64_t start_beat,
       _config.name, start_beat, end_beat, loop_number, _recorded_frames,
       length_frames, _record_total_frames);
 
-  const auto earliest_available =
-      _record_total_frames > _recorded_frames
-          ? _record_total_frames - _recorded_frames
-          : uint64_t{0};
+  const auto earliest_available = _record_total_frames > _recorded_frames
+                                      ? _record_total_frames - _recorded_frames
+                                      : uint64_t{0};
   if (length_frames == 0 || length_frames > _record_capacity_frames ||
       *start_frame_abs < earliest_available ||
       *end_frame_abs > _record_total_frames) {
@@ -844,10 +910,9 @@ void looper::Looper::cut_range(const uint64_t start_beat,
   slot.length_beats = end_beat - start_beat + 1;
   slot.play_started_beat.reset();
   slot.bpm.reset();
-  slot.bpm =
-      _active_command_event && _active_command_event->scheduled_beat > 0
-          ? bpm_at_beat(_active_command_event->scheduled_beat)
-          : bpm_at_beat(start_beat);
+  slot.bpm = _active_command_event && _active_command_event->scheduled_beat > 0
+                 ? bpm_at_beat(_active_command_event->scheduled_beat)
+                 : bpm_at_beat(start_beat);
   ++slot.generation;
 
   enqueue_copy_job(slot, loop_number);
@@ -1035,12 +1100,11 @@ float looper::Looper::render_wet_sample(const uint32_t channel) {
 
     const auto slot_channel = std::min<uint32_t>(channel, slot.channels - 1);
     if (slot.owned && slot.samples) {
-      return (*slot.samples)[(slot.playhead_frame * slot.channels) +
-                             slot_channel];
+      return (
+          *slot.samples)[(slot.playhead_frame * slot.channels) + slot_channel];
     } else if (!_record_buffer.empty()) {
-      const auto ring_frame =
-          (slot.ring_start_frame + slot.playhead_frame) %
-          _record_capacity_frames;
+      const auto ring_frame = (slot.ring_start_frame + slot.playhead_frame) %
+                              _record_capacity_frames;
       return _record_buffer[(ring_frame * slot.channels) + slot_channel];
     }
   }
@@ -1086,9 +1150,9 @@ void looper::Looper::capture_passthrough_input(pw_buffer *capture_buffer) {
   const auto *data = &buffer->datas[0];
   const auto channels = std::max(active_format().channels, 1u);
   const auto bytes_per_frame = channels * sizeof(float);
-  const auto frames = std::min(
-      static_cast<uint32_t>(data->chunk->size / bytes_per_frame),
-      PassthroughMaxFrames);
+  const auto frames =
+      std::min(static_cast<uint32_t>(data->chunk->size / bytes_per_frame),
+               PassthroughMaxFrames);
   const auto sample_count = frames * channels;
   const auto *samples = static_cast<const float *>(data->data);
   const auto offset_samples = data->chunk->offset / sizeof(float);
@@ -1134,8 +1198,8 @@ void looper::Looper::capture_passthrough_input(pw_buffer *capture_buffer) {
                   _record_buffer.data() + record_offset);
       _record_write_frame = (_record_write_frame + 1) % _record_capacity_frames;
       ++_record_total_frames;
-      _recorded_frames = std::min<uint64_t>(_recorded_frames + 1,
-                                            _record_capacity_frames);
+      _recorded_frames =
+          std::min<uint64_t>(_recorded_frames + 1, _record_capacity_frames);
     }
   } else {
     stop_recording();
@@ -1169,9 +1233,11 @@ bool looper::Looper::should_record_frame(const sesync::SyncSnapshot &snapshot,
           1'000'000'000ull;
     }
 
-    _record_write_frame =
-        _record_capacity_frames == 0 ? 0 : elapsed_frames % _record_capacity_frames;
-    _recorded_frames = std::min<uint64_t>(elapsed_frames, _record_capacity_frames);
+    _record_write_frame = _record_capacity_frames == 0
+                              ? 0
+                              : elapsed_frames % _record_capacity_frames;
+    _recorded_frames =
+        std::min<uint64_t>(elapsed_frames, _record_capacity_frames);
     _record_total_frames = elapsed_frames;
     _recording = true;
     _transport_start_beat = transport->beat;
@@ -1200,16 +1266,14 @@ void looper::Looper::write_passthrough_output(pw_buffer *playback_buffer) {
   if (buffer->n_datas > 0 && buffer->datas[0].data != nullptr &&
       buffer->datas[0].chunk != nullptr) {
     auto *data = &buffer->datas[0];
-    const auto frames =
-        playback_buffer->requested == 0 ? uint32_t{0}
-                                        : playback_buffer->requested;
+    const auto frames = playback_buffer->requested == 0
+                            ? uint32_t{0}
+                            : playback_buffer->requested;
     const auto channels = std::max(active_format().channels, 1u);
     const auto bytes_per_frame = channels * sizeof(float);
-    const auto requested_size =
-        static_cast<uint32_t>(frames * bytes_per_frame);
+    const auto requested_size = static_cast<uint32_t>(frames * bytes_per_frame);
     const auto size = std::min<uint32_t>(data->maxsize, requested_size);
-    const auto writable_frames =
-        static_cast<uint32_t>(size / bytes_per_frame);
+    const auto writable_frames = static_cast<uint32_t>(size / bytes_per_frame);
     auto *samples = static_cast<uint8_t *>(data->data);
     auto *output = reinterpret_cast<float *>(samples);
     const auto mix = _mix.load(std::memory_order_relaxed);
@@ -1230,10 +1294,9 @@ void looper::Looper::write_passthrough_output(pw_buffer *playback_buffer) {
                            std::max(active_format().rate, 1u));
       for (uint32_t channel = 0; channel < channels; ++channel) {
         const auto sample = (frame * channels) + channel;
-        const auto dry_sample =
-            dry_available && frame < _passthrough_frames
-                ? _passthrough_buffer[sample]
-                : 0.0f;
+        const auto dry_sample = dry_available && frame < _passthrough_frames
+                                    ? _passthrough_buffer[sample]
+                                    : 0.0f;
         output[sample] =
             (dry_sample * dry_gain) + (render_wet_sample(channel) * wet_gain);
       }
@@ -1323,8 +1386,7 @@ void looper::Looper::handle_params(const uint32_t id, const spa_pod *param) {
   publish_params();
 }
 
-void looper::Looper::handle_param_value(const char *key,
-                                        const spa_pod *value) {
+void looper::Looper::handle_param_value(const char *key, const spa_pod *value) {
   if (std::strcmp(key, "mix") == 0) {
     float mix = _mix.load(std::memory_order_relaxed);
     if (value->type == SPA_TYPE_Float) {
@@ -1369,8 +1431,8 @@ void looper::Looper::enqueue_command(const CommandEvent &event) {
   if (_command_events.push(event)) {
     logging::log<logging::LogLevel::Info>(
         "Looper '{}' queued command event kind={} beat={} loop={}",
-        _config.name, static_cast<uint32_t>(event.kind),
-        event.scheduled_beat, event.loop_number);
+        _config.name, static_cast<uint32_t>(event.kind), event.scheduled_beat,
+        event.loop_number);
     return;
   }
 
@@ -1508,9 +1570,11 @@ std::optional<double> looper::Looper::bpm_at_beat(const uint64_t beat) const {
   return bpm;
 }
 
-std::optional<uint64_t> looper::Looper::scheduled_beat_nsec(
-    const sesync::SyncSnapshot &snapshot, const uint64_t beat) const {
-  const auto find_beat = [beat](const auto &entries) -> std::optional<uint64_t> {
+std::optional<uint64_t>
+looper::Looper::scheduled_beat_nsec(const sesync::SyncSnapshot &snapshot,
+                                    const uint64_t beat) const {
+  const auto find_beat =
+      [beat](const auto &entries) -> std::optional<uint64_t> {
     for (const auto &entry : entries) {
       if (entry.beat == beat)
         return entry.nsec;
@@ -1524,8 +1588,8 @@ std::optional<uint64_t> looper::Looper::scheduled_beat_nsec(
 }
 
 std::optional<sesync::TransportStateEntry>
-looper::Looper::transport_state_entry_at(
-    const sesync::SyncSnapshot &snapshot, const uint64_t beat) const {
+looper::Looper::transport_state_entry_at(const sesync::SyncSnapshot &snapshot,
+                                         const uint64_t beat) const {
   std::optional<sesync::TransportStateEntry> current;
   for (const auto &entry : snapshot.transport_states) {
     if (entry.beat > beat)
@@ -1535,9 +1599,10 @@ looper::Looper::transport_state_entry_at(
   return current;
 }
 
-std::optional<uint64_t> looper::Looper::beat_frame_from_ring_zero(
-    const sesync::SyncSnapshot &snapshot, const uint64_t beat,
-    const uint32_t rate) const {
+std::optional<uint64_t>
+looper::Looper::beat_frame_from_ring_zero(const sesync::SyncSnapshot &snapshot,
+                                          const uint64_t beat,
+                                          const uint32_t rate) const {
   if (!_ring_buffer_zero_beat)
     return std::nullopt;
 
@@ -1551,9 +1616,10 @@ std::optional<uint64_t> looper::Looper::beat_frame_from_ring_zero(
          1'000'000'000ull;
 }
 
-std::optional<int64_t> looper::Looper::command_frame_offset(
-    const CommandEvent &event, const uint64_t buffer_start_nsec,
-    const uint32_t rate) const {
+std::optional<int64_t>
+looper::Looper::command_frame_offset(const CommandEvent &event,
+                                     const uint64_t buffer_start_nsec,
+                                     const uint32_t rate) const {
   if (event.scheduled_beat == 0)
     return 0;
   if (!_sync_client)
@@ -1629,14 +1695,14 @@ looper::Looper::format_state_json(const LooperStateUpdate &update) const {
   json << std::setprecision(12);
 
   auto append_optional_u64 = [&json](const bool has_value,
-                                    const uint64_t value) {
+                                     const uint64_t value) {
     if (has_value)
       json << value;
     else
       json << "null";
   };
   auto append_optional_double = [&json](const bool has_value,
-                                       const double value) {
+                                        const double value) {
     if (has_value)
       json << value;
     else
@@ -1666,8 +1732,8 @@ looper::Looper::format_state_json(const LooperStateUpdate &update) const {
       json << ",";
     first_loop = false;
 
-    json << R"({"loop_number":)" << loop.loop_number
-         << R"(,"generation":)" << loop.generation << R"(,"state":")"
+    json << R"({"loop_number":)" << loop.loop_number << R"(,"generation":)"
+         << loop.generation << R"(,"state":")"
          << (loop.playing ? "playing" : "stopped") << R"(","source":")"
          << (loop.owned ? "owned" : "ring") << R"(","start_beat":)";
     append_optional_u64(loop.has_start_beat, loop.start_beat);
@@ -1675,9 +1741,9 @@ looper::Looper::format_state_json(const LooperStateUpdate &update) const {
     append_optional_u64(loop.has_end_beat, loop.end_beat);
     json << R"(,"length_beats":)";
     append_optional_u64(loop.has_length_beats, loop.length_beats);
-    json << R"(,"length_frames":)" << loop.length_frames
-         << R"(,"sample_rate":)" << loop.sample_rate << R"(,"channels":)"
-         << loop.channels << R"(,"bpm":)";
+    json << R"(,"length_frames":)" << loop.length_frames << R"(,"sample_rate":)"
+         << loop.sample_rate << R"(,"channels":)" << loop.channels
+         << R"(,"bpm":)";
     append_optional_double(loop.has_bpm, loop.bpm);
     json << "}";
   }
@@ -1693,9 +1759,8 @@ looper::Looper::format_state_json(const LooperStateUpdate &update) const {
 
   json << R"(,"active_playback":)";
   if (active != nullptr) {
-    json << R"({"loop_number":)" << active->loop_number
-         << R"(,"generation":)" << active->generation
-         << R"(,"started_at_beat":)";
+    json << R"({"loop_number":)" << active->loop_number << R"(,"generation":)"
+         << active->generation << R"(,"started_at_beat":)";
     append_optional_u64(active->has_play_started_beat,
                         active->play_started_beat);
     json << R"(,"playhead_samples":)" << active->playhead_frame << "}";
@@ -1707,14 +1772,12 @@ looper::Looper::format_state_json(const LooperStateUpdate &update) const {
   return json.str();
 }
 
-std::string looper::Looper::archive_file_path(
-    const LoopArchiveJob &job) const {
+std::string looper::Looper::archive_file_path(const LoopArchiveJob &job) const {
   const auto folder =
       _config.archive_folder_path ? *_config.archive_folder_path : ".";
-  const auto filename =
-      std::format("{}-loop-{}-generation-{}.flac",
-                  sanitize_path_part(_config.name), job.loop_number,
-                  job.generation);
+  const auto filename = std::format("{}-loop-{}-generation-{}.flac",
+                                    sanitize_path_part(_config.name),
+                                    job.loop_number, job.generation);
   return (std::filesystem::path{folder} / filename).string();
 }
 
