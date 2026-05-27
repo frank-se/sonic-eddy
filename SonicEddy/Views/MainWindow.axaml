@@ -54,6 +54,8 @@
                           Command="{Binding ShowSynchronizationWindow}" />
                 <MenuItem Header="MIDI Sync ..."
                           Command="{Binding ShowMidiSyncWindow}" />
+                <MenuItem Header="MIDI Router ..."
+                          Command="{Binding ShowMidiRouterWindow}" />
                 <Separator />
                 <MenuItem Header="Midi Parameter Change Monitor ..."
                           Command="{Binding ShowMidiParameterChangeMonitorWindow}" />

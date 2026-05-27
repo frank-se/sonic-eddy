@@ -16,6 +16,7 @@ using SonicEddy.Services.Wireplumber;
 using SonicEddy.ViewModels.FilterGraphManagerViewModels;
 using SonicEddy.ViewModels.MetadataViewModels;
 using SonicEddy.ViewModels.MidiParameterChangeMonitorViewModels;
+using SonicEddy.ViewModels.MidiRouterViewModels;
 using SonicEddy.ViewModels.MixerViewModelsV2;
 using SonicEddy.ViewModels.ModuleManagerViewModels;
 using SonicEddy.ViewModels.ObjectBrowserViewModels;
@@ -26,6 +27,7 @@ using SonicEddy.ViewModels.VirtualInputsViewModels;
 using SonicEddy.Views.FilterGraphManagerViews;
 using SonicEddy.Views.MetadataViews;
 using SonicEddy.Views.MidiParameterChangeMonitorView;
+using SonicEddy.Views.MidiRouterViews;
 using SonicEddy.Views.ModuleManagerViews;
 using SonicEddy.Views.ObjectBrowserViews;
 using SonicEddy.Views.PreferencesViews;
@@ -79,6 +81,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     private Window? _preferencesWindow;
     private Window? _synchronizationWindow;
     private Window? _midiSyncWindow;
+    private Window? _midiRouterWindow;
 
     public MixerLayerViewModel? LayerAViewModel
     {
@@ -350,6 +353,21 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         };
 
         _midiSyncWindow.Show();
+    }
+
+    public void ShowMidiRouterWindow()
+    {
+        _logger.LogTrace("ShowMidiRouterWindow");
+
+        if (_midiRouterWindow is not null &&
+            _midiRouterWindow.IsVisible) return;
+
+        _midiRouterWindow = new MidiRouterWindow()
+        {
+            DataContext = new MidiRouterViewModel()
+        };
+
+        _midiRouterWindow.Show();
     }
 
     public void ShowVirtualInputsWindow()
