@@ -28,7 +28,7 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
     protected readonly CompositeDisposable Disposables = new();
 
     protected ChannelViewModelBase(ulong channelId, string text,
-        ICommand selectChannelCommand, LoopbackModule inputLoopback,
+        ICommand selectChannelCommand, TwoNodePipewireModule inputLoopback,
         TwoNodePipewireModule outputLoopback,
         FilterChain? filterChain,
         FilterGraph? filterGraph,
@@ -190,10 +190,10 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
         HasFilter = true;
     }
 
-    private readonly LoopbackModule _inputLoopback;
+    private readonly TwoNodePipewireModule _inputLoopback;
     private readonly TwoNodePipewireModule _outputLoopback;
 
-    public LoopbackModule InputLoopback => _inputLoopback;
+    public TwoNodePipewireModule InputLoopback => _inputLoopback;
     public TwoNodePipewireModule OutputLoopback => _outputLoopback;
     private readonly IAppDataService _appDataService;
     private readonly IMixerService _mixerService;

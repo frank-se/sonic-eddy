@@ -20,7 +20,7 @@ namespace SonicEddy.ViewModels.MixerViewModelsV2;
 public abstract class ChannelWithSendsViewModelBase : ChannelViewModelBase
 {
     protected ChannelWithSendsViewModelBase(ulong channelId, string text,
-        ICommand selectChannelCommand, LoopbackModule inputLoopback,
+        ICommand selectChannelCommand, TwoNodePipewireModule inputLoopback,
         TwoNodePipewireModule outputLoopback, List<LoopbackModule> sendLoopbacks,
         FilterChain? filterChain,
         FilterGraph? filterGraph,

@@ -50,6 +50,14 @@ public sealed record LoopState(
     uint SampleRate,
     [property: JsonPropertyName("channels")]
     uint Channels,
+    [property: JsonPropertyName("rms")]
+    double Rms,
+    [property: JsonPropertyName("peak")]
+    double Peak,
+    [property: JsonPropertyName("min")]
+    double Min,
+    [property: JsonPropertyName("max")]
+    double Max,
     [property: JsonPropertyName("bpm")]
     double? Bpm);
 

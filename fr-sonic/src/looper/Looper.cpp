@@ -313,6 +313,26 @@ void looper::Looper::copy_thread_main() {
                   samples->data() + dest_offset);
     }
 
+    double sum_squares = 0.0;
+    float peak = 0.0f;
+    float min = 0.0f;
+    float max = 0.0f;
+    if (!samples->empty()) {
+      min = samples->front();
+      max = samples->front();
+      for (const auto sample : *samples) {
+        sum_squares +=
+            static_cast<double>(sample) * static_cast<double>(sample);
+        peak = std::max(peak, std::abs(sample));
+        min = std::min(min, sample);
+        max = std::max(max, sample);
+      }
+    }
+    const auto rms =
+        samples->empty()
+            ? 0.0
+            : std::sqrt(sum_squares / static_cast<double>(samples->size()));
+
     const auto elapsed_usec = (monotonic_nsec() - started) / 1000;
     LoopCopyResult result{
         .loop_number = job.loop_number,
@@ -320,6 +340,10 @@ void looper::Looper::copy_thread_main() {
         .length_frames = job.length_frames,
         .channels = job.channels,
         .elapsed_usec = elapsed_usec,
+        .rms = rms,
+        .peak = peak,
+        .min = min,
+        .max = max,
         .samples = std::move(samples),
     };
     if (!_copy_results.push(std::move(result))) {
@@ -517,12 +541,16 @@ bool looper::Looper::setup_capture_stream() {
       PW_KEY_MEDIA_ROLE, "DSP", PW_KEY_MEDIA_CLASS, "Stream/Input/Audio",
       PW_KEY_NODE_NAME, name.c_str(), PW_KEY_NODE_DESCRIPTION,
       description.c_str(), "se.role", "looper-capture", "se.looper.name",
-      _config.name.c_str(), "pmx.purpose", "looper-capture", nullptr);
+      _config.name.c_str(), "pmx.purpose", "looper-capture", "node.linger",
+      "true", "node.passive", "false", nullptr);
   if (!_config.tag.empty())
     pw_properties_set(properties, "pmx.tag", _config.tag.c_str());
-  if (_config.capture_target_object)
+  if (_config.capture_target_object) {
     pw_properties_set(properties, PW_KEY_TARGET_OBJECT,
                       _config.capture_target_object->c_str());
+    pw_properties_set(properties, "node.autoconnect", "true");
+    pw_properties_set(properties, "node.dont-fallback", "true");
+  }
 
   _capture_stream = pw_stream_new_simple(_loop, name.c_str(), properties,
                                          &capture_stream_events, this);
@@ -559,12 +587,16 @@ bool looper::Looper::setup_playback_stream() {
       PW_KEY_MEDIA_ROLE, "DSP", PW_KEY_MEDIA_CLASS, "Stream/Output/Audio",
       PW_KEY_NODE_NAME, name.c_str(), PW_KEY_NODE_DESCRIPTION,
       description.c_str(), "se.role", "looper-playback", "se.looper.name",
-      _config.name.c_str(), "pmx.purpose", "looper-playback", nullptr);
+      _config.name.c_str(), "pmx.purpose", "looper-playback", "node.linger",
+      "true", "node.passive", "true", nullptr);
   if (!_config.tag.empty())
     pw_properties_set(properties, "pmx.tag", _config.tag.c_str());
-  if (_config.playback_target_object)
+  if (_config.playback_target_object) {
     pw_properties_set(properties, PW_KEY_TARGET_OBJECT,
                       _config.playback_target_object->c_str());
+    pw_properties_set(properties, "node.autoconnect", "true");
+    pw_properties_set(properties, "node.dont-fallback", "true");
+  }
 
   _playback_stream = pw_stream_new_simple(_loop, name.c_str(), properties,
                                           &playback_stream_events, this);
@@ -654,13 +686,18 @@ void looper::Looper::drain_copy_results() {
     slot.samples = std::move(result.samples);
     slot.length_frames = result.length_frames;
     slot.channels = result.channels;
+    slot.rms = result.rms;
+    slot.peak = result.peak;
+    slot.min = result.min;
+    slot.max = result.max;
     slot.owned = true;
     enqueue_state_update();
     logging::log<logging::LogLevel::Info>(
         "Looper '{}' copied loop={} generation={} frames={} channels={} in "
-        "{}us",
+        "{}us rms={} peak={} min={} max={}",
         _config.name, result.loop_number, result.generation,
-        result.length_frames, result.channels, result.elapsed_usec);
+        result.length_frames, result.channels, result.elapsed_usec, result.rms,
+        result.peak, result.min, result.max);
   }
 }
 
@@ -913,6 +950,10 @@ void looper::Looper::cut_range(const uint64_t start_beat,
   slot.bpm = _active_command_event && _active_command_event->scheduled_beat > 0
                  ? bpm_at_beat(_active_command_event->scheduled_beat)
                  : bpm_at_beat(start_beat);
+  slot.rms = 0.0;
+  slot.peak = 0.0f;
+  slot.min = 0.0f;
+  slot.max = 0.0f;
   ++slot.generation;
 
   enqueue_copy_job(slot, loop_number);
@@ -1016,6 +1057,10 @@ void looper::Looper::archive_loop(const uint32_t loop_number) {
   slot.length_beats.reset();
   slot.play_started_beat.reset();
   slot.bpm.reset();
+  slot.rms = 0.0;
+  slot.peak = 0.0f;
+  slot.min = 0.0f;
+  slot.max = 0.0f;
   ++slot.generation;
   _copy_wakeup.notify_one();
   enqueue_state_update();
@@ -1663,6 +1708,10 @@ looper::LooperStateUpdate looper::Looper::capture_state_update() const {
     entry.playhead_frame = slot.playhead_frame;
     entry.sample_rate = slot.sample_rate;
     entry.channels = slot.channels;
+    entry.rms = slot.rms;
+    entry.peak = slot.peak;
+    entry.min = slot.min;
+    entry.max = slot.max;
     entry.playing = slot.playing;
     entry.owned = slot.owned;
     if (slot.start_beat) {
@@ -1743,6 +1792,8 @@ looper::Looper::format_state_json(const LooperStateUpdate &update) const {
     append_optional_u64(loop.has_length_beats, loop.length_beats);
     json << R"(,"length_frames":)" << loop.length_frames << R"(,"sample_rate":)"
          << loop.sample_rate << R"(,"channels":)" << loop.channels
+         << R"(,"rms":)" << loop.rms << R"(,"peak":)" << loop.peak
+         << R"(,"min":)" << loop.min << R"(,"max":)" << loop.max
          << R"(,"bpm":)";
     append_optional_double(loop.has_bpm, loop.bpm);
     json << "}";

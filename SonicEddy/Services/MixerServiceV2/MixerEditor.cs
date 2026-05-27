@@ -391,23 +391,12 @@ public class MixerEditor(IWireplumberService wireplumberService)
         string name, ulong channelId, List<ReturnChannel> returnChannels,
         MasterChannel master, int numberOfChannels, int numberOfReturnChannels)
     {
-        var inputLoopback = await wireplumberService.CreateLoopbackModule(
-            $"input-loopback-{channelId}", new()
-            {
-                CaptureProps = CaptureBasePropsWithTargetObject(true,
-                    0.ToString(),
-                    $"channel-{channelId}-input-loopback-capture-{layerId}",
-                    passive: false),
-                PlaybackProps = PlaybackBaseProps(false,
-                    $"channel-{channelId}-input-loopback-playback-{layerId}"),
-            });
-
         var preFxLooper = await CreateLooper(
             layerId,
             channelId,
             "channel",
             "pre",
-            inputLoopback.PlaybackNode.ObjectSerial.ToString(),
+            0.ToString(),
             null);
 
         var postFxLooper = await CreateLooper(
@@ -428,7 +417,7 @@ public class MixerEditor(IWireplumberService wireplumberService)
                     $"send-loopback-{channelId}-send-{i}", new()
                     {
                         CaptureProps = CaptureBasePropsWithTargetObject(true,
-                            inputLoopback.PlaybackNode.ObjectSerial
+                            preFxLooper.PlaybackNode.ObjectSerial
                                 .ToString(),
                             $"channel-{channelId}-send-{i}-loopback-capture-{layerId}"),
                         PlaybackProps = PlaybackBasePropsWithTargetObject(true,
@@ -440,12 +429,12 @@ public class MixerEditor(IWireplumberService wireplumberService)
         var id = (channelId - 1) + layerId * (ulong)numberOfChannels;
 
         var silenceHandle = Fr.Sonic.FrSonic.CreateSilenceProducer(
-            inputLoopback.CaptureNode.ObjectSerial);
+            preFxLooper.CaptureNode.ObjectSerial);
 
         return new(
             name,
             id,
-            inputLoopback,
+            preFxLooper,
             preFxLooper,
             null,
             null,

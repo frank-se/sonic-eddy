@@ -55,6 +55,10 @@ struct LoopSlot {
   uint32_t sample_rate = 0;
   uint32_t channels = 0;
   std::optional<double> bpm;
+  double rms = 0.0;
+  float peak = 0.0f;
+  float min = 0.0f;
+  float max = 0.0f;
   bool ready = false;
   bool playing = false;
   bool owned = false;
@@ -74,6 +78,10 @@ struct LoopCopyResult {
   uint64_t length_frames = 0;
   uint32_t channels = 0;
   uint64_t elapsed_usec = 0;
+  double rms = 0.0;
+  float peak = 0.0f;
+  float min = 0.0f;
+  float max = 0.0f;
   std::shared_ptr<std::vector<float>> samples;
 };
 
@@ -114,6 +122,10 @@ struct LoopStateEntry {
   uint32_t sample_rate = 0;
   uint32_t channels = 0;
   double bpm = 0.0;
+  double rms = 0.0;
+  float peak = 0.0f;
+  float min = 0.0f;
+  float max = 0.0f;
   bool populated = false;
   bool playing = false;
   bool owned = false;

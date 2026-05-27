@@ -191,6 +191,8 @@ public sealed class LooperSlotDetailsViewModel
         Beats = FormatBeats(state);
         Length = FormatLength(state);
         Format = $"{state.Channels}ch @ {state.SampleRate}Hz";
+        Level = $"rms {state.Rms:0.###}, peak {state.Peak:0.###}";
+        Range = $"{state.Min:0.###}..{state.Max:0.###}";
         Bpm = state.Bpm?.ToString("0.##") ?? "-";
         CanPlay = string.Equals(state.State, "filled",
             StringComparison.OrdinalIgnoreCase);
@@ -206,6 +208,8 @@ public sealed class LooperSlotDetailsViewModel
     public string Beats { get; }
     public string Length { get; }
     public string Format { get; }
+    public string Level { get; }
+    public string Range { get; }
     public string Bpm { get; }
     public bool CanPlay { get; }
     public bool CanArchive { get; }

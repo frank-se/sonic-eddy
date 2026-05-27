@@ -20,7 +20,7 @@ public class ChannelStripViewModel : ChannelWithSendsViewModelBase,
     IChannelStrip
 {
     public ChannelStripViewModel(ulong channelId, string text,
-        ICommand selectChannelCommand, LoopbackModule inputLoopback,
+        ICommand selectChannelCommand, TwoNodePipewireModule inputLoopback,
         TwoNodePipewireModule outputLoopback, List<LoopbackModule> sendLoopbacks,
         FilterChain? filterChain,
         FilterGraph? filterGraph,

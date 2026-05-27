@@ -63,6 +63,10 @@
                                                     Binding="{Binding Length}" />
                                 <DataGridTextColumn Header="Format"
                                                     Binding="{Binding Format}" />
+                                <DataGridTextColumn Header="Level"
+                                                    Binding="{Binding Level}" />
+                                <DataGridTextColumn Header="Range"
+                                                    Binding="{Binding Range}" />
                                 <DataGridTextColumn Header="BPM"
                                                     Binding="{Binding Bpm}" />
                                 <DataGridTemplateColumn Header="Actions">
