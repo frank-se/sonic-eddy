@@ -30,7 +30,7 @@ public abstract record PipewireModule(
     /// <summary>
     /// Destroy the pipewire module.
     /// </summary>
-    public void Destroy()
+    public virtual void Destroy()
     {
         FrSonicLib.DestroyModuleC(ModuleHandle);
         DeleteFromModuleRegistry();

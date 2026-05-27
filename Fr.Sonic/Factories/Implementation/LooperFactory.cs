@@ -45,8 +45,9 @@ internal class LooperFactory(ModuleRegistry moduleRegistry) : ILooperFactory
 
         var pending =
             new PendingTwoNodeModuleWithTaskHandling<Looper>(tag,
-                (moduleTag, _, captureNode, playbackNode) =>
-                    new(config.Name, moduleTag, looperHandle, captureNode,
+                (moduleTag, moduleHandle, captureNode, playbackNode) =>
+                    new(config.Name, moduleTag,
+                        unchecked((UIntPtr)(nuint)moduleHandle), captureNode,
                         playbackNode),
                 moduleRegistry);
 
@@ -89,7 +90,8 @@ internal class LooperFactory(ModuleRegistry moduleRegistry) : ILooperFactory
                 throw exception;
             }
 
-            pending.ModuleHandle = unchecked((IntPtr)(nuint)looperHandle);
+            pending.SetModuleHandle(unchecked((IntPtr)(nuint)looperHandle));
+            pending.TryComplete();
             return pending.GetTask();
         }
     }

@@ -48,8 +48,9 @@ internal class MidiManipulatorFactory(ModuleRegistry moduleRegistry)
 
         var pending =
             new PendingTwoNodeModuleWithTaskHandling<MidiManipulator>(tag,
-                (moduleTag, _, captureNode, playbackNode) =>
-                    new(config.Name, moduleTag, handle, captureNode,
+                (moduleTag, moduleHandle, captureNode, playbackNode) =>
+                    new(config.Name, moduleTag,
+                        unchecked((UIntPtr)(nuint)moduleHandle), captureNode,
                         playbackNode),
                 moduleRegistry);
 
@@ -80,7 +81,8 @@ internal class MidiManipulatorFactory(ModuleRegistry moduleRegistry)
                 throw exception;
             }
 
-            pending.ModuleHandle = unchecked((IntPtr)(nuint)handle);
+            pending.SetModuleHandle(unchecked((IntPtr)(nuint)handle));
+            pending.TryComplete();
             return pending.GetTask();
         }
     }

@@ -16,6 +16,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <iterator>
 #include <memory>
 #include <pipewire/pipewire.h>
 #include <pipewire/thread-loop.h>
@@ -32,7 +33,6 @@ static std::shared_ptr<midi::MidiSyncSender> g_midi_sync_sender = nullptr;
 static std::vector<std::shared_ptr<looper::Looper>> g_loopers;
 static std::vector<size_t> g_free_looper_handles;
 static std::vector<std::shared_ptr<midi::MidiManipulator>> g_midi_manipulators;
-static std::vector<size_t> g_free_midi_manipulator_handles;
 
 class OwnedPipewireRuntime {
 public:
@@ -182,8 +182,10 @@ static size_t store_looper(std::shared_ptr<looper::Looper> looper) {
   if (!g_free_looper_handles.empty()) {
     const auto handle = g_free_looper_handles.back();
     g_free_looper_handles.pop_back();
-    g_loopers[handle] = std::move(looper);
-    return handle;
+    if (handle < g_loopers.size()) {
+      g_loopers[handle] = std::move(looper);
+      return handle;
+    }
   }
 
   g_loopers.push_back(std::move(looper));
@@ -192,13 +194,6 @@ static size_t store_looper(std::shared_ptr<looper::Looper> looper) {
 
 static size_t
 store_midi_manipulator(std::shared_ptr<midi::MidiManipulator> manipulator) {
-  if (!g_free_midi_manipulator_handles.empty()) {
-    const auto handle = g_free_midi_manipulator_handles.back();
-    g_free_midi_manipulator_handles.pop_back();
-    g_midi_manipulators[handle] = std::move(manipulator);
-    return handle;
-  }
-
   g_midi_manipulators.push_back(std::move(manipulator));
   return g_midi_manipulators.size() - 1;
 }
@@ -257,7 +252,6 @@ void frsonic_stop() {
           manipulator->stop();
       }
       g_midi_manipulators.clear();
-      g_free_midi_manipulator_handles.clear();
       if (g_midi_sync_sender) {
         g_midi_sync_sender->stop();
         g_midi_sync_sender = nullptr;
@@ -330,7 +324,7 @@ void frsonic_destroy_looper(const size_t looper_handle) {
   if (!g_owned_pipewire)
     return;
 
-  auto callback = [&] {
+  auto callback = [looper_handle] {
     if (looper_handle >= g_loopers.size() || !g_loopers[looper_handle])
       return;
 
@@ -371,14 +365,21 @@ void frsonic_destroy_midi_manipulator(const size_t manipulator_handle) {
   if (!g_owned_pipewire)
     return;
 
-  auto callback = [&] {
-    if (manipulator_handle >= g_midi_manipulators.size() ||
-        !g_midi_manipulators[manipulator_handle])
+  auto callback = [manipulator_handle] {
+    if (manipulator_handle >= g_midi_manipulators.size()) {
+      logging::log<logging::LogLevel::Error>(
+          "Ignoring invalid MIDI manipulator destroy handle {} with size {}",
+          manipulator_handle, g_midi_manipulators.size());
+      return;
+    }
+
+    auto slot = std::next(g_midi_manipulators.begin(),
+                          static_cast<std::ptrdiff_t>(manipulator_handle));
+    if (!*slot)
       return;
 
-    g_midi_manipulators[manipulator_handle]->stop();
-    g_midi_manipulators[manipulator_handle].reset();
-    g_free_midi_manipulator_handles.push_back(manipulator_handle);
+    (*slot)->stop();
+    slot->reset();
   };
   invoke_owned_pipewire_sync(callback);
 }

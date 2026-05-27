@@ -12,7 +12,7 @@ public record Looper(
         unchecked((IntPtr)(nuint)LooperHandle),
         CaptureNodeObjectSerial, PlaybackNodeObjectSerial)
 {
-    public new void Destroy()
+    public override void Destroy()
     {
         FrSonicLib.DestroyLooperC(LooperHandle);
         DeleteFromModuleRegistry();

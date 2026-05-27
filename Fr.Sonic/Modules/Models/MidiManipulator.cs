@@ -12,7 +12,7 @@ public record MidiManipulator(
         unchecked((IntPtr)(nuint)ManipulatorHandle),
         CaptureNodeObjectSerial, PlaybackNodeObjectSerial)
 {
-    public new void Destroy()
+    public override void Destroy()
     {
         FrSonicLib.DestroyMidiManipulatorC(ManipulatorHandle);
         DeleteFromModuleRegistry();

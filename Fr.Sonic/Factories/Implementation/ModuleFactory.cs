@@ -120,7 +120,8 @@ internal class ModuleFactory(ModuleRegistry moduleRegistry) : IModuleFactory
                 throw exception;
             }
 
-            pending.ModuleHandle = moduleHandle;
+            pending.SetModuleHandle(moduleHandle);
+            pending.TryComplete();
             return pending.GetTask();
         }
     }
