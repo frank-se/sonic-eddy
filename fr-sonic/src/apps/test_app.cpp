@@ -71,6 +71,7 @@ int main() {
       .description = "Sonic Eddy test looper 1",
       .capture_target_object = nullptr,
       .playback_target_object = nullptr,
+      .archive_folder_path = nullptr,
       .channels = 2,
       .max_record_seconds = 300,
   };
@@ -80,6 +81,7 @@ int main() {
       .description = "Sonic Eddy test looper 2",
       .capture_target_object = nullptr,
       .playback_target_object = nullptr,
+      .archive_folder_path = nullptr,
       .channels = 2,
       .max_record_seconds = 300,
   };

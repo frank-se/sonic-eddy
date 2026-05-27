@@ -18,6 +18,7 @@ struct Options {
   std::string tag = "cli-looper";
   std::optional<std::string> capture_target;
   std::optional<std::string> playback_target;
+  std::optional<std::string> archive_folder_path;
   uint32_t channels = 2;
   uint32_t max_record_seconds = 300;
   uint32_t duration_seconds = 0;
@@ -68,8 +69,8 @@ void print_usage(const char *argv0) {
   std::cerr
       << "Usage: " << argv0
       << " [-n name] [-t tag] [-c capture-target] [-p playback-target]\n"
-      << "       [--channels n] [--max-record-seconds n] [--mix value]"
-      << " [-d seconds]\n";
+      << "       [--archive-folder path] [--channels n]\n"
+      << "       [--max-record-seconds n] [--mix value] [-d seconds]\n";
 }
 
 bool parse_uint(const char *text, uint32_t &out) {
@@ -119,6 +120,11 @@ bool parse_args(int argc, char **argv, Options &options) {
     } else if (arg == "-p" || arg == "--playback-target") {
       if (const auto *value = require_value(arg.c_str()))
         options.playback_target = value;
+      else
+        return false;
+    } else if (arg == "--archive-folder") {
+      if (const auto *value = require_value(arg.c_str()))
+        options.archive_folder_path = value;
       else
         return false;
     } else if (arg == "--channels") {
@@ -174,6 +180,9 @@ int main(int argc, char **argv) {
           options.capture_target ? options.capture_target->c_str() : nullptr,
       .playback_target_object =
           options.playback_target ? options.playback_target->c_str() : nullptr,
+      .archive_folder_path = options.archive_folder_path
+                                  ? options.archive_folder_path->c_str()
+                                  : nullptr,
       .channels = options.channels,
       .max_record_seconds = options.max_record_seconds,
       .mix = options.mix,

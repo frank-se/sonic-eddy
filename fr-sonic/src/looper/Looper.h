@@ -114,6 +114,7 @@ struct LooperConfig {
   std::string description = "Sonic Eddy looper";
   std::optional<std::string> capture_target_object;
   std::optional<std::string> playback_target_object;
+  std::optional<std::string> archive_folder_path;
   uint32_t channels = 2;
   uint32_t max_record_seconds = 300;
   float mix = 0.0f;

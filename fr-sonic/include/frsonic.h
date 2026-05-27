@@ -76,6 +76,7 @@ struct frsonic_looper_config {
     const char *description;
     const char *capture_target_object;
     const char *playback_target_object;
+    const char *archive_folder_path;
     uint32_t channels;
     uint32_t max_record_seconds;
     float mix;

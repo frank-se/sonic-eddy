@@ -76,6 +76,7 @@ internal struct FrSonicLooperConfig
     internal IntPtr Description;
     internal IntPtr CaptureTargetObject;
     internal IntPtr PlaybackTargetObject;
+    internal IntPtr ArchiveFolderPath;
     internal uint Channels;
     internal uint MaxRecordSeconds;
     internal float Mix;

@@ -151,9 +151,9 @@ again.
 - `archive <loop_number>`
 
 Archive files are written under Sonic Eddy's local app data directory. The
-archive root is configurable, but the default location should be inside local
-app data so archived loops are private to the user and do not require additional
-permissions.
+archive root is provided by the looper creation config as
+`archive_folder_path`. If no archive folder path is configured, archive commands
+are rejected until the client creates a looper with an explicit archive folder.
 
 The archive file must contain the loop audio and enough metadata to restore or
 inspect the loop later: loop number, generation, start beat, end beat, length in
@@ -539,6 +539,7 @@ typedef struct {
     const char *description;
     const char *capture_target_object;  /* optional, may be NULL */
     const char *playback_target_object; /* optional, may be NULL */
+    const char *archive_folder_path;    /* optional, may be NULL */
     uint32_t    channels;
     uint32_t    max_record_seconds;
     float       mix;
@@ -576,6 +577,7 @@ public sealed record LooperConfig(
     string Description,
     string? CaptureTargetObject,
     string? PlaybackTargetObject,
+    string? ArchiveFolderPath,
     uint Channels,
     uint MaxRecordSeconds,
     float Mix);

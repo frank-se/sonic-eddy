@@ -64,6 +64,8 @@ internal class LooperFactory(ModuleRegistry moduleRegistry) : ILooperFactory
                 NativeUtf8String.FromNullable(config.CaptureTargetObject);
             using var playbackTarget =
                 NativeUtf8String.FromNullable(config.PlaybackTargetObject);
+            using var archiveFolderPath =
+                NativeUtf8String.FromNullable(config.ArchiveFolderPath);
 
             var nativeConfig = new FrSonicLooperConfig
             {
@@ -72,6 +74,7 @@ internal class LooperFactory(ModuleRegistry moduleRegistry) : ILooperFactory
                 Description = description.Pointer,
                 CaptureTargetObject = captureTarget.Pointer,
                 PlaybackTargetObject = playbackTarget.Pointer,
+                ArchiveFolderPath = archiveFolderPath.Pointer,
                 Channels = config.Channels,
                 MaxRecordSeconds = config.MaxRecordSeconds,
                 Mix = Math.Clamp(config.Mix, 0.0f, 1.0f),

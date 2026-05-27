@@ -268,6 +268,8 @@ bool frsonic_create_looper(const frsonic_looper_config *config,
                 optional_target_object(config->capture_target_object),
             .playback_target_object =
                 optional_target_object(config->playback_target_object),
+            .archive_folder_path =
+                optional_target_object(config->archive_folder_path),
             .channels = config->channels == 0 ? 2u : config->channels,
             .max_record_seconds = config->max_record_seconds == 0
                                       ? 300u
