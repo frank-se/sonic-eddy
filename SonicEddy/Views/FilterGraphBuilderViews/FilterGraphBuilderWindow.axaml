@@ -50,8 +50,7 @@
                 </ScrollViewer>
             </SplitView.Pane>
 
-            <graphEditorControl:GraphEditor
-                Background="SlateBlue"
+            <graphEditorControl:GraphEditorViewport
                 GraphInputs="{Binding InputNodeViewModel}"
                 GraphOutputs="{Binding OutputNodeViewModel}"
                 GraphNodes="{Binding Nodes}"

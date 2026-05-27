@@ -9,10 +9,10 @@
              x:Class="SonicEddy.Views.MidiConnectionEditorViews.MidiConnectionEditorView">
     <HeaderedContentControl Header="Midi Connections"
                             Margin="4">
-        <graphEditorControl:GraphEditor GraphInputs="{Binding InputPorts}"
-                                        GraphOutputs="{Binding OutputPorts}"
-                                        GraphEdges="{Binding Connections}"
-                                        CreateEdgeCommand="{Binding CreateEdgeCommand}"
-                                        Background="SlateBlue" />
+        <graphEditorControl:GraphEditorViewport
+            GraphInputs="{Binding InputPorts}"
+            GraphOutputs="{Binding OutputPorts}"
+            GraphEdges="{Binding Connections}"
+            CreateEdgeCommand="{Binding CreateEdgeCommand}" />
     </HeaderedContentControl>
 </UserControl>

@@ -1,7 +1,6 @@
 using System;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Shapes;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
@@ -10,125 +9,94 @@ namespace SonicEddy.Controls.GraphEditorControl;
 
 public class NodeControl : StackPanel, IDisposable
 {
-    private readonly GraphEditor _editor;
+    private readonly GraphEditorCanvas _canvas;
     private readonly TextBlock _nameTextBlock;
     private readonly GraphNode _node;
 
-    private static double _nextX = 20.0;
-    private static double _nextY = 20.0;
-
-    public NodeControl(GraphNode node, GraphEditor editor)
+    public NodeControl(GraphNode node, GraphEditorCanvas canvas)
     {
-        _editor = editor;
+        _canvas = canvas;
         _node = node;
         Orientation = Orientation.Vertical;
-        _nameTextBlock = new()
+        Background = Brushes.Bisque;
+
+        _nameTextBlock = new TextBlock
         {
             Text = node.Name,
-            Margin = new(6, 4, 4, 4),
+            Margin = new Thickness(6, 4, 4, 4),
             Foreground = Brushes.Black,
             FontWeight = FontWeight.Bold
         };
-
         Children.Add(_nameTextBlock);
 
         _nameTextBlock.PointerPressed += OnHeaderPressed;
         _nameTextBlock.PointerMoved += OnHeaderMoved;
         _nameTextBlock.PointerReleased += OnHeaderReleased;
 
-        Background = Brushes.Bisque;
+        var pos = canvas.NextNodePosition();
+        Canvas.SetLeft(this, pos.X);
+        Canvas.SetTop(this, pos.Y);
 
-        Canvas.SetLeft(this, _nextX);
-        Canvas.SetTop(this, _nextY);
+        var portRow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(4) };
+        var inCol = new StackPanel { Orientation = Orientation.Vertical, Margin = new Thickness(4) };
+        var outCol = new StackPanel { Orientation = Orientation.Vertical, Margin = new Thickness(4) };
 
-        _nextX += 150.0;
-        _nextY += 30;
-
-        var portStackPanel = new StackPanel()
+        foreach (var port in node.InPorts)
         {
-            Orientation = Orientation.Horizontal,
-            Margin = new(4)
-        };
-
-        Children.Add(portStackPanel);
-
-        var inPortStackPanel = new StackPanel()
-        {
-            Orientation = Orientation.Vertical,
-            Margin = new(4)
-        };
-
-        var outPortStackPanel = new StackPanel()
-        {
-            Orientation = Orientation.Vertical,
-            Margin = new(4)
-        };
-
-        foreach (var inPort in node.InPorts)
-        {
-            var control = new PortControl(PortType.In, PortTextSide.Right,
-                inPort, _editor);
-
-            inPortStackPanel.Children.Add(control);
-
-            editor.SetControl(inPort, control);
-            GraphEditor.SetPort(control, inPort);
+            var control = new PortControl(PortType.In, PortTextSide.Right, port, canvas);
+            inCol.Children.Add(control);
+            canvas.SetControl(port, control);
+            GraphEditorCanvas.SetPort(control, port);
         }
 
-        foreach (var outPort in node.OutPorts)
+        foreach (var port in node.OutPorts)
         {
-            var control = new PortControl(PortType.Out, PortTextSide.Left,
-                outPort, _editor);
-
-            outPortStackPanel.Children.Add(control);
-
-            editor.SetControl(outPort, control);
-            GraphEditor.SetPort(control, outPort);
+            var control = new PortControl(PortType.Out, PortTextSide.Left, port, canvas);
+            outCol.Children.Add(control);
+            canvas.SetControl(port, control);
+            GraphEditorCanvas.SetPort(control, port);
         }
 
-        portStackPanel.Children.Add(inPortStackPanel);
-        portStackPanel.Children.Add(outPortStackPanel);
+        portRow.Children.Add(inCol);
+        portRow.Children.Add(outCol);
+        Children.Add(portRow);
     }
 
-    private NodeDragDropState _dragDropState = NodeDragDropState.None;
+    private NodeDragDropState _dragState = NodeDragDropState.None;
     private Point? _lastPointerPosition;
 
-    private void OnHeaderPressed(object? sender,
-        PointerPressedEventArgs eventArgs)
+    private void OnHeaderPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (sender is not TextBlock textBlock) return;
-        _dragDropState = NodeDragDropState.MoveNode;
-        eventArgs.Pointer.Capture(textBlock);
-        Cursor = new(StandardCursorType.DragMove);
-        _lastPointerPosition = eventArgs.GetPosition(null);
+        if (sender is not TextBlock tb) return;
+        _dragState = NodeDragDropState.MoveNode;
+        e.Pointer.Capture(tb);
+        Cursor = new Cursor(StandardCursorType.DragMove);
+        _lastPointerPosition = e.GetPosition(null);
     }
 
-    private void OnHeaderMoved(object? sender, PointerEventArgs eventArgs)
+    private void OnHeaderMoved(object? sender, PointerEventArgs e)
     {
-        if (_dragDropState == NodeDragDropState.MoveNode)
+        if (_dragState != NodeDragDropState.MoveNode || _lastPointerPosition is null) return;
+
+        var current = e.GetPosition(null);
+        var diffX = _lastPointerPosition.Value.X - current.X;
+        var diffY = _lastPointerPosition.Value.Y - current.Y;
+        _lastPointerPosition = current;
+
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
-            if (_lastPointerPosition is null) return;
-            var x = Canvas.GetLeft(this);
-            var y = Canvas.GetTop(this);
-            var currentPosition = eventArgs.GetPosition(null);
-            var diffX = _lastPointerPosition.Value.X - currentPosition.X;
-            var diffY = _lastPointerPosition.Value.Y - currentPosition.Y;
-            _lastPointerPosition = currentPosition;
-            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-            {
-                Canvas.SetLeft(this, x - diffX);
-                Canvas.SetTop(this, y - diffY);
-                _editor.UpdateConnectionsForNodeMove(_node);
-            });
-        }
+            Canvas.SetLeft(this, Canvas.GetLeft(this) - diffX);
+            Canvas.SetTop(this, Canvas.GetTop(this) - diffY);
+            _canvas.UpdateConnectionsForNodeMove(_node);
+        });
     }
 
-    private void OnHeaderReleased(object? sender,
-        PointerReleasedEventArgs eventArgs)
+    private void OnHeaderReleased(object? sender, PointerReleasedEventArgs e)
     {
-        _dragDropState = NodeDragDropState.None;
-        eventArgs.Pointer.Capture(null);
-        Cursor = new(StandardCursorType.Arrow);
+        _dragState = NodeDragDropState.None;
+        e.Pointer.Capture(null);
+        Cursor = new Cursor(StandardCursorType.Arrow);
+        _canvas.UpdateCanvasSize();
     }
 
     public void Dispose()

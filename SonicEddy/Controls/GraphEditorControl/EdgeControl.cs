@@ -7,25 +7,21 @@ namespace SonicEddy.Controls.GraphEditorControl;
 
 public class EdgeControl : Line
 {
-    public EdgeControl(GraphEdge edge, GraphEditor editor)
+    public EdgeControl(GraphEdge edge, GraphEditorCanvas canvas)
     {
         Stroke = Brushes.Black;
         StrokeThickness = 2;
-        Cursor = new(StandardCursorType.Hand);
+        Cursor = new Cursor(StandardCursorType.Hand);
         StrokeLineCap = PenLineCap.Round;
 
-        var sourceControl = editor.GetControl(edge.Source);
-        var targetControl = editor.GetControl(edge.Target);
+        var sourceControl = canvas.GetControl(edge.Source);
+        var targetControl = canvas.GetControl(edge.Target);
 
-        if (sourceControl is not PortControl s ||
-            targetControl is not PortControl t) return;
+        if (sourceControl is not PortControl s || targetControl is not PortControl t) return;
 
-        var start = s.GetConnectionCenterPoint(editor);
-        var end = t.GetConnectionCenterPoint(editor);
+        StartPoint = s.GetConnectionCenterPoint(canvas);
+        EndPoint = t.GetConnectionCenterPoint(canvas);
 
-        StartPoint = start;
-        EndPoint = end;
-        
-        editor.SetControl(edge, this);
+        canvas.SetControl(edge, this);
     }
 }
