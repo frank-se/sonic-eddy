@@ -3,12 +3,15 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using Avalonia.Controls;
 using Avalonia.Media;
 using Fr.Sonic;
 using Fr.Sonic.Loopers;
 using Fr.Sonic.Modules.Models;
 using Fr.Sonic.Sync;
 using ReactiveUI;
+using SonicEddy.Tools;
+using SonicEddy.Views.MixerViewsV2;
 
 namespace SonicEddy.ViewModels.MixerViewModelsV2;
 
@@ -22,6 +25,7 @@ public sealed class LooperSectionViewModel : ReactiveObject, IDisposable
     private readonly LooperClient _preFxClient;
     private readonly LooperClient _postFxClient;
     private SyncClient? _syncClient;
+    private Window? _detailsWindow;
     private readonly Action<LooperState?> _preFxStateChanged;
     private readonly Action<LooperState?> _postFxStateChanged;
 
@@ -159,7 +163,32 @@ public sealed class LooperSectionViewModel : ReactiveObject, IDisposable
 
     private void ShowDetails()
     {
-        // Details window is intentionally left as the next UI slice.
+        if (_detailsWindow is not null)
+        {
+            _detailsWindow.Activate();
+            return;
+        }
+
+        _detailsWindow = new LooperDetailsWindow
+        {
+            DataContext = new LooperDetailsViewModel(
+                $"{_preFxLooper.Name} / {_postFxLooper.Name}",
+                _preFxLooper,
+                _postFxLooper)
+        };
+        _detailsWindow.Closed += OnDetailsWindowClosed;
+        var owner = WindowTools.GetMainWindow();
+        if (owner is null)
+            _detailsWindow.Show();
+        else
+            _detailsWindow.Show(owner);
+    }
+
+    private void OnDetailsWindowClosed(object? sender, EventArgs e)
+    {
+        if (_detailsWindow is not null)
+            _detailsWindow.Closed -= OnDetailsWindowClosed;
+        _detailsWindow = null;
     }
 
     private bool TryGetTargetBeat(out ulong targetBeat)
@@ -244,6 +273,8 @@ public sealed class LooperSectionViewModel : ReactiveObject, IDisposable
 
     public void Dispose()
     {
+        if (_detailsWindow is not null)
+            _detailsWindow.Close();
         _preFxClient.StateChanged -= _preFxStateChanged;
         _postFxClient.StateChanged -= _postFxStateChanged;
         _preFxClient.Dispose();
