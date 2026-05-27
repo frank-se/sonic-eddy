@@ -1,19 +1,28 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using Avalonia.Threading;
 using Fr.Sonic;
 using Fr.Sonic.Model.Objects;
 using ReactiveUI;
+using SonicEddy.Services.MidiRouter;
+using Splat;
 
 namespace SonicEddy.ViewModels.MidiRouterViewModels;
 
 public sealed class MidiRouterViewModel : ViewModelBase, IDisposable
 {
+    private readonly IMidiRouterService _routerService;
+
     public MidiRouterViewModel()
     {
-        ConnectCommand = ReactiveCommand.Create(Connect);
+        _routerService = Locator.Current.GetService<IMidiRouterService>() ??
+                         new MidiRouterService();
+        _routerService.RoutesChanged += OnRoutesChanged;
+        ConnectCommand = ReactiveCommand.CreateFromTask(ConnectAsync);
         RefreshCommand = ReactiveCommand.Create(Refresh);
 
         FrSonic.PortRegistry.Added += OnPortChanged;
@@ -54,12 +63,24 @@ public sealed class MidiRouterViewModel : ViewModelBase, IDisposable
     public bool CanConnect =>
         SelectedSource is not null &&
         SelectedTarget is not null &&
-        !HasLink(SelectedSource.Port.ObjectId, SelectedTarget.Port.ObjectId);
+        !HasRoute(SelectedSource.Port.ObjectId, SelectedTarget.Port.ObjectId);
 
     public string Status
     {
         get;
         private set => this.RaiseAndSetIfChanged(ref field, value);
+    } = string.Empty;
+
+    public string DropChannels
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    } = string.Empty;
+
+    public string ChannelMap
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
     } = string.Empty;
 
     public void Refresh()
@@ -95,18 +116,17 @@ public sealed class MidiRouterViewModel : ViewModelBase, IDisposable
                              target.Port.ObjectId == selectedTargetId) ??
                          Targets.FirstOrDefault();
 
-        foreach (var link in FrSonic.LinkRegistry.Objects
-                     .Where(IsVisibleRoute)
-                     .OrderBy(link => DisplayName(PortById(link.OutputPortId)))
-                     .ThenBy(link => DisplayName(PortById(link.InputPortId))))
-            AddRoute(link);
+        foreach (var route in _routerService.Routes
+                     .OrderBy(route => DisplayName(route.Source))
+                     .ThenBy(route => DisplayName(route.Target)))
+            AddRoute(route);
 
         Status =
             $"{Sources.Count} source ports, {Targets.Count} target ports, {RouteLinks.Count} routes.";
         this.RaisePropertyChanged(nameof(CanConnect));
     }
 
-    private void Connect()
+    private async Task ConnectAsync()
     {
         if (SelectedSource is null || SelectedTarget is null)
             return;
@@ -115,43 +135,27 @@ public sealed class MidiRouterViewModel : ViewModelBase, IDisposable
         var target = SelectedTarget.Port;
         if (source.Direction != "out" || target.Direction != "in")
             return;
-        if (HasLink(source.ObjectId, target.ObjectId))
+        if (HasRoute(source.ObjectId, target.ObjectId))
             return;
 
-        FrSonic.LinkFactory.CreateLink(source, target);
+        await _routerService.CreateRouteAsync(source, target,
+            ParseManipulation());
     }
 
-    private static void DeleteRoute(ulong sourcePortId, ulong targetPortId)
+    private void DeleteRoute(Guid routeId)
     {
-        foreach (var link in FrSonic.LinkRegistry.Objects
-                     .Where(link => link.OutputPortId == sourcePortId &&
-                                    link.InputPortId == targetPortId)
-                     .ToList())
-            FrSonic.LinkFactory.DeleteLink(link);
+        _routerService.DeleteRoute(routeId);
     }
 
-    private void AddRoute(Link link)
-    {
-        var source = PortById(link.OutputPortId);
-        var target = PortById(link.InputPortId);
-        if (source is null || target is null)
-            return;
+    private void AddRoute(MidiRoute route) =>
+        RouteLinks.Add(new(route.Id, DisplayName(route.Source),
+            DisplayName(route.Target), FormatManipulation(route.Manipulation),
+            DeleteRoute));
 
-        RouteLinks.Add(new(link.OutputPortId, link.InputPortId,
-            DisplayName(source), DisplayName(target), DeleteRoute));
-    }
-
-    private static bool HasLink(ulong sourcePortId, ulong targetPortId) =>
-        FrSonic.LinkRegistry.Objects.Any(link =>
-            link.OutputPortId == sourcePortId &&
-            link.InputPortId == targetPortId);
-
-    private static bool IsVisibleRoute(Link link) =>
-        IsControlPortId(link.OutputPortId) &&
-        IsControlPortId(link.InputPortId);
-
-    private static bool IsControlPortId(ulong objectId) =>
-        PortById(objectId) is { } port && IsControlPort(port);
+    private bool HasRoute(ulong sourcePortId, ulong targetPortId) =>
+        _routerService.Routes.Any(route =>
+            route.Source.ObjectId == sourcePortId &&
+            route.Target.ObjectId == targetPortId);
 
     private static bool IsControlPort(Port port)
     {
@@ -180,11 +184,9 @@ public sealed class MidiRouterViewModel : ViewModelBase, IDisposable
         return $"{nodeName}: {portName}";
     }
 
-    private static Port? PortById(ulong objectId) =>
-        FrSonic.PortRegistry.GetByObjectId(objectId);
-
     private void OnPortChanged(Port _) => PostRefresh();
     private void OnLinkChanged(Link _) => PostRefresh();
+    private void OnRoutesChanged() => PostRefresh();
 
     private void PostRefresh()
     {
@@ -197,5 +199,56 @@ public sealed class MidiRouterViewModel : ViewModelBase, IDisposable
         FrSonic.PortRegistry.Deleted -= OnPortChanged;
         FrSonic.LinkRegistry.Added -= OnLinkChanged;
         FrSonic.LinkRegistry.Deleted -= OnLinkChanged;
+        _routerService.RoutesChanged -= OnRoutesChanged;
+    }
+
+    private MidiManipulationConfig ParseManipulation()
+    {
+        var drops = DropChannels
+            .Split([',', ' ', ';'], StringSplitOptions.RemoveEmptyEntries)
+            .Select(ParseChannel)
+            .OfType<int>()
+            .Distinct()
+            .Order()
+            .ToList();
+
+        var maps = ChannelMap
+            .Split([',', ';'], StringSplitOptions.RemoveEmptyEntries)
+            .Select(ParseMap)
+            .OfType<ChannelMapEntry>()
+            .ToList();
+
+        return new(drops, maps);
+    }
+
+    private static int? ParseChannel(string value) =>
+        int.TryParse(value.Trim(), out var channel) && channel is >= 1 and <= 16
+            ? channel
+            : null;
+
+    private static ChannelMapEntry? ParseMap(string value)
+    {
+        var parts = value.Split(['>', ':', '-'],
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (parts.Length != 2)
+            return null;
+
+        var from = ParseChannel(parts[0]);
+        var to = ParseChannel(parts[1]);
+        return from is null || to is null ? null : new(from.Value, to.Value);
+    }
+
+    private static string FormatManipulation(MidiManipulationConfig config)
+    {
+        if (config.IsPassthrough)
+            return "passthrough";
+
+        var parts = new List<string>();
+        if (config.DropChannels.Count > 0)
+            parts.Add($"drop {string.Join(",", config.DropChannels)}");
+        if (config.ChannelMap.Count > 0)
+            parts.Add("map " + string.Join(",",
+                config.ChannelMap.Select(map => $"{map.From}>{map.To}")));
+        return string.Join("; ", parts);
     }
 }

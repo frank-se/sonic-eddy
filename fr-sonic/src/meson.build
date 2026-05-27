@@ -36,6 +36,7 @@ libfrsonic = shared_library(
         'midi/Receiver.cpp',
         'midi/Sender.cpp',
         'midi/MidiSyncSender.cpp',
+        'midi/MidiManipulator.cpp',
         'midi/parse_midi.cpp',
         'midi/parse_ump.cpp',
         'midi/build_midi.cpp',

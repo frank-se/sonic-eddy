@@ -8,4 +8,8 @@ internal static class PmxConstants
     internal const string PurposeLoopbackPlayback = "loopback-playback";
     internal const string PurposeLooperCapture = "looper-capture";
     internal const string PurposeLooperPlayback = "looper-playback";
+    internal const string PurposeMidiManipulatorCapture =
+        "midi-manipulator-capture";
+    internal const string PurposeMidiManipulatorPlayback =
+        "midi-manipulator-playback";
 }

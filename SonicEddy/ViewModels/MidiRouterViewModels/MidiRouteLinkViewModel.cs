@@ -5,14 +5,15 @@ using ReactiveUI;
 namespace SonicEddy.ViewModels.MidiRouterViewModels;
 
 public sealed class MidiRouteLinkViewModel(
-    ulong sourcePortId,
-    ulong targetPortId,
+    Guid routeId,
     string source,
     string target,
-    Action<ulong, ulong> delete)
+    string manipulation,
+    Action<Guid> delete)
 {
     public string Source { get; } = source;
     public string Target { get; } = target;
+    public string Manipulation { get; } = manipulation;
     public ICommand DeleteCommand { get; } =
-        ReactiveCommand.Create(() => delete(sourcePortId, targetPortId));
+        ReactiveCommand.Create(() => delete(routeId));
 }

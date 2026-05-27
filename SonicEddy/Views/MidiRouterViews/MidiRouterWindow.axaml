@@ -9,7 +9,7 @@
         x:Class="SonicEddy.Views.MidiRouterViews.MidiRouterWindow"
         x:DataType="midiRouterVm:MidiRouterViewModel"
         Title="MIDI Router">
-    <Grid RowDefinitions="Auto,Auto,*,Auto"
+    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto"
           Margin="12"
           RowSpacing="12">
         <StackPanel Grid.Row="0"
@@ -55,7 +55,29 @@
                     Command="{Binding ConnectCommand}" />
         </Grid>
 
-        <DataGrid Grid.Row="2"
+        <Grid Grid.Row="2"
+              ColumnDefinitions="*,*"
+              ColumnSpacing="8"
+              RowDefinitions="Auto,Auto"
+              RowSpacing="4">
+            <TextBlock Grid.Row="0"
+                       Grid.Column="0"
+                       Text="Drop channels" />
+            <TextBox Grid.Row="1"
+                     Grid.Column="0"
+                     PlaceholderText="1, 10, 16"
+                     Text="{Binding DropChannels}" />
+
+            <TextBlock Grid.Row="0"
+                       Grid.Column="1"
+                       Text="Channel map" />
+            <TextBox Grid.Row="1"
+                     Grid.Column="1"
+                     PlaceholderText="1&gt;2, 10&gt;1"
+                     Text="{Binding ChannelMap}" />
+        </Grid>
+
+        <DataGrid Grid.Row="3"
                   AutoGenerateColumns="False"
                   CanUserReorderColumns="False"
                   CanUserResizeColumns="True"
@@ -70,6 +92,9 @@
                 <DataGridTextColumn Header="Target"
                                     Width="*"
                                     Binding="{Binding Target}" />
+                <DataGridTextColumn Header="Manipulation"
+                                    Width="Auto"
+                                    Binding="{Binding Manipulation}" />
                 <DataGridTemplateColumn Header="Actions">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate x:DataType="midiRouterVm:MidiRouteLinkViewModel">
@@ -82,8 +107,8 @@
             </DataGrid.Columns>
         </DataGrid>
 
-        <TextBlock Grid.Row="3"
+        <TextBlock Grid.Row="4"
                    TextWrapping="Wrap"
-                   Text="MIDI/control routes are created as direct PipeWire port links. Use this for MIDI bridge hardware ports and internal control ports." />
+                   Text="MIDI/control routes are managed by Sonic Eddy. Passthrough routes use direct links; manipulated routes insert an internal MIDI node." />
     </Grid>
 </Window>

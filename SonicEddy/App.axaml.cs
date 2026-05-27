@@ -10,6 +10,7 @@ using ReactiveUI;
 using Serilog;
 using SonicEddy.Services.AppData;
 using SonicEddy.Services.Midi;
+using SonicEddy.Services.MidiRouter;
 using SonicEddy.Services.MixerServiceV2;
 using SonicEddy.Services.MixerViewModels;
 using SonicEddy.Services.Monitoring;
@@ -112,6 +113,9 @@ public class App : Application
             new MidiControllerService(midiControllerServiceLogger);
 
         var setupService = new MidiControllerSetupService();
+        var midiRouterService = new MidiRouterService();
+        Locator.CurrentMutable.Register<IMidiRouterService>(() =>
+            midiRouterService);
 
         var mixerViewModelServiceLogger =
             loggerFactory.CreateLogger<MixerViewModelService>();

@@ -118,6 +118,14 @@ internal static partial class FrSonicLib
     [LibraryImport(LIB, EntryPoint = "frsonic_destroy_looper")]
     internal static partial void DestroyLooperC(UIntPtr handle);
 
+    [LibraryImport(LIB, EntryPoint = "frsonic_create_midi_manipulator")]
+    [return: MarshalAs(UnmanagedType.U1)]
+    internal static partial bool CreateMidiManipulatorC(
+        in FrSonicMidiManipulatorConfig config, out UIntPtr handle);
+
+    [LibraryImport(LIB, EntryPoint = "frsonic_destroy_midi_manipulator")]
+    internal static partial void DestroyMidiManipulatorC(UIntPtr handle);
+
     /* wireplumber object model */
     [LibraryImport(LIB, EntryPoint = "frsonic_set_volumes")]
     internal static partial void SetVolumesC(ulong objectId,
