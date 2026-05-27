@@ -63,7 +63,7 @@ libfrsonic = shared_library(
     version : meson.project_version(),
     soversion : '0',
     link_args : ['-latomic'],
-    dependencies : [pipewire_dep, wireplumber_dep, boost_dep, lv2_dep, lilv_dep])
+    dependencies : [pipewire_dep, wireplumber_dep, boost_dep, lv2_dep, lilv_dep, flac_dep])
 
 conf_data = configuration_data()
 conf_data.set('LIBFRSONIC_VERSION', meson.project_version())

@@ -14,5 +14,6 @@ wireplumber_dep = dependency('wireplumber-0.5')
 boost_dep = dependency('boost')
 lv2_dep = dependency('lv2')
 lilv_dep = dependency('lilv-0')
+flac_dep = dependency('flac')
 
 subdir('src')
