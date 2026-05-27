@@ -17,6 +17,7 @@ internal static class Program
     {
         FrSonic.Init(TimeSpan.FromMilliseconds(250));
         FrSonic.Start();
+        FrSonicLv2.Init();
 
         /*
          * TODO: Update to wait for the availability of the midi bridge directly
@@ -55,6 +56,7 @@ internal static class Program
         BuildAvaloniaApp()
             .StartWithClassicDesktopLifetime(args);
 
+        FrSonicLv2.Destroy();
         FrSonic.Stop();
     }
 
