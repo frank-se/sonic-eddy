@@ -56,6 +56,9 @@ When the looper observes an already active `playing` transport state, it aligns
 the ring buffer to the transport state's beat tuple, so ring buffer position `0`
 corresponds to the beat where playback began.
 
+When the looper observes a `stopped` transport state, it stops recording and
+stops active loop playback.
+
 ## Stored Loops
 
 The looper can store 10 loops of different length internally. Commands refer to

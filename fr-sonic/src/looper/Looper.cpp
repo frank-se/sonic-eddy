@@ -871,12 +871,14 @@ bool looper::Looper::should_record_frame(const sesync::SyncSnapshot &snapshot,
   const auto current = snapshot.current_beat(frame_nsec);
   if (!current) {
     stop_recording();
+    stop_loops();
     return false;
   }
 
   const auto transport = transport_state_entry_at(snapshot, current->beat);
   if (!transport || transport->state == sesync::TransportState::Stopped) {
     stop_recording();
+    stop_loops();
     return false;
   }
 
