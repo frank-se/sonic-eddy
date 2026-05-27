@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
 #include <iostream>
 #include <limits>
 #include <optional>
@@ -33,6 +34,8 @@ struct Options {
   uint32_t channels = 2;
   uint32_t duration_seconds = 0;
   bool json = false;
+  bool transitions_json = false;
+  float transition_threshold = 0.5f;
 };
 
 struct Stats {
@@ -55,8 +58,11 @@ struct App {
   spa_audio_info_raw format{};
   Stats total{};
   Stats window{};
+  uint64_t frame = 0;
   uint64_t next_report_frame = 0;
   bool node_identity_printed = false;
+  bool transition_initialized = false;
+  bool transition_high = false;
 };
 
 App *g_app = nullptr;
@@ -64,7 +70,8 @@ App *g_app = nullptr;
 void print_usage(const char *argv0) {
   std::cerr << "Usage: " << argv0
             << " [-c target] [-n name] [-d seconds] [-r rate]"
-            << " [--channels n] [--json]\n";
+            << " [--channels n] [--json] [--transitions-json]"
+            << " [--transition-threshold value]\n";
 }
 
 bool parse_uint(const char *text, uint32_t &out) {
@@ -73,6 +80,15 @@ bool parse_uint(const char *text, uint32_t &out) {
   if (end == text || *end != '\0')
     return false;
   out = static_cast<uint32_t>(value);
+  return true;
+}
+
+bool parse_float(const char *text, float &out) {
+  char *end = nullptr;
+  const auto value = std::strtof(text, &end);
+  if (end == text || *end != '\0')
+    return false;
+  out = value;
   return true;
 }
 
@@ -138,6 +154,12 @@ bool parse_args(int argc, char **argv, Options &options) {
         return false;
     } else if (arg == "--json") {
       options.json = true;
+    } else if (arg == "--transitions-json") {
+      options.transitions_json = true;
+    } else if (arg == "--transition-threshold") {
+      if (const auto *value = require_value(arg.c_str());
+          value == nullptr || !parse_float(value, options.transition_threshold))
+        return false;
     } else if (arg == "-h" || arg == "--help") {
       print_usage(argv[0]);
       std::exit(0);
@@ -147,6 +169,13 @@ bool parse_args(int argc, char **argv, Options &options) {
     }
   }
   return true;
+}
+
+uint64_t monotonic_nsec() {
+  timespec now{};
+  clock_gettime(CLOCK_MONOTONIC, &now);
+  return (static_cast<uint64_t>(now.tv_sec) * 1'000'000'000ull) +
+         static_cast<uint64_t>(now.tv_nsec);
 }
 
 void add_sample(Stats &stats, const float sample) {
@@ -193,12 +222,37 @@ void on_process(void *data) {
   const auto channels = std::max(app->format.channels, 1u);
   const auto frames = spa_data->chunk->size / (channels * sizeof(float));
   const auto *samples = static_cast<const float *>(spa_data->data);
+  pw_time stream_time{};
+  auto buffer_start_nsec = monotonic_nsec();
+  if (pw_stream_get_time_n(app->stream, &stream_time, sizeof(stream_time)) >=
+          0 &&
+      stream_time.now > 0) {
+    buffer_start_nsec = static_cast<uint64_t>(stream_time.now);
+  }
+  const auto nsec_per_frame =
+      1'000'000'000ull / static_cast<uint64_t>(std::max(app->format.rate, 1u));
 
   for (uint32_t frame = 0; frame < frames; ++frame) {
     const auto sample = samples[frame * channels];
+    if (app->options.transitions_json) {
+      const auto high = sample >= app->options.transition_threshold;
+      if (!app->transition_initialized) {
+        app->transition_initialized = true;
+        app->transition_high = high;
+      } else if (high != app->transition_high) {
+        app->transition_high = high;
+        std::cout << "{\"type\":\"transition\",\"app\":\"record\",\"frame\":"
+                  << (app->frame + frame) << ",\"nsec\":"
+                  << (buffer_start_nsec +
+                      (static_cast<uint64_t>(frame) * nsec_per_frame))
+                  << ",\"high\":" << (high ? "true" : "false")
+                  << ",\"sample\":" << sample << "}" << std::endl;
+      }
+    }
     add_sample(app->total, sample);
     add_sample(app->window, sample);
   }
+  app->frame += frames;
   app->total.frames += frames;
   app->window.frames += frames;
 

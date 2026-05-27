@@ -5,11 +5,14 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
 #include <iostream>
 #include <limits>
 #include <optional>
 #include <sstream>
 #include <string>
+
+#include "sync/SyncClient.h"
 
 #include <pipewire/context.h>
 #include <pipewire/core.h>
@@ -28,7 +31,7 @@ namespace {
 
 constexpr double Pi = 3.14159265358979323846;
 
-enum class Mode { Constant, Alternating, Sine };
+enum class Mode { Constant, Alternating, Sine, BeatAlternating };
 
 struct Options {
   std::string name = "se.test_signal";
@@ -58,6 +61,7 @@ struct App {
   pw_core *core = nullptr;
   pw_registry *registry = nullptr;
   pw_stream *stream = nullptr;
+  std::shared_ptr<sesync::SyncClient> sync_client;
   spa_hook registry_listener{};
   spa_hook stream_listener{};
   spa_audio_info_raw format{};
@@ -72,7 +76,7 @@ App *g_app = nullptr;
 
 void print_usage(const char *argv0) {
   std::cerr << "Usage: " << argv0
-            << " [-p target] [-n name] [-m constant|alternating|sine]\n"
+            << " [-p target] [-n name] [-m constant|alternating|sine|beat-alternating]\n"
             << "       [--value v] [--high-value v] [-f hz] [-d seconds]\n"
             << "       [-r rate] [--channels n] [--json]\n";
 }
@@ -118,6 +122,10 @@ bool parse_mode(const char *text, Mode &out) {
     out = Mode::Sine;
     return true;
   }
+  if (value == "beat-alternating") {
+    out = Mode::BeatAlternating;
+    return true;
+  }
   return false;
 }
 
@@ -129,6 +137,8 @@ const char *mode_name(const Mode mode) {
     return "alternating";
   case Mode::Sine:
     return "sine";
+  case Mode::BeatAlternating:
+    return "beat-alternating";
   }
   return "unknown";
 }
@@ -222,7 +232,14 @@ bool parse_args(int argc, char **argv, Options &options) {
   return true;
 }
 
-float sample_value(const App &app, uint64_t frame) {
+uint64_t monotonic_nsec() {
+  timespec now{};
+  clock_gettime(CLOCK_MONOTONIC, &now);
+  return (static_cast<uint64_t>(now.tv_sec) * 1'000'000'000ull) +
+         static_cast<uint64_t>(now.tv_nsec);
+}
+
+float sample_value(const App &app, uint64_t frame, uint64_t frame_nsec) {
   const auto rate = std::max(app.format.rate, 1u);
   switch (app.options.mode) {
   case Mode::Constant:
@@ -235,6 +252,15 @@ float sample_value(const App &app, uint64_t frame) {
         app.options.value *
         std::sin(2.0 * Pi * app.options.frequency *
                  (static_cast<double>(frame) / static_cast<double>(rate))));
+  case Mode::BeatAlternating: {
+    if (!app.sync_client)
+      return app.options.value;
+    const auto current = app.sync_client->current_beat(frame_nsec);
+    if (!current)
+      return app.options.value;
+    return (current->beat % 2) == 0 ? app.options.value
+                                    : app.options.high_value;
+  }
   }
   return 0.0f;
 }
@@ -288,9 +314,20 @@ void on_process(void *data) {
       std::min<uint32_t>(requested,
                          spa_data->maxsize / (channels * sizeof(float)));
   auto *samples = static_cast<float *>(spa_data->data);
+  pw_time stream_time{};
+  auto buffer_start_nsec = monotonic_nsec();
+  if (pw_stream_get_time_n(app->stream, &stream_time, sizeof(stream_time)) >=
+          0 &&
+      stream_time.now > 0) {
+    buffer_start_nsec = static_cast<uint64_t>(stream_time.now);
+  }
+  const auto nsec_per_frame =
+      1'000'000'000ull / static_cast<uint64_t>(std::max(app->format.rate, 1u));
 
   for (uint32_t frame = 0; frame < frames; ++frame) {
-    const auto value = sample_value(*app, app->frame + frame);
+    const auto value = sample_value(
+        *app, app->frame + frame,
+        buffer_start_nsec + (static_cast<uint64_t>(frame) * nsec_per_frame));
     add_sample(app->total, value);
     add_sample(app->window, value);
     for (uint32_t channel = 0; channel < channels; ++channel)
@@ -433,6 +470,12 @@ int main(int argc, char **argv) {
     return 1;
   pw_registry_add_listener(app.registry, &app.registry_listener,
                            &registry_events, &app);
+  if (app.options.mode == Mode::BeatAlternating) {
+    app.sync_client =
+        std::make_shared<sesync::SyncClient>(app.core,
+                                             pw_main_loop_get_loop(app.main_loop));
+    app.sync_client->start();
+  }
 
   auto *properties = pw_properties_new(
       PW_KEY_MEDIA_TYPE, "Audio", PW_KEY_MEDIA_CATEGORY, "Playback",
@@ -472,6 +515,8 @@ int main(int argc, char **argv) {
   pw_main_loop_run(app.main_loop);
   print_stats("total", app.total, app.options.json);
 
+  if (app.sync_client)
+    app.sync_client->stop();
   pw_stream_destroy(app.stream);
   pw_proxy_destroy(reinterpret_cast<pw_proxy *>(app.registry));
   pw_core_disconnect(app.core);

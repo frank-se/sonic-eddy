@@ -10,6 +10,7 @@ tests=(
   "cut-play:scripts/looper-cut-play-test.sh"
   "sync-cut-play:scripts/looper-sync-cut-play-test.sh"
   "recording-transport:scripts/looper-recording-transport-test.sh"
+  "sample-sync:scripts/looper-sample-sync-test.sh"
 )
 
 tmp_dir="$(mktemp -d)"

@@ -101,6 +101,7 @@ executable(
     'se-signal',
     sources : [
         'apps/signal_app.cpp',
+        'sync/SyncClient.cpp',
     ],
     include_directories : [all_inc, build_inc],
     dependencies : [pipewire_dep, wireplumber_dep, boost_dep, lv2_dep, lilv_dep])
