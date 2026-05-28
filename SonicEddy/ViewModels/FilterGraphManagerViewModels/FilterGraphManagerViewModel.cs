@@ -7,6 +7,7 @@ using DynamicData;
 using Fr.Sonic;
 using SonicEddy.Services.AppData;
 using SonicEddy.ViewModels.FilterGraphBuilderViewModels;
+using SonicEddy.ViewModels.FilterGraphBuilderViewModels.Graph;
 using SonicEddy.Views.FilterGraphBuilderViews;
 using SonicEddy.Views.FilterGraphManagerViews;
 using Splat;
@@ -69,6 +70,21 @@ public class FilterGraphManagerViewModel : ViewModelBase
         };
 
         _filterGraphParameterEditor.Show();
+    }
+
+    public async Task EditFilterGraph(Guid id)
+    {
+        var filterGraph = await _appDataService.GetFilterGraph(id);
+        var pluginDescriptions = FrSonicLv2.PluginDescriptions();
+        var appDataService = Locator.Current.GetService<IAppDataService>();
+
+        var viewModel = new FilterGraphBuilderViewModel(appDataService!,
+            FrSonicLv2.ClassDescriptions(), pluginDescriptions);
+
+        viewModel.LoadFromGrpc(filterGraph, pluginDescriptions);
+
+        var window = new FilterGraphBuilderWindow { DataContext = viewModel };
+        window.Show();
     }
 
     public void ShowFilterGraphBuilderWindow()
