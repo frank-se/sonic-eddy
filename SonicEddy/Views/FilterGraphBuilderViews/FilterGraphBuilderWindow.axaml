@@ -4,6 +4,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:graphEditorControl="clr-namespace:SonicEddy.Controls.GraphEditorControl"
         xmlns:filterGraphBuilderViewModels="clr-namespace:SonicEddy.ViewModels.FilterGraphBuilderViewModels"
+        xmlns:lv2="clr-namespace:SonicEddy.ViewModels.FilterGraphBuilderViewModels.Graph.Lv2"
+        xmlns:builtin="clr-namespace:SonicEddy.ViewModels.FilterGraphBuilderViewModels.Graph.Builtin"
         xmlns:toolbox="clr-namespace:SonicEddy.ViewModels.FilterGraphBuilderViewModels.Toolbox"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="SonicEddy.Views.FilterGraphBuilderViews.FilterGraphBuilderWindow"
@@ -19,86 +21,156 @@
             </MenuItem>
         </Menu>
 
-        <SplitView IsPaneOpen="True"
+        <!-- Left SplitView: node details (slides in when a node is selected) -->
+        <SplitView IsPaneOpen="{Binding SelectedNode, Converter={x:Static ObjectConverters.IsNotNull}}"
                    DisplayMode="Inline"
-                   OpenPaneLength="250"
-                   PanePlacement="Right">
+                   OpenPaneLength="280"
+                   PanePlacement="Left">
             <SplitView.Pane>
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel>
+                    <StackPanel Margin="8">
+                        <TextBlock Text="{Binding SelectedNode.Name}"
+                                   FontWeight="Bold"
+                                   Margin="0,4,0,8" />
 
-                        <!-- Built-in filter nodes -->
-                        <Expander Header="Built-in"
-                                  HorizontalAlignment="Stretch"
-                                  IsExpanded="True">
-                            <ItemsControl ItemsSource="{Binding AvailableBuiltins}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="toolbox:BuiltinNodeGroupViewModel">
-                                        <Expander Header="{Binding Name}"
-                                                  HorizontalAlignment="Stretch">
-                                            <ItemsControl ItemsSource="{Binding Nodes}">
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate x:DataType="toolbox:AvailableBuiltinNode">
-                                                        <Grid ColumnDefinitions="*, Auto">
-                                                            <Button Grid.Column="0"
-                                                                    Content="{Binding DisplayName}"
-                                                                    HorizontalAlignment="Stretch"
-                                                                    Margin="4,2"
-                                                                    Command="{Binding #MainControl.((filterGraphBuilderViewModels:FilterGraphBuilderViewModel)DataContext).AddBuiltinNode}"
-                                                                    CommandParameter="{Binding}" />
-                                                            <NumericUpDown Grid.Column="1"
-                                                                           IsVisible="{Binding HasVariableChannelCount}"
-                                                                           Value="{Binding ChannelCount}"
-                                                                           Minimum="1" Maximum="8"
-                                                                           Increment="1"
-                                                                           FormatString="0"
-                                                                           Width="64"
-                                                                           Margin="0,2,4,2" />
-                                                        </Grid>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                        </Expander>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </Expander>
+                        <!-- LV2 control ports -->
+                        <ItemsControl ItemsSource="{Binding SelectedNodeAsLv2.Controls}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="lv2:Lv2ControlViewModel">
+                                    <StackPanel Margin="0,3">
+                                        <TextBlock Text="{Binding DisplayName}" FontSize="11" />
+                                        <Grid ColumnDefinitions="*, 72">
+                                            <Slider Grid.Column="0"
+                                                    Value="{Binding Value, Mode=TwoWay}"
+                                                    Minimum="{Binding Min}"
+                                                    Maximum="{Binding Max}" />
+                                            <NumericUpDown Grid.Column="1"
+                                                           Value="{Binding Value, Mode=TwoWay}"
+                                                           Minimum="{Binding Min}"
+                                                           Maximum="{Binding Max}"
+                                                           ShowButtonSpinner="False"
+                                                           FormatString="0.000"
+                                                           Padding="2,0"
+                                                           FontSize="11"
+                                                           Margin="4,0,0,0" />
+                                        </Grid>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
 
-                        <!-- LV2 plugins -->
-                        <Expander Header="LV2 Plugins"
-                                  HorizontalAlignment="Stretch">
-                            <ItemsControl ItemsSource="{Binding AvailablePluginsByClass}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Expander VerticalAlignment="Top"
-                                                  Header="{Binding Name}"
-                                                  HorizontalAlignment="Stretch">
-                                            <ItemsControl ItemsSource="{Binding Plugins}">
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <Button Content="{Binding Description.Name}"
-                                                                HorizontalAlignment="Stretch"
-                                                                Margin="4,2"
-                                                                Command="{Binding #MainControl.((filterGraphBuilderViewModels:FilterGraphBuilderViewModel)DataContext).AddPlugin}"
-                                                                CommandParameter="{Binding}" />
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                        </Expander>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </Expander>
-
+                        <!-- Builtin controls -->
+                        <ItemsControl ItemsSource="{Binding SelectedNodeAsBuiltin.Controls}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="builtin:BuiltinControlViewModel">
+                                    <StackPanel Margin="0,3">
+                                        <TextBlock Text="{Binding Name}" FontSize="11" />
+                                        <Grid ColumnDefinitions="*, 72">
+                                            <Slider Grid.Column="0"
+                                                    Value="{Binding Value, Mode=TwoWay}"
+                                                    Minimum="{Binding Min}"
+                                                    Maximum="{Binding Max}" />
+                                            <NumericUpDown Grid.Column="1"
+                                                           Value="{Binding Value, Mode=TwoWay}"
+                                                           Minimum="{Binding Min}"
+                                                           Maximum="{Binding Max}"
+                                                           ShowButtonSpinner="False"
+                                                           FormatString="0.000"
+                                                           Padding="2,0"
+                                                           FontSize="11"
+                                                           Margin="4,0,0,0" />
+                                        </Grid>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </StackPanel>
                 </ScrollViewer>
             </SplitView.Pane>
 
-            <graphEditorControl:GraphEditorViewport
-                GraphInputs="{Binding InputNodeViewModel}"
-                GraphOutputs="{Binding OutputNodeViewModel}"
-                GraphNodes="{Binding Nodes}"
-                GraphEdges="{Binding Connections}" />
+            <!-- Right SplitView: toolbox (always open) -->
+            <SplitView IsPaneOpen="True"
+                       DisplayMode="Inline"
+                       OpenPaneLength="250"
+                       PanePlacement="Right">
+                <SplitView.Pane>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+
+                            <!-- Built-in filter nodes -->
+                            <Expander Header="Built-in"
+                                      HorizontalAlignment="Stretch"
+                                      IsExpanded="True">
+                                <ItemsControl ItemsSource="{Binding AvailableBuiltins}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="toolbox:BuiltinNodeGroupViewModel">
+                                            <Expander Header="{Binding Name}"
+                                                      HorizontalAlignment="Stretch">
+                                                <ItemsControl ItemsSource="{Binding Nodes}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="toolbox:AvailableBuiltinNode">
+                                                            <Grid ColumnDefinitions="*, Auto">
+                                                                <Button Grid.Column="0"
+                                                                        Content="{Binding DisplayName}"
+                                                                        HorizontalAlignment="Stretch"
+                                                                        Margin="4,2"
+                                                                        Command="{Binding #MainControl.((filterGraphBuilderViewModels:FilterGraphBuilderViewModel)DataContext).AddBuiltinNode}"
+                                                                        CommandParameter="{Binding}" />
+                                                                <NumericUpDown Grid.Column="1"
+                                                                               IsVisible="{Binding HasVariableChannelCount}"
+                                                                               Value="{Binding ChannelCount}"
+                                                                               Minimum="1" Maximum="8"
+                                                                               Increment="1"
+                                                                               FormatString="0"
+                                                                               Width="64"
+                                                                               Margin="0,2,4,2" />
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </Expander>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Expander>
+
+                            <!-- LV2 plugins -->
+                            <Expander Header="LV2 Plugins"
+                                      HorizontalAlignment="Stretch">
+                                <ItemsControl ItemsSource="{Binding AvailablePluginsByClass}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Expander VerticalAlignment="Top"
+                                                      Header="{Binding Name}"
+                                                      HorizontalAlignment="Stretch">
+                                                <ItemsControl ItemsSource="{Binding Plugins}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Button Content="{Binding Description.Name}"
+                                                                    HorizontalAlignment="Stretch"
+                                                                    Margin="4,2"
+                                                                    Command="{Binding #MainControl.((filterGraphBuilderViewModels:FilterGraphBuilderViewModel)DataContext).AddPlugin}"
+                                                                    CommandParameter="{Binding}" />
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </Expander>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Expander>
+
+                        </StackPanel>
+                    </ScrollViewer>
+                </SplitView.Pane>
+
+                <graphEditorControl:GraphEditorViewport
+                    GraphInputs="{Binding InputNodeViewModel}"
+                    GraphOutputs="{Binding OutputNodeViewModel}"
+                    GraphNodes="{Binding Nodes}"
+                    GraphEdges="{Binding Connections}"
+                    NodeSelectedCommand="{Binding SelectNodeCommand}" />
+            </SplitView>
         </SplitView>
 
     </DockPanel>

@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Linq;
 using Fr.Sonic.Model.Lv2;
 
@@ -17,14 +18,16 @@ public class Lv2PluginNodeViewModel(PluginDescription plugin)
             .OfType<PortViewModelBase>()
             .ToList()))
 {
-    private const string OutputPortUri =
-        "http://lv2plug.in/ns/lv2core#OutputPort";
-
-    private const string
-        InputPortUri = "http://lv2plug.in/ns/lv2core#InputPort";
-
-    private const string
-        AudioPortUri = "http://lv2plug.in/ns/lv2core#AudioPort";
+    private const string OutputPortUri = Lv2PortUris.OutputPortUri;
+    private const string InputPortUri  = Lv2PortUris.InputPortUri;
+    private const string AudioPortUri  = Lv2PortUris.AudioPortUri;
 
     public PluginDescription Plugin { get; } = plugin;
+
+    public ReadOnlyCollection<Lv2ControlViewModel> Controls { get; } =
+        new(plugin.Ports
+            .Where(p => p.Classes.Contains(Lv2PortUris.ControlPortUri) &&
+                        p.Classes.Contains(Lv2PortUris.InputPortUri))
+            .Select(p => new Lv2ControlViewModel(p))
+            .ToList());
 }

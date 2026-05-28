@@ -92,6 +92,15 @@ public class GraphEditorViewport : UserControl, IDisposable
         set => SetValue(DeleteEdgeCommandProperty, value);
     }
 
+    public static readonly StyledProperty<ICommand?> NodeSelectedCommandProperty =
+        AvaloniaProperty.Register<GraphEditorViewport, ICommand?>(nameof(NodeSelectedCommand));
+
+    public ICommand? NodeSelectedCommand
+    {
+        get => GetValue(NodeSelectedCommandProperty);
+        set => SetValue(NodeSelectedCommandProperty, value);
+    }
+
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
@@ -108,6 +117,8 @@ public class GraphEditorViewport : UserControl, IDisposable
             _canvas.CreateEdgeCommand = change.NewValue as ICommand;
         else if (change.Property == DeleteEdgeCommandProperty)
             _canvas.DeleteEdgeCommand = change.NewValue as ICommand;
+        else if (change.Property == NodeSelectedCommandProperty)
+            _canvas.NodeSelectedCommand = change.NewValue as ICommand;
     }
 
     /* ── canvas shift compensation ───────────────────────────────────────── */

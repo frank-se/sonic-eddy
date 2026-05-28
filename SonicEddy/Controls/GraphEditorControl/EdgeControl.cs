@@ -9,7 +9,7 @@ public class EdgeControl : Line
 {
     public EdgeControl(GraphEdge edge, GraphEditorCanvas canvas)
     {
-        Stroke = Brushes.Black;
+        Stroke = new SolidColorBrush(Color.FromRgb(30, 110, 210));
         StrokeThickness = 2;
         Cursor = new Cursor(StandardCursorType.Hand);
         StrokeLineCap = PenLineCap.Round;

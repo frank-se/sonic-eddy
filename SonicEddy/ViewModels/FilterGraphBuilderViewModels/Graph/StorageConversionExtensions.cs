@@ -19,7 +19,10 @@ public static class StorageConversionExtensions
         var outputPorts = viewModel.OutPorts.OfType<Lv2PortViewModel>()
             .Select(p => new FilterGraphLv2OutputPort(p.Id, p.Name, p.Description.Symbol))
             .ToList();
-        return new(id, viewModel.Name, viewModel.Plugin.Uri, inputPorts, outputPorts);
+        var controls = viewModel.Controls
+            .Select(c => new FilterGraphLv2Control(c.Symbol, (float)c.Value))
+            .ToList();
+        return new(id, viewModel.Name, viewModel.Plugin.Uri, inputPorts, outputPorts, controls);
     }
 
     public static FilterGraphBuiltinNode ToGrpc(this BuiltinNodeViewModel viewModel, Guid id)

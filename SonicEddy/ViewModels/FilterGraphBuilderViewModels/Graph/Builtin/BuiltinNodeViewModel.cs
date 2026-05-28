@@ -16,7 +16,7 @@ public class BuiltinNodeViewModel(BuiltinNodeType type, int channelCount = 2)
 {
     public BuiltinNodeType NodeType { get; } = type;
     public int ChannelCount { get; } = channelCount;
-    public IReadOnlyList<(string Name, double Value)> Controls { get; } =
+    public ReadOnlyCollection<BuiltinControlViewModel> Controls { get; } =
         BuildControls(type, channelCount);
 
     private static ReadOnlyCollection<PortViewModelBase> BuildInPorts(
@@ -55,16 +55,16 @@ public class BuiltinNodeViewModel(BuiltinNodeType type, int channelCount = 2)
         return new ReadOnlyCollection<PortViewModelBase>(ports);
     }
 
-    private static IReadOnlyList<(string Name, double Value)> BuildControls(
+    private static ReadOnlyCollection<BuiltinControlViewModel> BuildControls(
         BuiltinNodeType type, int n)
     {
         if (type == BuiltinNodeType.Mixer)
-            return Enumerable.Range(1, n)
-                .Select(i => ($"Gain {i}", 1.0))
-                .ToList();
+            return new(Enumerable.Range(1, n)
+                .Select(i => new BuiltinControlViewModel($"Gain {i}", 1.0, 0.0, 10.0))
+                .ToList());
 
-        return BuiltinNodeCatalog.Get(type).DefaultControls
-            .Select(c => (c.Name, c.Default))
-            .ToList();
+        return new(BuiltinNodeCatalog.Get(type).DefaultControls
+            .Select(c => new BuiltinControlViewModel(c.Name, c.Default, c.Min, c.Max))
+            .ToList());
     }
 }

@@ -23,6 +23,7 @@ public class GraphEditorCanvas : Canvas, IDisposable
     {
         Width = InitialWidth;
         Height = InitialHeight;
+        Background = new SolidColorBrush(Color.FromRgb(48, 48, 52));
         PointerMoved += OnPointerMoved;
         PointerReleased += OnPointerReleased;
         GraphEdges = [];
@@ -91,6 +92,15 @@ public class GraphEditorCanvas : Canvas, IDisposable
     {
         get => GetValue(DeleteEdgeCommandProperty);
         set => SetValue(DeleteEdgeCommandProperty, value);
+    }
+
+    public static readonly StyledProperty<ICommand?> NodeSelectedCommandProperty =
+        AvaloniaProperty.Register<GraphEditorCanvas, ICommand?>(nameof(NodeSelectedCommand));
+
+    public ICommand? NodeSelectedCommand
+    {
+        get => GetValue(NodeSelectedCommandProperty);
+        set => SetValue(NodeSelectedCommandProperty, value);
     }
 
     /* ── private state ────────────────────────────────────────────────────── */
@@ -322,7 +332,7 @@ public class GraphEditorCanvas : Canvas, IDisposable
         var end = eventArgs.GetPosition(this);
         _newConnectionLine = new Line
         {
-            Stroke = Brushes.Black,
+            Stroke = new SolidColorBrush(Color.FromRgb(30, 110, 210)),
             StrokeThickness = 2,
             StartPoint = start,
             EndPoint = end,
@@ -403,6 +413,13 @@ public class GraphEditorCanvas : Canvas, IDisposable
         {
             if (GetControl(port) is PortControl p) p.RemoveHighlight();
         }
+    }
+
+    /* ── node selection ──────────────────────────────────────────────────── */
+
+    public void SelectNode(GraphNode node)
+    {
+        NodeSelectedCommand?.Execute(node);
     }
 
     /* ── element ↔ control map ────────────────────────────────────────────── */

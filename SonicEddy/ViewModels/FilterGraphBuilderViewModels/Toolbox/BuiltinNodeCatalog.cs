@@ -4,7 +4,7 @@ using SonicEddy.Contracts.FilterGraph;
 
 namespace SonicEddy.ViewModels.FilterGraphBuilderViewModels.Toolbox;
 
-public record BuiltinControlDef(string Name, double Default);
+public record BuiltinControlDef(string Name, double Default, double Min = 0.0, double Max = 1.0);
 
 public record BuiltinNodeDefinition(
     BuiltinNodeType Type,
@@ -25,46 +25,57 @@ public static class BuiltinNodeCatalog
             [BuiltinNodeType.Invert] = new(BuiltinNodeType.Invert, "Invert", "invert", false, []),
             [BuiltinNodeType.Linear] = new(BuiltinNodeType.Linear, "Linear", "linear", false,
             [
-                new("Mult", 1.0), new("Add", 0.0)
+                new("Mult", 1.0, -100.0, 100.0), new("Add", 0.0, -100.0, 100.0)
             ]),
             [BuiltinNodeType.Clamp] = new(BuiltinNodeType.Clamp, "Clamp", "clamp", false,
             [
-                new("Min", -1.0), new("Max", 1.0)
+                new("Min", -1.0, -10.0, 10.0), new("Max", 1.0, -10.0, 10.0)
             ]),
             [BuiltinNodeType.Reciprocal] = new(BuiltinNodeType.Reciprocal, "Reciprocal", "recip", false, []),
             [BuiltinNodeType.Abs] = new(BuiltinNodeType.Abs, "Abs", "abs", false, []),
             [BuiltinNodeType.Sqrt] = new(BuiltinNodeType.Sqrt, "Sqrt", "sqrt", false, []),
             [BuiltinNodeType.Exp] = new(BuiltinNodeType.Exp, "Exp", "exp", false,
             [
-                new("Base", Math.E)
+                new("Base", Math.E, 0.001, 100.0)
             ]),
             [BuiltinNodeType.Log] = new(BuiltinNodeType.Log, "Log", "log", false,
             [
-                new("Base", 10.0), new("M1", 1.0), new("M2", 1.0)
+                new("Base", 10.0, 0.001, 100.0),
+                new("M1", 1.0, -10.0, 10.0),
+                new("M2", 1.0, -10.0, 10.0)
             ]),
             [BuiltinNodeType.Multiply] = new(BuiltinNodeType.Multiply, "Multiply", "mult", true, []),
             [BuiltinNodeType.Sine] = new(BuiltinNodeType.Sine, "Sine", "sine", false,
             [
-                new("Freq", 440.0), new("Ampl", 1.0), new("Offset", 0.0), new("Phase", 0.0)
+                new("Freq", 440.0, 0.0, 22050.0),
+                new("Ampl", 1.0, 0.0, 10.0),
+                new("Offset", 0.0, -1.0, 1.0),
+                new("Phase", 0.0, 0.0, 6.2832)
             ]),
             [BuiltinNodeType.Max] = new(BuiltinNodeType.Max, "Max", "max", true, []),
             [BuiltinNodeType.DcBlock] = new(BuiltinNodeType.DcBlock, "DC Block", "dc_block", true,
             [
-                new("R", 0.995)
+                new("R", 0.995, 0.0, 1.0)
             ]),
             [BuiltinNodeType.Ramp] = new(BuiltinNodeType.Ramp, "Ramp", "ramp", false,
             [
-                new("Start", 0.0), new("Stop", 1.0), new("Duration (s)", 1.0)
+                new("Start", 0.0, -1.0, 1.0),
+                new("Stop", 1.0, -1.0, 1.0),
+                new("Duration (s)", 1.0, 0.0, 60.0)
             ]),
             [BuiltinNodeType.Debug] = new(BuiltinNodeType.Debug, "Debug", "debug", false, []),
             [BuiltinNodeType.ZeroRamp] = new(BuiltinNodeType.ZeroRamp, "Zero Ramp", "zeroramp", false,
             [
-                new("Gap (s)", 0.000666), new("Duration (s)", 0.000666)
+                new("Gap (s)", 0.000666, 0.0, 0.1),
+                new("Duration (s)", 0.000666, 0.0, 0.1)
             ]),
             [BuiltinNodeType.NoiseGate] = new(BuiltinNodeType.NoiseGate, "Noise Gate", "noisegate", false,
             [
-                new("Close threshold", 0.01), new("Open threshold", 0.02),
-                new("Hold (s)", 0.1), new("Attack (s)", 0.01), new("Release (s)", 0.1)
+                new("Close threshold", 0.01, 0.0, 1.0),
+                new("Open threshold", 0.02, 0.0, 1.0),
+                new("Hold (s)", 0.1, 0.0, 10.0),
+                new("Attack (s)", 0.01, 0.0, 10.0),
+                new("Release (s)", 0.1, 0.0, 10.0)
             ]),
         };
 

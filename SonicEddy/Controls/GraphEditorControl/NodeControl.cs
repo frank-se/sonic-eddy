@@ -64,11 +64,13 @@ public class NodeControl : StackPanel, IDisposable
 
     private NodeDragDropState _dragState = NodeDragDropState.None;
     private Point? _lastPointerPosition;
+    private bool _hasDragged;
 
     private void OnHeaderPressed(object? sender, PointerPressedEventArgs e)
     {
         if (sender is not TextBlock tb) return;
         _dragState = NodeDragDropState.MoveNode;
+        _hasDragged = false;
         e.Pointer.Capture(tb);
         Cursor = new Cursor(StandardCursorType.DragMove);
         _lastPointerPosition = e.GetPosition(null);
@@ -81,6 +83,10 @@ public class NodeControl : StackPanel, IDisposable
         var current = e.GetPosition(null);
         var diffX = _lastPointerPosition.Value.X - current.X;
         var diffY = _lastPointerPosition.Value.Y - current.Y;
+
+        if (Math.Abs(diffX) > 2 || Math.Abs(diffY) > 2)
+            _hasDragged = true;
+
         _lastPointerPosition = current;
 
         Avalonia.Threading.Dispatcher.UIThread.Post(() =>
@@ -96,6 +102,7 @@ public class NodeControl : StackPanel, IDisposable
         _dragState = NodeDragDropState.None;
         e.Pointer.Capture(null);
         Cursor = new Cursor(StandardCursorType.Arrow);
+        if (!_hasDragged) _canvas.SelectNode(_node);
         _canvas.UpdateCanvasSize();
     }
 

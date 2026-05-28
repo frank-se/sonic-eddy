@@ -87,7 +87,15 @@ public static class GrpcToFrWireplumberExtensions
         }
 
         var lv2Nodes = filterGraph.Nodes.OfType<FilterGraphLv2Plugin>()
-            .Select(n => new FilterGraphNode { Name = n.Name, Type = "lv2", Plugin = n.Uri });
+            .Select(n => new FilterGraphNode
+            {
+                Name   = n.Name,
+                Type   = "lv2",
+                Plugin = n.Uri,
+                Control = n.InitialControls.Count > 0
+                    ? n.InitialControls.ToDictionary(c => c.Symbol, c => (object)(double)c.Value)
+                    : null
+            });
 
         var builtinNodes = filterGraph.Nodes.OfType<FilterGraphBuiltinNode>()
             .Select(n => new FilterGraphNode

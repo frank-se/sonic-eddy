@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Reactive;
 using System.Threading.Tasks;
 using DynamicData;
 using Fr.Sonic.Model.Lv2;
@@ -27,6 +28,13 @@ public class FilterGraphBuilderViewModel : ViewModelBase
         List<PluginDescription> pluginDescriptions)
     {
         _appDataService = appDataService;
+        SelectNodeCommand = ReactiveCommand.Create<GraphNode?>(node =>
+        {
+            _selectedNode = node;
+            this.RaisePropertyChanged(nameof(SelectedNode));
+            this.RaisePropertyChanged(nameof(SelectedNodeAsLv2));
+            this.RaisePropertyChanged(nameof(SelectedNodeAsBuiltin));
+        });
 
         _ = Task.Run(() =>
             BuildPluginClasses(pluginClasses, pluginDescriptions));
@@ -67,6 +75,12 @@ public class FilterGraphBuilderViewModel : ViewModelBase
     public ObservableCollection<GraphNode> Nodes { get; } = [];
 
     public ObservableCollection<Lv2PluginClass> AvailablePluginsByClass { get; } = [];
+
+    private GraphNode? _selectedNode;
+    public GraphNode? SelectedNode => _selectedNode;
+    public Lv2PluginNodeViewModel? SelectedNodeAsLv2 => _selectedNode as Lv2PluginNodeViewModel;
+    public BuiltinNodeViewModel? SelectedNodeAsBuiltin => _selectedNode as BuiltinNodeViewModel;
+    public ReactiveCommand<GraphNode?, Unit> SelectNodeCommand { get; }
 
     public ObservableCollection<BuiltinNodeGroupViewModel> AvailableBuiltins { get; } =
         new(BuiltinNodeCatalog.Groups
