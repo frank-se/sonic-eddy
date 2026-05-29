@@ -104,10 +104,6 @@ public class App : Application
         Locator.CurrentMutable.Register<IMonitoringService>(() =>
             monitoringService);
 
-        var monitoringLinkService = new MonitoringLinkService();
-        Locator.CurrentMutable.Register<IMonitoringLinkService>(() =>
-            monitoringLinkService);
-
         var mixerServiceLogger = loggerFactory.CreateLogger<MixerService>();
         var mixerServiceV2 =
             new MixerService(appDataService,
@@ -116,6 +112,10 @@ public class App : Application
         Locator.CurrentMutable
             .Register<IMixerService>(() =>
                 mixerServiceV2);
+
+        var monitoringLinkService = new MonitoringLinkService(mixerServiceV2);
+        Locator.CurrentMutable.Register<IMonitoringLinkService>(() =>
+            monitoringLinkService);
 
         var midiControllerServiceLogger =
             loggerFactory.CreateLogger<MidiControllerService>();

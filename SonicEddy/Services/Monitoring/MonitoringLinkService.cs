@@ -8,25 +8,14 @@ using SonicEddy.Services.MixerServiceV2;
 
 namespace SonicEddy.Services.Monitoring;
 
-public class MonitoringLinkService : IMonitoringLinkService
+public class MonitoringLinkService(IMixerService mixerService) : IMonitoringLinkService
 {
-    private Mixer? _mixer;
-    private LoopbackModule? _monitoringLoopback;
     private readonly Dictionary<MonitoringChannelKey, MonitoringSource> _selections = new();
 
     public event Action? StateChanged;
 
-    public void SetMixer(Mixer? mixer)
-    {
-        _mixer = mixer;
-        RecreateAllLinks();
-    }
-
-    public void SetMonitoringLoopback(LoopbackModule? loopback)
-    {
-        _monitoringLoopback = loopback;
-        RecreateAllLinks();
-    }
+    private Mixer? Mixer => mixerService.CurrentMixer;
+    private LoopbackModule? MonitoringLoopback => Mixer?.MonitoringLoopback;
 
     public void SetSource(MonitoringChannelKey key, MonitoringSource source)
     {
@@ -45,28 +34,10 @@ public class MonitoringLinkService : IMonitoringLinkService
     public MonitoringSource GetSource(MonitoringChannelKey key) =>
         _selections.GetValueOrDefault(key, MonitoringSource.None);
 
-    private void RecreateAllLinks()
-    {
-        DeleteAllMonitoringLinks();
-        foreach (var (key, source) in _selections)
-            CreateLinksForNode(ResolveNode(key, source));
-    }
-
-    private void DeleteAllMonitoringLinks()
-    {
-        var captureNode = _monitoringLoopback?.CaptureNode;
-        if (captureNode is null) return;
-
-        foreach (var link in FrSonic.LinkRegistry.Objects
-                     .Where(l => l.InputNodeId == captureNode.ObjectId)
-                     .ToList())
-            FrSonic.LinkFactory.DeleteLink(link);
-    }
-
     private void DeleteLinksForNode(Node? sourceNode)
     {
         if (sourceNode is null) return;
-        var captureNode = _monitoringLoopback?.CaptureNode;
+        var captureNode = MonitoringLoopback?.CaptureNode;
         if (captureNode is null) return;
 
         foreach (var link in FrSonic.LinkRegistry.Objects
@@ -79,7 +50,7 @@ public class MonitoringLinkService : IMonitoringLinkService
     private void CreateLinksForNode(Node? sourceNode)
     {
         if (sourceNode is null) return;
-        var captureNode = _monitoringLoopback?.CaptureNode;
+        var captureNode = MonitoringLoopback?.CaptureNode;
         if (captureNode is null) return;
 
         var outputPorts = FrSonic.PortRegistry.Objects
@@ -100,9 +71,9 @@ public class MonitoringLinkService : IMonitoringLinkService
 
     private Node? ResolveNode(MonitoringChannelKey key, MonitoringSource source)
     {
-        if (source == MonitoringSource.None || _mixer is null) return null;
+        if (source == MonitoringSource.None || Mixer is null) return null;
 
-        var layers = _mixer.Layers;
+        var layers = Mixer.Layers;
         if (key.LayerIndex >= layers.Length) return null;
         var layer = layers[key.LayerIndex];
 
