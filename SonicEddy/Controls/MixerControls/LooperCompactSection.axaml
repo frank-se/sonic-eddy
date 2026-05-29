@@ -4,79 +4,107 @@
              xmlns:mixerControls="clr-namespace:SonicEddy.Controls.MixerControls"
              x:CompileBindings="False"
              x:Class="SonicEddy.Controls.MixerControls.LooperCompactSection">
-    <Grid ColumnDefinitions="42,*,42"
-          RowDefinitions="32,42"
-          Margin="4,4,4,8"
-          RowSpacing="4">
-        <ToggleButton Grid.Row="0"
-                      Grid.Column="0"
-                      Margin="0,0,2,2"
-                      Padding="0"
-                      Content="{Binding ActivePositionIcon}"
-                      FontFamily="{StaticResource FluentIconsRegular}"
-                      FontSize="18"
-                      Foreground="{Binding ActionForeground}"
-                      IsChecked="{Binding IsPostFxSelected}">
-            <ToolTip.Tip>Pre/post FX pickup</ToolTip.Tip>
-        </ToggleButton>
 
-        <ComboBox Grid.Row="0"
-                  Grid.Column="1"
-                  Margin="0,0,2,2"
-                  Padding="4,0"
-                  ItemsSource="{Binding BarLengths}"
-                  SelectedItem="{Binding SelectedBarLength}" />
+    <UserControl.Styles>
+        <Style Selector="Button, ToggleButton">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="VerticalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="0" />
+        </Style>
+    </UserControl.Styles>
 
-        <ToggleButton Grid.Row="0"
-                      Grid.Column="2"
-                      Margin="0,0,0,2"
-                      Padding="0"
-                      Content="&#xF3FC;"
-                      FontFamily="{StaticResource FluentIconsRegular}"
-                      FontSize="18"
-                      IsChecked="{Binding IsQuantized}">
-            <ToolTip.Tip>Quantize to phrase start</ToolTip.Tip>
-        </ToggleButton>
+    <Grid RowDefinitions="30,36,28,28"
+          Margin="4,4,4,16"
+          RowSpacing="3">
 
-        <controls:ValueSlider Grid.Row="1"
-                              Grid.Column="0"
-                              Grid.ColumnSpan="1"
-                              Margin="0,0,2,0"
-                              Minimum="0"
-                              Maximum="1"
-                              Background="Gray"
-                              Text="Mix"
-                              Value="{Binding Mix}" />
+        <!-- Header -->
+        <StackPanel Grid.Row="0"
+                    Orientation="Horizontal">
+            <TextBlock Text="Looper"
+                       FontSize="12"
+                       Margin="6" />
+        </StackPanel>
 
+        <!-- Row 1: Cut/Play, Stop, Mix -->
         <UniformGrid Grid.Row="1"
-                     Grid.Column="1"
-                     Grid.ColumnSpan="2"
                      Columns="3"
-                     Rows="1">
-            <Button Margin="0,0,2,0"
-                    Padding="0"
-                    Content="&#xF608;"
+                     Rows="1"
+                     ColumnSpacing="2">
+            <Button Content="&#xF608;"
                     FontFamily="{StaticResource FluentIconsRegular}"
                     FontSize="18"
                     Foreground="{Binding ActionForeground}"
                     Command="{Binding CutPlayCommand}">
                 <ToolTip.Tip>Cut and play</ToolTip.Tip>
             </Button>
-            <Button Margin="0,0,2,0"
-                    Padding="0"
-                    Content="&#xF759;"
+            <Button Content="&#xF759;"
                     FontFamily="{StaticResource FluentIconsRegular}"
                     FontSize="18"
                     Command="{Binding StopCommand}">
                 <ToolTip.Tip>Stop</ToolTip.Tip>
             </Button>
-            <Button Padding="0"
-                    Content="&#xF692;"
+            <controls:ValueSlider Minimum="0"
+                                  Maximum="1"
+                                  Background="Gray"
+                                  Text="Mix"
+                                  Value="{Binding Mix}" />
+        </UniformGrid>
+
+        <!-- Row 2: Bar length toggle buttons (exclusive) -->
+        <UniformGrid Grid.Row="2"
+                     Columns="5"
+                     Rows="1"
+                     ColumnSpacing="2">
+            <ToggleButton IsChecked="{Binding IsLength1}">
+                <ToolTip.Tip>1 bar</ToolTip.Tip>
+                1
+            </ToggleButton>
+            <ToggleButton IsChecked="{Binding IsLength2}">
+                <ToolTip.Tip>2 bars</ToolTip.Tip>
+                2
+            </ToggleButton>
+            <ToggleButton IsChecked="{Binding IsLength4}">
+                <ToolTip.Tip>4 bars</ToolTip.Tip>
+                4
+            </ToggleButton>
+            <ToggleButton IsChecked="{Binding IsLength8}">
+                <ToolTip.Tip>8 bars</ToolTip.Tip>
+                8
+            </ToggleButton>
+            <ToggleButton IsChecked="{Binding IsLength16}">
+                <ToolTip.Tip>16 bars</ToolTip.Tip>
+                16
+            </ToggleButton>
+        </UniformGrid>
+
+        <!-- Row 3: Pre/Post pickup, Quantize, Details -->
+        <UniformGrid Grid.Row="3"
+                     Columns="3"
+                     Rows="1"
+                     ColumnSpacing="2">
+            <ToggleButton Content="{Binding ActivePositionIcon}"
+                          FontFamily="{StaticResource FluentIconsRegular}"
+                          FontSize="18"
+                          Foreground="{Binding ActionForeground}"
+                          IsChecked="{Binding IsPostFxSelected}">
+                <ToolTip.Tip>Pre/post FX pickup</ToolTip.Tip>
+            </ToggleButton>
+            <ToggleButton Content="&#xF3FC;"
+                          FontFamily="{StaticResource FluentIconsRegular}"
+                          FontSize="18"
+                          IsChecked="{Binding IsQuantized}">
+                <ToolTip.Tip>Quantize to phrase start</ToolTip.Tip>
+            </ToggleButton>
+            <Button Content="&#xF692;"
                     FontFamily="{StaticResource FluentIconsRegular}"
                     FontSize="18"
                     Command="{Binding ShowDetailsCommand}">
                 <ToolTip.Tip>Details</ToolTip.Tip>
             </Button>
         </UniformGrid>
+
     </Grid>
 </UserControl>

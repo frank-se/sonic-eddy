@@ -69,10 +69,53 @@ public sealed class LooperSectionViewModel : ReactiveObject, IDisposable
     public int SelectedBarLength
     {
         get;
-        set => this.RaiseAndSetIfChanged(ref field, value);
+        set
+        {
+            this.RaiseAndSetIfChanged(ref field, value);
+            RaiseBarLengthProperties();
+        }
     } = 1;
 
     public int[] BarLengths { get; } = [1, 2, 4, 8, 16];
+
+    public bool IsLength1
+    {
+        get => SelectedBarLength == 1;
+        set { if (value) SelectedBarLength = 1; else this.RaisePropertyChanged(nameof(IsLength1)); }
+    }
+
+    public bool IsLength2
+    {
+        get => SelectedBarLength == 2;
+        set { if (value) SelectedBarLength = 2; else this.RaisePropertyChanged(nameof(IsLength2)); }
+    }
+
+    public bool IsLength4
+    {
+        get => SelectedBarLength == 4;
+        set { if (value) SelectedBarLength = 4; else this.RaisePropertyChanged(nameof(IsLength4)); }
+    }
+
+    public bool IsLength8
+    {
+        get => SelectedBarLength == 8;
+        set { if (value) SelectedBarLength = 8; else this.RaisePropertyChanged(nameof(IsLength8)); }
+    }
+
+    public bool IsLength16
+    {
+        get => SelectedBarLength == 16;
+        set { if (value) SelectedBarLength = 16; else this.RaisePropertyChanged(nameof(IsLength16)); }
+    }
+
+    private void RaiseBarLengthProperties()
+    {
+        this.RaisePropertyChanged(nameof(IsLength1));
+        this.RaisePropertyChanged(nameof(IsLength2));
+        this.RaisePropertyChanged(nameof(IsLength4));
+        this.RaisePropertyChanged(nameof(IsLength8));
+        this.RaisePropertyChanged(nameof(IsLength16));
+    }
 
     public bool IsQuantized
     {
