@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using SonicEddy.Services.AppData;
 
@@ -12,6 +13,8 @@ public class PreferenceService(IAppDataService appDataService)
         private set;
     }
 
+    public event Action? Changed;
+
     public async Task Load()
     {
         Preferences = await appDataService.LoadPreferences();
@@ -21,7 +24,7 @@ public class PreferenceService(IAppDataService appDataService)
         Contracts.ApplicationPreferences.Preferences preferences)
     {
         Preferences = preferences;
-        
         await appDataService.StorePreferences(Preferences);
+        Changed?.Invoke();
     }
 }

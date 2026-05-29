@@ -9,8 +9,10 @@
         Title="Preferences">
 
     <StackPanel>
-        <Grid RowDefinitions="Auto,Auto,Auto,Auto,*"
-              ColumnDefinitions="Auto,*">
+        <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,*"
+              ColumnDefinitions="Auto,*"
+              RowSpacing="6"
+              Margin="12">
 
             <Label Grid.Row="0"
                    Grid.Column="0"
@@ -56,6 +58,24 @@
                            x:Name="NumberOfReturnChannelsUpDown"
                            Minimum="1"
                            Value="{Binding NumberOfReturnChannels}" />
+
+            <Label Grid.Row="4"
+                   Grid.Column="0"
+                   Target="DefaultMonitorOutputComboBox"
+                   Content="Default Monitor Output" />
+
+            <ComboBox Grid.Row="4"
+                      Grid.Column="1"
+                      x:Name="DefaultMonitorOutputComboBox"
+                      ItemsSource="{Binding Nodes}"
+                      DisplayMemberBinding="{Binding Description}"
+                      SelectedItem="{Binding SelectedDefaultMonitorOutput}" />
+
+            <CheckBox Grid.Row="5"
+                      Grid.Column="0"
+                      Grid.ColumnSpan="2"
+                      Content="Monitoring Channel"
+                      IsChecked="{Binding MonitoringChannelEnabled}" />
 
         </Grid>
         

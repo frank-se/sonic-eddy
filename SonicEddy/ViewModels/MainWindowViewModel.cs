@@ -50,6 +50,19 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         _logger = logger;
         _loggerFactory = loggerFactory;
 
+        var preferenceService = Locator.Current.GetService<IPreferenceService>();
+        if (preferenceService is not null)
+        {
+            IsMonitoringEnabled =
+                preferenceService.Preferences?.MonitoringChannelEnabled ?? false;
+            preferenceService.Changed += () =>
+            {
+                IsMonitoringEnabled =
+                    preferenceService.Preferences?.MonitoringChannelEnabled ??
+                    false;
+            };
+        }
+
         _midiControllerService.LayerChanged += OnLayerSelected;
         _midiControllerService.FilterParamsSectionMovedRight +=
             OnMoveFilterParamsPageRight;
@@ -90,6 +103,12 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     {
         get;
         set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
+    public bool IsMonitoringEnabled
+    {
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
     public MixerLayerViewModel? LayerAViewModel

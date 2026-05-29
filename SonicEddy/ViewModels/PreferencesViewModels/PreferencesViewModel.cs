@@ -39,6 +39,22 @@ public class PreferencesViewModel : ViewModelBase
             })
             .DisposeWith(_disposable);
 
+        this.WhenAnyValue(x => x.SelectedDefaultMonitorOutput)
+            .Subscribe(_ =>
+            {
+                _changed = true;
+                UpdateButtonStates();
+            })
+            .DisposeWith(_disposable);
+
+        this.WhenAnyValue(x => x.MonitoringChannelEnabled)
+            .Subscribe(_ =>
+            {
+                _changed = true;
+                UpdateButtonStates();
+            })
+            .DisposeWith(_disposable);
+
         this.WhenAnyValue(x => x.NumberOfChannels)
             .Subscribe(_ =>
             {
@@ -69,6 +85,18 @@ public class PreferencesViewModel : ViewModelBase
     public ObservableCollection<Node> Nodes { get; } = [];
 
     public Node? SelectedDefaultMasterOutput
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
+    public Node? SelectedDefaultMonitorOutput
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
+    public bool MonitoringChannelEnabled
     {
         get;
         set => this.RaiseAndSetIfChanged(ref field, value);
@@ -106,7 +134,9 @@ public class PreferencesViewModel : ViewModelBase
             DefaultMasterOutputName = SelectedDefaultMasterOutput?.Name,
             NumberOfChannels = NumberOfChannels,
             NumberOfGroupChannels = NumberOfGroupChannels,
-            NumberOfReturnChannels = NumberOfReturnChannels
+            NumberOfReturnChannels = NumberOfReturnChannels,
+            DefaultMonitorOutputName = SelectedDefaultMonitorOutput?.Name,
+            MonitoringChannelEnabled = MonitoringChannelEnabled
         };
         await _preferenceService.UpdateAndSave(preferences);
     }
@@ -141,6 +171,10 @@ public class PreferencesViewModel : ViewModelBase
         NumberOfChannels = preferences.NumberOfChannels;
         NumberOfGroupChannels = preferences.NumberOfGroupChannels;
         NumberOfReturnChannels = preferences.NumberOfReturnChannels;
+
+        SelectedDefaultMonitorOutput = Nodes.FirstOrDefault(n =>
+            n.Name == preferences.DefaultMonitorOutputName);
+        MonitoringChannelEnabled = preferences.MonitoringChannelEnabled;
     }
 
     private void UpdateButtonStates()

@@ -3,7 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Fr.Sonic.Model.Config;
+using Fr.Sonic.Model.Config.LoopbackModule;
 using Fr.Sonic.Model.Objects;
+using Fr.Sonic.Modules.Models;
 using Microsoft.Extensions.Logging;
 using SonicEddy.Contracts.FilterGraph;
 using SonicEddy.Services.AppData;
@@ -88,6 +91,22 @@ public class MixerService : IMixerService, IDisposable
                     CollectMixerLayerNodeIds(firstLayer).ToArray();
                 _myNodeIds.AddRange(layerOneIds);
 
+                LoopbackModule? monitoringLoopback = null;
+                if (prefs.MonitoringChannelEnabled &&
+                    prefs.DefaultMonitorOutputName is not null)
+                {
+                    monitoringLoopback =
+                        await CreateMonitoringLoopback(
+                            prefs.DefaultMonitorOutputName);
+                    if (monitoringLoopback is not null)
+                    {
+                        _myNodeIds.Add(
+                            monitoringLoopback.CaptureNodeObjectSerial);
+                        _myNodeIds.Add(
+                            monitoringLoopback.PlaybackNodeObjectSerial);
+                    }
+                }
+
                 if (createSecondLayer)
                 {
                     var secondLayer = await _editor.Create(masterOutputName, 1,
@@ -96,11 +115,12 @@ public class MixerService : IMixerService, IDisposable
 
                     _myNodeIds.AddRange(CollectMixerLayerNodeIds(secondLayer));
 
-                    CurrentMixer = new([firstLayer, secondLayer]);
+                    CurrentMixer = new([firstLayer, secondLayer],
+                        monitoringLoopback);
                 }
                 else
                 {
-                    CurrentMixer = new([firstLayer]);
+                    CurrentMixer = new([firstLayer], monitoringLoopback);
                 }
             }
             finally
@@ -121,6 +141,44 @@ public class MixerService : IMixerService, IDisposable
         }
 
         return CurrentMixer;
+    }
+
+    private async Task<LoopbackModule?> CreateMonitoringLoopback(
+        string monitorOutputName)
+    {
+        var monitorOutput = _wireplumberService.GetCaptureNodes()
+            .FirstOrDefault(n => n.Name == monitorOutputName);
+
+        if (monitorOutput is null)
+            return null;
+
+        return await _wireplumberService.CreateLoopbackModule(
+            "mixer-monitoring", new LoopbackModuleConfig
+            {
+                CaptureProps = new NodePropertiesConfig
+                {
+                    Name = "mixer-monitoring-capture",
+                    Description = "Monitoring Capture",
+                    Linger = true,
+                    AutoConnect = false,
+                    DontFallback = true,
+                    Passive = true,
+                    MediaClass = "Stream/Input/Audio",
+                    AudioPosition = ["FL", "FR"]
+                },
+                PlaybackProps = new NodePropertiesConfig
+                {
+                    Name = "mixer-monitoring-playback",
+                    Description = "Monitoring Playback",
+                    Linger = true,
+                    AutoConnect = true,
+                    DontFallback = true,
+                    Passive = false,
+                    TargetObject = monitorOutput.ObjectSerial.ToString(),
+                    MediaClass = "Stream/Output/Audio",
+                    AudioPosition = ["FL", "FR"]
+                }
+            });
     }
 
     private IEnumerable<ulong> CollectMixerLayerNodeIds(MixerLayer layer)

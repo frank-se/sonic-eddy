@@ -52,6 +52,7 @@
 
             <MenuItem Header="Tools">
                 <MenuItem Header="Monitoring ..."
+                          IsVisible="{Binding IsMonitoringEnabled}"
                           Command="{Binding ShowMonitoringWindow}" />
                 <MenuItem Header="Synchronization ..."
                           Command="{Binding ShowSynchronizationWindow}" />
