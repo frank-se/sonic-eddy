@@ -358,6 +358,10 @@ public class MixerService : IMixerService, IDisposable
         }
     }
 
+    private static bool IsInternalNode(Node node) =>
+        node.Name?.StartsWith("silence-") == true ||
+        node.Name?.StartsWith("monitor ") == true;
+
     private async Task ProcessNodeAddedEvent(Node node)
     {
         _logger.LogTrace("ProcessNodeAddedEvent");
@@ -370,7 +374,8 @@ public class MixerService : IMixerService, IDisposable
         try
         {
             if (CurrentMixer is not null &&
-                !_myNodeIds.Contains(node.ObjectSerial))
+                !_myNodeIds.Contains(node.ObjectSerial) &&
+                !IsInternalNode(node))
             {
                 if (_wireplumberService.IsPlaybackNode(node))
                 {

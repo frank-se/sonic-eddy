@@ -30,12 +30,18 @@ public class WireplumberService : IWireplumberService, IDisposable
             n.Media.Class is "Audio/Sink" or "Stream/Input/Audio").ToList();
 
     public List<Node> GetPlaybackNodes() =>
-        Fr.Sonic.FrSonic.NodeRegistry.Objects.Where(IsPlaybackNode)
+        Fr.Sonic.FrSonic.NodeRegistry.Objects
+            .Where(n => IsPlaybackNode(n) && !IsInternalNode(n))
             .ToList();
 
     public List<Node> GetCaptureNodes() =>
-        Fr.Sonic.FrSonic.NodeRegistry.Objects.Where(IsCaptureNode)
+        Fr.Sonic.FrSonic.NodeRegistry.Objects
+            .Where(n => IsCaptureNode(n) && !IsInternalNode(n))
             .ToList();
+
+    private static bool IsInternalNode(Node node) =>
+        node.Name?.StartsWith("silence-") == true ||
+        node.Name?.StartsWith("monitor ") == true;
 
     public bool IsPlaybackNode(Node node) =>
         node.Media.Class is "Audio/Source" or "Stream/Output/Audio";
