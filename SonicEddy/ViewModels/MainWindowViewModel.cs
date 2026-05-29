@@ -24,6 +24,7 @@ using SonicEddy.ViewModels.PreferencesViewModels;
 using SonicEddy.ViewModels.MidiSyncViewModels;
 using SonicEddy.ViewModels.SynchronizationViewModels;
 using SonicEddy.ViewModels.MonitoringViewModels;
+using SonicEddy.ViewModels.TransportViewModels;
 using SonicEddy.ViewModels.VirtualInputsViewModels;
 using SonicEddy.Views.FilterGraphManagerViews;
 using SonicEddy.Views.MetadataViews;
@@ -104,6 +105,8 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         get;
         set => this.RaiseAndSetIfChanged(ref field, value);
     }
+
+    public TransportToolbarViewModel Transport { get; } = new();
 
     public bool IsMonitoringEnabled
     {
@@ -637,6 +640,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
 
     public void Dispose()
     {
+        Transport.Dispose();
         _midiControllerService.LayerChanged -= OnLayerSelected;
         _midiControllerService.FilterParamsSectionMovedRight -=
             OnMoveFilterParamsPageRight;

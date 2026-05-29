@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:reactiveUi="http://reactiveui.net"
         xmlns:mixerViewsV2="clr-namespace:SonicEddy.Views.MixerViewsV2"
+        xmlns:transport="clr-namespace:SonicEddy.ViewModels.TransportViewModels"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
         Width="1200" Height="1000"
         x:Class="SonicEddy.Views.MainWindow"
@@ -72,6 +73,31 @@
                 <MenuItem Header="Virtual Outputs ..." />
             </MenuItem>
         </Menu>
+
+        <!-- Transport toolbar -->
+        <Border DockPanel.Dock="Top"
+                BorderThickness="0,0,0,1"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                Padding="6,3">
+            <StackPanel Orientation="Horizontal" Spacing="10"
+                        DataContext="{Binding Transport}"
+                        x:DataType="transport:TransportToolbarViewModel">
+                <Button IsVisible="{Binding IsNotPlaying}"
+                        Command="{Binding StartCommand}"
+                        Content="&#xF608;"
+                        FontFamily="{StaticResource FluentIconsRegular}"
+                        Padding="8,2" />
+                <Button IsVisible="{Binding IsPlaying}"
+                        Command="{Binding StopCommand}"
+                        Content="&#xF759;"
+                        FontFamily="{StaticResource FluentIconsRegular}"
+                        Padding="8,2" />
+                <TextBlock Text="{Binding TransportStateText}"
+                           VerticalAlignment="Center" />
+                <TextBlock Text="{Binding CurrentBarBeat}"
+                           VerticalAlignment="Center" />
+            </StackPanel>
+        </Border>
 
         <SplitView IsPaneOpen="True"
                    DisplayMode="Inline"
