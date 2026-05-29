@@ -23,6 +23,7 @@ using SonicEddy.ViewModels.ObjectBrowserViewModels;
 using SonicEddy.ViewModels.PreferencesViewModels;
 using SonicEddy.ViewModels.MidiSyncViewModels;
 using SonicEddy.ViewModels.SynchronizationViewModels;
+using SonicEddy.ViewModels.MonitoringViewModels;
 using SonicEddy.ViewModels.VirtualInputsViewModels;
 using SonicEddy.Views.FilterGraphManagerViews;
 using SonicEddy.Views.MetadataViews;
@@ -33,6 +34,7 @@ using SonicEddy.Views.ObjectBrowserViews;
 using SonicEddy.Views.PreferencesViews;
 using SonicEddy.Views.MidiSyncViews;
 using SonicEddy.Views.SynchronizationViews;
+using SonicEddy.Views.MonitoringViews;
 using SonicEddy.Views.VirtualInputsViews;
 using Splat;
 using LogLevel = Microsoft.Extensions.Logging.LogLevel;
@@ -72,6 +74,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     private const int NumberOfChannels = 16;
     private const int NumberOfChannelsPerLayer = NumberOfChannels / 2;
 
+    private Window? _monitoringWindow;
     private Window? _midiParameterMonitorWindow;
     private Window? _objectBrowserWindow;
     private Window? _metadataManagerWindow;
@@ -327,6 +330,21 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         };
 
         _midiParameterMonitorWindow.Show();
+    }
+
+    public void ShowMonitoringWindow()
+    {
+        _logger.LogTrace("ShowMonitoringWindow");
+
+        if (_monitoringWindow is not null && _monitoringWindow.IsVisible)
+            return;
+
+        _monitoringWindow = new MonitoringWindow()
+        {
+            DataContext = new MonitoringViewModel()
+        };
+
+        _monitoringWindow.Show();
     }
 
     public void ShowSynchronizationWindow()

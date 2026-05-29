@@ -51,6 +51,8 @@
             </MenuItem>
 
             <MenuItem Header="Tools">
+                <MenuItem Header="Monitoring ..."
+                          Command="{Binding ShowMonitoringWindow}" />
                 <MenuItem Header="Synchronization ..."
                           Command="{Binding ShowSynchronizationWindow}" />
                 <MenuItem Header="MIDI Sync ..."
