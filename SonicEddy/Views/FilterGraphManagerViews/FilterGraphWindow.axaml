@@ -62,15 +62,6 @@
                                         Command="{Binding #MainControl.((filterGraphManagerViewModels:FilterGraphManagerViewModel)DataContext).EditFilterGraph}"
                                         CommandParameter="{Binding Id}" />
 
-                                <Button Content="&#xF7F6;"
-                                        FontFamily="{StaticResource FluentIconsRegular}"
-                                        FontSize="20"
-                                        ToolTip.Tip="Edit Parameters ..."
-                                        Padding="8"
-                                        Margin="4"
-                                        IsEnabled="True"
-                                        Command="{Binding #MainControl.((filterGraphManagerViewModels:FilterGraphManagerViewModel)DataContext).EditFilterGraphParameterOrder}"
-                                        CommandParameter="{Binding Id}" />
                             </StackPanel>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reactive;
+using System.Reactive.Linq;
 using System.Threading.Tasks;
 using DynamicData;
 using Fr.Sonic.Model.Lv2;
@@ -28,16 +29,45 @@ public class FilterGraphBuilderViewModel : ViewModelBase
         List<PluginDescription> pluginDescriptions)
     {
         _appDataService = appDataService;
+
         SelectNodeCommand = ReactiveCommand.Create<GraphNode?>(node =>
         {
             _selectedNode = node;
             this.RaisePropertyChanged(nameof(SelectedNode));
             this.RaisePropertyChanged(nameof(SelectedNodeAsLv2));
             this.RaisePropertyChanged(nameof(SelectedNodeAsBuiltin));
+            this.RaisePropertyChanged(nameof(SelectedNodeParameterGroup));
         });
 
-        _ = Task.Run(() =>
-            BuildPluginClasses(pluginClasses, pluginDescriptions));
+        MovePluginUpCommand = ReactiveCommand.Create<ParameterPluginViewModel>(g =>
+        {
+            var i = ParameterPlugins.IndexOf(g);
+            if (i > 0) ParameterPlugins.Move(i, i - 1);
+        });
+
+        MovePluginDownCommand = ReactiveCommand.Create<ParameterPluginViewModel>(g =>
+        {
+            var i = ParameterPlugins.IndexOf(g);
+            if (i < ParameterPlugins.Count - 1) ParameterPlugins.Move(i, i + 1);
+        });
+
+        MoveParameterUpCommand = ReactiveCommand.Create<ParameterItemViewModel>(p =>
+        {
+            var group = ParameterPlugins.FirstOrDefault(g => g.NodeId == p.NodeId);
+            if (group == null) return;
+            var i = group.Parameters.IndexOf(p);
+            if (i > 0) group.Parameters.Move(i, i - 1);
+        });
+
+        MoveParameterDownCommand = ReactiveCommand.Create<ParameterItemViewModel>(p =>
+        {
+            var group = ParameterPlugins.FirstOrDefault(g => g.NodeId == p.NodeId);
+            if (group == null) return;
+            var i = group.Parameters.IndexOf(p);
+            if (i < group.Parameters.Count - 1) group.Parameters.Move(i, i + 1);
+        });
+
+        _ = Task.Run(() => BuildPluginClasses(pluginClasses, pluginDescriptions));
     }
 
     public string Name
@@ -53,48 +83,61 @@ public class FilterGraphBuilderViewModel : ViewModelBase
     } = Guid.NewGuid();
 
     public ObservableCollection<GraphEdge> Connections { get; } = [];
+    public ObservableCollection<GraphNode> Nodes { get; } = [];
+    public ObservableCollection<ParameterPluginViewModel> ParameterPlugins { get; } = [];
 
     public InputNodeViewModel InputNodeViewModel
     {
         get;
         set => this.RaiseAndSetIfChanged(ref field, value);
-    } = new()
-    {
-        Id = Guid.NewGuid(),
-    };
+    } = new() { Id = Guid.NewGuid() };
 
     public OutputNodeViewModel OutputNodeViewModel
     {
         get;
         set => this.RaiseAndSetIfChanged(ref field, value);
-    } = new()
-    {
-        Id = Guid.NewGuid(),
-    };
-
-    public ObservableCollection<GraphNode> Nodes { get; } = [];
+    } = new() { Id = Guid.NewGuid() };
 
     public ObservableCollection<Lv2PluginClass> AvailablePluginsByClass { get; } = [];
+
+    public ObservableCollection<BuiltinNodeGroupViewModel> AvailableBuiltins { get; } =
+        new(BuiltinNodeCatalog.Groups.Select(g => new BuiltinNodeGroupViewModel(g.Name, g.Types)));
 
     private GraphNode? _selectedNode;
     public GraphNode? SelectedNode => _selectedNode;
     public Lv2PluginNodeViewModel? SelectedNodeAsLv2 => _selectedNode as Lv2PluginNodeViewModel;
     public BuiltinNodeViewModel? SelectedNodeAsBuiltin => _selectedNode as BuiltinNodeViewModel;
-    public ReactiveCommand<GraphNode?, Unit> SelectNodeCommand { get; }
+    public ParameterPluginViewModel? SelectedNodeParameterGroup =>
+        _selectedNode is Lv2PluginNodeViewModel lv2
+            ? ParameterPlugins.FirstOrDefault(g => g.NodeId == lv2.Id)
+            : null;
 
-    public ObservableCollection<BuiltinNodeGroupViewModel> AvailableBuiltins { get; } =
-        new(BuiltinNodeCatalog.Groups
-            .Select(g => new BuiltinNodeGroupViewModel(g.Name, g.Types)));
+    public ReactiveCommand<GraphNode?, Unit> SelectNodeCommand { get; }
+    public ReactiveCommand<ParameterPluginViewModel, Unit> MovePluginUpCommand { get; }
+    public ReactiveCommand<ParameterPluginViewModel, Unit> MovePluginDownCommand { get; }
+    public ReactiveCommand<ParameterItemViewModel, Unit> MoveParameterUpCommand { get; }
+    public ReactiveCommand<ParameterItemViewModel, Unit> MoveParameterDownCommand { get; }
 
     public void AddPlugin(AvailableLv2Plugin plugin)
     {
-        Nodes.Add(new Lv2PluginNodeViewModel(plugin.Description));
+        var nodeVm = new Lv2PluginNodeViewModel(plugin.Description);
+        Nodes.Add(nodeVm);
+
+        var group = new ParameterPluginViewModel(nodeVm.Id, nodeVm.Name);
+        foreach (var ctrl in nodeVm.Controls)
+        {
+            var param = new ParameterItemViewModel(
+                nodeVm.Id, nodeVm.Name, ctrl.Symbol, ctrl.DisplayName,
+                ctrl.Min, ctrl.Max, ctrl.Value);
+            param.WhenAnyValue(p => p.Default).Subscribe(v => ctrl.Value = v);
+            group.Parameters.Add(param);
+        }
+        ParameterPlugins.Add(group);
     }
 
     public void AddBuiltinNode(AvailableBuiltinNode available)
     {
-        Nodes.Add(new BuiltinNodeViewModel(available.NodeType,
-            (int)available.ChannelCount));
+        Nodes.Add(new BuiltinNodeViewModel(available.NodeType, (int)available.ChannelCount));
     }
 
     private async Task BuildPluginClasses(
@@ -105,31 +148,22 @@ public class FilterGraphBuilderViewModel : ViewModelBase
             x => new Lv2PluginClass(x.Uri, x.Label, []));
 
         foreach (var pluginDescription in pluginDescriptions)
-        {
-            classes[pluginDescription.ClassUri].Plugins
-                .Add(new(pluginDescription));
-        }
+            classes[pluginDescription.ClassUri].Plugins.Add(new(pluginDescription));
 
-        var classesWithDescriptions =
-            classes.Values.Where(c => c.Plugins.Any());
-
+        var classesWithDescriptions = classes.Values.Where(c => c.Plugins.Any());
         AvailablePluginsByClass.AddRange(classesWithDescriptions);
     }
 
     public async Task SaveGraph()
     {
         var dialogViewModel = new SaveFilterGraphDialogViewModel();
-        var dialog = new SaveFilterGraphDialogView()
-        {
-            DataContext = dialogViewModel
-        };
+        var dialog = new SaveFilterGraphDialogView { DataContext = dialogViewModel };
 
         await dialog.ShowDialog(WindowTools.GetMainWindow()!);
 
         if (dialogViewModel.DialogResult)
         {
             Name = dialogViewModel.Name;
-
             try
             {
                 var filterGraph = this.ToGrpc();

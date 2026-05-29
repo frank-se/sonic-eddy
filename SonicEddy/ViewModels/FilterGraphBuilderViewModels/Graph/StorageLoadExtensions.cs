@@ -1,11 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reactive.Linq;
 using Fr.Sonic.Model.Lv2;
+using ReactiveUI;
 using SonicEddy.Contracts.FilterGraph;
 using SonicEddy.Controls.GraphEditorControl;
 using SonicEddy.ViewModels.FilterGraphBuilderViewModels.Graph.Builtin;
 using SonicEddy.ViewModels.FilterGraphBuilderViewModels.Graph.Lv2;
+using SonicEddy.ViewModels.FilterGraphBuilderViewModels;
 
 namespace SonicEddy.ViewModels.FilterGraphBuilderViewModels.Graph;
 
@@ -76,6 +79,48 @@ public static class StorageLoadExtensions
             if (!portMap.TryGetValue(edge.Source, out var source)) continue;
             if (!portMap.TryGetValue(edge.Target, out var target)) continue;
             vm.Connections.Add(new GraphEdge("edge", source, target));
+        }
+
+        if (graph.FlatParameters is { Count: > 0 })
+        {
+            var nodeMap = vm.Nodes.OfType<Lv2PluginNodeViewModel>().ToDictionary(n => n.Id);
+            var groups = new Dictionary<Guid, ParameterPluginViewModel>();
+            var groupOrder = new List<ParameterPluginViewModel>();
+
+            foreach (var fp in graph.FlatParameters)
+            {
+                if (!nodeMap.TryGetValue(fp.NodeId, out var node)) continue;
+                if (!groups.TryGetValue(fp.NodeId, out var group))
+                {
+                    group = new ParameterPluginViewModel(fp.NodeId, node.Name);
+                    groups[fp.NodeId] = group;
+                    groupOrder.Add(group);
+                }
+                var ctrl = node.Controls.FirstOrDefault(c => c.Symbol == fp.Symbol);
+                if (ctrl == null) continue;
+                var param = new ParameterItemViewModel(
+                    fp.NodeId, node.Name, fp.Symbol, fp.DisplayName,
+                    ctrl.Min, ctrl.Max, fp.Default);
+                param.WhenAnyValue(p => p.Default).Subscribe(v => ctrl.Value = v);
+                group.Parameters.Add(param);
+            }
+            foreach (var g in groupOrder) vm.ParameterPlugins.Add(g);
+        }
+        else
+        {
+            foreach (var node in vm.Nodes.OfType<Lv2PluginNodeViewModel>())
+            {
+                var group = new ParameterPluginViewModel(node.Id, node.Name);
+                foreach (var ctrl in node.Controls)
+                {
+                    var param = new ParameterItemViewModel(
+                        node.Id, node.Name, ctrl.Symbol, ctrl.DisplayName,
+                        ctrl.Min, ctrl.Max, ctrl.Value);
+                    param.WhenAnyValue(p => p.Default).Subscribe(v => ctrl.Value = v);
+                    group.Parameters.Add(param);
+                }
+                vm.ParameterPlugins.Add(group);
+            }
         }
     }
 

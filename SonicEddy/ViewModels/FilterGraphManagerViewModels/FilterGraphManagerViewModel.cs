@@ -17,7 +17,6 @@ namespace SonicEddy.ViewModels.FilterGraphManagerViewModels;
 public class FilterGraphManagerViewModel : ViewModelBase
 {
     private Window? _filterGraphBuilder;
-    private Window? _filterGraphParameterEditor;
 
     public FilterGraphManagerViewModel(IAppDataService appDataService)
     {
@@ -52,24 +51,6 @@ public class FilterGraphManagerViewModel : ViewModelBase
     {
         _appDataService.DeleteFilterGraph(id);
         _ = Task.Run(LoadFilterGraphs);
-    }
-
-    public async Task EditFilterGraphParameterOrder(Guid id)
-    {
-        if (_filterGraphParameterEditor is not null &&
-            _filterGraphParameterEditor.IsVisible) return;
-
-        var filterGraph = await _appDataService.GetFilterGraph(id);
-
-        var viewModel = new FilterGraphParameterEditorViewModel(filterGraph,
-            FrSonicLv2.PluginDescriptions(), _appDataService);
-
-        _filterGraphParameterEditor = new FilterGraphParameterEditorWindow()
-        {
-            DataContext = viewModel
-        };
-
-        _filterGraphParameterEditor.Show();
     }
 
     public async Task EditFilterGraph(Guid id)
