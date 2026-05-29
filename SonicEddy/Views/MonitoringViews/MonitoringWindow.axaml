@@ -4,28 +4,82 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:SonicEddy.ViewModels.MonitoringViewModels"
         xmlns:monitoringControls="clr-namespace:SonicEddy.Controls.MonitoringControls"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
-        Width="800" Height="600"
+        mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="400"
+        Width="1000" Height="400"
         WindowStartupLocation="CenterOwner"
         x:Class="SonicEddy.Views.MonitoringViews.MonitoringWindow"
         x:CompileBindings="False"
         x:DataType="vm:MonitoringViewModel"
         Title="Monitoring">
-    <SplitView IsPaneOpen="True"
-               DisplayMode="Inline"
-               OpenPaneLength="124">
-        <SplitView.Pane>
-            <Panel>
-                <monitoringControls:MonitoringChannelStrip
-                    IsVisible="{Binding Channel, Converter={x:Static ObjectConverters.IsNotNull}}"
-                    Volume="{Binding Channel.PanAndVolume.Volume}"
-                    Pan="{Binding Channel.PanAndVolume.Pan}"
-                    LeftAverage="{Binding Channel.PanAndVolume.LeftAverage}"
-                    RightAverage="{Binding Channel.PanAndVolume.RightAverage}"
-                    LeftPeak="{Binding Channel.PanAndVolume.LeftPeak}"
-                    RightPeak="{Binding Channel.PanAndVolume.RightPeak}" />
-            </Panel>
-        </SplitView.Pane>
-        <Grid />
-    </SplitView>
+
+    <Grid ColumnDefinitions="*,5,Auto">
+
+        <!-- Pickup selection -->
+        <TabControl Grid.Column="0">
+            <TabItem Header="Layer 1">
+                <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Disabled">
+                    <StackPanel Orientation="Horizontal" Spacing="2" Margin="4">
+                        <monitoringControls:MonitoringPickupColumn Header="CH1" />
+                        <monitoringControls:MonitoringPickupColumn Header="CH2" />
+                        <monitoringControls:MonitoringPickupColumn Header="CH3" />
+                        <monitoringControls:MonitoringPickupColumn Header="CH4" />
+                        <monitoringControls:MonitoringPickupColumn Header="CH5" />
+                        <monitoringControls:MonitoringPickupColumn Header="CH6" />
+                        <monitoringControls:MonitoringPickupColumn Header="CH7" />
+                        <monitoringControls:MonitoringPickupColumn Header="CH8" />
+                        <monitoringControls:MonitoringPickupColumn Header="GR1" />
+                        <monitoringControls:MonitoringPickupColumn Header="GR2" />
+                        <monitoringControls:MonitoringPickupColumn Header="GR3" />
+                        <monitoringControls:MonitoringPickupColumn Header="GR4" />
+                        <monitoringControls:MonitoringPickupColumn Header="MST" />
+                        <monitoringControls:MonitoringPickupColumn Header="RT1" />
+                        <monitoringControls:MonitoringPickupColumn Header="RT2" />
+                        <monitoringControls:MonitoringPickupColumn Header="RT3" />
+                        <monitoringControls:MonitoringPickupColumn Header="RT4" />
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+            <TabItem Header="Layer 2">
+                <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Disabled">
+                    <StackPanel Orientation="Horizontal" Spacing="2" Margin="4">
+                        <monitoringControls:MonitoringPickupColumn Header="CH1" />
+                        <monitoringControls:MonitoringPickupColumn Header="CH2" />
+                        <monitoringControls:MonitoringPickupColumn Header="CH3" />
+                        <monitoringControls:MonitoringPickupColumn Header="CH4" />
+                        <monitoringControls:MonitoringPickupColumn Header="CH5" />
+                        <monitoringControls:MonitoringPickupColumn Header="CH6" />
+                        <monitoringControls:MonitoringPickupColumn Header="CH7" />
+                        <monitoringControls:MonitoringPickupColumn Header="CH8" />
+                        <monitoringControls:MonitoringPickupColumn Header="GR1" />
+                        <monitoringControls:MonitoringPickupColumn Header="GR2" />
+                        <monitoringControls:MonitoringPickupColumn Header="GR3" />
+                        <monitoringControls:MonitoringPickupColumn Header="GR4" />
+                        <monitoringControls:MonitoringPickupColumn Header="MST" />
+                        <monitoringControls:MonitoringPickupColumn Header="RT1" />
+                        <monitoringControls:MonitoringPickupColumn Header="RT2" />
+                        <monitoringControls:MonitoringPickupColumn Header="RT3" />
+                        <monitoringControls:MonitoringPickupColumn Header="RT4" />
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
+
+        <GridSplitter Grid.Column="1"
+                      ResizeDirection="Columns"
+                      Background="Gray" />
+
+        <!-- Monitor volume channel -->
+        <monitoringControls:MonitoringChannelStrip
+            Grid.Column="2"
+            IsVisible="{Binding Channel, Converter={x:Static ObjectConverters.IsNotNull}}"
+            Volume="{Binding Channel.PanAndVolume.Volume}"
+            Pan="{Binding Channel.PanAndVolume.Pan}"
+            LeftAverage="{Binding Channel.PanAndVolume.LeftAverage}"
+            RightAverage="{Binding Channel.PanAndVolume.RightAverage}"
+            LeftPeak="{Binding Channel.PanAndVolume.LeftPeak}"
+            RightPeak="{Binding Channel.PanAndVolume.RightPeak}" />
+
+    </Grid>
 </Window>

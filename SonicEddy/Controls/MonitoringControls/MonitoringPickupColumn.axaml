@@ -1,0 +1,39 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:monitoringControls="clr-namespace:SonicEddy.Controls.MonitoringControls"
+             x:Class="SonicEddy.Controls.MonitoringControls.MonitoringPickupColumn"
+             x:CompileBindings="False">
+
+    <UserControl.Styles>
+        <Style Selector="ToggleButton">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="Padding" Value="2,4" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="UniformGrid ToggleButton">
+            <Setter Property="FontSize" Value="9" />
+            <Setter Property="Padding" Value="1,2" />
+        </Style>
+    </UserControl.Styles>
+
+    <StackPanel Orientation="Vertical"
+                Width="52"
+                Spacing="2">
+        <TextBlock Text="{Binding $parent[monitoringControls:MonitoringPickupColumn].Header}"
+                   HorizontalAlignment="Center"
+                   FontSize="11"
+                   FontWeight="Bold"
+                   Margin="0,4,0,4" />
+        <ToggleButton x:Name="PreButton" Content="Pre" />
+        <ToggleButton x:Name="PostButton" Content="Post" />
+        <ToggleButton x:Name="OutButton" Content="Out" />
+        <UniformGrid Columns="2" ColumnSpacing="2"
+                     IsEnabled="{Binding #OutButton.IsChecked}">
+            <ToggleButton x:Name="PreFaderButton" Content="Pre" />
+            <ToggleButton x:Name="PostFaderButton" Content="Post" />
+        </UniformGrid>
+    </StackPanel>
+
+</UserControl>
