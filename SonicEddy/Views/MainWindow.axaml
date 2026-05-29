@@ -46,10 +46,6 @@
                           Command="{Binding ShowPreferencesWindow}" />
             </MenuItem>
 
-            <MenuItem Header="_Mixer">
-                <MenuItem Header="Add Channel ..." />
-            </MenuItem>
-
             <MenuItem Header="Tools">
                 <MenuItem Header="Monitoring ..."
                           IsVisible="{Binding IsMonitoringEnabled}"

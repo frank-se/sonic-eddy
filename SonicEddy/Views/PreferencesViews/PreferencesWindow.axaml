@@ -6,6 +6,7 @@
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="SonicEddy.Views.PreferencesViews.PreferencesWindow"
         x:DataType="preferencesViewModels:PreferencesViewModel"
+        Width="520" Height="300"
         Title="Preferences">
 
     <StackPanel>
