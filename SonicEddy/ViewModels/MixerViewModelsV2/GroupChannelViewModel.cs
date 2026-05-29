@@ -16,7 +16,7 @@ public class GroupChannelViewModel(
     ulong channelId,
     string text,
     ICommand selectChannelCommand,
-    LoopbackModule inputLoopback,
+    TwoNodePipewireModule inputLoopback,
     TwoNodePipewireModule outputLoopback,
     List<LoopbackModule> sendLoopbacks,
     FilterChain? filterChain,

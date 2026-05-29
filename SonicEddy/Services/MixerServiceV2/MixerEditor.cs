@@ -191,23 +191,12 @@ public class MixerEditor(IWireplumberService wireplumberService)
     private async Task<MasterChannel> CreateMasterChannel(ulong layerId,
         OutputChannel defaultOutput)
     {
-        var inputLoopback = await wireplumberService.CreateLoopbackModule(
-            "input-loopback-master", new()
-            {
-                CaptureProps =
-                    CaptureBaseProps(false,
-                        $"master-input-loopback-capture-{layerId}"),
-                PlaybackProps =
-                    PlaybackBaseProps(false,
-                        $"master-input-loopback-playback-{layerId}"),
-            });
-
         var preFxLooper = await CreateLooper(
             layerId,
             0,
             "master",
             "pre",
-            inputLoopback.PlaybackNode.ObjectSerial.ToString(),
+            null,
             null);
 
         var postFxLooper = await CreateLooper(
@@ -224,7 +213,7 @@ public class MixerEditor(IWireplumberService wireplumberService)
         return new(
             "Master",
             0,
-            inputLoopback,
+            preFxLooper,
             preFxLooper,
             null,
             null,
@@ -246,16 +235,6 @@ public class MixerEditor(IWireplumberService wireplumberService)
         MasterChannel masterChannel, List<ReturnChannel> returnChannels,
         int numberOfGroupChannels, int numberOfReturnChannels)
     {
-        var inputLoopback = await wireplumberService.CreateLoopbackModule(
-            $"input-loopback-group-{index}", new()
-            {
-                CaptureProps = CaptureBaseProps(false,
-                    $"group-{index}-input-loopback-capture-{layerId}",
-                    passive: false),
-                PlaybackProps = PlaybackBaseProps(false,
-                    $"group-{index}-input-loopback-playback-{layerId}"),
-            });
-
         var channelId =
             (ulong)((index - 1) + numberOfGroupChannels * (int)layerId);
 
@@ -264,7 +243,7 @@ public class MixerEditor(IWireplumberService wireplumberService)
             channelId,
             "group",
             "pre",
-            inputLoopback.PlaybackNode.ObjectSerial.ToString(),
+            null,
             null);
 
         var postFxLooper = await CreateLooper(
@@ -285,7 +264,7 @@ public class MixerEditor(IWireplumberService wireplumberService)
                     $"send-loopback-group-{index}-send-{i}", new()
                     {
                         CaptureProps = CaptureBasePropsWithTargetObject(true,
-                            inputLoopback.PlaybackNode.ObjectSerial
+                            preFxLooper.PlaybackNode.ObjectSerial
                                 .ToString(),
                             $"group-{index}-send-{i}-loopback-capture-{layerId}"),
                         PlaybackProps = PlaybackBasePropsWithTargetObject(true,
@@ -297,12 +276,12 @@ public class MixerEditor(IWireplumberService wireplumberService)
         var id = index - 1 + (int)layerId * numberOfGroupChannels;
 
         var silenceHandle = Fr.Sonic.FrSonic.CreateSilenceProducer(
-            inputLoopback.CaptureNode.ObjectSerial);
+            preFxLooper.CaptureNode.ObjectSerial);
 
         return new(
             $"Group {index}",
             (ulong)id,
-            inputLoopback,
+            preFxLooper,
             preFxLooper,
             null,
             postFxLooper,

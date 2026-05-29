@@ -8,7 +8,7 @@ namespace SonicEddy.Services.MixerServiceV2;
 public record MasterChannel(
     string Name,
     ulong ChannelId,
-    LoopbackModule InputLoopback,
+    TwoNodePipewireModule InputLoopback,
     Looper PreFxLooper,
     FilterChain? FilterChain,
     FilterGraph? FilterGraph,

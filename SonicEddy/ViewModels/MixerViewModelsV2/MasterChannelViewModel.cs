@@ -16,7 +16,7 @@ public class MasterChannelViewModel(
     ulong channelId,
     string text,
     ICommand selectChannelCommand,
-    LoopbackModule inputLoopback,
+    TwoNodePipewireModule inputLoopback,
     TwoNodePipewireModule outputLoopback,
     FilterChain? filterChain,
     FilterGraph? filterGraph,
