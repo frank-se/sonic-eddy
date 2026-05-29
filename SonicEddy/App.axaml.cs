@@ -104,6 +104,10 @@ public class App : Application
         Locator.CurrentMutable.Register<IMonitoringService>(() =>
             monitoringService);
 
+        var monitoringLinkService = new MonitoringLinkService();
+        Locator.CurrentMutable.Register<IMonitoringLinkService>(() =>
+            monitoringLinkService);
+
         var mixerServiceLogger = loggerFactory.CreateLogger<MixerService>();
         var mixerServiceV2 =
             new MixerService(appDataService,
