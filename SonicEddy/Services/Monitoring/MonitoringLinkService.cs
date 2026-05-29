@@ -55,18 +55,17 @@ public class MonitoringLinkService(IMixerService mixerService) : IMonitoringLink
 
         var outputPorts = FrSonic.PortRegistry.Objects
             .Where(p => p.Node.Id == sourceNode.ObjectId && p.Direction == "out")
+            .OrderBy(p => p.PortId)
             .ToList();
 
         var inputPorts = FrSonic.PortRegistry.Objects
             .Where(p => p.Node.Id == captureNode.ObjectId && p.Direction == "in")
+            .OrderBy(p => p.PortId)
             .ToList();
 
-        foreach (var outPort in outputPorts)
-        {
-            var inPort = inputPorts.FirstOrDefault(ip => ip.Channel == outPort.Channel);
-            if (inPort is not null)
-                FrSonic.LinkFactory.CreateLink(outPort, inPort);
-        }
+        var count = Math.Min(outputPorts.Count, inputPorts.Count);
+        for (var i = 0; i < count; i++)
+            FrSonic.LinkFactory.CreateLink(outputPorts[i], inputPorts[i]);
     }
 
     private Node? ResolveNode(MonitoringChannelKey key, MonitoringSource source)
