@@ -1,0 +1,30 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:mixerControls="clr-namespace:SonicEddy.Controls.MixerControls"
+             xmlns:monitoringControls="clr-namespace:SonicEddy.Controls.MonitoringControls"
+             mc:Ignorable="d" d:DesignWidth="120" d:DesignHeight="400"
+             x:Class="SonicEddy.Controls.MonitoringControls.MonitoringChannelStrip">
+
+    <Panel Background="DarkCyan">
+        <Grid ColumnDefinitions="120"
+              RowDefinitions="Auto,*"
+              Margin="2">
+
+            <mixerControls:ChannelHeader Grid.Row="0"
+                                         Text="{Binding $parent[monitoringControls:MonitoringChannelStrip].Text}"
+                                         IsDeleteButtonVisible="False" />
+
+            <mixerControls:PanAndVolumeSectionWithMonitor Grid.Row="1"
+                                                          LeftAverage="{Binding $parent[monitoringControls:MonitoringChannelStrip].LeftAverage}"
+                                                          RightAverage="{Binding $parent[monitoringControls:MonitoringChannelStrip].RightAverage}"
+                                                          LeftPeak="{Binding $parent[monitoringControls:MonitoringChannelStrip].LeftPeak}"
+                                                          RightPeak="{Binding $parent[monitoringControls:MonitoringChannelStrip].RightPeak}"
+                                                          Volume="{Binding $parent[monitoringControls:MonitoringChannelStrip].Volume}"
+                                                          Pan="{Binding $parent[monitoringControls:MonitoringChannelStrip].Pan}" />
+
+        </Grid>
+    </Panel>
+
+</UserControl>

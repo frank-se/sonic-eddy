@@ -18,6 +18,7 @@ public class PreferenceService(IAppDataService appDataService)
     public async Task Load()
     {
         Preferences = await appDataService.LoadPreferences();
+        Changed?.Invoke();
     }
 
     public async Task UpdateAndSave(

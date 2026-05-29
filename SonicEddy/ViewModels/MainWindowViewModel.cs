@@ -358,9 +358,12 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         if (_monitoringWindow is not null && _monitoringWindow.IsVisible)
             return;
 
+        var mixerService = Locator.Current.GetService<IMixerService>();
+        var loopback = mixerService?.CurrentMixer?.MonitoringLoopback;
+
         _monitoringWindow = new MonitoringWindow()
         {
-            DataContext = new MonitoringViewModel()
+            DataContext = new MonitoringViewModel(loopback)
         };
 
         _monitoringWindow.Show();
