@@ -59,6 +59,25 @@
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
+                                <StackPanel IsVisible="{Binding HasFilter}" Spacing="2">
+                                    <TextBlock Text="Filter Chain" Classes="section-header" />
+                                    <TextBlock Text="{Binding FilterChain.Name, StringFormat='Name: {0}'}" />
+                                    <TextBlock Text="{Binding FilterChain.CaptureNode.ObjectSerial, StringFormat='Capture Serial: {0}'}" />
+                                    <TextBlock Text="{Binding FilterChain.CaptureNode.ObjectId, StringFormat='Capture Id: {0}'}" />
+                                    <TextBlock Text="{Binding FilterChain.PlaybackNode.ObjectSerial, StringFormat='Playback Serial: {0}'}" />
+                                    <TextBlock Text="{Binding FilterChain.PlaybackNode.ObjectId, StringFormat='Playback Id: {0}'}" />
+                                    <TextBlock Text="Filter Graph" Classes="section-header" />
+                                    <TextBlock Text="{Binding FilterGraph.Name, StringFormat='Name: {0}'}" />
+                                    <ItemsControl ItemsSource="{Binding FilterGraph.Nodes}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock x:CompileBindings="False"
+                                                           Text="{Binding Name}"
+                                                           Margin="0,2,0,0" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
                             </StackPanel>
                         </DataTemplate>
 
@@ -89,6 +108,25 @@
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
+                                <StackPanel IsVisible="{Binding HasFilter}" Spacing="2">
+                                    <TextBlock Text="Filter Chain" Classes="section-header" />
+                                    <TextBlock Text="{Binding FilterChain.Name, StringFormat='Name: {0}'}" />
+                                    <TextBlock Text="{Binding FilterChain.CaptureNode.ObjectSerial, StringFormat='Capture Serial: {0}'}" />
+                                    <TextBlock Text="{Binding FilterChain.CaptureNode.ObjectId, StringFormat='Capture Id: {0}'}" />
+                                    <TextBlock Text="{Binding FilterChain.PlaybackNode.ObjectSerial, StringFormat='Playback Serial: {0}'}" />
+                                    <TextBlock Text="{Binding FilterChain.PlaybackNode.ObjectId, StringFormat='Playback Id: {0}'}" />
+                                    <TextBlock Text="Filter Graph" Classes="section-header" />
+                                    <TextBlock Text="{Binding FilterGraph.Name, StringFormat='Name: {0}'}" />
+                                    <ItemsControl ItemsSource="{Binding FilterGraph.Nodes}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock x:CompileBindings="False"
+                                                           Text="{Binding Name}"
+                                                           Margin="0,2,0,0" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
                             </StackPanel>
                         </DataTemplate>
 
@@ -106,6 +144,25 @@
                                 <TextBlock Text="{Binding OutputLoopback.CaptureNode.ObjectId, StringFormat='Capture Id: {0}'}" />
                                 <TextBlock Text="{Binding OutputLoopback.PlaybackNode.ObjectSerial, StringFormat='Playback Serial: {0}'}" />
                                 <TextBlock Text="{Binding OutputLoopback.PlaybackNode.ObjectId, StringFormat='Playback Id: {0}'}" />
+                                <StackPanel IsVisible="{Binding HasFilter}" Spacing="2">
+                                    <TextBlock Text="Filter Chain" Classes="section-header" />
+                                    <TextBlock Text="{Binding FilterChain.Name, StringFormat='Name: {0}'}" />
+                                    <TextBlock Text="{Binding FilterChain.CaptureNode.ObjectSerial, StringFormat='Capture Serial: {0}'}" />
+                                    <TextBlock Text="{Binding FilterChain.CaptureNode.ObjectId, StringFormat='Capture Id: {0}'}" />
+                                    <TextBlock Text="{Binding FilterChain.PlaybackNode.ObjectSerial, StringFormat='Playback Serial: {0}'}" />
+                                    <TextBlock Text="{Binding FilterChain.PlaybackNode.ObjectId, StringFormat='Playback Id: {0}'}" />
+                                    <TextBlock Text="Filter Graph" Classes="section-header" />
+                                    <TextBlock Text="{Binding FilterGraph.Name, StringFormat='Name: {0}'}" />
+                                    <ItemsControl ItemsSource="{Binding FilterGraph.Nodes}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock x:CompileBindings="False"
+                                                           Text="{Binding Name}"
+                                                           Margin="0,2,0,0" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
                             </StackPanel>
                         </DataTemplate>
 
