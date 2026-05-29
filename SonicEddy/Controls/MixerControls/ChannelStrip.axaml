@@ -41,7 +41,10 @@
                                                AddCommand="{Binding $parent[mixerControls:ChannelStrip].AddFilterCommand}"
                                                AddCommandParameter="{Binding $parent[mixerControls:ChannelStrip].AddFilterCommandParameter}"
                                                DeleteCommand="{Binding $parent[mixerControls:ChannelStrip].DeleteFilterCommand}"
-                                               DeleteCommandParameter="{Binding $parent[mixerControls:ChannelStrip].DeleteFilterCommandParameter}" />
+                                               DeleteCommandParameter="{Binding $parent[mixerControls:ChannelStrip].DeleteFilterCommandParameter}"
+                                               Presets="{Binding $parent[mixerControls:ChannelStrip].Presets}"
+                                               SavePresetCommand="{Binding $parent[mixerControls:ChannelStrip].SavePresetCommand}"
+                                               LoadPresetCommand="{Binding $parent[mixerControls:ChannelStrip].LoadPresetCommand}" />
 
             <mixerControls:ParameterSection Grid.Row="5"
                                             Margin="4"

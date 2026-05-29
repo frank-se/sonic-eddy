@@ -67,6 +67,13 @@ public class App : Application
 
         Directory.CreateDirectory(preferencesPath);
 
+        var presetPath = Path.Combine(
+            Environment.GetFolderPath(
+                Environment.SpecialFolder.LocalApplicationData),
+            "SonicEddy/FilterChainPreset");
+
+        Directory.CreateDirectory(presetPath);
+
         var loggerFactory = CreateLoggerFactory();
         var logger = loggerFactory.CreateLogger<App>();
 
@@ -75,7 +82,7 @@ public class App : Application
         Locator.CurrentMutable.Register(() => loggerFactory);
 
         var appDataService =
-            new AppDataService(filterGraphPath, mixerPath, preferencesPath);
+            new AppDataService(filterGraphPath, mixerPath, preferencesPath, presetPath);
 
         Locator.CurrentMutable.Register<IAppDataService>(() => appDataService);
 

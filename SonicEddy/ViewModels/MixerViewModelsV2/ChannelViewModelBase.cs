@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Reactive;
 using System.Reactive.Disposables;
 using System.Reactive.Disposables.Fluent;
 using System.Threading.Tasks;
@@ -18,6 +19,8 @@ using SonicEddy.Services.MixerServiceV2;
 using SonicEddy.Services.Monitoring;
 using SonicEddy.Tools;
 using SonicEddy.Views.MixerViewsV2;
+using SonicEddy.Views.SavePresetDialogViews;
+using SonicEddy.ViewModels.SavePresetDialogViewModels;
 using ChannelStrip = SonicEddy.Services.MixerServiceV2.ChannelStrip;
 
 namespace SonicEddy.ViewModels.MixerViewModelsV2;
@@ -148,6 +151,58 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
         this.WhenAnyValue(x => x.FilterChain)
             .Subscribe(OnFilterChainUpdate)
             .DisposeWith(Disposables);
+
+        var hasFilter = this.WhenAnyValue(x => x.HasFilter);
+        SavePresetCommand = ReactiveCommand.CreateFromTask(SavePreset, hasFilter);
+        LoadPresetCommand = ReactiveCommand.Create<FilterChainPresetViewModel>(LoadPreset);
+    }
+
+    public ObservableCollection<FilterChainPresetViewModel> AvailablePresets { get; } = [];
+    public ICommand SavePresetCommand { get; }
+    public ICommand LoadPresetCommand { get; }
+
+    private async Task SavePreset()
+    {
+        var dialogVm = new SavePresetDialogViewModel();
+        var dialog = new SavePresetDialogView { DataContext = dialogVm };
+        await dialog.ShowDialog(WindowTools.GetMainWindow()!);
+
+        if (!dialogVm.DialogResult) return;
+
+        var values = Parameters?
+            .SelectMany(c => c.Parameters)
+            .Select(p => new FilterChainPresetValue(p.FullyQualifiedName, p.Value))
+            .ToList() ?? [];
+
+        var preset = new FilterChainPreset(Guid.NewGuid(), dialogVm.Name,
+            FilterGraph!.Id, values);
+        await _appDataService.CreateFilterChainPreset(preset);
+        await LoadPresetsForCurrentFilter();
+    }
+
+    private void LoadPreset(FilterChainPresetViewModel preset)
+    {
+        if (Parameters == null) return;
+        var valueMap = preset.Values.ToDictionary(v => v.FullyQualifiedName, v => v.Value);
+        foreach (var collection in Parameters)
+        foreach (var parameter in collection.Parameters)
+            if (valueMap.TryGetValue(parameter.FullyQualifiedName, out var value))
+                parameter.Value = value;
+    }
+
+    private async Task LoadPresetsForCurrentFilter()
+    {
+        if (FilterGraph == null)
+        {
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => AvailablePresets.Clear());
+            return;
+        }
+        var presets = await _appDataService.GetPresetsForFilterGraph(FilterGraph.Id);
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            AvailablePresets.Clear();
+            AvailablePresets.AddRange(presets.Select(p => new FilterChainPresetViewModel(p)));
+        });
     }
 
     private void OnFilterChainUpdate(FilterChain? chain)
@@ -188,6 +243,7 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
             chain.CaptureNode.ObjectId);
 
         HasFilter = true;
+        _ = LoadPresetsForCurrentFilter();
     }
 
     private readonly TwoNodePipewireModule _inputLoopback;

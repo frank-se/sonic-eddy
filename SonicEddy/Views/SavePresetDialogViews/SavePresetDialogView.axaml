@@ -1,0 +1,23 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:SonicEddy.ViewModels.SavePresetDialogViewModels"
+        mc:Ignorable="d" d:DesignWidth="300" d:DesignHeight="120"
+        x:Class="SonicEddy.Views.SavePresetDialogViews.SavePresetDialogView"
+        x:DataType="vm:SavePresetDialogViewModel"
+        Title="Save Preset"
+        Width="300" SizeToContent="Height">
+    <StackPanel Margin="8">
+        <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto" Margin="0,0,0,8">
+            <Label Grid.Column="0" Content="Name" Target="NameTextBox"
+                   VerticalAlignment="Center" Margin="0,0,8,0" />
+            <TextBox Grid.Column="1" Text="{Binding Name}" x:Name="NameTextBox" />
+        </Grid>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+            <Button Content="Cancel" Command="{Binding Cancel}" />
+            <Button Content="Save" Command="{Binding FinishSave}"
+                    IsEnabled="{Binding IsButtonEnabled}" />
+        </StackPanel>
+    </StackPanel>
+</Window>

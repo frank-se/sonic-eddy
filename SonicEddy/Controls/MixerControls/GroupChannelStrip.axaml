@@ -36,7 +36,10 @@
                                                AddCommand="{Binding $parent[mixerControls:GroupChannelStrip].AddFilterCommand}"
                                                AddCommandParameter="{Binding $parent[mixerControls:GroupChannelStrip].AddFilterCommandParameter}"
                                                DeleteCommand="{Binding $parent[mixerControls:GroupChannelStrip].DeleteFilterCommand}"
-                                               DeleteCommandParameter="{Binding $parent[mixerControls:GroupChannelStrip].DeleteFilterCommandParameter}" />
+                                               DeleteCommandParameter="{Binding $parent[mixerControls:GroupChannelStrip].DeleteFilterCommandParameter}"
+                                               Presets="{Binding $parent[mixerControls:GroupChannelStrip].Presets}"
+                                               SavePresetCommand="{Binding $parent[mixerControls:GroupChannelStrip].SavePresetCommand}"
+                                               LoadPresetCommand="{Binding $parent[mixerControls:GroupChannelStrip].LoadPresetCommand}" />
 
             <mixerControls:ParameterSection Grid.Row="4"
                                             Margin="4"

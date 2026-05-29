@@ -1,8 +1,10 @@
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Data;
+using SonicEddy.ViewModels.MixerViewModelsV2;
 
 namespace SonicEddy.Controls.MixerControls;
 
@@ -127,6 +129,35 @@ public partial class MasterChannelStrip : UserControl
     {
         get => GetValue(DeleteFilterCommandParameterProperty);
         set => SetValue(DeleteFilterCommandParameterProperty, value);
+    }
+
+    public static readonly StyledProperty<IList<FilterChainPresetViewModel>?>
+        PresetsProperty =
+            AvaloniaProperty.Register<MasterChannelStrip, IList<FilterChainPresetViewModel>?>(
+                nameof(Presets));
+
+    public IList<FilterChainPresetViewModel>? Presets
+    {
+        get => GetValue(PresetsProperty);
+        set => SetValue(PresetsProperty, value);
+    }
+
+    public static readonly StyledProperty<ICommand?> SavePresetCommandProperty =
+        AvaloniaProperty.Register<MasterChannelStrip, ICommand?>(nameof(SavePresetCommand));
+
+    public ICommand? SavePresetCommand
+    {
+        get => GetValue(SavePresetCommandProperty);
+        set => SetValue(SavePresetCommandProperty, value);
+    }
+
+    public static readonly StyledProperty<ICommand?> LoadPresetCommandProperty =
+        AvaloniaProperty.Register<MasterChannelStrip, ICommand?>(nameof(LoadPresetCommand));
+
+    public ICommand? LoadPresetCommand
+    {
+        get => GetValue(LoadPresetCommandProperty);
+        set => SetValue(LoadPresetCommandProperty, value);
     }
 
     /*

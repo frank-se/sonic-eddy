@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using ProtoBuf;
 using SonicEddy.Contracts.FilterGraph;
@@ -11,7 +12,8 @@ namespace SonicEddy.Services.AppData;
 public class AppDataService(
     string filterGraphFolderPath,
     string mixerFolderPath,
-    string preferencesFolderPath) : IAppDataService
+    string preferencesFolderPath,
+    string presetFolderPath) : IAppDataService
 {
     private readonly AppDataServiceBase<FilterGraph>
         _filterGraphAppDataService =
@@ -19,6 +21,9 @@ public class AppDataService(
 
     private readonly AppDataServiceBase<Mixer>
         _mixerAppDataService = new(mixerFolderPath, "mix");
+
+    private readonly AppDataServiceBase<FilterChainPreset>
+        _presetAppDataService = new(presetFolderPath, "fcp");
 
     public Task<FilterGraph> GetFilterGraph(Guid id) =>
         _filterGraphAppDataService.Get(id);
@@ -40,6 +45,18 @@ public class AppDataService(
         _mixerAppDataService.Create(mixer.Id, mixer);
 
     public void DeleteMixer(Guid id) => _mixerAppDataService.Delete(id);
+
+    public Task CreateFilterChainPreset(FilterChainPreset preset) =>
+        _presetAppDataService.Create(preset.Id, preset);
+
+    public async Task<List<FilterChainPreset>> GetPresetsForFilterGraph(Guid filterGraphId)
+    {
+        var all = await _presetAppDataService.GetAll();
+        return all.Where(p => p.FilterGraphId == filterGraphId).ToList();
+    }
+
+    public void DeleteFilterChainPreset(Guid id) =>
+        _presetAppDataService.Delete(id);
 
     public async Task StorePreferences(
         Contracts.ApplicationPreferences.Preferences preferences)

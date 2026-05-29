@@ -17,6 +17,10 @@ public interface IAppDataService
     Task CreateMixer(Mixer mixer);
     void DeleteMixer(Guid id);
 
+    Task CreateFilterChainPreset(FilterChainPreset preset);
+    Task<List<FilterChainPreset>> GetPresetsForFilterGraph(Guid filterGraphId);
+    void DeleteFilterChainPreset(Guid id);
+
     Task StorePreferences(
         Contracts.ApplicationPreferences.Preferences preferences);
 
