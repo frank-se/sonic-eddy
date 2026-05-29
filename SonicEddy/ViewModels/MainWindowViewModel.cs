@@ -83,6 +83,12 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     private Window? _midiSyncWindow;
     private Window? _midiRouterWindow;
 
+    public bool IsInitialized
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
     public MixerLayerViewModel? LayerAViewModel
     {
         get;
@@ -534,7 +540,10 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
                     .ConvertCurrentMixerToViewModel(0);
 
             if (mixerView is not null)
+            {
                 LayerAViewModel = mixerView;
+                IsInitialized = true;
+            }
         });
     }
 

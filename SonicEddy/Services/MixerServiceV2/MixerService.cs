@@ -137,26 +137,25 @@ public class MixerService : IMixerService, IDisposable
                 .Select(c => c.FilterChain?.PlaybackNode.ObjectSerial)
                 .OfType<ulong>(),
             layer.Channels
-                .Select(c => c.InputLoopback.CaptureNode.ObjectSerial),
+                .Select(c => c.InputLoopback.CaptureNodeObjectSerial),
             layer.Channels
-                .Select(c => c.InputLoopback.PlaybackNode.ObjectSerial),
+                .Select(c => c.InputLoopback.PlaybackNodeObjectSerial),
             layer.Channels
-                .Select(c => c.PreFxLooper.CaptureNode.ObjectSerial),
+                .Select(c => c.PreFxLooper.CaptureNodeObjectSerial),
             layer.Channels
-                .Select(c => c.PreFxLooper.PlaybackNode.ObjectSerial),
+                .Select(c => c.PreFxLooper.PlaybackNodeObjectSerial),
             layer.Channels
-                .Select(c => c.OutputLoopback.CaptureNode.ObjectSerial),
+                .Select(c => c.OutputLoopback.CaptureNodeObjectSerial),
             layer.Channels
-                .Select(c =>
-                    c.OutputLoopback.PlaybackNode.ObjectSerial),
-            layer.Channels
-                .SelectMany(c =>
-                    c.SendLoopbacks.Select(s =>
-                        s.CaptureNode.ObjectSerial)),
+                .Select(c => c.OutputLoopback.PlaybackNodeObjectSerial),
             layer.Channels
                 .SelectMany(c =>
                     c.SendLoopbacks.Select(s =>
-                        s.PlaybackNode.ObjectSerial)),
+                        s.CaptureNodeObjectSerial)),
+            layer.Channels
+                .SelectMany(c =>
+                    c.SendLoopbacks.Select(s =>
+                        s.PlaybackNodeObjectSerial)),
             layer.SendReturns
                 .Select(r => r.FilterChain?.CaptureNode.ObjectSerial)
                 .OfType<ulong>(),
@@ -164,14 +163,13 @@ public class MixerService : IMixerService, IDisposable
                 .Select(r => r.FilterChain?.PlaybackNode.ObjectSerial)
                 .OfType<ulong>(),
             layer.SendReturns
-                .Select(r => r.InputLoopback.CaptureNode.ObjectSerial),
+                .Select(r => r.InputLoopback.CaptureNodeObjectSerial),
             layer.SendReturns
-                .Select(r => r.InputLoopback.PlaybackNode.ObjectSerial),
+                .Select(r => r.InputLoopback.PlaybackNodeObjectSerial),
             layer.SendReturns
-                .Select(r => r.OutputLoopback.CaptureNode.ObjectSerial),
+                .Select(r => r.OutputLoopback.CaptureNodeObjectSerial),
             layer.SendReturns
-                .Select(r =>
-                    r.OutputLoopback.PlaybackNode.ObjectSerial),
+                .Select(r => r.OutputLoopback.PlaybackNodeObjectSerial),
             layer.GroupChannels
                 .Select(c => c.FilterChain?.CaptureNode.ObjectSerial)
                 .OfType<ulong>(),
@@ -179,26 +177,25 @@ public class MixerService : IMixerService, IDisposable
                 .Select(c => c.FilterChain?.PlaybackNode.ObjectSerial)
                 .OfType<ulong>(),
             layer.GroupChannels
-                .Select(c => c.InputLoopback.CaptureNode.ObjectSerial),
+                .Select(c => c.InputLoopback.CaptureNodeObjectSerial),
             layer.GroupChannels
-                .Select(c => c.InputLoopback.PlaybackNode.ObjectSerial),
+                .Select(c => c.InputLoopback.PlaybackNodeObjectSerial),
             layer.GroupChannels
-                .Select(c => c.PreFxLooper.CaptureNode.ObjectSerial),
+                .Select(c => c.PreFxLooper.CaptureNodeObjectSerial),
             layer.GroupChannels
-                .Select(c => c.PreFxLooper.PlaybackNode.ObjectSerial),
+                .Select(c => c.PreFxLooper.PlaybackNodeObjectSerial),
             layer.GroupChannels
-                .Select(c => c.OutputLoopback.CaptureNode.ObjectSerial),
+                .Select(c => c.OutputLoopback.CaptureNodeObjectSerial),
             layer.GroupChannels
-                .Select(c =>
-                    c.OutputLoopback.PlaybackNode.ObjectSerial),
-            layer.GroupChannels
-                .SelectMany(c =>
-                    c.SendLoopbacks.Select(s =>
-                        s.CaptureNode.ObjectSerial)),
+                .Select(c => c.OutputLoopback.PlaybackNodeObjectSerial),
             layer.GroupChannels
                 .SelectMany(c =>
                     c.SendLoopbacks.Select(s =>
-                        s.PlaybackNode.ObjectSerial)),
+                        s.CaptureNodeObjectSerial)),
+            layer.GroupChannels
+                .SelectMany(c =>
+                    c.SendLoopbacks.Select(s =>
+                        s.PlaybackNodeObjectSerial)),
             [
                 layer.MasterChannel.FilterChain?.CaptureNode
                     .ObjectSerial ?? 0ul
@@ -207,30 +204,12 @@ public class MixerService : IMixerService, IDisposable
                 layer.MasterChannel.FilterChain?.PlaybackNode
                     .ObjectSerial ?? 0ul
             ],
-            [
-                layer.MasterChannel.InputLoopback.CaptureNode
-                    .ObjectSerial
-            ],
-            [
-                layer.MasterChannel.InputLoopback.PlaybackNode
-                    .ObjectSerial
-            ],
-            [
-                layer.MasterChannel.PreFxLooper.CaptureNode
-                    .ObjectSerial
-            ],
-            [
-                layer.MasterChannel.PreFxLooper.PlaybackNode
-                    .ObjectSerial
-            ],
-            [
-                layer.MasterChannel.OutputLoopback.CaptureNode
-                    .ObjectSerial
-            ],
-            [
-                layer.MasterChannel.OutputLoopback.PlaybackNode
-                    .ObjectSerial
-            ],
+            [layer.MasterChannel.InputLoopback.CaptureNodeObjectSerial],
+            [layer.MasterChannel.InputLoopback.PlaybackNodeObjectSerial],
+            [layer.MasterChannel.PreFxLooper.CaptureNodeObjectSerial],
+            [layer.MasterChannel.PreFxLooper.PlaybackNodeObjectSerial],
+            [layer.MasterChannel.OutputLoopback.CaptureNodeObjectSerial],
+            [layer.MasterChannel.OutputLoopback.PlaybackNodeObjectSerial],
         ];
 
         return ids.SelectMany(i => i);

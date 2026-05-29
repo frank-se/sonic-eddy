@@ -32,6 +32,7 @@
         </Style>
     </Window.Styles>
 
+    <Grid>
     <DockPanel>
 
         <Menu DockPanel.Dock="Top">
@@ -124,4 +125,15 @@
             </Grid>
         </SplitView>
     </DockPanel>
+
+    <Panel IsVisible="{Binding !IsInitialized}"
+           Background="#1E1E1E"
+           ZIndex="100">
+        <Image Source="avares://SonicEddy/Assets/Images/logo.webp"
+               HorizontalAlignment="Center"
+               VerticalAlignment="Center"
+               MaxWidth="600" />
+    </Panel>
+
+    </Grid>
 </Window>
