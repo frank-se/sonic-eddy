@@ -7,8 +7,18 @@ namespace Fr.Sonic.PInvoke;
 
 /* ── enums ───────────────────────────────────────────────────────────────── */
 
-public enum ChannelType { Channel = 0, GroupChannel = 1 }
-public enum DialMode    { Sends = 1, FilterParams = 2 }
+public enum ChannelType
+{
+    Channel = 0,
+    GroupChannel = 1,
+}
+
+public enum DialMode
+{
+    Sends = 1,
+    FilterParams = 2,
+}
+
 /* WireplumberObjectType removed — wireplumber_object_type from WireplumberData.cs is used instead */
 
 /* ── callback delegates ──────────────────────────────────────────────────── */
@@ -32,16 +42,25 @@ public delegate void ObjectDeletedCallback(ulong objectSerial, wireplumber_objec
 public delegate void MetadataAddedCallback(IntPtr metadataName);
 
 [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-public delegate void MetadataEntryUpdatedCallback(IntPtr metadataName,
-    ulong subject, IntPtr key, IntPtr type, IntPtr value);
+public delegate void MetadataEntryUpdatedCallback(
+    IntPtr metadataName,
+    ulong subject,
+    IntPtr key,
+    IntPtr type,
+    IntPtr value
+);
 
 [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-public delegate void MetadataEntryDeletedCallback(IntPtr metadataName,
-    ulong subject, IntPtr key);
+public delegate void MetadataEntryDeletedCallback(IntPtr metadataName, ulong subject, IntPtr key);
 
 [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-public delegate void PeakCallback(ulong objectSerial,
-    float leftPeak, float rightPeak, float leftAverage, float rightAverage);
+public delegate void PeakCallback(
+    ulong objectSerial,
+    float leftPeak,
+    float rightPeak,
+    float leftAverage,
+    float rightAverage
+);
 
 [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 public delegate void LayerSelectCallback(ulong layerId);
@@ -53,7 +72,11 @@ public delegate void ChannelSelectCallback(ChannelType channelType, ulong channe
 public delegate void DialModeCallback(ChannelType channelType, ulong channelId, DialMode dialMode);
 
 [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-public delegate void FilterSectionCallback(ChannelType channelType, ulong channelId, ulong sectionId);
+public delegate void FilterSectionCallback(
+    ChannelType channelType,
+    ulong channelId,
+    ulong sectionId
+);
 
 [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 public delegate void PagesRightCallback(ulong stepCount);
@@ -62,9 +85,15 @@ public delegate void PagesRightCallback(ulong stepCount);
 public delegate void PagesLeftCallback(ulong stepCount);
 
 [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-public delegate void MidiCcUpdateCallback(ChannelType channelType, ulong channelId,
-    ulong objectId, IntPtr parameterName, float normalizedValue,
-    float normalizedKnownValue, [MarshalAs(UnmanagedType.U1)] bool catchingUp);
+public delegate void MidiCcUpdateCallback(
+    ChannelType channelType,
+    ulong channelId,
+    ulong objectId,
+    IntPtr parameterName,
+    float normalizedValue,
+    float normalizedKnownValue,
+    [MarshalAs(UnmanagedType.U1)] bool catchingUp
+);
 
 /* ── structs ─────────────────────────────────────────────────────────────── */
 
@@ -86,22 +115,23 @@ internal struct FrSonicLooperConfig
 
 internal static partial class FrSonicLib
 {
-    private const string LIB = "libfrsonic.so.0.4.0";
+    private const string LIB = "libfrsonic.so.0.5.0";
 
     /* lifecycle */
     [LibraryImport(LIB, EntryPoint = "frsonic_init")]
     internal static partial void InitC(
-        NodeAddedCallback            nodeAdded,
-        PropsChangedCallback         propsChanged,
-        PropsEnumFailedCallback      propsEnumFailed,
-        PropInfoAddedCallback        propInfoAdded,
-        ObjectDeletedCallback        objectDeleted,
-        MetadataAddedCallback        metadataAdded,
+        NodeAddedCallback nodeAdded,
+        PropsChangedCallback propsChanged,
+        PropsEnumFailedCallback propsEnumFailed,
+        PropInfoAddedCallback propInfoAdded,
+        ObjectDeletedCallback objectDeleted,
+        MetadataAddedCallback metadataAdded,
         MetadataEntryUpdatedCallback metadataEntryUpdated,
         MetadataEntryDeletedCallback metadataEntryDeleted,
-        PeakCallback                 peak,
-        ulong                        peakUpdateIntervalMs,
-        MidiCcUpdateCallback         midiCcUpdate);
+        PeakCallback peak,
+        ulong peakUpdateIntervalMs,
+        MidiCcUpdateCallback midiCcUpdate
+    );
 
     [LibraryImport(LIB, EntryPoint = "frsonic_start")]
     internal static partial void StartC();
@@ -112,8 +142,7 @@ internal static partial class FrSonicLib
     /* loopers */
     [LibraryImport(LIB, EntryPoint = "frsonic_create_looper")]
     [return: MarshalAs(UnmanagedType.U1)]
-    internal static partial bool CreateLooperC(
-        in FrSonicLooperConfig config, out UIntPtr handle);
+    internal static partial bool CreateLooperC(in FrSonicLooperConfig config, out UIntPtr handle);
 
     [LibraryImport(LIB, EntryPoint = "frsonic_destroy_looper")]
     internal static partial void DestroyLooperC(UIntPtr handle);
@@ -121,46 +150,74 @@ internal static partial class FrSonicLib
     [LibraryImport(LIB, EntryPoint = "frsonic_create_midi_manipulator")]
     [return: MarshalAs(UnmanagedType.U1)]
     internal static partial bool CreateMidiManipulatorC(
-        in FrSonicMidiManipulatorConfig config, out UIntPtr handle);
+        in FrSonicMidiManipulatorConfig config,
+        out UIntPtr handle
+    );
 
     [LibraryImport(LIB, EntryPoint = "frsonic_destroy_midi_manipulator")]
     internal static partial void DestroyMidiManipulatorC(UIntPtr handle);
 
     /* wireplumber object model */
     [LibraryImport(LIB, EntryPoint = "frsonic_set_volumes")]
-    internal static partial void SetVolumesC(ulong objectId,
-        ReadOnlySpan<double> volumes, nuint count);
+    internal static partial void SetVolumesC(
+        ulong objectId,
+        ReadOnlySpan<double> volumes,
+        nuint count
+    );
 
     [LibraryImport(LIB, EntryPoint = "frsonic_set_mute")]
-    internal static partial void SetMuteC(ulong objectId,
-        [MarshalAs(UnmanagedType.U1)] bool mute);
+    internal static partial void SetMuteC(ulong objectId, [MarshalAs(UnmanagedType.U1)] bool mute);
 
     [LibraryImport(LIB, EntryPoint = "frsonic_set_params")]
-    internal static partial void SetParamsC(ulong objectId, IntPtr keys,
-        ReadOnlySpan<ParamType> paramTypes, ReadOnlySpan<ulong> values, nuint count);
+    internal static partial void SetParamsC(
+        ulong objectId,
+        IntPtr keys,
+        ReadOnlySpan<ParamType> paramTypes,
+        ReadOnlySpan<ulong> values,
+        nuint count
+    );
 
-    [LibraryImport(LIB, EntryPoint = "frsonic_load_module",
-        StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(
+        LIB,
+        EntryPoint = "frsonic_load_module",
+        StringMarshalling = StringMarshalling.Utf8
+    )]
     [return: MarshalAs(UnmanagedType.U1)]
-    internal static partial bool LoadModuleC(string name, string config,
-        out IntPtr handle);
+    internal static partial bool LoadModuleC(string name, string config, out IntPtr handle);
 
     [LibraryImport(LIB, EntryPoint = "frsonic_destroy_module")]
     internal static partial void DestroyModuleC(IntPtr handle);
 
-    [LibraryImport(LIB, EntryPoint = "frsonic_set_metadata_entry",
-        StringMarshalling = StringMarshalling.Utf8)]
-    internal static partial void SetMetadataEntryC(string metadataName,
-        ulong subject, string key, string type, string value);
+    [LibraryImport(
+        LIB,
+        EntryPoint = "frsonic_set_metadata_entry",
+        StringMarshalling = StringMarshalling.Utf8
+    )]
+    internal static partial void SetMetadataEntryC(
+        string metadataName,
+        ulong subject,
+        string key,
+        string type,
+        string value
+    );
 
-    [LibraryImport(LIB, EntryPoint = "frsonic_delete_metadata_entry",
-        StringMarshalling = StringMarshalling.Utf8)]
-    internal static partial void DeleteMetadataEntryC(string metadataName,
-        ulong subject, string key);
+    [LibraryImport(
+        LIB,
+        EntryPoint = "frsonic_delete_metadata_entry",
+        StringMarshalling = StringMarshalling.Utf8
+    )]
+    internal static partial void DeleteMetadataEntryC(
+        string metadataName,
+        ulong subject,
+        string key
+    );
 
     [LibraryImport(LIB, EntryPoint = "frsonic_create_link_by_port_ids")]
-    internal static partial void CreateLinkByPortIdsC(ulong outPortId,
-        ulong inPortId, [MarshalAs(UnmanagedType.U1)] bool linger);
+    internal static partial void CreateLinkByPortIdsC(
+        ulong outPortId,
+        ulong inPortId,
+        [MarshalAs(UnmanagedType.U1)] bool linger
+    );
 
     [LibraryImport(LIB, EntryPoint = "frsonic_delete_link_by_object_id")]
     internal static partial void DeleteLinkByObjectIdC(ulong objectId);
@@ -173,21 +230,41 @@ internal static partial class FrSonicLib
     internal static partial void StopMonitorNodeC(ulong objectSerial);
 
     /* midi */
-    [LibraryImport(LIB, EntryPoint = "frsonic_create_midi_mix_port",
-        StringMarshalling = StringMarshalling.Utf8)]
-    internal static partial ulong CreateMidiMixPortC(string pmxPurpose, string pmxTag,
-        LayerSelectCallback layerCb, ChannelSelectCallback channelCb,
-        DialModeCallback dialModeCb, FilterSectionCallback filterSectionCb);
+    [LibraryImport(
+        LIB,
+        EntryPoint = "frsonic_create_midi_mix_port",
+        StringMarshalling = StringMarshalling.Utf8
+    )]
+    internal static partial ulong CreateMidiMixPortC(
+        string pmxPurpose,
+        string pmxTag,
+        LayerSelectCallback layerCb,
+        ChannelSelectCallback channelCb,
+        DialModeCallback dialModeCb,
+        FilterSectionCallback filterSectionCb
+    );
 
-    [LibraryImport(LIB, EntryPoint = "frsonic_create_mm1_port",
-        StringMarshalling = StringMarshalling.Utf8)]
-    internal static partial ulong CreateMm1PortC(string pmxPurpose, string pmxTag,
-        LayerSelectCallback layerCb, ChannelSelectCallback channelCb,
-        DialModeCallback dialModeCb, FilterSectionCallback filterSectionCb,
-        PagesRightCallback pagesRightCb, PagesLeftCallback pagesLeftCb);
+    [LibraryImport(
+        LIB,
+        EntryPoint = "frsonic_create_mm1_port",
+        StringMarshalling = StringMarshalling.Utf8
+    )]
+    internal static partial ulong CreateMm1PortC(
+        string pmxPurpose,
+        string pmxTag,
+        LayerSelectCallback layerCb,
+        ChannelSelectCallback channelCb,
+        DialModeCallback dialModeCb,
+        FilterSectionCallback filterSectionCb,
+        PagesRightCallback pagesRightCb,
+        PagesLeftCallback pagesLeftCb
+    );
 
-    [LibraryImport(LIB, EntryPoint = "frsonic_create_fader_fox_pc4_port",
-        StringMarshalling = StringMarshalling.Utf8)]
+    [LibraryImport(
+        LIB,
+        EntryPoint = "frsonic_create_fader_fox_pc4_port",
+        StringMarshalling = StringMarshalling.Utf8
+    )]
     internal static partial ulong CreateFaderFoxPc4PortC(string pmxPurpose, string pmxTag);
 
     [LibraryImport(LIB, EntryPoint = "frsonic_set_selected_plugin_page")]
@@ -203,28 +280,46 @@ internal static partial class FrSonicLib
     internal static partial void SetSelectedLayerC(ulong layerId);
 
     [LibraryImport(LIB, EntryPoint = "frsonic_set_channel_node")]
-    internal static partial void SetChannelNodeC(ChannelType channelType,
-        ulong channelId, ulong objectId);
+    internal static partial void SetChannelNodeC(
+        ChannelType channelType,
+        ulong channelId,
+        ulong objectId
+    );
 
     [LibraryImport(LIB, EntryPoint = "frsonic_set_master_channel_node")]
     internal static partial void SetMasterChannelNodeC(ulong layerId, ulong objectId);
 
     [LibraryImport(LIB, EntryPoint = "frsonic_set_channel_filter_node")]
-    internal static partial void SetChannelFilterNodeC(ChannelType channelType,
-        ulong channelId, ulong objectId);
+    internal static partial void SetChannelFilterNodeC(
+        ChannelType channelType,
+        ulong channelId,
+        ulong objectId
+    );
 
     [LibraryImport(LIB, EntryPoint = "frsonic_set_channel_send_node")]
-    internal static partial void SetChannelSendNodeC(ChannelType channelType,
-        ulong channelId, ulong sendId, ulong objectId);
+    internal static partial void SetChannelSendNodeC(
+        ChannelType channelType,
+        ulong channelId,
+        ulong sendId,
+        ulong objectId
+    );
 
     [LibraryImport(LIB, EntryPoint = "frsonic_clear_filter_parameters")]
-    internal static partial void ClearFilterParametersC(ChannelType channelType,
-        ulong channelId);
+    internal static partial void ClearFilterParametersC(ChannelType channelType, ulong channelId);
 
-    [LibraryImport(LIB, EntryPoint = "frsonic_add_filter_parameter",
-        StringMarshalling = StringMarshalling.Utf8)]
-    internal static partial void AddFilterParameterC(ChannelType channelType,
-        ulong channelId, ulong pluginId, string name, float min, float max);
+    [LibraryImport(
+        LIB,
+        EntryPoint = "frsonic_add_filter_parameter",
+        StringMarshalling = StringMarshalling.Utf8
+    )]
+    internal static partial void AddFilterParameterC(
+        ChannelType channelType,
+        ulong channelId,
+        ulong pluginId,
+        string name,
+        float min,
+        float max
+    );
 
     /* silence producers */
     [LibraryImport(LIB, EntryPoint = "frsonic_create_silence_producer")]

@@ -193,15 +193,21 @@ void sesync::SyncClient::start() {
 }
 
 void sesync::SyncClient::stop() {
+  logging::log<logging::LogLevel::Trace>("SyncClient::stop: destroying master");
   destroy_master();
+  logging::log<logging::LogLevel::Trace>("SyncClient::stop: master destroyed");
 
   if (_registry != nullptr) {
+    logging::log<logging::LogLevel::Trace>("SyncClient::stop: removing registry listener");
     spa_hook_remove(&_registry_listener);
+    logging::log<logging::LogLevel::Trace>("SyncClient::stop: destroying registry proxy");
     pw_proxy_destroy(reinterpret_cast<pw_proxy *>(_registry));
+    logging::log<logging::LogLevel::Trace>("SyncClient::stop: registry proxy destroyed");
     _registry = nullptr;
   }
 
   std::atomic_store(&_snapshot, SnapshotPtr{});
+  logging::log<logging::LogLevel::Trace>("SyncClient::stop: done");
 }
 
 sesync::SyncClient::SnapshotPtr sesync::SyncClient::snapshot() const {

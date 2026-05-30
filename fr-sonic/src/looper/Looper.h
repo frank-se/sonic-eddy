@@ -169,6 +169,7 @@ public:
 
   bool start();
   void stop();
+  void stop_copy_thread();
   void process();
 
   [[nodiscard]] pw_stream *capture_stream() const { return _capture_stream; }
@@ -235,7 +236,6 @@ private:
   bool setup_capture_stream();
   bool setup_playback_stream();
   void start_copy_thread();
-  void stop_copy_thread();
   void copy_thread_main();
   void process_archive_job(const LoopArchiveJob &job);
   void drain_retired_sample_buffers();

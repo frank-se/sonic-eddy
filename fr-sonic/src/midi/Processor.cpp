@@ -13,6 +13,7 @@ void midi::Processor::start() {
 void midi::Processor::stop() {
   logging::log<logging::LogLevel::Trace>("Processor::stop");
   _is_running = false;
+  _queue_wait_condition.notify_all();
   _midi_processing_thread.join();
 }
 

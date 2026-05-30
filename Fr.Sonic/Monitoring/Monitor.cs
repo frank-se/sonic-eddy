@@ -18,14 +18,16 @@ public class Monitor : IMonitor
     {
         _updatesThread = new(() =>
         {
-            while (true)
+            try
             {
-                var item = FrSonicMonitoring.MonitoringQueue.Take();
-                Updated?.Invoke(new(item.ObjectSerial,
-                    [item.LeftPeak, item.RightPeak],
-                    [item.LeftAverage, item.RightAverage]));
+                foreach (var item in FrSonicMonitoring.MonitoringQueue.GetConsumingEnumerable())
+                    Updated?.Invoke(new(item.ObjectSerial,
+                        [item.LeftPeak, item.RightPeak],
+                        [item.LeftAverage, item.RightAverage]));
             }
-        });
+            catch (OperationCanceledException) { }
+        })
+        { IsBackground = true };
         _updatesThread.Start();
     }
 }

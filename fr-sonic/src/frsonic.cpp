@@ -14,6 +14,8 @@
 #include "wireplumber/params/params_handling.h"
 #include "wireplumber/props/props_handling.h"
 
+#include "logging/log.h"
+
 #include <algorithm>
 #include <iostream>
 #include <iterator>
@@ -71,27 +73,37 @@ public:
   }
 
   void stop() {
-    if (_thread_loop != nullptr)
+    if (_thread_loop != nullptr) {
+      logging::log<logging::LogLevel::Trace>("OwnedPipewireRuntime: pw_thread_loop_stop");
       pw_thread_loop_stop(_thread_loop);
+      logging::log<logging::LogLevel::Trace>("OwnedPipewireRuntime: pw_thread_loop_stop done");
+    }
 
     if (_core != nullptr) {
+      logging::log<logging::LogLevel::Trace>("OwnedPipewireRuntime: pw_core_disconnect");
       pw_core_disconnect(_core);
+      logging::log<logging::LogLevel::Trace>("OwnedPipewireRuntime: pw_core_disconnect done");
       _core = nullptr;
     }
 
     if (_context != nullptr) {
+      logging::log<logging::LogLevel::Trace>("OwnedPipewireRuntime: pw_context_destroy");
       pw_context_destroy(_context);
+      logging::log<logging::LogLevel::Trace>("OwnedPipewireRuntime: pw_context_destroy done");
       _context = nullptr;
     }
 
     if (_thread_loop != nullptr) {
+      logging::log<logging::LogLevel::Trace>("OwnedPipewireRuntime: pw_thread_loop_destroy");
       pw_thread_loop_destroy(_thread_loop);
+      logging::log<logging::LogLevel::Trace>("OwnedPipewireRuntime: pw_thread_loop_destroy done");
       _thread_loop = nullptr;
     }
 
     _loop = nullptr;
   }
 
+  [[nodiscard]] pw_thread_loop *thread_loop() const { return _thread_loop; }
   [[nodiscard]] pw_loop *loop() const { return _loop; }
   [[nodiscard]] pw_core *core() const { return _core; }
   [[nodiscard]] pw_context *context() const { return _context; }
@@ -240,48 +252,89 @@ void frsonic_start() {
 
 void frsonic_stop() {
   if (g_owned_pipewire) {
-    auto callback = [] {
-      for (auto &looper : g_loopers) {
-        if (looper)
-          looper->stop();
-      }
-      g_loopers.clear();
-      g_free_looper_handles.clear();
-      for (auto &manipulator : g_midi_manipulators) {
-        if (manipulator)
-          manipulator->stop();
-      }
-      g_midi_manipulators.clear();
-      if (g_midi_sync_sender) {
-        g_midi_sync_sender->stop();
-        g_midi_sync_sender = nullptr;
-      }
-      if (g_sync_client) {
-        g_sync_client->stop();
-        g_sync_client = nullptr;
-      }
-      if (g_sync_master) {
-        g_sync_master->stop();
-        g_sync_master = nullptr;
-      }
-      if (g_monitor) {
-        g_monitor->stop();
-        g_monitor = nullptr;
-      }
-      if (g_midi) {
-        g_midi->stop();
-        g_midi = nullptr;
-      }
-    };
-    invoke_owned_pipewire_sync(callback);
+    // Phase 1 — join all background threads while the PW loop runs freely.
+    // Every thread that may call pw_loop_invoke(sync=true) or make reverse
+    // P/Invoke calls into managed C# code must be fully joined here, before
+    // we acquire the loop lock in phase 2.  Joining under the lock would
+    // deadlock: the loop thread is paused and cannot service sync invokes
+    // from any thread we are trying to join.
+    if (g_midi)
+      g_midi->stop();       // joins MIDI processing thread
+    if (g_monitor)
+      g_monitor->stop();    // joins monitor update thread
+    // Looper copy threads may call pw_loop_invoke(sync=true) via
+    // publish_state_update; join them now while the loop is free.
+    for (auto &looper : g_loopers)
+      if (looper) looper->stop_copy_thread();
+
+    // Phase 2 — with the PW loop paused under pw_thread_loop_lock, do all
+    // PW-object cleanup from the main thread.  No background threads remain
+    // that could call pw_loop_invoke, so holding the lock is safe.
+    logging::log<logging::LogLevel::Trace>("frsonic_stop: acquiring loop lock");
+    pw_thread_loop_lock(g_owned_pipewire->thread_loop());
+    logging::log<logging::LogLevel::Trace>("frsonic_stop: loop lock acquired");
+
+    // stop() is idempotent: copy thread is already done; only stream destroy runs.
+    logging::log<logging::LogLevel::Trace>("frsonic_stop: stopping loopers");
+    for (auto &looper : g_loopers)
+      if (looper) looper->stop();
+    g_loopers.clear();
+    g_free_looper_handles.clear();
+    logging::log<logging::LogLevel::Trace>("frsonic_stop: loopers done");
+
+    logging::log<logging::LogLevel::Trace>("frsonic_stop: stopping manipulators");
+    for (auto &manipulator : g_midi_manipulators)
+      if (manipulator) manipulator->stop();
+    g_midi_manipulators.clear();
+    logging::log<logging::LogLevel::Trace>("frsonic_stop: manipulators done");
+
+    if (g_midi_sync_sender) {
+      g_midi_sync_sender->stop();
+      g_midi_sync_sender = nullptr;
+    }
+    logging::log<logging::LogLevel::Trace>("frsonic_stop: midi sync sender done");
+
+    if (g_sync_client) {
+      logging::log<logging::LogLevel::Trace>("frsonic_stop: stopping sync client");
+      g_sync_client->stop();
+      logging::log<logging::LogLevel::Trace>("frsonic_stop: sync client stopped");
+      g_sync_client = nullptr;
+      logging::log<logging::LogLevel::Trace>("frsonic_stop: sync client released");
+    }
+    if (g_sync_master) {
+      g_sync_master->stop();
+      logging::log<logging::LogLevel::Trace>("frsonic_stop: sync master stop() returned");
+      g_sync_master = nullptr;
+      logging::log<logging::LogLevel::Trace>("frsonic_stop: sync master released");
+    }
+    // g_monitor thread already stopped; destructor has no PW ops.
+    logging::log<logging::LogLevel::Trace>("frsonic_stop: releasing monitor");
+    if (g_monitor)
+      g_monitor = nullptr;
+    logging::log<logging::LogLevel::Trace>("frsonic_stop: releasing midi processor");
+    // Receiver/Sender destructors call pw_stream_destroy — safe under lock.
+    if (g_midi)
+      g_midi = nullptr;
+    logging::log<logging::LogLevel::Trace>("frsonic_stop: midi processor released");
+
+    logging::log<logging::LogLevel::Trace>("frsonic_stop: releasing loop lock");
+    pw_thread_loop_unlock(g_owned_pipewire->thread_loop());
+    logging::log<logging::LogLevel::Trace>("frsonic_stop: loop lock released");
+
+    // Phase 3 — stop the loop thread and tear down the PipeWire runtime.
+    logging::log<logging::LogLevel::Trace>("frsonic_stop: owned pipewire stop");
     g_owned_pipewire->stop();
+    logging::log<logging::LogLevel::Trace>("frsonic_stop: owned pipewire stop done");
     g_owned_pipewire = nullptr;
   }
 
   if (g_core) {
+    logging::log<logging::LogLevel::Trace>("frsonic_stop: g_core->stop()");
     g_core->stop();
+    logging::log<logging::LogLevel::Trace>("frsonic_stop: g_core->stop() done");
     g_core = nullptr;
   }
+  logging::log<logging::LogLevel::Trace>("frsonic_stop: complete");
 }
 
 bool frsonic_create_looper(const frsonic_looper_config *config,

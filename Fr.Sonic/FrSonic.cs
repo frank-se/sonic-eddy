@@ -134,6 +134,8 @@ public static class FrSonic
         FrSonicLib.StopC();
         _running = false;
         _cts.Cancel();
+        UpdatesFromPipewire.CompleteAdding();
+        FrSonicMonitoring.MonitoringQueue.CompleteAdding();
     }
 
     /* ── event processing ────────────────────────────────────────────────── */
