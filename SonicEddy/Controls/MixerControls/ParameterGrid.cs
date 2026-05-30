@@ -187,7 +187,7 @@ public class ParameterGrid : Grid
         }
 
         RowDefinitions.Clear();
-        RowDefinitions.Add(new() { Height = new GridLength(20) });
+        RowDefinitions.Add(new() { Height = GridLength.Auto });
 
         for (var i = 0; i < numberOfRows; i++)
         {

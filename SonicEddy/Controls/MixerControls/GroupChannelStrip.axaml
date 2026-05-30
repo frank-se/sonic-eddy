@@ -60,6 +60,7 @@
                                             Text="{Binding $parent[mixerControls:GroupChannelStrip].ThirdPluginText}" />
 
             <mixerControls:PanAndVolumeSectionWithMonitor Grid.Row="7"
+                                                          Margin="0,12,0,0"
                                                           LeftAverage="{Binding $parent[mixerControls:GroupChannelStrip].LeftAverage}"
                                                           RightAverage="{Binding $parent[mixerControls:GroupChannelStrip].RightAverage}"
                                                           LeftPeak="{Binding $parent[mixerControls:GroupChannelStrip].LeftPeak}"

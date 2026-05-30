@@ -17,7 +17,7 @@ public class ParameterSection : Grid
     public ParameterSection()
     {
         ColumnDefinitions = ColumnDefinitions.Parse("*,*");
-        RowDefinitions = RowDefinitions.Parse("20,40,40");
+        RowDefinitions = RowDefinitions.Parse("Auto,40,40");
 
         var header = new TextBlock()
         {
