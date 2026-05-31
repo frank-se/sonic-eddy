@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reactive;
 using System.Reactive.Disposables;
 using System.Reactive.Disposables.Fluent;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using Fr.Sonic.Modules.Models;
 using Fr.Sonic.PInvoke;
@@ -15,6 +16,8 @@ using SonicEddy.Services.Midi;
 using SonicEddy.Services.MixerServiceV2;
 using SonicEddy.Services.Monitoring;
 using SonicEddy.Services.TraktorZ1;
+using SonicEddy.Tools;
+using SonicEddy.Views.MixerViewsV2;
 
 namespace SonicEddy.ViewModels.MixerViewModelsV2;
 
@@ -74,6 +77,25 @@ public class MasterChannelViewModel : ChannelViewModelBase, IMasterChannel
 
     public MasterChannel MasterChannel { get; }
     public LooperSectionViewModel Looper { get; }
+
+    public override async Task AddFilterAction()
+    {
+        var dialogViewModel = new AddFilterChainViewModel(_appDataService);
+        var dialog = new AddFilterChainView()
+        {
+            DataContext = dialogViewModel
+        };
+
+        await dialog.ShowDialog(WindowTools.GetMainWindow()!);
+
+        if (dialogViewModel is not
+            { DialogResult: true, SelectedFilterGraph: not null })
+            return;
+
+        FilterChain = await _mixerService.AddFilterToMasterChannel(
+            _layerId, dialogViewModel.SelectedFilterGraph);
+        FilterGraph = dialogViewModel.SelectedFilterGraph;
+    }
 
     protected override void Dispose(bool disposing)
     {

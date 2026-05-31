@@ -92,6 +92,128 @@ public class MixerEditor(IWireplumberService wireplumberService)
         };
     }
 
+    public async Task<MixerLayer> AddFilterToGroupChannel(
+        MixerLayer mixerLayer,
+        ulong channelId,
+        FilterGraph filterGraph)
+    {
+        var channel =
+            mixerLayer.GroupChannels.First(c => c.ChannelId == channelId);
+
+        var filterChainConfig = new FilterChainModuleConfig()
+        {
+            CaptureProps = new()
+            {
+                Name = $"mixer-fc-group-{channelId}-capture",
+                Description =
+                    $"Capture Node for Mixer Filter Group Channel {channelId}",
+                Linger = true,
+                AutoConnect = true,
+                DontFallback = true,
+                Passive = false,
+                TargetObject = channel.PreFxLooper.PlaybackNode.ObjectSerial
+                    .ToString(),
+                MediaClass = "Stream/Input/Audio",
+                AudioPosition = ["FL", "FR"]
+            },
+            PlaybackProps = new()
+            {
+                Name = $"mixer-fc-group-{channelId}-playback",
+                Description =
+                    $"Playback Node for Mixer Filter Group Channel {channelId}",
+                Linger = true,
+                AutoConnect = true,
+                DontFallback = true,
+                Passive = false,
+                TargetObject = channel.OutputLoopback.CaptureNode.ObjectSerial
+                    .ToString(),
+                MediaClass = "Stream/Output/Audio",
+                AudioPosition = ["FL", "FR"]
+            },
+            FilterGraph = filterGraph.ToFilterGraphConfig()
+        };
+
+        var filterChain =
+            await Fr.Sonic.FrSonic.ModuleFactory
+                .CreateFilterChainAsync(
+                    $"mixer-fc-group-{channelId}", filterChainConfig);
+
+        channel.PreFxLooper.PlaybackNode.OverrideTargetObject(
+            filterChain.CaptureNode.ObjectSerial.ToString());
+
+        channel.OutputLoopback.CaptureNode.OverrideTargetObject(
+            filterChain.PlaybackNode.ObjectSerial.ToString());
+
+        foreach (var send in channel.SendLoopbacks)
+        {
+            send.CaptureNode.OverrideTargetObject(filterChain.PlaybackNode
+                .ObjectSerial.ToString());
+        }
+
+        var newChannel = channel with { FilterChain = filterChain };
+
+        var newList = mixerLayer.GroupChannels.Select(c =>
+            c.ChannelId == channelId ? newChannel : c).ToList();
+
+        return mixerLayer with { GroupChannels = newList };
+    }
+
+    public async Task<MixerLayer> AddFilterToMasterChannel(
+        MixerLayer mixerLayer,
+        FilterGraph filterGraph)
+    {
+        var channel = mixerLayer.MasterChannel;
+
+        var filterChainConfig = new FilterChainModuleConfig()
+        {
+            CaptureProps = new()
+            {
+                Name = "mixer-fc-master-capture",
+                Description = "Capture Node for Mixer Filter Master Channel",
+                Linger = true,
+                AutoConnect = true,
+                DontFallback = true,
+                Passive = false,
+                TargetObject = channel.PreFxLooper.PlaybackNode.ObjectSerial
+                    .ToString(),
+                MediaClass = "Stream/Input/Audio",
+                AudioPosition = ["FL", "FR"]
+            },
+            PlaybackProps = new()
+            {
+                Name = "mixer-fc-master-playback",
+                Description = "Playback Node for Mixer Filter Master Channel",
+                Linger = true,
+                AutoConnect = true,
+                DontFallback = true,
+                Passive = false,
+                TargetObject = channel.OutputLoopback.CaptureNode.ObjectSerial
+                    .ToString(),
+                MediaClass = "Stream/Output/Audio",
+                AudioPosition = ["FL", "FR"]
+            },
+            FilterGraph = filterGraph.ToFilterGraphConfig()
+        };
+
+        var filterChain =
+            await Fr.Sonic.FrSonic.ModuleFactory
+                .CreateFilterChainAsync("mixer-fc-master", filterChainConfig);
+
+        channel.PreFxLooper.PlaybackNode.OverrideTargetObject(
+            filterChain.CaptureNode.ObjectSerial.ToString());
+
+        channel.OutputLoopback.CaptureNode.OverrideTargetObject(
+            filterChain.PlaybackNode.ObjectSerial.ToString());
+
+        var newMaster = channel with
+        {
+            FilterChain = filterChain,
+            FilterGraph = filterGraph
+        };
+
+        return mixerLayer with { MasterChannel = newMaster };
+    }
+
     public async Task<MixerLayer> Create(string? defaultMasterName,
         ulong layerId,
         int numberOfChannels,

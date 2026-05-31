@@ -251,22 +251,22 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
 
     public TwoNodePipewireModule InputLoopback => _inputLoopback;
     public TwoNodePipewireModule OutputLoopback => _outputLoopback;
-    private readonly IAppDataService _appDataService;
-    private readonly IMixerService _mixerService;
+    protected readonly IAppDataService _appDataService;
+    protected readonly IMixerService _mixerService;
     private readonly IMidiControllerSetupService _midiSetupService;
-    private readonly int _layerId;
+    protected readonly int _layerId;
     private readonly ulong _midiControllerChannelId;
 
     public FilterChain? FilterChain
     {
         get;
-        private set => this.RaiseAndSetIfChanged(ref field, value);
+        protected set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
     public FilterGraph? FilterGraph
     {
         get;
-        private set => this.RaiseAndSetIfChanged(ref field, value);
+        protected set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
     public ulong ChannelId
@@ -310,7 +310,7 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
         set => this.RaiseAndSetIfChanged(ref field, value);
     } = false;
 
-    public async Task AddFilterAction()
+    public virtual async Task AddFilterAction()
     {
         var dialogViewModel = new AddFilterChainViewModel(_appDataService);
         var dialog = new AddFilterChainView()
@@ -320,16 +320,23 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
 
         await dialog.ShowDialog(WindowTools.GetMainWindow()!);
 
-        if (dialogViewModel is
+        if (dialogViewModel is not
             { DialogResult: true, SelectedFilterGraph: not null })
+            return;
+
+        if (_channelType == ChannelType.GroupChannel)
+        {
+            FilterChain = await _mixerService.AddFilterToGroupChannel(
+                _layerId, ChannelId, dialogViewModel.SelectedFilterGraph);
+        }
+        else
         {
             var channelStrip = await _mixerService.AddFilterToChannelStrip(
-                _layerId,
-                ChannelId,
-                dialogViewModel.SelectedFilterGraph);
-            FilterGraph = dialogViewModel.SelectedFilterGraph;
+                _layerId, ChannelId, dialogViewModel.SelectedFilterGraph);
             FilterChain = channelStrip.FilterChain;
         }
+
+        FilterGraph = dialogViewModel.SelectedFilterGraph;
     }
 
     public void DeleteFilterAction()

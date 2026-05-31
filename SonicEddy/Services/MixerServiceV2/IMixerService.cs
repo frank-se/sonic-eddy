@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Fr.Sonic.Modules.Models;
 using SonicEddy.Contracts.FilterGraph;
 
 namespace SonicEddy.Services.MixerServiceV2;
@@ -18,6 +19,15 @@ public interface IMixerService
     public Task<ChannelStrip> AddFilterToChannelStrip(
         int layerId,
         ulong channelId,
+        FilterGraph filterGraph);
+
+    public Task<FilterChain?> AddFilterToGroupChannel(
+        int layerId,
+        ulong channelId,
+        FilterGraph filterGraph);
+
+    public Task<FilterChain?> AddFilterToMasterChannel(
+        int layerId,
         FilterGraph filterGraph);
 
     event Action<List<InputChannel>>? InputsChanged;

@@ -372,6 +372,122 @@ public class MixerService : IMixerService, IDisposable
             .First(c => c.ChannelId == channelId);
     }
 
+    public async Task<FilterChain?> AddFilterToGroupChannel(int layerId,
+        ulong channelId,
+        FilterGraph filterGraph)
+    {
+        _logger.LogTrace("AddFilterToGroupChannel");
+
+        await _externalChange.WaitAsync();
+
+        try
+        {
+            lock (_isModifyingLock)
+            {
+                _isModifyingMixer = true;
+            }
+
+            if (CurrentMixer is null)
+                throw new InvalidOperationException("CurrentMixer is null");
+
+            await _internalChange.WaitAsync();
+
+            try
+            {
+                CurrentMixer.Layers[layerId] =
+                    await _editor.AddFilterToGroupChannel(
+                        CurrentMixer.Layers[layerId],
+                        channelId,
+                        filterGraph);
+
+                var fc = CurrentMixer.Layers[layerId].GroupChannels
+                    .First(c => c.ChannelId == channelId).FilterChain;
+
+                List<ulong?> ids =
+                [
+                    fc?.CaptureNode.ObjectSerial,
+                    fc?.PlaybackNode.ObjectSerial,
+                ];
+
+                _myNodeIds.AddRange(ids.OfType<ulong>());
+            }
+            finally
+            {
+                _internalChange.Release();
+            }
+
+            lock (_isModifyingLock)
+            {
+                _isModifyingMixer = false;
+            }
+
+            await FinishPendingAddNodeEvents();
+        }
+        finally
+        {
+            _externalChange.Release();
+        }
+
+        return CurrentMixer.Layers[layerId].GroupChannels
+            .First(c => c.ChannelId == channelId).FilterChain;
+    }
+
+    public async Task<FilterChain?> AddFilterToMasterChannel(int layerId,
+        FilterGraph filterGraph)
+    {
+        _logger.LogTrace("AddFilterToMasterChannel");
+
+        await _externalChange.WaitAsync();
+
+        try
+        {
+            lock (_isModifyingLock)
+            {
+                _isModifyingMixer = true;
+            }
+
+            if (CurrentMixer is null)
+                throw new InvalidOperationException("CurrentMixer is null");
+
+            await _internalChange.WaitAsync();
+
+            try
+            {
+                CurrentMixer.Layers[layerId] =
+                    await _editor.AddFilterToMasterChannel(
+                        CurrentMixer.Layers[layerId],
+                        filterGraph);
+
+                var fc = CurrentMixer.Layers[layerId].MasterChannel.FilterChain;
+
+                List<ulong?> ids =
+                [
+                    fc?.CaptureNode.ObjectSerial,
+                    fc?.PlaybackNode.ObjectSerial,
+                ];
+
+                _myNodeIds.AddRange(ids.OfType<ulong>());
+            }
+            finally
+            {
+                _internalChange.Release();
+            }
+
+            lock (_isModifyingLock)
+            {
+                _isModifyingMixer = false;
+            }
+
+            await FinishPendingAddNodeEvents();
+        }
+        finally
+        {
+            _externalChange.Release();
+        }
+
+        return CurrentMixer.Layers[layerId].MasterChannel.FilterChain;
+    }
+
     public event Action<List<InputChannel>>? InputsChanged;
     public event Action<List<OutputChannel>>? OutputsChanged;
 
