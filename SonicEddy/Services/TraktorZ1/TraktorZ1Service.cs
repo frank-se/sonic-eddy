@@ -17,6 +17,7 @@ public class TraktorZ1Service : ITraktorZ1Service
     private const byte  BtnOnL          = 0x04;
     private const byte  BtnOnR          = 0x08;
     private const float PickUpThreshold = 0.02f;
+    private const float RawMaxValue     = 4096f; // 12-bit ADC
 
     private const int IdxGainL  = 0;
     private const int IdxHiL    = 1;
@@ -131,6 +132,16 @@ public class TraktorZ1Service : ITraktorZ1Service
                 buf.AsSpan(KnobByteOffsets[i]));
         byte buttons = buf[29];
 
+        if (_logger.IsEnabled(LogLevel.Trace))
+            _logger.LogTrace(
+                "Z1 raw: gain_l={GainL} hi_l={HiL} mid_l={MidL} low_l={LowL} " +
+                "filter_l={FilterL} gain_r={GainR} hi_r={HiR} mid_r={MidR} " +
+                "low_r={LowR} filter_r={FilterR} cue_mix={CueMix} " +
+                "fader_l={FaderL} fader_r={FaderR} cross={Cross} btn=0x{Btn:X2}",
+                cur[0], cur[1], cur[2], cur[3], cur[4],
+                cur[5], cur[6], cur[7], cur[8], cur[9], cur[10],
+                cur[11], cur[12], cur[13], buttons);
+
         if (cur[IdxFaderL] != _prev[IdxFaderL])
             SetVolume(TraktorZ1Side.Left, cur[IdxFaderL]);
         if (cur[IdxFaderR] != _prev[IdxFaderR])
@@ -160,12 +171,18 @@ public class TraktorZ1Service : ITraktorZ1Service
         var node = _setup.GetMasterFaderNode(side);
         if (node is null) return;
 
-        var normalized = (float)(raw / 65535.0);
+        var normalized = (float)(raw / RawMaxValue);
         var sideIdx    = (int)side;
+        var known      = GetCurrentVolumeNormalized(node);
+
+        _logger.LogTrace(
+            "Z1 fader {Side}: raw={Raw} normalized={Normalized:F4} " +
+            "known={Known} catchingUp={CatchingUp}",
+            side, raw, normalized, known?.ToString("F4") ?? "null",
+            _faderCatchingUp[sideIdx]);
 
         if (_faderCatchingUp[sideIdx])
         {
-            var known = GetCurrentVolumeNormalized(node);
             if (known is null || MathF.Abs(normalized - known.Value) > PickUpThreshold)
                 return;
             _faderCatchingUp[sideIdx] = false;
@@ -188,7 +205,7 @@ public class TraktorZ1Service : ITraktorZ1Service
         if (paramIndex >= section.Count) return;
 
         var param      = section[paramIndex];
-        var normalized = raw / 65535.0f;
+        var normalized = raw / RawMaxValue;
         var sideIdx    = (int)side;
 
         if (_knobCatchingUp[sideIdx][paramIndex])
