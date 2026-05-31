@@ -9,6 +9,7 @@ using ReactiveUI;
 using SonicEddy.Services.AppData;
 using SonicEddy.Services.Midi;
 using SonicEddy.Services.MixerServiceV2;
+using SonicEddy.Services.TraktorZ1;
 using SonicEddy.Services.MixerViewModels;
 using SonicEddy.Services.Preferences;
 using SonicEddy.Services.VirtualInputs;
@@ -45,9 +46,11 @@ namespace SonicEddy.ViewModels;
 public class MainWindowViewModel : ViewModelBase, IDisposable
 {
     public MainWindowViewModel(IMidiControllerService midiControllerService,
+        ITraktorZ1Service traktorZ1Service,
         ILogger<MainWindowViewModel> logger, ILoggerFactory loggerFactory)
     {
         _midiControllerService = midiControllerService;
+        _traktorZ1Service = traktorZ1Service;
         _logger = logger;
         _loggerFactory = loggerFactory;
 
@@ -79,6 +82,8 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
 
         _midiControllerService.SelectedFilterParamsSectionChanged +=
             OnFilterMidiControlSectionIdChanged;
+
+        _traktorZ1Service.FilterSectionChanged += OnTraktorZ1FilterSectionChanged;
 
         _ = NavigateToMixerV2ViewLayerA();
     }
@@ -139,8 +144,19 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     }
 
     private readonly IMidiControllerService _midiControllerService;
+    private readonly ITraktorZ1Service _traktorZ1Service;
     private readonly ILogger<MainWindowViewModel> _logger;
     private readonly ILoggerFactory _loggerFactory;
+
+    private void OnTraktorZ1FilterSectionChanged(TraktorZ1Side side, int sectionIndex)
+    {
+        if (side == TraktorZ1Side.Left)
+            LayerAViewModel?.SetMasterChannelFilterMidiControlSectionId(
+                (ulong)sectionIndex);
+        else
+            LayerBViewModel?.SetMasterChannelFilterMidiControlSectionId(
+                (ulong)sectionIndex);
+    }
 
     private void OnFilterMidiControlSectionIdChanged(
         FilterParamsSectionSelectEventArgs eventArgs)
@@ -656,6 +672,8 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
 
         _midiControllerService.SelectedFilterParamsSectionChanged -=
             OnFilterMidiControlSectionIdChanged;
+
+        _traktorZ1Service.FilterSectionChanged -= OnTraktorZ1FilterSectionChanged;
 
         GC.SuppressFinalize(this);
     }

@@ -158,6 +158,7 @@ public class App : Application
 
         Locator.CurrentMutable.Register(() =>
             new MainWindowViewModel(midiControllerService,
+                traktorZ1Service,
                 loggerFactory.CreateLogger<MainWindowViewModel>(),
                 loggerFactory));
     }

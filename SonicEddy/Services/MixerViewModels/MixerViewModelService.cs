@@ -229,7 +229,7 @@ public class MixerViewModelService(
         audioToRoutingTargets,
         selectedAudioToRoutingTarget,
         appDataService, mixerService, channel, monitoringService, layerId,
-        controllerSetupService);
+        controllerSetupService, traktorZ1SetupService);
 
     public ChannelStripViewModel ConvertChannelStrip(int layerId,
         ChannelStrip channel,

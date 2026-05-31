@@ -150,6 +150,13 @@ public class MixerLayerViewModel : ViewModelBase,
         SetSelectedChannel(channel);
     }
 
+    public void SetMasterChannelFilterMidiControlSectionId(ulong sectionId)
+    {
+        if (MasterChannels?.Count > 0 &&
+            MasterChannels[0] is ChannelViewModelBase master)
+            master.SetMidiControlledSectionId(sectionId);
+    }
+
     public void SetChannelFilterMidiControlSectionId(ChannelType channelType,
         ulong channelId, ulong sectionId)
     {
