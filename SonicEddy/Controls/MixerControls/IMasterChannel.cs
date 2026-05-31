@@ -15,6 +15,12 @@ public interface IMasterChannel : IChannel
 
     public bool HasFilter { get; set; }
 
+    public bool IsFilterMidiControlled { get; set; }
+
+    public bool FirstPluginSelectedForMidi { get; }
+    public bool SecondPluginSelectedForMidi { get; }
+    public bool ThirdPluginSelectedForMidi { get; }
+
     public ObservableCollection<IParameter>? FirstPluginParameters { get; }
 
     public string FirstPluginText { get; set; }

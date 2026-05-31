@@ -34,16 +34,19 @@
 
             <mixerControls:ParameterSection Grid.Row="3"
                                             Margin="4"
+                                            IsMidiControlled="{Binding $parent[mixerControls:MasterChannelStrip].FirstPluginParametersMidiControlled}"
                                             Parameters="{Binding $parent[mixerControls:MasterChannelStrip].FirstPluginParameters}"
                                             Text="{Binding $parent[mixerControls:MasterChannelStrip].FirstPluginText}" />
 
             <mixerControls:ParameterSection Grid.Row="4"
                                             Margin="4"
+                                            IsMidiControlled="{Binding $parent[mixerControls:MasterChannelStrip].SecondPluginParametersMidiControlled}"
                                             Parameters="{Binding $parent[mixerControls:MasterChannelStrip].SecondPluginParameters}"
                                             Text="{Binding $parent[mixerControls:MasterChannelStrip].SecondPluginText}" />
 
             <mixerControls:ParameterSection Grid.Row="5"
                                             Margin="4"
+                                            IsMidiControlled="{Binding $parent[mixerControls:MasterChannelStrip].ThirdPluginParametersMidiControlled}"
                                             Parameters="{Binding $parent[mixerControls:MasterChannelStrip].ThirdPluginParameters}"
                                             Text="{Binding $parent[mixerControls:MasterChannelStrip].ThirdPluginText}" />
 

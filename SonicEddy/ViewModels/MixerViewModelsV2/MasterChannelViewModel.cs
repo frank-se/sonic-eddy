@@ -46,6 +46,7 @@ public class MasterChannelViewModel : ChannelViewModelBase, IMasterChannel
         MasterChannel = masterChannel;
         Looper = new LooperSectionViewModel(
             masterChannel.PreFxLooper, masterChannel.PostFxLooper);
+        IsFilterMidiControlled = true;
 
         var side = layerId == 0 ? TraktorZ1Side.Left : TraktorZ1Side.Right;
 

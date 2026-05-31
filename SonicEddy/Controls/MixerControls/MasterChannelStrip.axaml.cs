@@ -308,6 +308,52 @@ public partial class MasterChannelStrip : UserControl
     }
 
     /*
+     * Midi control state
+     */
+    public static readonly StyledProperty<bool> IsFilterMidiControlledProperty =
+        AvaloniaProperty.Register<MasterChannelStrip, bool>(
+            nameof(IsFilterMidiControlled));
+
+    public bool IsFilterMidiControlled
+    {
+        get => GetValue(IsFilterMidiControlledProperty);
+        set => SetValue(IsFilterMidiControlledProperty, value);
+    }
+
+    public static readonly StyledProperty<bool>
+        FirstPluginParametersMidiControlledProperty =
+            AvaloniaProperty.Register<MasterChannelStrip, bool>(
+                nameof(FirstPluginParametersMidiControlled));
+
+    public bool FirstPluginParametersMidiControlled
+    {
+        get => GetValue(FirstPluginParametersMidiControlledProperty);
+        set => SetValue(FirstPluginParametersMidiControlledProperty, value);
+    }
+
+    public static readonly StyledProperty<bool>
+        SecondPluginParametersMidiControlledProperty =
+            AvaloniaProperty.Register<MasterChannelStrip, bool>(
+                nameof(SecondPluginParametersMidiControlled));
+
+    public bool SecondPluginParametersMidiControlled
+    {
+        get => GetValue(SecondPluginParametersMidiControlledProperty);
+        set => SetValue(SecondPluginParametersMidiControlledProperty, value);
+    }
+
+    public static readonly StyledProperty<bool>
+        ThirdPluginParametersMidiControlledProperty =
+            AvaloniaProperty.Register<MasterChannelStrip, bool>(
+                nameof(ThirdPluginParametersMidiControlled));
+
+    public bool ThirdPluginParametersMidiControlled
+    {
+        get => GetValue(ThirdPluginParametersMidiControlledProperty);
+        set => SetValue(ThirdPluginParametersMidiControlledProperty, value);
+    }
+
+    /*
      * Audio to routing box
      */
     public static readonly StyledProperty<ObservableCollection<IRoutingTarget>?>
