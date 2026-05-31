@@ -203,7 +203,7 @@ public class MixerViewModelService(
     {
         var side = layer.layerId == 0 ? TraktorZ1Side.Left : TraktorZ1Side.Right;
         traktorZ1SetupService.SetMasterFaderNode(side,
-            layer.MasterChannel.OutputLoopback.PlaybackNode.ObjectId);
+            layer.MasterChannel.OutputLoopback.PlaybackNode);
     }
 
     private GroupChannelViewModel ConvertGroupChannel(int layerId,
