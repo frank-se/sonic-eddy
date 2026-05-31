@@ -537,6 +537,13 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         _metadataManagerWindow.Show();
     }
 
+    public void ExitCommand()
+    {
+        if (Avalonia.Application.Current?.ApplicationLifetime is
+            Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop)
+            desktop.Shutdown();
+    }
+
     public void ShowPreferencesWindow()
     {
         _logger.LogTrace("ShowPreferencesWindow");
