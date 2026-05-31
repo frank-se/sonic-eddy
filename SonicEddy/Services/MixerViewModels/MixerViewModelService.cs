@@ -10,6 +10,7 @@ using SonicEddy.Controls.MixerControls;
 using SonicEddy.Services.AppData;
 using SonicEddy.Services.Midi;
 using SonicEddy.Services.MixerServiceV2;
+using SonicEddy.Services.TraktorZ1;
 using SonicEddy.Services.Monitoring;
 using SonicEddy.ViewModels.MixerViewModelsV2;
 using ChannelStrip = SonicEddy.Services.MixerServiceV2.ChannelStrip;
@@ -23,7 +24,8 @@ public class MixerViewModelService(
     ILogger<MixerViewModelService> logger,
     ILoggerFactory loggerFactory,
     IMidiControllerSetupService controllerSetupService,
-    IMidiControllerService midiControllerService)
+    IMidiControllerService midiControllerService,
+    ITraktorZ1SetupService traktorZ1SetupService)
     : IMixerViewModelService
 {
     public async Task<MixerLayerViewModel?> ConvertCurrentMixerToViewModel(
@@ -136,6 +138,7 @@ public class MixerViewModelService(
             mixerModel.SetupEvents();
 
             SetupMidiControllerForLayer(layer);
+            SetupTraktorZ1ForLayer(layer);
         }
         catch (Exception e)
         {
@@ -195,6 +198,13 @@ public class MixerViewModelService(
         }
     }
 
+
+    private void SetupTraktorZ1ForLayer(MixerLayer layer)
+    {
+        var side = layer.layerId == 0 ? TraktorZ1Side.Left : TraktorZ1Side.Right;
+        traktorZ1SetupService.SetMasterFaderNode(side,
+            layer.MasterChannel.OutputLoopback.PlaybackNode.ObjectId);
+    }
 
     private GroupChannelViewModel ConvertGroupChannel(int layerId,
         GroupChannel channel,

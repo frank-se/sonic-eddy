@@ -16,6 +16,7 @@ using SonicEddy.Services.MixerViewModels;
 using SonicEddy.Services.Monitoring;
 using SonicEddy.Services.Preferences;
 using SonicEddy.Services.VirtualInputs;
+using SonicEddy.Services.TraktorZ1;
 using SonicEddy.Services.Wireplumber;
 using SonicEddy.ViewModels;
 using SonicEddy.Views;
@@ -130,10 +131,15 @@ public class App : Application
 
         var mixerViewModelServiceLogger =
             loggerFactory.CreateLogger<MixerViewModelService>();
+        var traktorZ1SetupService = new TraktorZ1SetupService();
+        var traktorZ1Service = new TraktorZ1Service(traktorZ1SetupService,
+            loggerFactory.CreateLogger<TraktorZ1Service>());
+        traktorZ1Service.Start("/dev/hidraw3");
+
         var mixerViewModelService =
             new MixerViewModelService(appDataService, mixerServiceV2,
                 monitoringService, mixerViewModelServiceLogger, loggerFactory,
-                setupService, midiControllerService);
+                setupService, midiControllerService, traktorZ1SetupService);
         Locator.CurrentMutable.Register<IMixerViewModelService>(() =>
             mixerViewModelService);
 
