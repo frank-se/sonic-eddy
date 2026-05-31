@@ -264,11 +264,15 @@ public class TraktorZ1Service : ITraktorZ1Service
     private void WriteLeds(FileStream stream)
     {
         var buf = new byte[22];
-        buf[0]  = ReportIdOutput;
-        buf[17] = 0xff; // on_button_l brightness
-        buf[18] = 0x0f; // on_button_l color
-        buf[20] = 0xff; // on_button_r brightness
-        buf[21] = 0x0f; // on_button_r color
+        buf[0] = ReportIdOutput;
+
+        var (lBright, lColor) = SectionLedState(_selectedSection[(int)TraktorZ1Side.Left]);
+        var (rBright, rColor) = SectionLedState(_selectedSection[(int)TraktorZ1Side.Right]);
+
+        buf[17] = lBright; // on_button_l brightness
+        buf[18] = lColor;  // on_button_l color
+        buf[20] = rBright; // on_button_r brightness
+        buf[21] = rColor;  // on_button_r color
 
         try
         {
@@ -280,4 +284,13 @@ public class TraktorZ1Service : ITraktorZ1Service
             _logger.LogWarning("Failed to write LEDs: {Message}", ex.Message);
         }
     }
+
+    private static (byte brightness, byte color) SectionLedState(int section) =>
+        section switch
+        {
+            0 => (0x00, 0x00),
+            1 => (0xff, 0x30),
+            2 => (0xff, 0x80),
+            _ => (0x00, 0x00)
+        };
 }
