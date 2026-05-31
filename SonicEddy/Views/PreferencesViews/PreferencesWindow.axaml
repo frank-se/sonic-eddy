@@ -6,11 +6,11 @@
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="SonicEddy.Views.PreferencesViews.PreferencesWindow"
         x:DataType="preferencesViewModels:PreferencesViewModel"
-        Width="520" Height="300"
+        Width="520" Height="330"
         Title="Preferences">
 
     <StackPanel>
-        <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,*"
+        <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,*"
               ColumnDefinitions="Auto,*"
               RowSpacing="6"
               Margin="12">
@@ -77,6 +77,16 @@
                       Grid.ColumnSpan="2"
                       Content="Monitoring Channel"
                       IsChecked="{Binding MonitoringChannelEnabled}" />
+
+            <Label Grid.Row="6"
+                   Grid.Column="0"
+                   Target="TraktorZ1HidrawPathTextBox"
+                   Content="Traktor Z1 HID Device" />
+
+            <TextBox Grid.Row="6"
+                     Grid.Column="1"
+                     x:Name="TraktorZ1HidrawPathTextBox"
+                     Text="{Binding TraktorZ1HidrawPath}" />
 
         </Grid>
         

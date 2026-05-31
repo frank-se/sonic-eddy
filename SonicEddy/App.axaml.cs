@@ -134,7 +134,17 @@ public class App : Application
         var traktorZ1SetupService = new TraktorZ1SetupService();
         var traktorZ1Service = new TraktorZ1Service(traktorZ1SetupService,
             loggerFactory.CreateLogger<TraktorZ1Service>());
-        traktorZ1Service.Start("/dev/hidraw3");
+
+        var traktorZ1CurrentPath = "";
+        preferencesService.Changed += () =>
+        {
+            var newPath = preferencesService.Preferences?.TraktorZ1HidrawPath ?? "";
+            if (newPath == traktorZ1CurrentPath) return;
+            traktorZ1Service.Stop();
+            traktorZ1CurrentPath = newPath;
+            if (!string.IsNullOrEmpty(newPath))
+                traktorZ1Service.Start(newPath);
+        };
 
         var mixerViewModelService =
             new MixerViewModelService(appDataService, mixerServiceV2,

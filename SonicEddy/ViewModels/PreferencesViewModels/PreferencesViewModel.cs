@@ -56,6 +56,14 @@ public class PreferencesViewModel : ViewModelBase
             })
             .DisposeWith(_disposable);
 
+        this.WhenAnyValue(x => x.TraktorZ1HidrawPath)
+            .Subscribe(_ =>
+            {
+                _changed = true;
+                UpdateButtonStates();
+            })
+            .DisposeWith(_disposable);
+
         this.WhenAnyValue(x => x.NumberOfChannels)
             .Subscribe(_ =>
             {
@@ -121,6 +129,12 @@ public class PreferencesViewModel : ViewModelBase
         set => this.RaiseAndSetIfChanged(ref field, value);
     } = 1;
 
+    public string TraktorZ1HidrawPath
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    } = "/dev/hidraw3";
+
     public bool IsSaveEnabled
     {
         get;
@@ -137,7 +151,8 @@ public class PreferencesViewModel : ViewModelBase
             NumberOfGroupChannels = NumberOfGroupChannels,
             NumberOfReturnChannels = NumberOfReturnChannels,
             DefaultMonitorOutputName = SelectedDefaultMonitorOutput?.Name,
-            MonitoringChannelEnabled = MonitoringChannelEnabled
+            MonitoringChannelEnabled = MonitoringChannelEnabled,
+            TraktorZ1HidrawPath = TraktorZ1HidrawPath
         };
         await _preferenceService.UpdateAndSave(preferences);
     }
@@ -176,6 +191,7 @@ public class PreferencesViewModel : ViewModelBase
         SelectedDefaultMonitorOutput = Nodes.FirstOrDefault(n =>
             n.Name == preferences.DefaultMonitorOutputName);
         MonitoringChannelEnabled = preferences.MonitoringChannelEnabled;
+        TraktorZ1HidrawPath = preferences.TraktorZ1HidrawPath ?? "/dev/hidraw3";
     }
 
     private void UpdateButtonStates()
