@@ -393,7 +393,8 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
 
         _globalMasterWindow = new GlobalMasterWindow
         {
-            DataContext = new GlobalMasterViewModel(globalMaster, layerA, layerB)
+            DataContext = new GlobalMasterViewModel(globalMaster, layerA, layerB,
+                mixerService?.CurrentMixer?.Cue)
         };
         _globalMasterWindow.Show();
     }

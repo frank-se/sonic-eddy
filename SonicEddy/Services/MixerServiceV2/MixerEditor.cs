@@ -259,6 +259,56 @@ public class MixerEditor(IWireplumberService wireplumberService)
             });
     }
 
+    // The cue filter chain's capture targets the GlobalMaster capture node.
+    // In PipeWire a Stream/Input/Audio targeting another Stream/Input/Audio
+    // connects to its monitor output ports, giving a pre-xfade tap of each layer:
+    // AUX0/1 = Layer A, AUX2/3 = Layer B.
+    public async Task<FilterChain> CreateCueFilterChain(
+        string globalMasterCaptureSerial, string cueOutputSerial)
+    {
+        return await Fr.Sonic.FrSonic.ModuleFactory
+            .CreateFilterChainAsync("cue", new FilterChainModuleConfig
+            {
+                CaptureProps = new()
+                {
+                    Name = "cue-capture",
+                    Description = "Cue Capture",
+                    Linger = true,
+                    AutoConnect = true,
+                    DontFallback = true,
+                    Passive = false,
+                    TargetObject = globalMasterCaptureSerial,
+                    MediaClass = CaptureNodeMediaClass,
+                    AudioPosition = ["AUX0", "AUX1", "AUX2", "AUX3"]
+                },
+                PlaybackProps = new()
+                {
+                    Name = "cue-playback",
+                    Description = "Cue Playback",
+                    Linger = true,
+                    AutoConnect = true,
+                    DontFallback = true,
+                    Passive = false,
+                    TargetObject = cueOutputSerial,
+                    MediaClass = PlaybackNodeMediaClass,
+                    AudioPosition = StereoAudioPosition
+                },
+                FilterGraph = new FilterGraphConfig
+                {
+                    Nodes =
+                    [
+                        new FilterGraphNode
+                        {
+                            Name = "xfade",
+                            Type = "lv2",
+                            Plugin = "http://gareus.org/oss/lv2/xfade"
+                        }
+                    ],
+                    Links = []
+                }
+            });
+    }
+
     public async Task<MixerLayer> Create(string? defaultMasterName,
         ulong layerId,
         int numberOfChannels,

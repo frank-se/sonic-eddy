@@ -6,11 +6,11 @@
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="SonicEddy.Views.PreferencesViews.PreferencesWindow"
         x:DataType="preferencesViewModels:PreferencesViewModel"
-        Width="520" Height="330"
+        Width="520" Height="360"
         Title="Preferences">
 
     <StackPanel>
-        <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,*"
+        <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,*"
               ColumnDefinitions="Auto,*"
               RowSpacing="6"
               Margin="12">
@@ -80,10 +80,22 @@
 
             <Label Grid.Row="6"
                    Grid.Column="0"
+                   Target="DefaultCueOutputComboBox"
+                   Content="Default Cue Output" />
+
+            <ComboBox Grid.Row="6"
+                      Grid.Column="1"
+                      x:Name="DefaultCueOutputComboBox"
+                      ItemsSource="{Binding Nodes}"
+                      DisplayMemberBinding="{Binding Description}"
+                      SelectedItem="{Binding SelectedDefaultCueOutput}" />
+
+            <Label Grid.Row="7"
+                   Grid.Column="0"
                    Target="TraktorZ1HidrawPathTextBox"
                    Content="Traktor Z1 HID Device" />
 
-            <TextBox Grid.Row="6"
+            <TextBox Grid.Row="7"
                      Grid.Column="1"
                      x:Name="TraktorZ1HidrawPathTextBox"
                      Text="{Binding TraktorZ1HidrawPath}" />

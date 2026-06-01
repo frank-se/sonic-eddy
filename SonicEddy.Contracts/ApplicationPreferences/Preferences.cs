@@ -10,9 +10,10 @@ public record Preferences(
     [property: ProtoMember(4)] int NumberOfReturnChannels,
     [property: ProtoMember(5)] string? DefaultMonitorOutputName,
     [property: ProtoMember(6)] bool MonitoringChannelEnabled,
-    [property: ProtoMember(7)] string? TraktorZ1HidrawPath)
+    [property: ProtoMember(7)] string? TraktorZ1HidrawPath,
+    [property: ProtoMember(8)] string? DefaultCueOutputName)
 {
-    public Preferences() : this(null, 8, 4, 1, null, false, "/dev/hidraw3")
+    public Preferences() : this(null, 8, 4, 1, null, false, "/dev/hidraw3", null)
     {
     }
 }

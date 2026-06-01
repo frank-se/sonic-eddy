@@ -83,49 +83,99 @@
 
         </StackPanel>
 
-        <!-- Crossfader section — fixed height at the bottom -->
-        <Border Grid.Row="1"
-                Margin="8"
-                Padding="8"
-                BorderThickness="1"
-                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
-                CornerRadius="4">
-            <StackPanel Spacing="8">
+        <!-- Crossfader and Cue section — fixed height at the bottom -->
+        <StackPanel Grid.Row="1" Spacing="4" Margin="8,4,8,8">
 
-                <controls:PanSlider Text="xfade"
-                                    Value="{Binding Xfade, Mode=TwoWay}"
-                                    Maximum="1"
-                                    Background="DimGray"
-                                    Height="40" />
+            <!-- Main crossfader -->
+            <Border Padding="8"
+                    BorderThickness="1"
+                    BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                    CornerRadius="4">
+                <StackPanel Spacing="8">
 
-                <Grid ColumnDefinitions="60,*"
-                      RowDefinitions="Auto,Auto"
-                      RowSpacing="6">
+                    <TextBlock Text="Main" FontWeight="SemiBold" />
 
-                    <TextBlock Grid.Row="0" Grid.Column="0"
-                               Text="Shape"
-                               VerticalAlignment="Center" />
-                    <ComboBox Grid.Row="0" Grid.Column="1"
-                              SelectedIndex="{Binding ShapeIndex, Mode=TwoWay}"
-                              HorizontalAlignment="Stretch">
-                        <ComboBoxItem Content="Linear" />
-                        <ComboBoxItem Content="Equal Power" />
-                    </ComboBox>
+                    <controls:PanSlider Text="xfade"
+                                        Value="{Binding Xfade, Mode=TwoWay}"
+                                        Maximum="1"
+                                        Background="DimGray"
+                                        Height="40" />
 
-                    <TextBlock Grid.Row="1" Grid.Column="0"
-                               Text="Mode"
-                               VerticalAlignment="Center" />
-                    <ComboBox Grid.Row="1" Grid.Column="1"
-                              SelectedIndex="{Binding ModeIndex, Mode=TwoWay}"
-                              HorizontalAlignment="Stretch">
-                        <ComboBoxItem Content="X-fade" />
-                        <ComboBoxItem Content="V-fade" />
-                    </ComboBox>
+                    <Grid ColumnDefinitions="60,*"
+                          RowDefinitions="Auto,Auto"
+                          RowSpacing="6">
 
-                </Grid>
+                        <TextBlock Grid.Row="0" Grid.Column="0"
+                                   Text="Shape"
+                                   VerticalAlignment="Center" />
+                        <ComboBox Grid.Row="0" Grid.Column="1"
+                                  SelectedIndex="{Binding ShapeIndex, Mode=TwoWay}"
+                                  HorizontalAlignment="Stretch">
+                            <ComboBoxItem Content="Linear" />
+                            <ComboBoxItem Content="Equal Power" />
+                        </ComboBox>
 
-            </StackPanel>
-        </Border>
+                        <TextBlock Grid.Row="1" Grid.Column="0"
+                                   Text="Mode"
+                                   VerticalAlignment="Center" />
+                        <ComboBox Grid.Row="1" Grid.Column="1"
+                                  SelectedIndex="{Binding ModeIndex, Mode=TwoWay}"
+                                  HorizontalAlignment="Stretch">
+                            <ComboBoxItem Content="X-fade" />
+                            <ComboBoxItem Content="V-fade" />
+                        </ComboBox>
+
+                    </Grid>
+
+                </StackPanel>
+            </Border>
+
+            <!-- Cue crossfader (only shown when a cue output is configured) -->
+            <Border IsVisible="{Binding HasCue}"
+                    Padding="8"
+                    BorderThickness="1"
+                    BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                    CornerRadius="4">
+                <StackPanel Spacing="8">
+
+                    <TextBlock Text="Cue" FontWeight="SemiBold" />
+
+                    <controls:PanSlider Text="xfade"
+                                        Value="{Binding CueXfade, Mode=TwoWay}"
+                                        Maximum="1"
+                                        Background="DimGray"
+                                        Height="40" />
+
+                    <Grid ColumnDefinitions="60,*"
+                          RowDefinitions="Auto,Auto"
+                          RowSpacing="6">
+
+                        <TextBlock Grid.Row="0" Grid.Column="0"
+                                   Text="Shape"
+                                   VerticalAlignment="Center" />
+                        <ComboBox Grid.Row="0" Grid.Column="1"
+                                  SelectedIndex="{Binding CueShapeIndex, Mode=TwoWay}"
+                                  HorizontalAlignment="Stretch">
+                            <ComboBoxItem Content="Linear" />
+                            <ComboBoxItem Content="Equal Power" />
+                        </ComboBox>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0"
+                                   Text="Mode"
+                                   VerticalAlignment="Center" />
+                        <ComboBox Grid.Row="1" Grid.Column="1"
+                                  SelectedIndex="{Binding CueModeIndex, Mode=TwoWay}"
+                                  HorizontalAlignment="Stretch">
+                            <ComboBoxItem Content="X-fade" />
+                            <ComboBoxItem Content="V-fade" />
+                        </ComboBox>
+
+                    </Grid>
+
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
 
     </Grid>
 

@@ -10,19 +10,29 @@ namespace SonicEddy.ViewModels.GlobalMasterViewModels;
 
 public class GlobalMasterViewModel : ReactiveObject, IDisposable
 {
-    private readonly Node _node;
+    private readonly Node _xfadeNode;
+    private readonly Node? _cueNode;
     private bool _internal;
 
     public GlobalMasterViewModel(GlobalMasterChannel globalMaster,
-        MasterChannelViewModel layerA, MasterChannelViewModel layerB)
+        MasterChannelViewModel layerA, MasterChannelViewModel layerB,
+        CueChannel? cue)
     {
         LayerA = layerA;
         LayerB = layerB;
-        _node = globalMaster.CrossFader.CaptureNode;
-        _node.ParamsChanged += OnParamsChanged;
+        HasCue = cue is not null;
+
+        _xfadeNode = globalMaster.CrossFader.CaptureNode;
+        _xfadeNode.ParamsChanged += OnXfadeParamsChanged;
+
+        if (cue is not null)
+        {
+            _cueNode = cue.CrossFader.CaptureNode;
+            _cueNode.ParamsChanged += OnCueParamsChanged;
+        }
     }
 
-    private void OnParamsChanged(
+    private void OnXfadeParamsChanged(
         Dictionary<string, Fr.Sonic.Model.Params.IParameter>? parameters)
     {
         if (parameters is null) return;
@@ -36,9 +46,25 @@ public class GlobalMasterViewModel : ReactiveObject, IDisposable
         _internal = false;
     }
 
+    private void OnCueParamsChanged(
+        Dictionary<string, Fr.Sonic.Model.Params.IParameter>? parameters)
+    {
+        if (parameters is null) return;
+        _internal = true;
+        if (parameters.TryGetValue("xfade", out var xp) && xp is Parameter<float> xf)
+            CueXfade = xf.Value;
+        if (parameters.TryGetValue("shape", out var sp) && sp is Parameter<float> sf)
+            CueShapeIndex = sf.Value > 0.5f ? 1 : 0;
+        if (parameters.TryGetValue("mode", out var mp) && mp is Parameter<float> mf)
+            CueModeIndex = mf.Value > 0.5f ? 1 : 0;
+        _internal = false;
+    }
+
     public MasterChannelViewModel LayerA { get; }
     public MasterChannelViewModel LayerB { get; }
+    public bool HasCue { get; }
 
+    // Main xfade
     private double _xfade;
     public double Xfade
     {
@@ -46,7 +72,7 @@ public class GlobalMasterViewModel : ReactiveObject, IDisposable
         set
         {
             this.RaiseAndSetIfChanged(ref _xfade, value);
-            if (!_internal) _node.SetParam("xfade", (float)value);
+            if (!_internal) _xfadeNode.SetParam("xfade", (float)value);
         }
     }
 
@@ -57,7 +83,7 @@ public class GlobalMasterViewModel : ReactiveObject, IDisposable
         set
         {
             this.RaiseAndSetIfChanged(ref _shapeIndex, value);
-            if (!_internal) _node.SetParam("shape", (float)value);
+            if (!_internal) _xfadeNode.SetParam("shape", (float)value);
         }
     }
 
@@ -68,13 +94,48 @@ public class GlobalMasterViewModel : ReactiveObject, IDisposable
         set
         {
             this.RaiseAndSetIfChanged(ref _modeIndex, value);
-            if (!_internal) _node.SetParam("mode", (float)value);
+            if (!_internal) _xfadeNode.SetParam("mode", (float)value);
+        }
+    }
+
+    // Cue xfade
+    private double _cueXfade;
+    public double CueXfade
+    {
+        get => _cueXfade;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _cueXfade, value);
+            if (!_internal) _cueNode?.SetParam("xfade", (float)value);
+        }
+    }
+
+    private int _cueShapeIndex;
+    public int CueShapeIndex
+    {
+        get => _cueShapeIndex;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _cueShapeIndex, value);
+            if (!_internal) _cueNode?.SetParam("shape", (float)value);
+        }
+    }
+
+    private int _cueModeIndex;
+    public int CueModeIndex
+    {
+        get => _cueModeIndex;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _cueModeIndex, value);
+            if (!_internal) _cueNode?.SetParam("mode", (float)value);
         }
     }
 
     public void Dispose()
     {
-        _node.ParamsChanged -= OnParamsChanged;
+        _xfadeNode.ParamsChanged -= OnXfadeParamsChanged;
+        if (_cueNode is not null) _cueNode.ParamsChanged -= OnCueParamsChanged;
         GC.SuppressFinalize(this);
     }
 }
