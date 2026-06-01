@@ -29,6 +29,7 @@ public class GlobalMasterViewModel : ReactiveObject, IDisposable
         {
             _cueNode = cue.CrossFader.CaptureNode;
             _cueNode.ParamsChanged += OnCueParamsChanged;
+            CueChannel = new CueChannelViewModel(cue, layerA.AudioToRoutingTargets);
         }
     }
 
@@ -62,6 +63,7 @@ public class GlobalMasterViewModel : ReactiveObject, IDisposable
 
     public MasterChannelViewModel LayerA { get; }
     public MasterChannelViewModel LayerB { get; }
+    public CueChannelViewModel? CueChannel { get; }
     public bool HasCue { get; }
 
     // Main xfade
@@ -136,6 +138,7 @@ public class GlobalMasterViewModel : ReactiveObject, IDisposable
     {
         _xfadeNode.ParamsChanged -= OnXfadeParamsChanged;
         if (_cueNode is not null) _cueNode.ParamsChanged -= OnCueParamsChanged;
+        CueChannel?.Dispose();
         GC.SuppressFinalize(this);
     }
 }

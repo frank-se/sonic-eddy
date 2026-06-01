@@ -4,8 +4,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:mixerControls="clr-namespace:SonicEddy.Controls.MixerControls"
         xmlns:controls="clr-namespace:SonicEddy.Controls"
-        mc:Ignorable="d" d:DesignWidth="268" d:DesignHeight="800"
-        Width="268" Height="900"
+        mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="800"
+        Width="400" Height="900"
         WindowStartupLocation="CenterOwner"
         x:CompileBindings="False"
         x:Class="SonicEddy.Views.GlobalMasterViews.GlobalMasterWindow"
@@ -13,11 +13,23 @@
 
     <Grid RowDefinitions="*,Auto">
 
-        <!-- Two master channel strips side by side — fills all available height -->
+        <!-- Three channel strips side by side — fills all available height -->
         <StackPanel Grid.Row="0"
                     Orientation="Horizontal"
                     Spacing="4"
                     Margin="4,4,4,0">
+
+            <!-- Cue channel strip — only shown when a cue output is configured -->
+            <mixerControls:CueChannelStrip
+                IsVisible="{Binding HasCue}"
+                Volume="{Binding CueChannel.PanAndVolume.Volume}"
+                Pan="{Binding CueChannel.PanAndVolume.Pan}"
+                LeftAverage="{Binding CueChannel.PanAndVolume.LeftAverage}"
+                RightAverage="{Binding CueChannel.PanAndVolume.RightAverage}"
+                LeftPeak="{Binding CueChannel.PanAndVolume.LeftPeak}"
+                RightPeak="{Binding CueChannel.PanAndVolume.RightPeak}"
+                AudioToRoutingTargets="{Binding CueChannel.AudioToRoutingTargets}"
+                SelectedAudioToRoutingTarget="{Binding CueChannel.SelectedAudioToRoutingTarget}" />
 
             <!-- Strip bound entirely from its own DataContext (LayerA) -->
             <mixerControls:MasterChannelStrip
@@ -83,55 +95,15 @@
 
         </StackPanel>
 
-        <!-- Crossfader and Cue section — fixed height at the bottom -->
-        <StackPanel Grid.Row="1" Spacing="4" Margin="8,4,8,8">
+        <!-- Crossfader section — cue xfader on the left, main xfader on the right -->
+        <StackPanel Grid.Row="1"
+                    Orientation="Horizontal"
+                    Spacing="4"
+                    Margin="8,4,8,8">
 
-            <!-- Main crossfader -->
-            <Border Padding="8"
-                    BorderThickness="1"
-                    BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
-                    CornerRadius="4">
-                <StackPanel Spacing="8">
-
-                    <TextBlock Text="Main" FontWeight="SemiBold" />
-
-                    <controls:PanSlider Text="xfade"
-                                        Value="{Binding Xfade, Mode=TwoWay}"
-                                        Maximum="1"
-                                        Background="DimGray"
-                                        Height="40" />
-
-                    <Grid ColumnDefinitions="60,*"
-                          RowDefinitions="Auto,Auto"
-                          RowSpacing="6">
-
-                        <TextBlock Grid.Row="0" Grid.Column="0"
-                                   Text="Shape"
-                                   VerticalAlignment="Center" />
-                        <ComboBox Grid.Row="0" Grid.Column="1"
-                                  SelectedIndex="{Binding ShapeIndex, Mode=TwoWay}"
-                                  HorizontalAlignment="Stretch">
-                            <ComboBoxItem Content="Linear" />
-                            <ComboBoxItem Content="Equal Power" />
-                        </ComboBox>
-
-                        <TextBlock Grid.Row="1" Grid.Column="0"
-                                   Text="Mode"
-                                   VerticalAlignment="Center" />
-                        <ComboBox Grid.Row="1" Grid.Column="1"
-                                  SelectedIndex="{Binding ModeIndex, Mode=TwoWay}"
-                                  HorizontalAlignment="Stretch">
-                            <ComboBoxItem Content="X-fade" />
-                            <ComboBoxItem Content="V-fade" />
-                        </ComboBox>
-
-                    </Grid>
-
-                </StackPanel>
-            </Border>
-
-            <!-- Cue crossfader (only shown when a cue output is configured) -->
+            <!-- Cue crossfader — under the cue channel strip, only when cue is configured -->
             <Border IsVisible="{Binding HasCue}"
+                    Width="124"
                     Padding="8"
                     BorderThickness="1"
                     BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
@@ -146,31 +118,50 @@
                                         Background="DimGray"
                                         Height="40" />
 
-                    <Grid ColumnDefinitions="60,*"
-                          RowDefinitions="Auto,Auto"
-                          RowSpacing="6">
-
-                        <TextBlock Grid.Row="0" Grid.Column="0"
-                                   Text="Shape"
-                                   VerticalAlignment="Center" />
-                        <ComboBox Grid.Row="0" Grid.Column="1"
-                                  SelectedIndex="{Binding CueShapeIndex, Mode=TwoWay}"
+                    <StackPanel Spacing="6">
+                        <ComboBox SelectedIndex="{Binding CueShapeIndex, Mode=TwoWay}"
                                   HorizontalAlignment="Stretch">
                             <ComboBoxItem Content="Linear" />
                             <ComboBoxItem Content="Equal Power" />
                         </ComboBox>
-
-                        <TextBlock Grid.Row="1" Grid.Column="0"
-                                   Text="Mode"
-                                   VerticalAlignment="Center" />
-                        <ComboBox Grid.Row="1" Grid.Column="1"
-                                  SelectedIndex="{Binding CueModeIndex, Mode=TwoWay}"
+                        <ComboBox SelectedIndex="{Binding CueModeIndex, Mode=TwoWay}"
                                   HorizontalAlignment="Stretch">
                             <ComboBoxItem Content="X-fade" />
                             <ComboBoxItem Content="V-fade" />
                         </ComboBox>
+                    </StackPanel>
 
-                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Main crossfader -->
+            <Border Padding="8"
+                    BorderThickness="1"
+                    BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                    CornerRadius="4"
+                    HorizontalAlignment="Stretch">
+                <StackPanel Spacing="8">
+
+                    <TextBlock Text="Main" FontWeight="SemiBold" />
+
+                    <controls:PanSlider Text="xfade"
+                                        Value="{Binding Xfade, Mode=TwoWay}"
+                                        Maximum="1"
+                                        Background="DimGray"
+                                        Height="40" />
+
+                    <StackPanel Spacing="6">
+                        <ComboBox SelectedIndex="{Binding ShapeIndex, Mode=TwoWay}"
+                                  HorizontalAlignment="Stretch">
+                            <ComboBoxItem Content="Linear" />
+                            <ComboBoxItem Content="Equal Power" />
+                        </ComboBox>
+                        <ComboBox SelectedIndex="{Binding ModeIndex, Mode=TwoWay}"
+                                  HorizontalAlignment="Stretch">
+                            <ComboBoxItem Content="X-fade" />
+                            <ComboBoxItem Content="V-fade" />
+                        </ComboBox>
+                    </StackPanel>
 
                 </StackPanel>
             </Border>
