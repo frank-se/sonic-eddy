@@ -47,8 +47,7 @@ public class MixerService : IMixerService, IDisposable
     private readonly SemaphoreSlim _externalChange = new(1, 1);
     private readonly SemaphoreSlim _internalChange = new(1, 1);
 
-    public async Task<Mixer> NewCurrentMixer(string name,
-        bool createSecondLayer = true)
+    public async Task<Mixer> NewCurrentMixer(string name)
     {
         if (_logger.IsEnabled(LogLevel.Trace))
             _logger.LogTrace("NewCurrentMixer {Name}", name);
@@ -78,14 +77,30 @@ public class MixerService : IMixerService, IDisposable
                 var numberOfReturnChannels = prefs.NumberOfReturnChannels;
 
                 NumberOfChannelsPerLayer = numberOfChannels;
-                NumberOfChannels = numberOfChannels * (createSecondLayer ? 2 : 1);
+                NumberOfChannels = numberOfChannels * 2;
                 NumberOfGroupChannelsPerLayer = numberOfGroupChannels;
-                NumberOfGroupChannels =
-                    numberOfGroupChannels * (createSecondLayer ? 2 : 1);
+                NumberOfGroupChannels = numberOfGroupChannels * 2;
+
+                // Create the GlobalMaster FilterChain first so master channels
+                // target it at creation time — no post-hoc override needed.
+                var physicalOutput = _wireplumberService.GetCaptureNodes()
+                    .FirstOrDefault(n => n.Name == masterOutputName)
+                    ?? _wireplumberService.GetCaptureNodes().First();
+
+                var xfade = await _editor.CreateGlobalMasterFilterChain(
+                    physicalOutput.ObjectSerial.ToString());
+
+                var globalMasterCaptureSerial =
+                    xfade.CaptureNode.ObjectSerial.ToString();
+                var globalMaster = new GlobalMasterChannel(xfade);
+
+                _myNodeIds.Add(xfade.CaptureNode.ObjectSerial);
+                _myNodeIds.Add(xfade.PlaybackNode.ObjectSerial);
 
                 var firstLayer = await _editor.Create(masterOutputName, 0,
                     numberOfChannels, numberOfGroupChannels,
-                    numberOfReturnChannels);
+                    numberOfReturnChannels,
+                    globalMasterCaptureSerial: globalMasterCaptureSerial);
 
                 var layerOneIds =
                     CollectMixerLayerNodeIds(firstLayer).ToArray();
@@ -107,26 +122,15 @@ public class MixerService : IMixerService, IDisposable
                     }
                 }
 
-                if (createSecondLayer)
-                {
-                    var secondLayer = await _editor.Create(masterOutputName, 1,
-                        numberOfChannels, numberOfGroupChannels,
-                        numberOfReturnChannels, layerOneIds);
+                var secondLayer = await _editor.Create(masterOutputName, 1,
+                    numberOfChannels, numberOfGroupChannels,
+                    numberOfReturnChannels, layerOneIds,
+                    globalMasterCaptureSerial: globalMasterCaptureSerial);
 
-                    _myNodeIds.AddRange(CollectMixerLayerNodeIds(secondLayer));
+                _myNodeIds.AddRange(CollectMixerLayerNodeIds(secondLayer));
 
-                    var globalMaster =
-                        await _editor.CreateGlobalMaster(firstLayer, secondLayer);
-                    _myNodeIds.Add(globalMaster.CrossFader.CaptureNode.ObjectSerial);
-                    _myNodeIds.Add(globalMaster.CrossFader.PlaybackNode.ObjectSerial);
-
-                    CurrentMixer = new([firstLayer, secondLayer],
-                        monitoringLoopback, globalMaster);
-                }
-                else
-                {
-                    CurrentMixer = new([firstLayer], monitoringLoopback);
-                }
+                CurrentMixer = new([firstLayer, secondLayer],
+                    monitoringLoopback, globalMaster);
             }
             finally
             {

@@ -229,7 +229,8 @@ public class MixerViewModelService(
         audioToRoutingTargets,
         selectedAudioToRoutingTarget,
         appDataService, mixerService, channel, monitoringService, layerId,
-        controllerSetupService, traktorZ1SetupService);
+        controllerSetupService, traktorZ1SetupService,
+        globalMasterPlaybackNode: mixerService.CurrentMixer?.GlobalMaster?.CrossFader.PlaybackNode);
 
     public ChannelStripViewModel ConvertChannelStrip(int layerId,
         ChannelStrip channel,

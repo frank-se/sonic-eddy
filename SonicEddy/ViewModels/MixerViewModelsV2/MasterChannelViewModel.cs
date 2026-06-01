@@ -6,6 +6,7 @@ using System.Reactive.Disposables;
 using System.Reactive.Disposables.Fluent;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using Fr.Sonic.Model.Objects;
 using Fr.Sonic.Modules.Models;
 using Fr.Sonic.PInvoke;
 using ReactiveUI;
@@ -23,6 +24,8 @@ namespace SonicEddy.ViewModels.MixerViewModelsV2;
 
 public class MasterChannelViewModel : ChannelViewModelBase, IMasterChannel
 {
+    private readonly Node? _globalMasterPlaybackNode;
+
     public MasterChannelViewModel(
         ulong channelId,
         string text,
@@ -39,13 +42,15 @@ public class MasterChannelViewModel : ChannelViewModelBase, IMasterChannel
         IMonitoringService monitoringService,
         int layerId,
         IMidiControllerSetupService midiControllerSetupService,
-        ITraktorZ1SetupService traktorZ1SetupService)
+        ITraktorZ1SetupService traktorZ1SetupService,
+        Node? globalMasterPlaybackNode = null)
         : base(channelId, text, selectChannelCommand,
             inputLoopback, outputLoopback, filterChain, filterGraph,
             audioToRoutingTargets, selectedAudioToRoutingTarget,
             appDataService, mixerService, monitoringService,
             true, layerId, midiControllerSetupService, ChannelType.Channel)
     {
+        _globalMasterPlaybackNode = globalMasterPlaybackNode;
         MasterChannel = masterChannel;
         Looper = new LooperSectionViewModel(
             masterChannel.PreFxLooper, masterChannel.PostFxLooper);
@@ -95,6 +100,19 @@ public class MasterChannelViewModel : ChannelViewModelBase, IMasterChannel
         FilterChain = await _mixerService.AddFilterToMasterChannel(
             _layerId, dialogViewModel.SelectedFilterGraph);
         FilterGraph = dialogViewModel.SelectedFilterGraph;
+    }
+
+    protected override void ApplyAudioRoutingTarget(IRoutingTarget? routingTarget)
+    {
+        if (routingTarget is null) return;
+        var node = _globalMasterPlaybackNode;
+        if (node is null) { base.ApplyAudioRoutingTarget(routingTarget); return; }
+        switch (routingTarget.Channel)
+        {
+            case OutputChannelViewModel output:
+                node.OverrideTargetObject(output.CaptureNodeObjectSerial.ToString());
+                break;
+        }
     }
 
     protected override void Dispose(bool disposing)

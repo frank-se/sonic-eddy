@@ -214,61 +214,49 @@ public class MixerEditor(IWireplumberService wireplumberService)
         return mixerLayer with { MasterChannel = newMaster };
     }
 
-    public async Task<GlobalMasterChannel> CreateGlobalMaster(
-        MixerLayer layerA, MixerLayer layerB)
+    public async Task<FilterChain> CreateGlobalMasterFilterChain(
+        string physicalOutputSerial)
     {
-        var physicalOutputSerial =
-            layerA.MasterChannel.OutputTargetObject!.ObjectSerial.ToString();
-
-        var filterChainConfig = new FilterChainModuleConfig
-        {
-            CaptureProps = new()
+        return await Fr.Sonic.FrSonic.ModuleFactory
+            .CreateFilterChainAsync("global-master", new FilterChainModuleConfig
             {
-                Name = "global-master-capture",
-                Description = "Global Master Capture",
-                Linger = true,
-                AutoConnect = false,
-                DontFallback = true,
-                Passive = false,
-                MediaClass = CaptureNodeMediaClass,
-                AudioPosition = ["AUX0", "AUX1", "AUX2", "AUX3"]
-            },
-            PlaybackProps = new()
-            {
-                Name = "global-master-playback",
-                Description = "Global Master Playback",
-                Linger = true,
-                AutoConnect = true,
-                DontFallback = true,
-                Passive = false,
-                TargetObject = physicalOutputSerial,
-                MediaClass = PlaybackNodeMediaClass,
-                AudioPosition = StereoAudioPosition
-            },
-            FilterGraph = new FilterGraphConfig
-            {
-                Nodes =
-                [
-                    new FilterGraphNode
-                    {
-                        Name = "xfade",
-                        Type = "lv2",
-                        Plugin = "http://gareus.org/oss/lv2/xfade"
-                    }
-                ],
-                Links = []
-            }
-        };
-
-        var crossFader = await Fr.Sonic.FrSonic.ModuleFactory
-            .CreateFilterChainAsync("global-master", filterChainConfig);
-
-        layerA.MasterChannel.OutputLoopback.PlaybackNode.OverrideTargetObject(
-            crossFader.CaptureNode.ObjectSerial.ToString());
-        layerB.MasterChannel.OutputLoopback.PlaybackNode.OverrideTargetObject(
-            crossFader.CaptureNode.ObjectSerial.ToString());
-
-        return new GlobalMasterChannel(crossFader);
+                CaptureProps = new()
+                {
+                    Name = "global-master-capture",
+                    Description = "Global Master Capture",
+                    Linger = true,
+                    AutoConnect = false,
+                    DontFallback = true,
+                    Passive = false,
+                    MediaClass = CaptureNodeMediaClass,
+                    AudioPosition = ["AUX0", "AUX1", "AUX2", "AUX3"]
+                },
+                PlaybackProps = new()
+                {
+                    Name = "global-master-playback",
+                    Description = "Global Master Playback",
+                    Linger = true,
+                    AutoConnect = true,
+                    DontFallback = true,
+                    Passive = false,
+                    TargetObject = physicalOutputSerial,
+                    MediaClass = PlaybackNodeMediaClass,
+                    AudioPosition = StereoAudioPosition
+                },
+                FilterGraph = new FilterGraphConfig
+                {
+                    Nodes =
+                    [
+                        new FilterGraphNode
+                        {
+                            Name = "xfade",
+                            Type = "lv2",
+                            Plugin = "http://gareus.org/oss/lv2/xfade"
+                        }
+                    ],
+                    Links = []
+                }
+            });
     }
 
     public async Task<MixerLayer> Create(string? defaultMasterName,
@@ -276,7 +264,8 @@ public class MixerEditor(IWireplumberService wireplumberService)
         int numberOfChannels,
         int numberOfGroupChannels,
         int numberOfReturnChannels,
-        ulong[]? ignoreSerials = null)
+        ulong[]? ignoreSerials = null,
+        string? globalMasterCaptureSerial = null)
     {
         ignoreSerials ??= [];
 
@@ -290,7 +279,8 @@ public class MixerEditor(IWireplumberService wireplumberService)
 
         var inputChannels = CreateInputChannels(ignoreSerials);
 
-        var masterChannel = await CreateMasterChannel(layerId, defaultOutput);
+        var masterChannel = await CreateMasterChannel(layerId, defaultOutput,
+            globalMasterCaptureSerial);
 
         var returns = await CreateReturnChannels(masterChannel, layerId,
             numberOfReturnChannels);
@@ -368,7 +358,7 @@ public class MixerEditor(IWireplumberService wireplumberService)
     }
 
     private async Task<MasterChannel> CreateMasterChannel(ulong layerId,
-        OutputChannel defaultOutput)
+        OutputChannel defaultOutput, string? globalMasterCaptureSerial = null)
     {
         var preFxLooper = await CreateLooper(
             layerId,
@@ -378,14 +368,22 @@ public class MixerEditor(IWireplumberService wireplumberService)
             null,
             null);
 
-        var playbackAudioPosition = layerId == 0 ? "AUX0,AUX1" : "AUX2,AUX3";
+        // When a GlobalMaster exists the postFx looper routes into it;
+        // layer position (0→AUX0/1, 1→AUX2/3) determines which xfade input pair.
+        // Without a GlobalMaster it routes straight to the physical output.
+        var masterTarget = globalMasterCaptureSerial
+            ?? defaultOutput.CaptureNode.ObjectSerial.ToString();
+        var playbackAudioPosition = globalMasterCaptureSerial is not null
+            ? (layerId == 0 ? "AUX0,AUX1" : "AUX2,AUX3")
+            : null;
+
         var postFxLooper = await CreateLooper(
             layerId,
             0,
             "master",
             "post",
             preFxLooper.PlaybackNode.ObjectSerial.ToString(),
-            defaultOutput.CaptureNode.ObjectSerial.ToString(),
+            masterTarget,
             playbackAudioPosition);
 
         preFxLooper.PlaybackNode.OverrideTargetObject(

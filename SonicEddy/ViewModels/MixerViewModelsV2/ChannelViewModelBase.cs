@@ -79,23 +79,7 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
         }
 
         this.WhenAnyValue(x => x.SelectedAudioToRoutingTarget)
-            .Subscribe(routingTarget =>
-            {
-                if (routingTarget is null) return;
-
-                switch (routingTarget.Channel)
-                {
-                    case ChannelViewModelBase channel:
-                        _outputLoopback.PlaybackNode.OverrideTargetObject(
-                            channel._inputLoopback.CaptureNode.ObjectSerial
-                                .ToString());
-                        break;
-                    case OutputChannelViewModel output:
-                        _outputLoopback.PlaybackNode.OverrideTargetObject(
-                            output.CaptureNodeObjectSerial.ToString());
-                        break;
-                }
-            })
+            .Subscribe(ApplyAudioRoutingTarget)
             .DisposeWith(Disposables);
 
         this.WhenAnyValue(x => x.Parameters)
@@ -417,6 +401,22 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
     {
         Dispose(true);
         GC.SuppressFinalize(this);
+    }
+
+    protected virtual void ApplyAudioRoutingTarget(IRoutingTarget? routingTarget)
+    {
+        if (routingTarget is null) return;
+        switch (routingTarget.Channel)
+        {
+            case ChannelViewModelBase channel:
+                _outputLoopback.PlaybackNode.OverrideTargetObject(
+                    channel._inputLoopback.CaptureNode.ObjectSerial.ToString());
+                break;
+            case OutputChannelViewModel output:
+                _outputLoopback.PlaybackNode.OverrideTargetObject(
+                    output.CaptureNodeObjectSerial.ToString());
+                break;
+        }
     }
 
     private readonly ChannelType _channelType;
