@@ -610,7 +610,11 @@ bool looper::Looper::setup_playback_stream() {
   std::array<uint8_t, 1024> buffer{};
   spa_pod_builder builder{};
   spa_pod_builder_init(&builder, buffer.data(), buffer.size());
-  params[0] = build_audio_format(builder, _config.format, _config.channels);
+  const auto *channel_map = _config.playback_channel_map.empty()
+                                ? nullptr
+                                : &_config.playback_channel_map;
+  params[0] = build_audio_format(builder, _config.format, _config.channels,
+                                 channel_map);
 
   const auto result = pw_stream_connect(
       _playback_stream, PW_DIRECTION_OUTPUT, PW_ID_ANY,
@@ -1832,12 +1836,17 @@ std::string looper::Looper::archive_file_path(const LoopArchiveJob &job) const {
   return (std::filesystem::path{folder} / filename).string();
 }
 
-const spa_pod *looper::Looper::build_audio_format(spa_pod_builder &builder,
-                                                  spa_audio_format format,
-                                                  uint32_t channels) {
+const spa_pod *looper::Looper::build_audio_format(
+    spa_pod_builder &builder, spa_audio_format format, uint32_t channels,
+    const std::vector<spa_audio_channel> *channel_map) {
   spa_audio_info_raw audio_info{};
   audio_info.format = format;
   audio_info.channels = channels;
+  if (channel_map && !channel_map->empty()) {
+    for (size_t i = 0; i < channel_map->size() && i < SPA_AUDIO_MAX_CHANNELS;
+         ++i)
+      audio_info.position[i] = static_cast<uint32_t>((*channel_map)[i]);
+  }
   return spa_format_audio_raw_build(&builder, SPA_PARAM_EnumFormat,
                                     &audio_info);
 }

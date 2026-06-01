@@ -156,6 +156,7 @@ struct LooperConfig {
   uint32_t max_record_seconds = 300;
   float mix = 0.0f;
   spa_audio_format format = SPA_AUDIO_FORMAT_F32;
+  std::vector<spa_audio_channel> playback_channel_map;
 };
 
 class Looper {
@@ -295,9 +296,9 @@ private:
   format_state_json(const LooperStateUpdate &update) const;
   [[nodiscard]] std::string archive_file_path(const LoopArchiveJob &job) const;
 
-  static const spa_pod *build_audio_format(spa_pod_builder &builder,
-                                           spa_audio_format format,
-                                           uint32_t channels);
+  static const spa_pod *build_audio_format(
+      spa_pod_builder &builder, spa_audio_format format, uint32_t channels,
+      const std::vector<spa_audio_channel> *channel_map = nullptr);
 };
 
 } // namespace looper

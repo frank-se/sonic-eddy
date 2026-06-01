@@ -115,8 +115,13 @@ public class MixerService : IMixerService, IDisposable
 
                     _myNodeIds.AddRange(CollectMixerLayerNodeIds(secondLayer));
 
+                    var globalMaster =
+                        await _editor.CreateGlobalMaster(firstLayer, secondLayer);
+                    _myNodeIds.Add(globalMaster.CrossFader.CaptureNode.ObjectSerial);
+                    _myNodeIds.Add(globalMaster.CrossFader.PlaybackNode.ObjectSerial);
+
                     CurrentMixer = new([firstLayer, secondLayer],
-                        monitoringLoopback);
+                        monitoringLoopback, globalMaster);
                 }
                 else
                 {

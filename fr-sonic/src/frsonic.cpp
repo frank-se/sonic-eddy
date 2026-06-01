@@ -22,6 +22,7 @@
 #include <memory>
 #include <pipewire/pipewire.h>
 #include <pipewire/thread-loop.h>
+#include <spa/param/audio/raw.h>
 #include <string>
 #include <utility>
 #include <vector>
@@ -120,6 +121,45 @@ static std::unique_ptr<OwnedPipewireRuntime> g_owned_pipewire = nullptr;
 static peak_callback_t g_peak_cb = nullptr;
 static uint64_t g_peak_interval_ms = 0;
 static midi_cc_update_callback_t g_midi_cc_cb = nullptr;
+
+/* ── helpers: parse audio position string to spa_audio_channel vector ─────── */
+
+static spa_audio_channel channel_name_to_spa(const std::string &name) {
+  if (name == "FL") return SPA_AUDIO_CHANNEL_FL;
+  if (name == "FR") return SPA_AUDIO_CHANNEL_FR;
+  if (name == "FC") return SPA_AUDIO_CHANNEL_FC;
+  if (name == "RL") return SPA_AUDIO_CHANNEL_RL;
+  if (name == "RR") return SPA_AUDIO_CHANNEL_RR;
+  if (name == "AUX0") return SPA_AUDIO_CHANNEL_AUX0;
+  if (name == "AUX1") return SPA_AUDIO_CHANNEL_AUX1;
+  if (name == "AUX2") return SPA_AUDIO_CHANNEL_AUX2;
+  if (name == "AUX3") return SPA_AUDIO_CHANNEL_AUX3;
+  if (name == "AUX4") return SPA_AUDIO_CHANNEL_AUX4;
+  if (name == "AUX5") return SPA_AUDIO_CHANNEL_AUX5;
+  return SPA_AUDIO_CHANNEL_UNKNOWN;
+}
+
+static std::vector<spa_audio_channel>
+parse_audio_positions(const char *positions_str) {
+  if (!positions_str || positions_str[0] == '\0')
+    return {};
+  std::vector<spa_audio_channel> result;
+  std::string str(positions_str);
+  std::string token;
+  for (size_t start = 0, end; start < str.size(); start = end + 1) {
+    end = str.find(',', start);
+    if (end == std::string::npos)
+      end = str.size();
+    token = str.substr(start, end - start);
+    auto trim_start = token.find_first_not_of(" \t");
+    auto trim_end = token.find_last_not_of(" \t");
+    if (trim_start != std::string::npos)
+      result.push_back(channel_name_to_spa(token.substr(trim_start, trim_end - trim_start + 1)));
+    if (end == str.size())
+      break;
+  }
+  return result;
+}
 
 /* ── helpers: convert public-API enums to internal ones ─────────────────── */
 
@@ -359,6 +399,8 @@ bool frsonic_create_looper(const frsonic_looper_config *config,
         .max_record_seconds =
             config->max_record_seconds == 0 ? 300u : config->max_record_seconds,
         .mix = std::clamp(config->mix, 0.0f, 1.0f),
+        .playback_channel_map =
+            parse_audio_positions(config->playback_audio_position),
     };
 
     auto looper = std::make_shared<looper::Looper>(

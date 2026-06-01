@@ -87,6 +87,8 @@ struct frsonic_looper_config {
   uint32_t channels;
   uint32_t max_record_seconds;
   float mix;
+  /* optional comma-separated channel names, e.g. "AUX0,AUX1" – null = default */
+  const char *playback_audio_position;
 };
 
 struct frsonic_midi_manipulator_config {

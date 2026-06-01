@@ -109,6 +109,7 @@ internal struct FrSonicLooperConfig
     internal uint Channels;
     internal uint MaxRecordSeconds;
     internal float Mix;
+    internal IntPtr PlaybackAudioPosition;
 }
 
 /* ── P/Invoke declarations ───────────────────────────────────────────────── */
