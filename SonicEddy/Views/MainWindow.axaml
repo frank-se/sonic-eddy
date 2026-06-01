@@ -46,6 +46,9 @@
             </MenuItem>
 
             <MenuItem Header="Tools">
+                <MenuItem Header="Global Master ..."
+                          Command="{Binding ShowGlobalMasterWindow}" />
+                <Separator />
                 <MenuItem Header="Monitoring ..."
                           IsVisible="{Binding IsMonitoringEnabled}"
                           Command="{Binding ShowMonitoringWindow}" />

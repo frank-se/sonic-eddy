@@ -1,0 +1,132 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:mixerControls="clr-namespace:SonicEddy.Controls.MixerControls"
+        xmlns:controls="clr-namespace:SonicEddy.Controls"
+        mc:Ignorable="d" d:DesignWidth="268" d:DesignHeight="800"
+        Width="268" Height="900"
+        WindowStartupLocation="CenterOwner"
+        x:CompileBindings="False"
+        x:Class="SonicEddy.Views.GlobalMasterViews.GlobalMasterWindow"
+        Title="Global Master">
+
+    <Grid RowDefinitions="*,Auto">
+
+        <!-- Two master channel strips side by side — fills all available height -->
+        <StackPanel Grid.Row="0"
+                    Orientation="Horizontal"
+                    Spacing="4"
+                    Margin="4,4,4,0">
+
+            <!-- Strip bound entirely from its own DataContext (LayerA) -->
+            <mixerControls:MasterChannelStrip
+                DataContext="{Binding LayerA}"
+                Text="Layer A"
+                IsSelected="{Binding IsSelected}"
+                SelectCommand="{Binding SelectChannelCommand}"
+                HasFilter="{Binding HasFilter}"
+                AddFilterCommand="{Binding AddFilterAction}"
+                DeleteFilterCommand="{Binding DeleteFilterAction}"
+                Presets="{Binding AvailablePresets}"
+                SavePresetCommand="{Binding SavePresetCommand}"
+                LoadPresetCommand="{Binding LoadPresetCommand}"
+                FirstPluginParameters="{Binding FirstPluginParameters}"
+                FirstPluginText="{Binding FirstPluginText}"
+                SecondPluginParameters="{Binding SecondPluginParameters}"
+                SecondPluginText="{Binding SecondPluginText}"
+                ThirdPluginParameters="{Binding ThirdPluginParameters}"
+                ThirdPluginText="{Binding ThirdPluginText}"
+                Volume="{Binding PanAndVolume.Volume}"
+                Pan="{Binding PanAndVolume.Pan}"
+                LeftAverage="{Binding PanAndVolume.LeftAverage}"
+                RightAverage="{Binding PanAndVolume.RightAverage}"
+                LeftPeak="{Binding PanAndVolume.LeftPeak}"
+                RightPeak="{Binding PanAndVolume.RightPeak}"
+                AudioToRoutingTargets="{Binding AudioToRoutingTargets}"
+                SelectedAudioToRoutingTarget="{Binding SelectedAudioToRoutingTarget}"
+                IsFilterMidiControlled="{Binding IsFilterMidiControlled}"
+                FirstPluginParametersMidiControlled="{Binding FirstPluginSelectedForMidi}"
+                SecondPluginParametersMidiControlled="{Binding SecondPluginSelectedForMidi}"
+                ThirdPluginParametersMidiControlled="{Binding ThirdPluginSelectedForMidi}" />
+
+            <!-- Strip bound entirely from its own DataContext (LayerB) -->
+            <mixerControls:MasterChannelStrip
+                DataContext="{Binding LayerB}"
+                Text="Layer B"
+                IsSelected="{Binding IsSelected}"
+                SelectCommand="{Binding SelectChannelCommand}"
+                HasFilter="{Binding HasFilter}"
+                AddFilterCommand="{Binding AddFilterAction}"
+                DeleteFilterCommand="{Binding DeleteFilterAction}"
+                Presets="{Binding AvailablePresets}"
+                SavePresetCommand="{Binding SavePresetCommand}"
+                LoadPresetCommand="{Binding LoadPresetCommand}"
+                FirstPluginParameters="{Binding FirstPluginParameters}"
+                FirstPluginText="{Binding FirstPluginText}"
+                SecondPluginParameters="{Binding SecondPluginParameters}"
+                SecondPluginText="{Binding SecondPluginText}"
+                ThirdPluginParameters="{Binding ThirdPluginParameters}"
+                ThirdPluginText="{Binding ThirdPluginText}"
+                Volume="{Binding PanAndVolume.Volume}"
+                Pan="{Binding PanAndVolume.Pan}"
+                LeftAverage="{Binding PanAndVolume.LeftAverage}"
+                RightAverage="{Binding PanAndVolume.RightAverage}"
+                LeftPeak="{Binding PanAndVolume.LeftPeak}"
+                RightPeak="{Binding PanAndVolume.RightPeak}"
+                AudioToRoutingTargets="{Binding AudioToRoutingTargets}"
+                SelectedAudioToRoutingTarget="{Binding SelectedAudioToRoutingTarget}"
+                IsFilterMidiControlled="{Binding IsFilterMidiControlled}"
+                FirstPluginParametersMidiControlled="{Binding FirstPluginSelectedForMidi}"
+                SecondPluginParametersMidiControlled="{Binding SecondPluginSelectedForMidi}"
+                ThirdPluginParametersMidiControlled="{Binding ThirdPluginSelectedForMidi}" />
+
+        </StackPanel>
+
+        <!-- Crossfader section — fixed height at the bottom -->
+        <Border Grid.Row="1"
+                Margin="8"
+                Padding="8"
+                BorderThickness="1"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                CornerRadius="4">
+            <StackPanel Spacing="8">
+
+                <controls:PanSlider Text="xfade"
+                                    Value="{Binding Xfade, Mode=TwoWay}"
+                                    Maximum="1"
+                                    Background="DimGray"
+                                    Height="40" />
+
+                <Grid ColumnDefinitions="60,*"
+                      RowDefinitions="Auto,Auto"
+                      RowSpacing="6">
+
+                    <TextBlock Grid.Row="0" Grid.Column="0"
+                               Text="Shape"
+                               VerticalAlignment="Center" />
+                    <ComboBox Grid.Row="0" Grid.Column="1"
+                              SelectedIndex="{Binding ShapeIndex, Mode=TwoWay}"
+                              HorizontalAlignment="Stretch">
+                        <ComboBoxItem Content="Linear" />
+                        <ComboBoxItem Content="Equal Power" />
+                    </ComboBox>
+
+                    <TextBlock Grid.Row="1" Grid.Column="0"
+                               Text="Mode"
+                               VerticalAlignment="Center" />
+                    <ComboBox Grid.Row="1" Grid.Column="1"
+                              SelectedIndex="{Binding ModeIndex, Mode=TwoWay}"
+                              HorizontalAlignment="Stretch">
+                        <ComboBoxItem Content="X-fade" />
+                        <ComboBoxItem Content="V-fade" />
+                    </ComboBox>
+
+                </Grid>
+
+            </StackPanel>
+        </Border>
+
+    </Grid>
+
+</Window>

@@ -26,8 +26,10 @@ using SonicEddy.ViewModels.MidiSyncViewModels;
 using SonicEddy.ViewModels.SynchronizationViewModels;
 using SonicEddy.ViewModels.MonitoringViewModels;
 using SonicEddy.ViewModels.TransportViewModels;
+using SonicEddy.ViewModels.GlobalMasterViewModels;
 using SonicEddy.ViewModels.VirtualInputsViewModels;
 using SonicEddy.Views.FilterGraphManagerViews;
+using SonicEddy.Views.GlobalMasterViews;
 using SonicEddy.Views.MetadataViews;
 using SonicEddy.Views.MidiParameterChangeMonitorView;
 using SonicEddy.Views.MidiRouterViews;
@@ -93,6 +95,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     private const int NumberOfChannels = 16;
     private const int NumberOfChannelsPerLayer = NumberOfChannels / 2;
 
+    private Window? _globalMasterWindow;
     private Window? _monitoringWindow;
     private Window? _midiParameterMonitorWindow;
     private Window? _objectBrowserWindow;
@@ -368,6 +371,31 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         };
 
         _midiParameterMonitorWindow.Show();
+    }
+
+    public void ShowGlobalMasterWindow()
+    {
+        _logger.LogTrace("ShowGlobalMasterWindow");
+
+        if (_globalMasterWindow is not null && _globalMasterWindow.IsVisible) return;
+
+        var mixerService = Locator.Current.GetService<IMixerService>();
+        var globalMaster = mixerService?.CurrentMixer?.GlobalMaster;
+        if (globalMaster is null) return;
+
+        var layerA = LayerAViewModel?.MasterChannels?.Count > 0
+            ? LayerAViewModel.MasterChannels[0] as MasterChannelViewModel
+            : null;
+        var layerB = LayerBViewModel?.MasterChannels?.Count > 0
+            ? LayerBViewModel.MasterChannels[0] as MasterChannelViewModel
+            : null;
+        if (layerA is null || layerB is null) return;
+
+        _globalMasterWindow = new GlobalMasterWindow
+        {
+            DataContext = new GlobalMasterViewModel(globalMaster, layerA, layerB)
+        };
+        _globalMasterWindow.Show();
     }
 
     public void ShowMonitoringWindow()
