@@ -251,7 +251,8 @@ public class MixerEditor(IWireplumberService wireplumberService)
                         {
                             Name = "xfade",
                             Type = "lv2",
-                            Plugin = "http://gareus.org/oss/lv2/xfade"
+                            Plugin = "http://gareus.org/oss/lv2/xfade",
+                            Control = new Dictionary<string, object> { ["shape"] = 1.0 }
                         }
                     ],
                     Links = []
@@ -301,7 +302,8 @@ public class MixerEditor(IWireplumberService wireplumberService)
                         {
                             Name = "xfade",
                             Type = "lv2",
-                            Plugin = "http://gareus.org/oss/lv2/xfade"
+                            Plugin = "http://gareus.org/oss/lv2/xfade",
+                            Control = new Dictionary<string, object> { ["shape"] = 1.0 }
                         }
                     ],
                     Links = []
