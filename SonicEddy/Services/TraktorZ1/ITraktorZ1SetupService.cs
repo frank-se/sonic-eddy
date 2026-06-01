@@ -10,4 +10,7 @@ public interface ITraktorZ1SetupService
 
     void AddFilterParameter(TraktorZ1Side side, int sectionIndex,
         Node pluginNode, string name, float min, float max);
+
+    void SetXfadeNode(Node? node);
+    void SetCueMixNode(Node? node);
 }

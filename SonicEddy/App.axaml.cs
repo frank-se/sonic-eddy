@@ -152,6 +152,8 @@ public class App : Application
                 setupService, midiControllerService, traktorZ1SetupService);
         Locator.CurrentMutable.Register<IMixerViewModelService>(() =>
             mixerViewModelService);
+        Locator.CurrentMutable.Register<ITraktorZ1SetupService>(() =>
+            traktorZ1SetupService);
 
         Locator.CurrentMutable.RegisterViewsForViewModels(
             Assembly.GetExecutingAssembly());

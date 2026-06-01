@@ -4,6 +4,7 @@ using Fr.Sonic.Model.Objects;
 using Fr.Sonic.Model.Params;
 using ReactiveUI;
 using SonicEddy.Services.MixerServiceV2;
+using SonicEddy.Services.TraktorZ1;
 using SonicEddy.ViewModels.MixerViewModelsV2;
 
 namespace SonicEddy.ViewModels.GlobalMasterViewModels;
@@ -12,23 +13,28 @@ public class GlobalMasterViewModel : ReactiveObject, IDisposable
 {
     private readonly Node _xfadeNode;
     private readonly Node? _cueNode;
+    private readonly ITraktorZ1SetupService _traktorZ1SetupService;
     private bool _internal;
 
     public GlobalMasterViewModel(GlobalMasterChannel globalMaster,
         MasterChannelViewModel layerA, MasterChannelViewModel layerB,
-        CueChannel? cue)
+        CueChannel? cue, ITraktorZ1SetupService traktorZ1SetupService)
     {
+        _traktorZ1SetupService = traktorZ1SetupService;
+
         LayerA = layerA;
         LayerB = layerB;
         HasCue = cue is not null;
 
         _xfadeNode = globalMaster.CrossFader.CaptureNode;
         _xfadeNode.ParamsChanged += OnXfadeParamsChanged;
+        traktorZ1SetupService.SetXfadeNode(_xfadeNode);
 
         if (cue is not null)
         {
             _cueNode = cue.CrossFader.CaptureNode;
             _cueNode.ParamsChanged += OnCueParamsChanged;
+            traktorZ1SetupService.SetCueMixNode(_cueNode);
             CueChannel = new CueChannelViewModel(cue, layerA.AudioToRoutingTargets);
         }
     }
@@ -138,6 +144,8 @@ public class GlobalMasterViewModel : ReactiveObject, IDisposable
     {
         _xfadeNode.ParamsChanged -= OnXfadeParamsChanged;
         if (_cueNode is not null) _cueNode.ParamsChanged -= OnCueParamsChanged;
+        _traktorZ1SetupService.SetXfadeNode(null);
+        _traktorZ1SetupService.SetCueMixNode(null);
         CueChannel?.Dispose();
         GC.SuppressFinalize(this);
     }

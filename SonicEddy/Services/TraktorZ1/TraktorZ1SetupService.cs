@@ -6,6 +6,8 @@ namespace SonicEddy.Services.TraktorZ1;
 public class TraktorZ1SetupService : ITraktorZ1SetupService
 {
     private readonly Node?[] _masterFaderNodes = new Node?[2];
+    private Node? _xfadeNode;
+    private Node? _cueMixNode;
 
     private readonly List<List<FilterSectionParam>>[] _sectionParams =
         [[], []];
@@ -25,8 +27,14 @@ public class TraktorZ1SetupService : ITraktorZ1SetupService
         sections[sectionIndex].Add(new FilterSectionParam(pluginNode, name, min, max));
     }
 
+    public void SetXfadeNode(Node? node) => _xfadeNode = node;
+    public void SetCueMixNode(Node? node) => _cueMixNode = node;
+
     internal Node? GetMasterFaderNode(TraktorZ1Side side) =>
         _masterFaderNodes[(int)side];
+
+    internal Node? GetXfadeNode() => _xfadeNode;
+    internal Node? GetCueMixNode() => _cueMixNode;
 
     internal IReadOnlyList<IReadOnlyList<FilterSectionParam>> GetSections(
         TraktorZ1Side side) =>
