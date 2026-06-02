@@ -391,13 +391,10 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
             : null;
         if (layerA is null || layerB is null) return;
 
-        var traktorZ1SetupService =
-            Locator.Current.GetService<ITraktorZ1SetupService>()!;
-
         _globalMasterWindow = new GlobalMasterWindow
         {
             DataContext = new GlobalMasterViewModel(globalMaster, layerA, layerB,
-                mixerService?.CurrentMixer?.Cue, traktorZ1SetupService)
+                mixerService?.CurrentMixer?.Cue)
         };
         _globalMasterWindow.Show();
     }
@@ -641,6 +638,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
             {
                 LayerAViewModel = mixerView;
                 IsInitialized = true;
+                mixerViewModelService.SetupControllers();
             }
         });
     }

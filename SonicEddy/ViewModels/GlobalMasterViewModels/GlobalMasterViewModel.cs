@@ -13,14 +13,12 @@ public class GlobalMasterViewModel : ReactiveObject, IDisposable
 {
     private readonly Node _xfadeNode;
     private readonly Node? _cueNode;
-    private readonly ITraktorZ1SetupService _traktorZ1SetupService;
     private bool _internal;
 
     public GlobalMasterViewModel(GlobalMasterChannel globalMaster,
         MasterChannelViewModel layerA, MasterChannelViewModel layerB,
-        CueChannel? cue, ITraktorZ1SetupService traktorZ1SetupService)
+        CueChannel? cue)
     {
-        _traktorZ1SetupService = traktorZ1SetupService;
 
         LayerA = layerA;
         LayerB = layerB;
@@ -28,13 +26,11 @@ public class GlobalMasterViewModel : ReactiveObject, IDisposable
 
         _xfadeNode = globalMaster.CrossFader.CaptureNode;
         _xfadeNode.ParamsChanged += OnXfadeParamsChanged;
-        traktorZ1SetupService.SetXfadeNode(_xfadeNode);
 
         if (cue is not null)
         {
             _cueNode = cue.CrossFader.CaptureNode;
             _cueNode.ParamsChanged += OnCueParamsChanged;
-            traktorZ1SetupService.SetCueMixNode(_cueNode);
             CueChannel = new CueChannelViewModel(cue, layerA.AudioToRoutingTargets);
         }
     }
@@ -44,11 +40,11 @@ public class GlobalMasterViewModel : ReactiveObject, IDisposable
     {
         if (parameters is null) return;
         _internal = true;
-        if (parameters.TryGetValue("xfade", out var xp) && xp is Parameter<float> xf)
+        if (parameters.TryGetValue("xfade:xfade", out var xp) && xp is Parameter<float> xf)
             Xfade = xf.Value;
-        if (parameters.TryGetValue("shape", out var sp) && sp is Parameter<float> sf)
+        if (parameters.TryGetValue("xfade:shape", out var sp) && sp is Parameter<float> sf)
             ShapeIndex = sf.Value > 0.5f ? 1 : 0;
-        if (parameters.TryGetValue("mode", out var mp) && mp is Parameter<float> mf)
+        if (parameters.TryGetValue("xfade:mode", out var mp) && mp is Parameter<float> mf)
             ModeIndex = mf.Value > 0.5f ? 1 : 0;
         _internal = false;
     }
@@ -58,11 +54,11 @@ public class GlobalMasterViewModel : ReactiveObject, IDisposable
     {
         if (parameters is null) return;
         _internal = true;
-        if (parameters.TryGetValue("xfade", out var xp) && xp is Parameter<float> xf)
+        if (parameters.TryGetValue("xfade:xfade", out var xp) && xp is Parameter<float> xf)
             CueXfade = xf.Value;
-        if (parameters.TryGetValue("shape", out var sp) && sp is Parameter<float> sf)
+        if (parameters.TryGetValue("xfade:shape", out var sp) && sp is Parameter<float> sf)
             CueShapeIndex = sf.Value > 0.5f ? 1 : 0;
-        if (parameters.TryGetValue("mode", out var mp) && mp is Parameter<float> mf)
+        if (parameters.TryGetValue("xfade:mode", out var mp) && mp is Parameter<float> mf)
             CueModeIndex = mf.Value > 0.5f ? 1 : 0;
         _internal = false;
     }
@@ -71,6 +67,8 @@ public class GlobalMasterViewModel : ReactiveObject, IDisposable
     public MasterChannelViewModel LayerB { get; }
     public CueChannelViewModel? CueChannel { get; }
     public bool HasCue { get; }
+    public string XfadeNodeSerial => _xfadeNode.ObjectSerial.ToString();
+    public string? CueNodeSerial => _cueNode?.ObjectSerial.ToString();
 
     // Main xfade
     private double _xfade;
@@ -80,7 +78,7 @@ public class GlobalMasterViewModel : ReactiveObject, IDisposable
         set
         {
             this.RaiseAndSetIfChanged(ref _xfade, value);
-            if (!_internal) _xfadeNode.SetParam("xfade", (float)value);
+            if (!_internal) _xfadeNode.SetParam("xfade:xfade", (float)value);
         }
     }
 
@@ -91,7 +89,7 @@ public class GlobalMasterViewModel : ReactiveObject, IDisposable
         set
         {
             this.RaiseAndSetIfChanged(ref _shapeIndex, value);
-            if (!_internal) _xfadeNode.SetParam("shape", (float)value);
+            if (!_internal) _xfadeNode.SetParam("xfade:shape", (float)value);
         }
     }
 
@@ -102,7 +100,7 @@ public class GlobalMasterViewModel : ReactiveObject, IDisposable
         set
         {
             this.RaiseAndSetIfChanged(ref _modeIndex, value);
-            if (!_internal) _xfadeNode.SetParam("mode", (float)value);
+            if (!_internal) _xfadeNode.SetParam("xfade:mode", (float)value);
         }
     }
 
@@ -114,7 +112,7 @@ public class GlobalMasterViewModel : ReactiveObject, IDisposable
         set
         {
             this.RaiseAndSetIfChanged(ref _cueXfade, value);
-            if (!_internal) _cueNode?.SetParam("xfade", (float)value);
+            if (!_internal) _cueNode?.SetParam("xfade:xfade", (float)value);
         }
     }
 
@@ -125,7 +123,7 @@ public class GlobalMasterViewModel : ReactiveObject, IDisposable
         set
         {
             this.RaiseAndSetIfChanged(ref _cueShapeIndex, value);
-            if (!_internal) _cueNode?.SetParam("shape", (float)value);
+            if (!_internal) _cueNode?.SetParam("xfade:shape", (float)value);
         }
     }
 
@@ -136,7 +134,7 @@ public class GlobalMasterViewModel : ReactiveObject, IDisposable
         set
         {
             this.RaiseAndSetIfChanged(ref _cueModeIndex, value);
-            if (!_internal) _cueNode?.SetParam("mode", (float)value);
+            if (!_internal) _cueNode?.SetParam("xfade:mode", (float)value);
         }
     }
 
@@ -144,8 +142,6 @@ public class GlobalMasterViewModel : ReactiveObject, IDisposable
     {
         _xfadeNode.ParamsChanged -= OnXfadeParamsChanged;
         if (_cueNode is not null) _cueNode.ParamsChanged -= OnCueParamsChanged;
-        _traktorZ1SetupService.SetXfadeNode(null);
-        _traktorZ1SetupService.SetCueMixNode(null);
         CueChannel?.Dispose();
         GC.SuppressFinalize(this);
     }

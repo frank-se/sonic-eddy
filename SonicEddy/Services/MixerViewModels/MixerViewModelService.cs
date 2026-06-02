@@ -137,8 +137,6 @@ public class MixerViewModelService(
 
             mixerModel.SetupEvents();
 
-            SetupMidiControllerForLayer(layer);
-            SetupTraktorZ1ForLayer(layer);
         }
         catch (Exception e)
         {
@@ -204,6 +202,21 @@ public class MixerViewModelService(
         var side = layer.layerId == 0 ? TraktorZ1Side.Left : TraktorZ1Side.Right;
         traktorZ1SetupService.SetMasterFaderNode(side,
             layer.MasterChannel.OutputLoopback.PlaybackNode);
+    }
+
+    public void SetupControllers()
+    {
+        var mixer = mixerService.CurrentMixer;
+        if (mixer is null) return;
+        foreach (var layer in mixer.Layers)
+        {
+            SetupMidiControllerForLayer(layer);
+            SetupTraktorZ1ForLayer(layer);
+        }
+        traktorZ1SetupService.SetXfadeNode(
+            mixer.GlobalMaster?.CrossFader.CaptureNode);
+        traktorZ1SetupService.SetCueMixNode(
+            mixer.Cue?.CrossFader.CaptureNode);
     }
 
     private GroupChannelViewModel ConvertGroupChannel(int layerId,

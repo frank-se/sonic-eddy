@@ -11,7 +11,7 @@
         x:Class="SonicEddy.Views.GlobalMasterViews.GlobalMasterWindow"
         Title="Global Master">
 
-    <Grid RowDefinitions="*,Auto">
+    <Grid RowDefinitions="*,Auto,Auto">
 
         <!-- Three channel strips side by side — fills all available height -->
         <StackPanel Grid.Row="0"
@@ -95,8 +95,14 @@
 
         </StackPanel>
 
+        <!-- Debug: node serials -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8" Margin="8,2,8,0">
+            <TextBlock FontSize="10" Foreground="Gray" Text="{Binding XfadeNodeSerial, StringFormat='xfade: {0}'}" />
+            <TextBlock FontSize="10" Foreground="Gray" Text="{Binding CueNodeSerial, StringFormat='cue: {0}'}" />
+        </StackPanel>
+
         <!-- Crossfader section — cue xfader on the left, main xfader on the right -->
-        <StackPanel Grid.Row="1"
+        <StackPanel Grid.Row="2"
                     Orientation="Horizontal"
                     Spacing="4"
                     Margin="8,4,8,8">

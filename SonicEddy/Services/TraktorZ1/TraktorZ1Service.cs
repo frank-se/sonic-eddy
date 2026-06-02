@@ -42,8 +42,6 @@ public class TraktorZ1Service : ITraktorZ1Service
     private readonly bool[]   _faderCatchingUp   = [true, true];
     private readonly bool[][] _knobCatchingUp    = [[true, true, true, true],
                                                     [true, true, true, true]];
-    private bool _crossCatchingUp  = true;
-    private bool _cueMixCatchingUp = true;
     private readonly ushort[] _prev              = new ushort[14];
     private byte _prevButtons;
 
@@ -110,8 +108,6 @@ public class TraktorZ1Service : ITraktorZ1Service
         for (int s = 0; s < 2; s++)
         for (int p = 0; p < 4; p++)
             _knobCatchingUp[s][p] = true;
-        _crossCatchingUp  = true;
-        _cueMixCatchingUp = true;
     }
 
     private void ReadLoop(FileStream stream, CancellationToken token)
@@ -207,36 +203,14 @@ public class TraktorZ1Service : ITraktorZ1Service
     {
         var node = _setup.GetXfadeNode();
         if (node is null) return;
-
-        var normalized = raw / RawMaxValue;
-
-        if (_crossCatchingUp)
-        {
-            var known = GetCurrentParamNormalized(node, "xfade", 0f, 1f);
-            if (known is null || MathF.Abs(normalized - known.Value) > PickUpThreshold)
-                return;
-            _crossCatchingUp = false;
-        }
-
-        node.SetParam("xfade", normalized);
+        node.SetParam("xfade:xfade", raw / RawMaxValue * 2f - 1f);
     }
 
     private void SetCueMixParam(ushort raw)
     {
         var node = _setup.GetCueMixNode();
         if (node is null) return;
-
-        var normalized = raw / RawMaxValue;
-
-        if (_cueMixCatchingUp)
-        {
-            var known = GetCurrentParamNormalized(node, "xfade", 0f, 1f);
-            if (known is null || MathF.Abs(normalized - known.Value) > PickUpThreshold)
-                return;
-            _cueMixCatchingUp = false;
-        }
-
-        node.SetParam("xfade", normalized);
+        node.SetParam("xfade:xfade", raw / RawMaxValue * 2f - 1f);
     }
 
     private void ProcessFilterParam(TraktorZ1Side side, int paramIndex,

@@ -13,6 +13,7 @@ namespace SonicEddy.Services.MixerViewModels;
 public interface IMixerViewModelService
 {
     Task<MixerLayerViewModel?> ConvertCurrentMixerToViewModel(int layerId);
+    void SetupControllers();
 
     InputChannelViewModel ConvertInputChannel(
         InputChannel channel,
