@@ -10,6 +10,14 @@ static int setup_stream_function(struct spa_loop *loop, bool async,
   return 0;
 }
 
+static int destroy_stream_function(struct spa_loop *loop, bool async,
+                                   uint32_t seq, const void *data, size_t size,
+                                   void *user_data) {
+  auto stream = static_cast<monitoring::Stream *>(user_data);
+  stream->destroy();
+  return 0;
+}
+
 void monitoring::Monitor::start_monitor_node(uint64_t object_serial) {
   std::lock_guard lock(_monitoring_streams_mutex);
 
@@ -42,7 +50,8 @@ void monitoring::Monitor::stop_monitor_node(uint64_t object_serial) {
 
   auto stream = *it;
   std::erase(_monitoring_streams, stream);
-  stream->destroy();
+  pw_loop_invoke(_loop, destroy_stream_function, SPA_ID_INVALID,
+                 nullptr, 0, false, stream.get());
 }
 
 void monitoring::Monitor::forward_measures() {
