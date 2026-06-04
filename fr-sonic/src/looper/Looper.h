@@ -223,6 +223,7 @@ private:
   std::optional<uint64_t> _ring_buffer_zero_beat;
   uint64_t _last_capture_frames = 0;
   std::optional<CommandEvent> _active_command_event;
+  uint64_t _active_command_late_frames = 0;
   uint64_t _record_capacity_frames = 0;
   std::vector<float> _record_buffer;
   std::array<LoopSlot, 10> _loop_slots;

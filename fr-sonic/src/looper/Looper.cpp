@@ -797,9 +797,13 @@ void looper::Looper::process_due_commands(const uint32_t frame_offset,
       }
 
       _active_command_event = queued_event;
+      _active_command_late_frames =
+          static_cast<uint64_t>(static_cast<int64_t>(frame_offset) -
+                                *scheduled_frame);
       ++_processed_command_count;
       apply_command_event(queued_event);
       _active_command_event.reset();
+      _active_command_late_frames = 0;
     } else {
       _pending_commands[remaining_count++] = queued_event;
     }
@@ -1147,7 +1151,7 @@ void looper::Looper::play_loop(const uint32_t loop_number) {
   }
 
   slot.playing = true;
-  slot.playhead_frame = 0;
+  slot.playhead_frame = _active_command_late_frames % slot.length_frames;
   slot.play_started_beat =
       _active_command_event && _active_command_event->scheduled_beat > 0
           ? std::optional<uint64_t>{_active_command_event->scheduled_beat}
