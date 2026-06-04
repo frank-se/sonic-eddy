@@ -236,6 +236,8 @@ private:
 
   bool setup_capture_stream();
   bool setup_playback_stream();
+  void process_capture();
+  void process_playback();
   void start_copy_thread();
   void copy_thread_main();
   void process_archive_job(const LoopArchiveJob &job);
@@ -276,7 +278,8 @@ private:
   [[nodiscard]] std::string capture_name() const;
   [[nodiscard]] std::string playback_name() const;
   [[nodiscard]] const spa_audio_info_raw &active_format() const;
-  [[nodiscard]] pw_stream_flags stream_flags(bool autoconnect) const;
+  [[nodiscard]] pw_stream_flags stream_flags(bool autoconnect,
+                                             pw_stream_flags extra_flags) const;
   [[nodiscard]] std::optional<uint64_t> current_sync_beat() const;
   [[nodiscard]] std::optional<double> bpm_at_beat(uint64_t beat) const;
   [[nodiscard]] std::optional<uint64_t>

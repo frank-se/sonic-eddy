@@ -568,7 +568,9 @@ bool looper::Looper::setup_capture_stream() {
 
   const auto result = pw_stream_connect(
       _capture_stream, PW_DIRECTION_INPUT, PW_ID_ANY,
-      stream_flags(_config.capture_target_object.has_value()), params, 1);
+      stream_flags(_config.capture_target_object.has_value(),
+                   PW_STREAM_FLAG_ASYNC),
+      params, 1);
   if (result < 0) {
     logging::log<logging::LogLevel::Error>(
         "Failed to connect looper capture stream '{}': {}", name, result);
@@ -618,7 +620,9 @@ bool looper::Looper::setup_playback_stream() {
 
   const auto result = pw_stream_connect(
       _playback_stream, PW_DIRECTION_OUTPUT, PW_ID_ANY,
-      stream_flags(_config.playback_target_object.has_value()), params, 1);
+      stream_flags(_config.playback_target_object.has_value(),
+                   PW_STREAM_FLAG_TRIGGER),
+      params, 1);
   if (result < 0) {
     logging::log<logging::LogLevel::Error>(
         "Failed to connect looper playback stream '{}': {}", name, result);
@@ -629,28 +633,58 @@ bool looper::Looper::setup_playback_stream() {
 }
 
 void looper::Looper::process() {
+  process_playback();
+}
+
+void looper::Looper::process_capture() {
+  if (_playback_stream == nullptr)
+    return;
+
+  const auto result = pw_stream_trigger_process(_playback_stream);
+  if (result >= 0)
+    return;
+
+  while (_capture_stream != nullptr) {
+    auto *capture_buffer = pw_stream_dequeue_buffer(_capture_stream);
+    if (capture_buffer == nullptr)
+      break;
+    pw_stream_queue_buffer(_capture_stream, capture_buffer);
+  }
+}
+
+void looper::Looper::process_playback() {
   drain_copy_results();
   drain_archive_results();
   drain_command_events();
   _last_capture_frames = 0;
 
-  if (_capture_stream != nullptr) {
-    auto *capture_buffer = pw_stream_dequeue_buffer(_capture_stream);
-    if (capture_buffer != nullptr) {
-      capture_passthrough_input(capture_buffer);
-      pw_stream_queue_buffer(_capture_stream, capture_buffer);
-    }
-  }
-
   if (_playback_stream == nullptr)
     return;
 
-  auto *playback_buffer = pw_stream_dequeue_buffer(_playback_stream);
-  if (playback_buffer == nullptr)
-    return;
+  pw_buffer *capture_buffer = nullptr;
+  if (_capture_stream != nullptr) {
+    while (true) {
+      auto *next_capture_buffer = pw_stream_dequeue_buffer(_capture_stream);
+      if (next_capture_buffer == nullptr)
+        break;
+      if (capture_buffer != nullptr)
+        pw_stream_queue_buffer(_capture_stream, capture_buffer);
+      capture_buffer = next_capture_buffer;
+    }
+  }
 
+  auto *playback_buffer = pw_stream_dequeue_buffer(_playback_stream);
+  if (capture_buffer == nullptr || playback_buffer == nullptr)
+    goto done;
+
+  capture_passthrough_input(capture_buffer);
   write_passthrough_output(playback_buffer);
-  pw_stream_queue_buffer(_playback_stream, playback_buffer);
+
+done:
+  if (capture_buffer != nullptr)
+    pw_stream_queue_buffer(_capture_stream, capture_buffer);
+  if (playback_buffer != nullptr)
+    pw_stream_queue_buffer(_playback_stream, playback_buffer);
 }
 
 void looper::Looper::drain_archive_results() {
@@ -1585,9 +1619,11 @@ const spa_audio_info_raw &looper::Looper::active_format() const {
   return fallback;
 }
 
-pw_stream_flags looper::Looper::stream_flags(const bool autoconnect) const {
+pw_stream_flags looper::Looper::stream_flags(
+    const bool autoconnect, const pw_stream_flags extra_flags) const {
   auto flags = static_cast<pw_stream_flags>(PW_STREAM_FLAG_MAP_BUFFERS |
-                                            PW_STREAM_FLAG_RT_PROCESS);
+                                            PW_STREAM_FLAG_RT_PROCESS |
+                                            extra_flags);
   if (autoconnect)
     flags = static_cast<pw_stream_flags>(flags | PW_STREAM_FLAG_AUTOCONNECT);
   return flags;
@@ -1852,11 +1888,11 @@ const spa_pod *looper::Looper::build_audio_format(
 }
 
 void looper::Looper::capture_process_callback(void *data) {
-  static_cast<Looper *>(data)->process();
+  static_cast<Looper *>(data)->process_capture();
 }
 
 void looper::Looper::playback_process_callback(void *data) {
-  static_cast<Looper *>(data)->process();
+  static_cast<Looper *>(data)->process_playback();
 }
 
 void looper::Looper::capture_param_changed_callback(void *data,
