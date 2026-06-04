@@ -670,19 +670,19 @@ scripts/looper-passthrough-test.sh
 
 The script connects `se-signal` to `<looper-name>.capture` and `se-record` to
 `<looper-name>.playback`, runs both tools with JSON stats, compares signal
-window `n` against record window `n + 1`, then prints the looper, signal, and
-recorder logs. Environment variables such as `LOOPER_NAME`, `DURATION`,
-`RECORD_DURATION`, `SIGNAL_MODE`, `SIGNAL_VALUE`, `SIGNAL_HIGH_VALUE`, `MIX`,
-and `RMS_TOLERANCE` can override the default setup.
+window `n` against record window `n` after the startup window, then prints the
+looper, signal, and recorder logs. Environment variables such as `LOOPER_NAME`,
+`DURATION`, `RECORD_DURATION`, `SIGNAL_MODE`, `SIGNAL_VALUE`,
+`SIGNAL_HIGH_VALUE`, `MIX`, and `RMS_TOLERANCE` can override the default setup.
 
 `scripts/looper-mix-test.sh` runs the same setup with `MIX=0.5` by default.
-The validator expects record window `n + 1` to match signal window `n` scaled
-by `1 - MIX`.
+The validator expects record window `n` to match signal window `n` scaled by
+`1 - MIX` after the startup window.
 
 `scripts/looper-mix-change-test.sh` starts with `INITIAL_MIX=0`, changes the
 looper capture node to `CHANGED_MIX=0.5` halfway through the signal run using
-`pw-cli set-param`, skips the transition window, and validates the shifted
-window RMS before and after the change. With equal time at `mix = 0` and
+`pw-cli set-param`, skips the startup and transition windows, and validates
+same-window RMS before and after the change. With equal time at `mix = 0` and
 `mix = 0.5`, total RMS is expected to be about `79%` of the source RMS, while
 average amplitude would be `75%`.
 

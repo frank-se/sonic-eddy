@@ -122,25 +122,25 @@ awk -v tolerance="${rms_tolerance}" -v mix="${mix}" '
   }
   END {
     comparisons = signal_count
-    if (record_count - 1 < comparisons)
-      comparisons = record_count - 1
-    if (comparisons < 1) {
+    if (record_count < comparisons)
+      comparisons = record_count
+    if (comparisons < 2) {
       print "validation failed: not enough window stats" > "/dev/stderr"
       exit 1
     }
-    for (i = 1; i <= comparisons; ++i) {
+    for (i = 2; i <= comparisons; ++i) {
       expected = signal_rms[i] * (1.0 - mix)
-      diff = expected - record_rms[i + 1]
+      diff = expected - record_rms[i]
       if (diff < 0)
         diff = -diff
       if (diff > tolerance) {
         printf("validation failed: signal window %d expected record rms %.9f from source rms %.9f mix %.6f vs record window %d rms %.9f diff %.9f tolerance %.9f\n",
-               i, expected, signal_rms[i], mix, i + 1, record_rms[i + 1], diff, tolerance) > "/dev/stderr"
+               i, expected, signal_rms[i], mix, i, record_rms[i], diff, tolerance) > "/dev/stderr"
         exit 1
       }
     }
-    printf("validation passed: compared %d shifted window RMS values with mix %.6f tolerance %.6f\n",
-           comparisons, mix, tolerance)
+    printf("validation passed: compared %d same-window RMS values with mix %.6f tolerance %.6f\n",
+           comparisons - 1, mix, tolerance)
   }
 ' "${signal_windows}" "${record_windows}"
 
