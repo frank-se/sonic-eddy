@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using SonicEddy.Contracts.FilterGraph;
+using SonicEddy.Contracts.MidiSync;
 using SonicEddy.Contracts.Mixers;
 
 namespace SonicEddy.Services.AppData;
@@ -25,4 +26,8 @@ public interface IAppDataService
         Contracts.ApplicationPreferences.Preferences preferences);
 
     Task<Contracts.ApplicationPreferences.Preferences?> LoadPreferences();
+
+    Task StoreMidiSyncConfig(MidiSyncConfig config);
+
+    Task<MidiSyncConfig?> LoadMidiSyncConfig();
 }

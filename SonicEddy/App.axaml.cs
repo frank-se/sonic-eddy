@@ -11,6 +11,7 @@ using Serilog;
 using SonicEddy.Services.AppData;
 using SonicEddy.Services.Midi;
 using SonicEddy.Services.MidiRouter;
+using SonicEddy.Services.MidiSync;
 using SonicEddy.Services.MixerServiceV2;
 using SonicEddy.Services.MixerViewModels;
 using SonicEddy.Services.Monitoring;
@@ -128,6 +129,11 @@ public class App : Application
         var midiRouterService = new MidiRouterService();
         Locator.CurrentMutable.Register<IMidiRouterService>(() =>
             midiRouterService);
+
+        var midiSyncLinkService = new MidiSyncLinkService(appDataService);
+        Locator.CurrentMutable.Register<IMidiSyncLinkService>(() =>
+            midiSyncLinkService);
+        _ = midiSyncLinkService.InitializeAsync();
 
         var mixerViewModelServiceLogger =
             loggerFactory.CreateLogger<MixerViewModelService>();

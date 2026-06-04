@@ -8,6 +8,7 @@ namespace SonicEddy.ViewModels.MidiSyncViewModels;
 public sealed class MidiSyncPortViewModel(
     Port port,
     bool receivesSync,
+    bool existingLink,
     Action<MidiSyncPortViewModel>? syncChanged = null)
     : ViewModelBase
 {
@@ -29,5 +30,5 @@ public sealed class MidiSyncPortViewModel(
         }
     } = receivesSync;
 
-    public bool ExistingLink { get; set; } = receivesSync;
+    public bool ExistingLink { get; set; } = existingLink;
 }

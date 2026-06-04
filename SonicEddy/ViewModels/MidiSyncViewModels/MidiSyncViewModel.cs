@@ -1,16 +1,15 @@
 using System.Collections.ObjectModel;
-using System.Linq;
 using Avalonia.Threading;
-using Fr.Sonic;
-using Fr.Sonic.Model.Objects;
 using ReactiveUI;
+using SonicEddy.Services.MidiSync;
 using SonicEddy.ViewModels;
+using Splat;
 
 namespace SonicEddy.ViewModels.MidiSyncViewModels;
 
 public sealed class MidiSyncViewModel : ViewModelBase
 {
-    private const string MidiSyncNodeName = "se.midi_sync";
+    private readonly IMidiSyncLinkService? _midiSyncLinkService;
     private bool _refreshing;
 
     public ObservableCollection<MidiSyncPortViewModel> Ports { get; } = [];
@@ -22,7 +21,15 @@ public sealed class MidiSyncViewModel : ViewModelBase
     } = string.Empty;
 
     public MidiSyncViewModel()
+        : this(Locator.Current.GetService<IMidiSyncLinkService>())
     {
+    }
+
+    public MidiSyncViewModel(IMidiSyncLinkService? midiSyncLinkService)
+    {
+        _midiSyncLinkService = midiSyncLinkService;
+        if (_midiSyncLinkService is not null)
+            _midiSyncLinkService.Changed += OnMidiSyncLinksChanged;
         Refresh();
     }
 
@@ -31,31 +38,22 @@ public sealed class MidiSyncViewModel : ViewModelBase
         _refreshing = true;
         try
         {
-            var syncOutputPort = FindSyncOutputPort();
             Ports.Clear();
 
-            if (syncOutputPort is null)
+            if (_midiSyncLinkService is null)
             {
                 Status = "MIDI sync output is unavailable.";
                 return;
             }
 
-            var links = FrSonic.LinkRegistry.Objects
-                .Where(link => link.OutputPortId == syncOutputPort.ObjectId)
-                .ToList();
+            foreach (var port in _midiSyncLinkService.GetPorts())
+                Ports.Add(new(port.Port, port.ReceivesSync,
+                    port.ExistingLink, ApplyPort));
 
-            var inputPorts = FrSonic.PortRegistry.Objects
-                .Where(IsMidiInputPort)
-                .OrderBy(DisplayName);
-
-            foreach (var port in inputPorts)
-            {
-                var linked = links.Any(link => link.InputPortId == port.ObjectId);
-                Ports.Add(new(port, linked, ApplyPort));
-            }
-
-            Status = Ports.Count == 0
-                ? "No MIDI input ports available."
+            Status = !_midiSyncLinkService.IsSyncOutputAvailable
+                ? "MIDI sync output is unavailable."
+                : Ports.Count == 0
+                    ? "No MIDI input ports available."
                 : $"{Ports.Count} MIDI input ports available.";
         }
         finally
@@ -84,57 +82,15 @@ public sealed class MidiSyncViewModel : ViewModelBase
             port.ReceivesSync = false;
     }
 
-    private static Port? FindSyncOutputPort()
-    {
-        var syncNode = FrSonic.NodeRegistry.Objects
-            .FirstOrDefault(node => node.Name == MidiSyncNodeName);
-        if (syncNode is null)
-            return null;
-
-        return FrSonic.PortRegistry.Objects.FirstOrDefault(port =>
-            port.Node.Id == syncNode.ObjectId && port.Direction == "out");
-    }
-
-    private static bool IsMidiInputPort(Port port)
-    {
-        if (port.Direction != "in")
-            return false;
-
-        var node = FrSonic.NodeRegistry.GetByObjectId(port.Node.Id);
-        return node is { Media.Class: "Midi/Bridge" } &&
-               node.Name != MidiSyncNodeName;
-    }
-
-    private static string DisplayName(Port port) =>
-        port.Alias ?? port.Name ?? $"Port {port.ObjectId}";
-
     private void ApplyPort(MidiSyncPortViewModel port)
     {
-        if (_refreshing || port.ReceivesSync == port.ExistingLink)
+        if (_refreshing)
             return;
 
-        var syncOutputPort = FindSyncOutputPort();
-        if (syncOutputPort is null)
-        {
-            Status = "MIDI sync output is unavailable.";
-            port.ReceivesSync = port.ExistingLink;
-            return;
-        }
-
-        if (port.ReceivesSync)
-            FrSonic.LinkFactory.CreateLink(syncOutputPort, port.Port);
-        else
-            DeleteExistingLink(syncOutputPort, port.Port);
-
+        _midiSyncLinkService?.SetReceivesSync(port.Port, port.ReceivesSync);
         port.ExistingLink = port.ReceivesSync;
     }
 
-    private static void DeleteExistingLink(Port syncOutputPort, Port inputPort)
-    {
-        var link = FrSonic.LinkRegistry.Objects.FirstOrDefault(link =>
-            link.OutputPortId == syncOutputPort.ObjectId &&
-            link.InputPortId == inputPort.ObjectId);
-        if (link is not null)
-            FrSonic.LinkFactory.DeleteLink(link);
-    }
+    private void OnMidiSyncLinksChanged() =>
+        Dispatcher.UIThread.Post(Refresh);
 }
