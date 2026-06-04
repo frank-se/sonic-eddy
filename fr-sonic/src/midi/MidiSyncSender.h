@@ -36,12 +36,22 @@ private:
   sesync::TransportState _last_transport_state =
       sesync::TransportState::Stopped;
   std::optional<uint64_t> _last_emitted_tick;
+  std::optional<uint64_t> _last_process_nsec;
+  uint32_t _last_cycle_frames = 1024;
 
   void setup_stream();
-  void emit_due_messages(spa_pod_builder &builder, uint64_t now_nsec);
-  void emit_byte(spa_pod_builder &builder, uint8_t byte) const;
+  void emit_due_messages(spa_pod_builder &builder, uint64_t cycle_start_nsec,
+                         uint64_t cycle_end_nsec, uint32_t cycle_frames);
+  void emit_byte(spa_pod_builder &builder, uint32_t offset,
+                 uint8_t byte) const;
 
   [[nodiscard]] uint64_t now_nsec() const;
+  [[nodiscard]] uint32_t cycle_frames(const pw_buffer &buffer,
+                                      const pw_time &stream_time);
+  [[nodiscard]] uint32_t event_offset(uint64_t target_nsec,
+                                      uint64_t cycle_start_nsec,
+                                      uint64_t cycle_end_nsec,
+                                      uint32_t cycle_frames) const;
   [[nodiscard]] std::optional<uint64_t>
   tick_nsec(const sesync::SyncSnapshot &snapshot, uint64_t tick) const;
 

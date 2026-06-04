@@ -48,6 +48,8 @@ void midi::MidiSyncSender::stop() {
 
   _last_transport_state = sesync::TransportState::Stopped;
   _last_emitted_tick.reset();
+  _last_process_nsec.reset();
+  _last_cycle_frames = 1024;
 }
 
 void midi::MidiSyncSender::setup_stream() {
@@ -116,7 +118,22 @@ void midi::MidiSyncSender::process() {
 
   spa_pod_frame sequence_frame{};
   spa_pod_builder_push_sequence(&builder, &sequence_frame, 0);
-  emit_due_messages(builder, now_nsec());
+
+  pw_time stream_time{};
+  auto cycle_start_nsec = now_nsec();
+  uint32_t frames = _last_cycle_frames;
+  if (pw_stream_get_time_n(_stream, &stream_time, sizeof(stream_time)) >= 0 &&
+      stream_time.now > 0) {
+    cycle_start_nsec = static_cast<uint64_t>(stream_time.now);
+    frames = cycle_frames(*pipewire_buffer, stream_time);
+  }
+
+  const auto rate = stream_time.rate.denom == 0 ? 48'000u
+                                                : stream_time.rate.denom;
+  const auto cycle_end_nsec =
+      cycle_start_nsec +
+      (static_cast<uint64_t>(frames) * 1'000'000'000ull) / rate;
+  emit_due_messages(builder, cycle_start_nsec, cycle_end_nsec, frames);
   spa_pod_builder_pop(&builder, &sequence_frame);
 
   spa_data->chunk->size = builder.state.offset;
@@ -124,26 +141,28 @@ void midi::MidiSyncSender::process() {
 }
 
 void midi::MidiSyncSender::emit_due_messages(spa_pod_builder &builder,
-                                             const uint64_t now_nsec) {
+                                             const uint64_t cycle_start_nsec,
+                                             const uint64_t cycle_end_nsec,
+                                             const uint32_t cycle_frames) {
   const auto snapshot = _sync_client.snapshot();
   if (!snapshot)
     return;
 
-  const auto current_beat = snapshot->current_beat(now_nsec);
+  const auto current_beat = snapshot->current_beat(cycle_start_nsec);
   if (!current_beat)
     return;
 
   const auto state = snapshot->transport_state_at(current_beat->beat);
   if (state == sesync::TransportState::Stopped) {
     if (_last_transport_state != sesync::TransportState::Stopped)
-      emit_byte(builder, 0xfc);
+      emit_byte(builder, 0, 0xfc);
     _last_transport_state = state;
     _last_emitted_tick.reset();
     return;
   }
 
   if (_last_transport_state == sesync::TransportState::Stopped) {
-    emit_byte(builder, 0xfa);
+    emit_byte(builder, 0, 0xfa);
     const auto first_tick = current_beat->beat * PulsesPerBeat;
     _last_emitted_tick = first_tick == 0 ? std::nullopt
                                          : std::optional(first_tick - 1);
@@ -156,17 +175,20 @@ void midi::MidiSyncSender::emit_due_messages(spa_pod_builder &builder,
 
   for (uint32_t emitted = 0; emitted < 256; ++emitted, ++next_tick) {
     const auto target_nsec = tick_nsec(*snapshot, next_tick);
-    if (!target_nsec || *target_nsec > now_nsec)
+    if (!target_nsec || *target_nsec >= cycle_end_nsec)
       break;
 
-    emit_byte(builder, 0xf8);
+    const auto offset = event_offset(*target_nsec, cycle_start_nsec,
+                                     cycle_end_nsec, cycle_frames);
+    emit_byte(builder, offset, 0xf8);
     _last_emitted_tick = next_tick;
   }
 }
 
 void midi::MidiSyncSender::emit_byte(spa_pod_builder &builder,
+                                     const uint32_t offset,
                                      const uint8_t byte) const {
-  spa_pod_builder_control(&builder, 0, SPA_CONTROL_Midi);
+  spa_pod_builder_control(&builder, offset, SPA_CONTROL_Midi);
   spa_pod_builder_bytes(&builder, &byte, 1);
 }
 
@@ -174,6 +196,46 @@ uint64_t midi::MidiSyncSender::now_nsec() const {
   timespec ts{};
   clock_gettime(CLOCK_MONOTONIC, &ts);
   return timespec_to_nsec(ts);
+}
+
+uint32_t midi::MidiSyncSender::cycle_frames(const pw_buffer &buffer,
+                                           const pw_time &stream_time) {
+  if (buffer.requested > 0) {
+    _last_cycle_frames = buffer.requested;
+  } else if (_last_process_nsec && stream_time.now > 0 &&
+             static_cast<uint64_t>(stream_time.now) > *_last_process_nsec &&
+             stream_time.rate.denom > 0) {
+    const auto elapsed_nsec =
+        static_cast<uint64_t>(stream_time.now) - *_last_process_nsec;
+    const auto inferred_frames =
+        (elapsed_nsec * stream_time.rate.denom) / 1'000'000'000ull;
+    if (inferred_frames > 0)
+      _last_cycle_frames = static_cast<uint32_t>(
+          std::clamp<uint64_t>(inferred_frames, 1, 8192));
+  }
+
+  if (stream_time.now > 0)
+    _last_process_nsec = static_cast<uint64_t>(stream_time.now);
+
+  return _last_cycle_frames;
+}
+
+uint32_t midi::MidiSyncSender::event_offset(
+    const uint64_t target_nsec, const uint64_t cycle_start_nsec,
+    const uint64_t cycle_end_nsec, const uint32_t cycle_frames) const {
+  if (target_nsec <= cycle_start_nsec)
+    return 0;
+  if (target_nsec >= cycle_end_nsec)
+    return cycle_frames == 0 ? 0 : cycle_frames - 1;
+
+  const auto cycle_nsec = cycle_end_nsec - cycle_start_nsec;
+  if (cycle_nsec == 0 || cycle_frames == 0)
+    return 0;
+
+  const auto offset =
+      ((target_nsec - cycle_start_nsec) * cycle_frames) / cycle_nsec;
+  return static_cast<uint32_t>(
+      std::min<uint64_t>(offset, static_cast<uint64_t>(cycle_frames - 1)));
 }
 
 std::optional<uint64_t>
