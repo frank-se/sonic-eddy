@@ -12,6 +12,7 @@ namespace SonicEddy.ViewModels.SynchronizationViewModels;
 public sealed class SynchronizationViewModel : ViewModelBase, IDisposable
 {
     private const ulong BeatsPerBar = 4;
+    private const ulong StopLeadTimeBeats = 4;
     private readonly DispatcherTimer _timer;
     private readonly SyncClient? _syncClient;
 
@@ -104,8 +105,11 @@ public sealed class SynchronizationViewModel : ViewModelBase, IDisposable
     public void StartPlayback() =>
         ScheduleTransportState(SyncTransportState.Playing);
 
-    public void StopPlayback() =>
-        ScheduleTransportState(SyncTransportState.Stopped);
+    public void StopPlayback()
+    {
+        if (TryGetStopTargetBeat(out var target))
+            _syncClient?.ScheduleTransportState(target, SyncTransportState.Stopped);
+    }
 
     public void ApplyBpm()
     {
@@ -187,6 +191,19 @@ public sealed class SynchronizationViewModel : ViewModelBase, IDisposable
             SynchronizationApplyMode.CustomBeat => decimal.ToUInt64(CustomBeat),
             _ => NextBarBeat(beat)
         };
+        return true;
+    }
+
+    private bool TryGetStopTargetBeat(out ulong target)
+    {
+        if (!TryGetTargetBeat(out target))
+            return false;
+
+        var current = _syncClient?.Snapshot?.CurrentBeat(MonotonicClock.NowNsec());
+        if (current is null)
+            return false;
+
+        target = Math.Max(target, current.Value.Beat + StopLeadTimeBeats);
         return true;
     }
 

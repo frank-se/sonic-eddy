@@ -20,8 +20,6 @@
                     Command="{Binding SelectAll}" />
             <Button Content="Clear"
                     Command="{Binding Clear}" />
-            <Button Content="Apply"
-                    Command="{Binding Apply}" />
         </StackPanel>
 
         <TextBlock DockPanel.Dock="Bottom"
