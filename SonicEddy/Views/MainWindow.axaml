@@ -38,6 +38,14 @@
 
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="_File">
+                <MenuItem Header="_Save"
+                          Command="{Binding SaveMixer}" />
+                <MenuItem Header="Save _As ..."
+                          Command="{Binding SaveMixerAs}" />
+                <MenuItem Header="_Load ..."
+                          Command="{Binding LoadMixer}"
+                          IsEnabled="{Binding Transport.IsStopped}" />
+                <Separator />
                 <MenuItem Header="Preferences ..."
                           Command="{Binding ShowPreferencesWindow}" />
                 <Separator />

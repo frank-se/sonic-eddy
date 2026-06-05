@@ -1,12 +1,19 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Reactive.Disposables;
 using System.Reactive.Disposables.Fluent;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using Fr.Sonic.Modules.Models;
+using Fr.Sonic.Model.Params;
 using ReactiveUI;
 using SonicEddy.Controls.MixerControls;
+using SonicEddy.Contracts.FilterGraph;
+using SonicEddy.Contracts.Mixers;
+using SonicEddy.Services.AppData;
+using SonicEddy.Services.MixerServiceV2;
 using SonicEddy.Services.Monitoring;
 
 namespace SonicEddy.ViewModels.MixerViewModelsV2;
@@ -24,12 +31,17 @@ public class ReturnChannelViewModel : ReactiveObject, IReturnChannel,
 
     public ReturnChannelViewModel(string text, ICommand selectChannelCommand,
         LoopbackModule inputLoopback, LoopbackModule outbackLoopback,
-        FilterChain? filterChain, IMonitoringService monitoringService)
+        FilterChain? filterChain, FilterGraph? filterGraph,
+        IMonitoringService monitoringService, IAppDataService appDataService,
+        IMixerService mixerService)
     {
         Text = text;
         SelectChannelCommand = selectChannelCommand;
         _inputLoopback = inputLoopback;
         _outbackLoopback = outbackLoopback;
+        _appDataService = appDataService;
+        _mixerService = mixerService;
+        FilterGraph = filterGraph;
 
         this.WhenAnyValue(x => x.FilterChain)
             .Subscribe(chain =>
@@ -64,6 +76,72 @@ public class ReturnChannelViewModel : ReactiveObject, IReturnChannel,
     {
         get;
         set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
+    public FilterGraph? FilterGraph
+    {
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
+    private readonly IAppDataService _appDataService;
+    private readonly IMixerService _mixerService;
+
+    public async Task ApplyFilterConfigurationAsync(int layerId, int index,
+        FilterConfig? config)
+    {
+        if (config is null)
+        {
+            if (FilterChain is null) return;
+
+            await _mixerService.RemoveFilterFromReturnChannel(layerId, index);
+            FilterChain = null;
+            FilterGraph = null;
+            return;
+        }
+
+        var graph = await _appDataService.GetFilterGraph(config.FilterGraphId);
+        if (FilterGraph?.Id != graph.Id || FilterChain is null)
+        {
+            FilterChain = await _mixerService.AddFilterToReturnChannel(
+                layerId, index, graph);
+            FilterGraph = graph;
+        }
+
+        var node = FilterChain?.CaptureNode;
+        if (node is null) return;
+        foreach (var value in config.Values)
+            node.SetParam(value.FullyQualifiedName, value.Value);
+    }
+
+    public FilterConfig? CaptureFilterConfiguration() =>
+        FilterGraph is null
+            ? null
+            : new()
+            {
+                FilterGraphId = FilterGraph.Id,
+                Values = CaptureFilterValues()
+            };
+
+    private List<FilterChainPresetValue> CaptureFilterValues()
+    {
+        var values = Parameters?.SelectMany(collection =>
+                collection.Parameters)
+            .Select(parameter => new FilterChainPresetValue(
+                parameter.FullyQualifiedName, parameter.Value))
+            .ToList() ?? [];
+        if (values.Count > 0) return values;
+
+        if (FilterChain?.CaptureNode.Params is not
+            { IsCompletedSuccessfully: true } paramsTask ||
+            paramsTask.Result is null)
+            return [];
+
+        return paramsTask.Result.Values
+            .OfType<Parameter<float>>()
+            .Select(parameter => new FilterChainPresetValue(
+                parameter.Name, parameter.Value))
+            .ToList();
     }
 
     public string Text { get; }

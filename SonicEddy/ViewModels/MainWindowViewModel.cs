@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Fr.Sonic;
@@ -9,7 +10,9 @@ using ReactiveUI;
 using SonicEddy.Services.AppData;
 using SonicEddy.Services.Midi;
 using SonicEddy.Services.MixerServiceV2;
+using SonicEddy.Services.MixerPersistence;
 using SonicEddy.Services.TraktorZ1;
+using SonicEddy.Tools;
 using SonicEddy.Services.MixerViewModels;
 using SonicEddy.Services.Preferences;
 using SonicEddy.Services.VirtualInputs;
@@ -20,6 +23,7 @@ using SonicEddy.ViewModels.MetadataViewModels;
 using SonicEddy.ViewModels.MidiParameterChangeMonitorViewModels;
 using SonicEddy.ViewModels.MidiRouterViewModels;
 using SonicEddy.ViewModels.MixerViewModelsV2;
+using SonicEddy.ViewModels.MixerPersistenceViewModels;
 using SonicEddy.ViewModels.ModuleManagerViewModels;
 using SonicEddy.ViewModels.ObjectBrowserViewModels;
 using SonicEddy.ViewModels.PreferencesViewModels;
@@ -39,6 +43,7 @@ using SonicEddy.Views.ModuleManagerViews;
 using SonicEddy.Views.ObjectBrowserViews;
 using SonicEddy.Views.PreferencesViews;
 using SonicEddy.Views.MidiSyncViews;
+using SonicEddy.Views.MixerPersistenceViews;
 using SonicEddy.Views.SynchronizationViews;
 using SonicEddy.Views.MonitoringViews;
 using SonicEddy.Views.VirtualInputsViews;
@@ -111,6 +116,10 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     private Window? _synchronizationWindow;
     private Window? _midiSyncWindow;
     private Window? _midiRouterWindow;
+    private readonly SemaphoreSlim _layerInitializationLock = new(1, 1);
+    private GlobalMasterViewModel? _globalMasterViewModel;
+    private Guid _currentMixerId;
+    private string _currentMixerName = string.Empty;
 
     public bool IsInitialized
     {
@@ -383,24 +392,136 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
 
         if (_globalMasterWindow is not null && _globalMasterWindow.IsVisible) return;
 
-        var mixerService = Locator.Current.GetService<IMixerService>();
-        var globalMaster = mixerService?.CurrentMixer?.GlobalMaster;
-        if (globalMaster is null) return;
+        _ = ShowGlobalMasterWindowAsync();
+    }
 
-        var layerA = LayerAViewModel?.MasterChannels?.Count > 0
-            ? LayerAViewModel.MasterChannels[0] as MasterChannelViewModel
-            : null;
-        var layerB = LayerBViewModel?.MasterChannels?.Count > 0
-            ? LayerBViewModel.MasterChannels[0] as MasterChannelViewModel
-            : null;
-        if (layerA is null || layerB is null) return;
-
+    private async Task ShowGlobalMasterWindowAsync()
+    {
+        var viewModel = await EnsureGlobalMasterViewModelAsync();
+        if (viewModel is null) return;
         _globalMasterWindow = new GlobalMasterWindow
         {
-            DataContext = new GlobalMasterViewModel(globalMaster, layerA, layerB,
-                mixerService?.CurrentMixer?.Cue)
+            DataContext = viewModel
         };
         _globalMasterWindow.Show();
+    }
+
+    public async Task SaveMixer()
+    {
+        if (_currentMixerId == Guid.Empty)
+        {
+            await SaveMixerAs();
+            return;
+        }
+
+        await StoreMixerAsync(_currentMixerId, _currentMixerName);
+    }
+
+    public async Task SaveMixerAs()
+    {
+        var viewModel = new MixerNameDialogViewModel(_currentMixerName);
+        var dialog = new MixerNameDialog { DataContext = viewModel };
+        await dialog.ShowDialog(WindowTools.GetMainWindow()!);
+        if (!viewModel.DialogResult) return;
+
+        var id = Guid.NewGuid();
+        var name = viewModel.Name.Trim();
+        await StoreMixerAsync(id, name);
+        _currentMixerId = id;
+        _currentMixerName = name;
+    }
+
+    public async Task LoadMixer()
+    {
+        if (Transport.TransportState != Fr.Sonic.Sync.SyncTransportState.Stopped)
+            return;
+
+        var appDataService = Locator.Current.GetService<IAppDataService>();
+        var configurationService =
+            Locator.Current.GetService<MixerConfigurationService>();
+        if (appDataService is null || configurationService is null) return;
+
+        var mixers = await appDataService.GetAllMixers();
+        var viewModel = new LoadMixerDialogViewModel(mixers);
+        var dialog = new LoadMixerDialog { DataContext = viewModel };
+        await dialog.ShowDialog(WindowTools.GetMainWindow()!);
+        if (!viewModel.DialogResult || viewModel.SelectedMixer is null) return;
+
+        var globalMaster = await EnsureGlobalMasterViewModelAsync();
+        if (globalMaster is null || LayerAViewModel is null ||
+            LayerBViewModel is null)
+            return;
+
+        await configurationService.ApplyAsync(viewModel.SelectedMixer,
+            LayerAViewModel, LayerBViewModel, globalMaster);
+        _currentMixerId = viewModel.SelectedMixer.Id;
+        _currentMixerName = viewModel.SelectedMixer.Name;
+    }
+
+    private async Task StoreMixerAsync(Guid id, string name)
+    {
+        var globalMaster = await EnsureGlobalMasterViewModelAsync();
+        if (globalMaster is null || LayerAViewModel is null ||
+            LayerBViewModel is null)
+            return;
+
+        var appDataService = Locator.Current.GetService<IAppDataService>();
+        var configurationService =
+            Locator.Current.GetService<MixerConfigurationService>();
+        if (appDataService is null || configurationService is null) return;
+
+        var configuration = configurationService.Capture(id, name,
+            LayerAViewModel, LayerBViewModel, globalMaster);
+        await appDataService.CreateMixer(configuration);
+    }
+
+    private async Task<GlobalMasterViewModel?>
+        EnsureGlobalMasterViewModelAsync()
+    {
+        if (_globalMasterViewModel is not null)
+            return _globalMasterViewModel;
+
+        await EnsureLayerViewModelsAsync();
+        var mixerService = Locator.Current.GetService<IMixerService>();
+        var globalMaster = mixerService?.CurrentMixer?.GlobalMaster;
+        var layerA = LayerAViewModel?.MasterChannels?
+            .OfType<MasterChannelViewModel>().FirstOrDefault();
+        var layerB = LayerBViewModel?.MasterChannels?
+            .OfType<MasterChannelViewModel>().FirstOrDefault();
+        if (globalMaster is null || layerA is null || layerB is null)
+            return null;
+
+        _globalMasterViewModel = new(globalMaster, layerA, layerB,
+            mixerService?.CurrentMixer?.Cue);
+        return _globalMasterViewModel;
+    }
+
+    private async Task EnsureLayerViewModelsAsync()
+    {
+        await _layerInitializationLock.WaitAsync();
+        try
+        {
+            var mixerService = Locator.Current.GetService<IMixerService>();
+            var viewModelService =
+                Locator.Current.GetService<IMixerViewModelService>();
+            if (mixerService is null || viewModelService is null) return;
+            if (mixerService.CurrentMixer is null)
+                await CreateMixer();
+
+            LayerAViewModel ??=
+                await viewModelService.ConvertCurrentMixerToViewModel(0);
+            LayerBViewModel ??=
+                await viewModelService.ConvertCurrentMixerToViewModel(1);
+            if (LayerAViewModel is not null)
+            {
+                IsInitialized = true;
+                viewModelService.SetupControllers();
+            }
+        }
+        finally
+        {
+            _layerInitializationLock.Release();
+        }
     }
 
     public void ShowMonitoringWindow()
@@ -638,35 +759,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         MixerViewV2LayerAViewSelected = true;
         MixerViewV2LayerBViewSelected = false;
 
-        if (LayerAViewModel is not null)
-        {
-            _logger.LogTrace("Layer A model already exists, done!");
-            return;
-        }
-
-        var mixerService = Locator.Current.GetService<IMixerService>();
-
-        var mixerViewModelService =
-            Locator.Current.GetService<IMixerViewModelService>();
-
-        if (mixerService is null || mixerViewModelService is null) return;
-
-        if (mixerService.CurrentMixer is null)
-            await CreateMixer();
-
-        Avalonia.Threading.Dispatcher.UIThread.Post(async () =>
-        {
-            var mixerView =
-                await mixerViewModelService
-                    .ConvertCurrentMixerToViewModel(0);
-
-            if (mixerView is not null)
-            {
-                LayerAViewModel = mixerView;
-                IsInitialized = true;
-                mixerViewModelService.SetupControllers();
-            }
-        });
+        await EnsureLayerViewModelsAsync();
     }
 
     private static Task CreateMixer()
@@ -690,36 +783,15 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         MixerViewV2LayerAViewSelected = false;
         MixerViewV2LayerBViewSelected = true;
 
-        if (LayerBViewModel is not null)
-        {
-            _logger.LogTrace("Layer B model already exists, done!");
-            return;
-        }
-
-        var mixerService = Locator.Current.GetService<IMixerService>();
-
-        var mixerViewModelService =
-            Locator.Current.GetService<IMixerViewModelService>();
-
-        if (mixerService is null || mixerViewModelService is null) return;
-
-        if (mixerService.CurrentMixer is null)
-            await CreateMixer();
-
-        Avalonia.Threading.Dispatcher.UIThread.Post(async () =>
-        {
-            var mixerView =
-                await mixerViewModelService
-                    .ConvertCurrentMixerToViewModel(1);
-
-            if (mixerView is not null)
-                LayerBViewModel = mixerView;
-        });
+        await EnsureLayerViewModelsAsync();
     }
 
     public void Dispose()
     {
         Transport.Dispose();
+        _globalMasterViewModel?.Dispose();
+        Locator.Current.GetService<MixerConfigurationService>()?.Dispose();
+        _layerInitializationLock.Dispose();
         _midiControllerService.LayerChanged -= OnLayerSelected;
         _midiControllerService.FilterParamsSectionMovedRight -=
             OnMoveFilterParamsPageRight;

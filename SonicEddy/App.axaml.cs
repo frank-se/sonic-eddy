@@ -13,6 +13,7 @@ using SonicEddy.Services.Midi;
 using SonicEddy.Services.MidiRouter;
 using SonicEddy.Services.MidiSync;
 using SonicEddy.Services.MixerServiceV2;
+using SonicEddy.Services.MixerPersistence;
 using SonicEddy.Services.MixerViewModels;
 using SonicEddy.Services.Monitoring;
 using SonicEddy.Services.Preferences;
@@ -122,6 +123,10 @@ public class App : Application
         Locator.CurrentMutable
             .Register<IMixerService>(() =>
                 mixerServiceV2);
+
+        var mixerConfigurationService =
+            new MixerConfigurationService(wireplumberService);
+        Locator.CurrentMutable.Register(() => mixerConfigurationService);
 
         var monitoringLinkService = new MonitoringLinkService(mixerServiceV2);
         Locator.CurrentMutable.Register<IMonitoringLinkService>(() =>

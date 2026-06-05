@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Reactive.Disposables;
 using System.Reactive.Disposables.Fluent;
 using ReactiveUI;
@@ -20,6 +21,10 @@ public class CueChannelViewModel : ReactiveObject, IDisposable
         _playbackNode = cue.CrossFader.PlaybackNode;
         PanAndVolume = new PanAndVolumeViewModel(_playbackNode);
         AudioToRoutingTargets = audioToRoutingTargets;
+        SelectedAudioToRoutingTarget = audioToRoutingTargets.FirstOrDefault(
+            target => target.Channel is OutputChannelViewModel output &&
+                      output.CaptureNodeObjectSerial.ToString() ==
+                      _playbackNode.TargetObject);
 
         this.WhenAnyValue(x => x.SelectedAudioToRoutingTarget)
             .Subscribe(ApplyAudioRoutingTarget)

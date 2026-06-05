@@ -98,9 +98,9 @@ public class MasterChannelViewModel : ChannelViewModelBase, IMasterChannel
             { DialogResult: true, SelectedFilterGraph: not null })
             return;
 
+        FilterGraph = dialogViewModel.SelectedFilterGraph;
         FilterChain = await _mixerService.AddFilterToMasterChannel(
             _layerId, dialogViewModel.SelectedFilterGraph);
-        FilterGraph = dialogViewModel.SelectedFilterGraph;
     }
 
     protected override void ApplyAudioRoutingTarget(IRoutingTarget? routingTarget)

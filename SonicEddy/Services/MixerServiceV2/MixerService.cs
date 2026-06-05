@@ -513,6 +513,94 @@ public class MixerService : IMixerService, IDisposable
         return CurrentMixer.Layers[layerId].MasterChannel.FilterChain;
     }
 
+    public Task RemoveFilterFromChannelStrip(int layerId, ulong channelId) =>
+        ModifyLayer(layerId, layer =>
+            Task.FromResult(_editor.RemoveFilterFromChannelStrip(
+                layer, channelId)));
+
+    public Task RemoveFilterFromGroupChannel(int layerId, ulong channelId) =>
+        ModifyLayer(layerId, layer =>
+            Task.FromResult(_editor.RemoveFilterFromGroupChannel(
+                layer, channelId)));
+
+    public Task RemoveFilterFromMasterChannel(int layerId) =>
+        ModifyLayer(layerId, layer =>
+            Task.FromResult(_editor.RemoveFilterFromMasterChannel(layer)));
+
+    public async Task<FilterChain?> AddFilterToReturnChannel(int layerId,
+        int index, FilterGraph filterGraph)
+    {
+        await ModifyLayer(layerId, layer =>
+            _editor.AddFilterToReturnChannel(layer, index, filterGraph));
+        return CurrentMixer?.Layers[layerId].SendReturns[index].FilterChain;
+    }
+
+    public Task RemoveFilterFromReturnChannel(int layerId, int index) =>
+        ModifyLayer(layerId, layer =>
+            Task.FromResult(_editor.RemoveFilterFromReturnChannel(
+                layer, index)));
+
+    private async Task ModifyLayer(int layerId,
+        Func<MixerLayer, Task<MixerLayer>> update)
+    {
+        await _externalChange.WaitAsync();
+        try
+        {
+            lock (_isModifyingLock)
+                _isModifyingMixer = true;
+
+            try
+            {
+                if (CurrentMixer is null)
+                    throw new InvalidOperationException(
+                        "CurrentMixer is null");
+
+                await _internalChange.WaitAsync();
+                try
+                {
+                    CurrentMixer.Layers[layerId] =
+                        await update(CurrentMixer.Layers[layerId]);
+                    RegisterFilterNodes(CurrentMixer.Layers[layerId]);
+                }
+                finally
+                {
+                    _internalChange.Release();
+                }
+
+            }
+            finally
+            {
+                lock (_isModifyingLock)
+                    _isModifyingMixer = false;
+            }
+
+            await FinishPendingAddNodeEvents();
+        }
+        finally
+        {
+            _externalChange.Release();
+        }
+    }
+
+    private void RegisterFilterNodes(MixerLayer layer)
+    {
+        IEnumerable<FilterChain?> filters =
+        [
+            layer.MasterChannel.FilterChain,
+            .. layer.Channels.Select(channel => channel.FilterChain),
+            .. layer.GroupChannels.Select(channel => channel.FilterChain),
+            .. layer.SendReturns.Select(channel => channel.FilterChain)
+        ];
+
+        foreach (var filter in filters.OfType<FilterChain>())
+        {
+            if (!_myNodeIds.Contains(filter.CaptureNode.ObjectSerial))
+                _myNodeIds.Add(filter.CaptureNode.ObjectSerial);
+            if (!_myNodeIds.Contains(filter.PlaybackNode.ObjectSerial))
+                _myNodeIds.Add(filter.PlaybackNode.ObjectSerial);
+        }
+    }
+
     public event Action<List<InputChannel>>? InputsChanged;
     public event Action<List<OutputChannel>>? OutputsChanged;
 

@@ -29,6 +29,13 @@ public interface IMixerService
         int layerId,
         FilterGraph filterGraph);
 
+    Task RemoveFilterFromChannelStrip(int layerId, ulong channelId);
+    Task RemoveFilterFromGroupChannel(int layerId, ulong channelId);
+    Task RemoveFilterFromMasterChannel(int layerId);
+    Task<FilterChain?> AddFilterToReturnChannel(int layerId, int index,
+        FilterGraph filterGraph);
+    Task RemoveFilterFromReturnChannel(int layerId, int index);
+
     event Action<List<InputChannel>>? InputsChanged;
     event Action<List<OutputChannel>>? OutputsChanged;
 

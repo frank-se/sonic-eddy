@@ -61,6 +61,12 @@ public sealed class TransportToolbarViewModel : ViewModelBase, IDisposable
         private set => this.RaiseAndSetIfChanged(ref field, value);
     } = true;
 
+    public bool IsStopped
+    {
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
+    } = true;
+
     public string TransportStateText
     {
         get;
@@ -121,6 +127,7 @@ public sealed class TransportToolbarViewModel : ViewModelBase, IDisposable
             TransportState = SyncTransportState.Stopped;
             IsPlaying = false;
             IsNotPlaying = true;
+            IsStopped = true;
             TransportStateText = "Stopped";
             CurrentBarBeat = "-";
             return;
@@ -132,6 +139,7 @@ public sealed class TransportToolbarViewModel : ViewModelBase, IDisposable
         TransportState = state;
         IsPlaying = state == SyncTransportState.Playing;
         IsNotPlaying = state != SyncTransportState.Playing;
+        IsStopped = state == SyncTransportState.Stopped;
         TransportStateText = state switch
         {
             SyncTransportState.Playing => "Playing",

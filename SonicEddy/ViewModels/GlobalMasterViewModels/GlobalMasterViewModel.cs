@@ -26,12 +26,16 @@ public class GlobalMasterViewModel : ReactiveObject, IDisposable
 
         _xfadeNode = globalMaster.CrossFader.CaptureNode;
         _xfadeNode.ParamsChanged += OnXfadeParamsChanged;
+        if (_xfadeNode.Params.IsCompleted)
+            OnXfadeParamsChanged(_xfadeNode.Params.Result);
 
         if (cue is not null)
         {
             _cueNode = cue.CrossFader.CaptureNode;
             _cueNode.ParamsChanged += OnCueParamsChanged;
             CueChannel = new CueChannelViewModel(cue, layerA.AudioToRoutingTargets);
+            if (_cueNode.Params.IsCompleted)
+                OnCueParamsChanged(_cueNode.Params.Result);
         }
     }
 

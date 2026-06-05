@@ -226,7 +226,8 @@ public class MixerViewModelService(
         IRoutingTarget selectedAudioToRoutingTarget) =>
         new(channel.ChannelId, channel.Name,
             selectedChannelCommand, channel.InputLoopback,
-            channel.OutputLoopback, channel.SendLoopbacks, null, null,
+            channel.OutputLoopback, channel.SendLoopbacks,
+            channel.FilterChain, channel.FilterGraph,
             audioToRoutingTargets, selectedAudioToRoutingTarget, appDataService,
             mixerService, channel, monitoringService, layerId,
             controllerSetupService);
@@ -266,7 +267,8 @@ public class MixerViewModelService(
         ICommand selectChannelCommand) =>
         new(channel.Name, selectChannelCommand,
             channel.InputLoopback, channel.OutputLoopback, channel.FilterChain,
-            monitoringService);
+            channel.FilterGraph, monitoringService, appDataService,
+            mixerService);
 
     public OutputChannelViewModel
         ConvertOutputChannel(OutputChannel channel,

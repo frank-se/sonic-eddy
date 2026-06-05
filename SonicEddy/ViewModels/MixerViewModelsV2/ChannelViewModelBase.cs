@@ -12,6 +12,7 @@ using Fr.Sonic.PInvoke;
 using Fr.Sonic.Modules.Models;
 using ReactiveUI;
 using SonicEddy.Contracts.FilterGraph;
+using SonicEddy.Contracts.Mixers;
 using SonicEddy.Controls.MixerControls;
 using SonicEddy.Services.AppData;
 using SonicEddy.Services.Midi;
@@ -235,6 +236,7 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
 
     public TwoNodePipewireModule InputLoopback => _inputLoopback;
     public TwoNodePipewireModule OutputLoopback => _outputLoopback;
+    public string InputNodeName => _inputLoopback.CaptureNode.Name ?? string.Empty;
     protected readonly IAppDataService _appDataService;
     protected readonly IMixerService _mixerService;
     private readonly IMidiControllerSetupService _midiSetupService;
@@ -308,6 +310,7 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
             { DialogResult: true, SelectedFilterGraph: not null })
             return;
 
+        FilterGraph = dialogViewModel.SelectedFilterGraph;
         if (_channelType == ChannelType.GroupChannel)
         {
             FilterChain = await _mixerService.AddFilterToGroupChannel(
@@ -320,11 +323,81 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
             FilterChain = channelStrip.FilterChain;
         }
 
-        FilterGraph = dialogViewModel.SelectedFilterGraph;
     }
 
     public void DeleteFilterAction()
     {
+    }
+
+    public async Task ApplyFilterConfigurationAsync(FilterConfig? config)
+    {
+        if (config is null)
+        {
+            if (FilterChain is null) return;
+
+            if (this is MasterChannelViewModel)
+                await _mixerService.RemoveFilterFromMasterChannel(_layerId);
+            else if (_channelType == ChannelType.GroupChannel)
+                await _mixerService.RemoveFilterFromGroupChannel(
+                    _layerId, ChannelId);
+            else
+                await _mixerService.RemoveFilterFromChannelStrip(
+                    _layerId, ChannelId);
+
+            FilterChain = null;
+            FilterGraph = null;
+            return;
+        }
+
+        var graph = await _appDataService.GetFilterGraph(config.FilterGraphId);
+        if (FilterGraph?.Id != graph.Id || FilterChain is null)
+        {
+            FilterGraph = graph;
+            if (this is MasterChannelViewModel)
+                FilterChain = await _mixerService.AddFilterToMasterChannel(
+                    _layerId, graph);
+            else if (_channelType == ChannelType.GroupChannel)
+                FilterChain = await _mixerService.AddFilterToGroupChannel(
+                    _layerId, ChannelId, graph);
+            else
+                FilterChain = (await _mixerService.AddFilterToChannelStrip(
+                    _layerId, ChannelId, graph)).FilterChain;
+        }
+
+        var node = FilterChain?.CaptureNode;
+        if (node is null) return;
+        foreach (var value in config.Values)
+            node.SetParam(value.FullyQualifiedName, value.Value);
+    }
+
+    public FilterConfig? CaptureFilterConfiguration() =>
+        FilterGraph is null
+            ? null
+            : new()
+            {
+                FilterGraphId = FilterGraph.Id,
+                Values = CaptureFilterValues()
+            };
+
+    private List<FilterChainPresetValue> CaptureFilterValues()
+    {
+        var values = Parameters?.SelectMany(collection =>
+                collection.Parameters)
+            .Select(parameter => new FilterChainPresetValue(
+                parameter.FullyQualifiedName, parameter.Value))
+            .ToList() ?? [];
+        if (values.Count > 0) return values;
+
+        if (FilterChain?.CaptureNode.Params is not
+            { IsCompletedSuccessfully: true } paramsTask ||
+            paramsTask.Result is null)
+            return [];
+
+        return paramsTask.Result.Values
+            .OfType<Fr.Sonic.Model.Params.Parameter<float>>()
+            .Select(parameter => new FilterChainPresetValue(
+                parameter.Name, parameter.Value))
+            .ToList();
     }
 
     public ObservableCollection<IParameter>? FirstPluginParameters { get; } =

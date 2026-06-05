@@ -77,6 +77,7 @@ public class MixerEditor(IWireplumberService wireplumberService)
                 .ObjectSerial.ToString());
         }
 
+        var oldFilter = channel.FilterChain;
         var newChannel = channel with
         {
             FilterChain = filterChain,
@@ -86,6 +87,7 @@ public class MixerEditor(IWireplumberService wireplumberService)
         var newList = mixerLayer.Channels.Select(c =>
             c.ChannelId == channelId ? newChannel : c).ToList();
 
+        oldFilter?.Destroy();
         return mixerLayer with
         {
             Channels = newList
@@ -150,11 +152,17 @@ public class MixerEditor(IWireplumberService wireplumberService)
                 .ObjectSerial.ToString());
         }
 
-        var newChannel = channel with { FilterChain = filterChain };
+        var oldFilter = channel.FilterChain;
+        var newChannel = channel with
+        {
+            FilterChain = filterChain,
+            FilterGraph = filterGraph
+        };
 
         var newList = mixerLayer.GroupChannels.Select(c =>
             c.ChannelId == channelId ? newChannel : c).ToList();
 
+        oldFilter?.Destroy();
         return mixerLayer with { GroupChannels = newList };
     }
 
@@ -205,13 +213,142 @@ public class MixerEditor(IWireplumberService wireplumberService)
         channel.OutputLoopback.CaptureNode.OverrideTargetObject(
             filterChain.PlaybackNode.ObjectSerial.ToString());
 
+        var oldFilter = channel.FilterChain;
         var newMaster = channel with
         {
             FilterChain = filterChain,
             FilterGraph = filterGraph
         };
 
+        oldFilter?.Destroy();
         return mixerLayer with { MasterChannel = newMaster };
+    }
+
+    public MixerLayer RemoveFilterFromChannelStrip(MixerLayer mixerLayer,
+        ulong channelId)
+    {
+        var channel = mixerLayer.Channels.First(c => c.ChannelId == channelId);
+        if (channel.FilterChain is null) return mixerLayer;
+
+        channel.PreFxLooper.PlaybackNode.OverrideTargetObject(
+            channel.OutputLoopback.CaptureNode.ObjectSerial.ToString());
+        channel.OutputLoopback.CaptureNode.OverrideTargetObject(
+            channel.PreFxLooper.PlaybackNode.ObjectSerial.ToString());
+        foreach (var send in channel.SendLoopbacks)
+            send.CaptureNode.OverrideTargetObject(
+                channel.PreFxLooper.PlaybackNode.ObjectSerial.ToString());
+
+        channel.FilterChain.Destroy();
+        var replacement = channel with { FilterChain = null, FilterGraph = null };
+        return mixerLayer with
+        {
+            Channels = mixerLayer.Channels.Select(candidate =>
+                candidate.ChannelId == channelId ? replacement : candidate)
+                .ToList()
+        };
+    }
+
+    public MixerLayer RemoveFilterFromGroupChannel(MixerLayer mixerLayer,
+        ulong channelId)
+    {
+        var channel =
+            mixerLayer.GroupChannels.First(c => c.ChannelId == channelId);
+        if (channel.FilterChain is null) return mixerLayer;
+
+        channel.PreFxLooper.PlaybackNode.OverrideTargetObject(
+            channel.OutputLoopback.CaptureNode.ObjectSerial.ToString());
+        channel.OutputLoopback.CaptureNode.OverrideTargetObject(
+            channel.PreFxLooper.PlaybackNode.ObjectSerial.ToString());
+        foreach (var send in channel.SendLoopbacks)
+            send.CaptureNode.OverrideTargetObject(
+                channel.PreFxLooper.PlaybackNode.ObjectSerial.ToString());
+
+        channel.FilterChain.Destroy();
+        var replacement = channel with { FilterChain = null, FilterGraph = null };
+        return mixerLayer with
+        {
+            GroupChannels = mixerLayer.GroupChannels.Select(candidate =>
+                candidate.ChannelId == channelId ? replacement : candidate)
+                .ToList()
+        };
+    }
+
+    public MixerLayer RemoveFilterFromMasterChannel(MixerLayer mixerLayer)
+    {
+        var channel = mixerLayer.MasterChannel;
+        if (channel.FilterChain is null) return mixerLayer;
+
+        channel.PreFxLooper.PlaybackNode.OverrideTargetObject(
+            channel.OutputLoopback.CaptureNode.ObjectSerial.ToString());
+        channel.OutputLoopback.CaptureNode.OverrideTargetObject(
+            channel.PreFxLooper.PlaybackNode.ObjectSerial.ToString());
+        channel.FilterChain.Destroy();
+        return mixerLayer with
+        {
+            MasterChannel =
+                channel with { FilterChain = null, FilterGraph = null }
+        };
+    }
+
+    public async Task<MixerLayer> AddFilterToReturnChannel(
+        MixerLayer mixerLayer, int index, FilterGraph filterGraph)
+    {
+        var channel = mixerLayer.SendReturns[index];
+        var filterChain = await Fr.Sonic.FrSonic.ModuleFactory
+            .CreateFilterChainAsync($"mixer-fc-return-{index}", new()
+            {
+                CaptureProps = new()
+                {
+                    Name = $"mixer-fc-return-{index}-capture",
+                    Linger = true,
+                    AutoConnect = true,
+                    DontFallback = true,
+                    TargetObject = channel.InputLoopback.PlaybackNode
+                        .ObjectSerial.ToString(),
+                    MediaClass = "Stream/Input/Audio",
+                    AudioPosition = ["FL", "FR"]
+                },
+                PlaybackProps = new()
+                {
+                    Name = $"mixer-fc-return-{index}-playback",
+                    Linger = true,
+                    AutoConnect = true,
+                    DontFallback = true,
+                    TargetObject = channel.OutputLoopback.CaptureNode
+                        .ObjectSerial.ToString(),
+                    MediaClass = "Stream/Output/Audio",
+                    AudioPosition = ["FL", "FR"]
+                },
+                FilterGraph = filterGraph.ToFilterGraphConfig()
+            });
+
+        channel.OutputLoopback.CaptureNode.OverrideTargetObject(
+            filterChain.PlaybackNode.ObjectSerial.ToString());
+        var oldFilter = channel.FilterChain;
+        var replacement = channel with
+        {
+            FilterChain = filterChain,
+            FilterGraph = filterGraph
+        };
+        oldFilter?.Destroy();
+        var returns = mixerLayer.SendReturns.ToList();
+        returns[index] = replacement;
+        return mixerLayer with { SendReturns = returns };
+    }
+
+    public MixerLayer RemoveFilterFromReturnChannel(MixerLayer mixerLayer,
+        int index)
+    {
+        var channel = mixerLayer.SendReturns[index];
+        if (channel.FilterChain is null) return mixerLayer;
+
+        channel.OutputLoopback.CaptureNode.OverrideTargetObject(
+            channel.InputLoopback.PlaybackNode.ObjectSerial.ToString());
+        channel.FilterChain.Destroy();
+        var returns = mixerLayer.SendReturns.ToList();
+        returns[index] =
+            channel with { FilterChain = null, FilterGraph = null };
+        return mixerLayer with { SendReturns = returns };
     }
 
     public async Task<FilterChain> CreateGlobalMasterFilterChain(
@@ -515,6 +652,7 @@ public class MixerEditor(IWireplumberService wireplumberService)
             preFxLooper,
             preFxLooper,
             null,
+            null,
             postFxLooper,
             sendLoopbacks,
             masterChannel.InputLoopback.CaptureNode,
@@ -575,6 +713,7 @@ public class MixerEditor(IWireplumberService wireplumberService)
         return new(
             $"Return {sendId}",
             inputLoopback,
+            null,
             null,
             outputLoopback);
     }
