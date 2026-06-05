@@ -180,6 +180,8 @@ public sealed class ClickSyncService : IClickSyncService, IDisposable
         ApplyConfiguredLinks();
         _ = StoreConfigAsync();
         Changed?.Invoke();
+        _ = StoreConfigAsync();
+        Changed?.Invoke();
     }
 
     private async Task ApplyConfiguredConvertersAsync()
@@ -253,12 +255,27 @@ public sealed class ClickSyncService : IClickSyncService, IDisposable
         IEnumerable<ClickSyncTargetPortConfig> targets)
     {
         if (source is null) return;
-        foreach (var target in targets)
+
+        var targetPorts = targets
+            .Select(target =>
+                FrSonic.PortRegistry.Objects.FirstOrDefault(candidate =>
+                    IsAudioInputPort(candidate) &&
+                    Matches(candidate, target)))
+            .OfType<Port>()
+            .ToArray();
+        var targetPortIds = targetPorts
+            .Select(port => port.ObjectId)
+            .ToHashSet();
+
+        foreach (var link in FrSonic.LinkRegistry.Objects.Where(link =>
+                     link.OutputPortId == source.ObjectId &&
+                     !targetPortIds.Contains(link.InputPortId)).ToList())
+            FrSonic.LinkFactory.DeleteLink(link);
+
+        foreach (var port in targetPorts)
         {
-            var port = FrSonic.PortRegistry.Objects.FirstOrDefault(candidate =>
-                IsAudioInputPort(candidate) && Matches(candidate, target));
-            if (port is null || HasLink(source, port)) continue;
-            FrSonic.LinkFactory.CreateLink(source, port);
+            if (!HasLink(source, port))
+                FrSonic.LinkFactory.CreateLink(source, port);
         }
     }
 
@@ -337,6 +354,9 @@ public sealed class ClickSyncService : IClickSyncService, IDisposable
         if (port.Direction != "in") return false;
         var node = FrSonic.NodeRegistry.GetByObjectId(port.Node.Id);
         return node is { Media.Class: "Audio/Sink" or "Stream/Input/Audio" } &&
+               string.IsNullOrEmpty(node.Pmx.Tag) &&
+               !(port.Name?.StartsWith("monitor",
+                   StringComparison.OrdinalIgnoreCase) ?? false) &&
                !(node.Name?.StartsWith("se.click_sync.",
                    StringComparison.Ordinal) ?? false);
     }

@@ -21,13 +21,13 @@
           RowSpacing="12">
         <Grid Grid.Row="0"
               Grid.ColumnSpan="2"
-              ColumnDefinitions="2*,Auto,Auto,Auto,Auto,Auto"
+              ColumnDefinitions="240,Auto,Auto,Auto,Auto,Auto"
               ColumnSpacing="8">
             <TextBox Grid.Column="0"
                      PlaceholderText="Converter name"
                      Text="{Binding NewName}" />
             <NumericUpDown Grid.Column="1"
-                           Width="90"
+                           Width="140"
                            Minimum="1"
                            Maximum="96"
                            Increment="1"
@@ -37,7 +37,7 @@
                        VerticalAlignment="Center"
                        Text="PPQN" />
             <NumericUpDown Grid.Column="3"
-                           Width="100"
+                           Width="140"
                            Minimum="0.1"
                            Maximum="20"
                            Increment="0.1"

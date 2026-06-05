@@ -81,7 +81,8 @@ bool sesync::ClickSyncConverter::setup_output(Output &output) {
       PW_KEY_MEDIA_ROLE, "DSP", PW_KEY_MEDIA_CLASS, "Stream/Output/Audio",
       PW_KEY_NODE_NAME, name.c_str(), PW_KEY_NODE_DESCRIPTION,
       node_description.c_str(), "se.role", purpose, "pmx.purpose", purpose,
-      "node.linger", "true", "node.passive", "false", nullptr);
+      "node.linger", "true", "node.passive", "false",
+      PW_KEY_NODE_ALWAYS_PROCESS, "true", nullptr);
   if (!_config.tag.empty())
     pw_properties_set(properties, "pmx.tag", _config.tag.c_str());
 
