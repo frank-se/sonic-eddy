@@ -326,65 +326,74 @@ void frsonic_stop() {
     for (auto &looper : g_loopers)
       if (looper) looper->stop_copy_thread();
 
-    logging::log<logging::LogLevel::Trace>("frsonic_stop: stopping loopers");
-    for (auto &looper : g_loopers)
-      if (looper) looper->stop();
-    logging::log<logging::LogLevel::Trace>("frsonic_stop: loopers stopped");
-    for (auto &converter : g_click_sync_converters)
-      if (converter) converter->stop();
+    // Phase 2 — pause the loop and destroy every object owned by this runtime.
+    // All background threads are joined, and Looper::stop no longer performs
+    // a nested blocking invoke while the loop lock is held.
+    auto cleanup_owned_objects = [] {
+      logging::log<logging::LogLevel::Trace>("frsonic_stop: stopping loopers");
+      for (auto &looper : g_loopers)
+        if (looper) looper->stop();
+      logging::log<logging::LogLevel::Trace>("frsonic_stop: loopers stopped");
+      g_loopers.clear();
+      g_free_looper_handles.clear();
+      logging::log<logging::LogLevel::Trace>("frsonic_stop: loopers done");
 
-    // Phase 2 — with the PW loop paused under pw_thread_loop_lock, do all
-    // remaining PW-object cleanup from the main thread.  Looper stream
-    // destruction happens before the lock because pw_stream_destroy can wait
-    // for loop-thread work during shutdown.
+      for (auto &converter : g_click_sync_converters)
+        if (converter) converter->stop();
+      g_click_sync_converters.clear();
+      g_free_click_sync_converter_handles.clear();
+      logging::log<logging::LogLevel::Trace>(
+          "frsonic_stop: click sync converters done");
+
+      logging::log<logging::LogLevel::Trace>(
+          "frsonic_stop: stopping manipulators");
+      for (auto &manipulator : g_midi_manipulators)
+        if (manipulator) manipulator->stop();
+      g_midi_manipulators.clear();
+      logging::log<logging::LogLevel::Trace>(
+          "frsonic_stop: manipulators done");
+
+      if (g_midi_sync_sender) {
+        g_midi_sync_sender->stop();
+        g_midi_sync_sender = nullptr;
+      }
+      logging::log<logging::LogLevel::Trace>(
+          "frsonic_stop: midi sync sender done");
+
+      if (g_sync_client) {
+        logging::log<logging::LogLevel::Trace>(
+            "frsonic_stop: stopping sync client");
+        g_sync_client->stop();
+        logging::log<logging::LogLevel::Trace>(
+            "frsonic_stop: sync client stopped");
+        g_sync_client = nullptr;
+        logging::log<logging::LogLevel::Trace>(
+            "frsonic_stop: sync client released");
+      }
+      if (g_sync_master) {
+        g_sync_master->stop();
+        logging::log<logging::LogLevel::Trace>(
+            "frsonic_stop: sync master stop() returned");
+        g_sync_master = nullptr;
+        logging::log<logging::LogLevel::Trace>(
+            "frsonic_stop: sync master released");
+      }
+
+      // The monitor thread is already stopped. Receiver/Sender destructors
+      // owned by Processor destroy their streams on this loop thread.
+      logging::log<logging::LogLevel::Trace>(
+          "frsonic_stop: releasing monitor");
+      g_monitor = nullptr;
+      logging::log<logging::LogLevel::Trace>(
+          "frsonic_stop: releasing midi processor");
+      g_midi = nullptr;
+      logging::log<logging::LogLevel::Trace>(
+          "frsonic_stop: midi processor released");
+    };
     logging::log<logging::LogLevel::Trace>("frsonic_stop: acquiring loop lock");
     pw_thread_loop_lock(g_owned_pipewire->thread_loop());
     logging::log<logging::LogLevel::Trace>("frsonic_stop: loop lock acquired");
-
-    g_loopers.clear();
-    g_free_looper_handles.clear();
-    logging::log<logging::LogLevel::Trace>("frsonic_stop: loopers done");
-
-    g_click_sync_converters.clear();
-    g_free_click_sync_converter_handles.clear();
-    logging::log<logging::LogLevel::Trace>(
-        "frsonic_stop: click sync converters done");
-
-    logging::log<logging::LogLevel::Trace>("frsonic_stop: stopping manipulators");
-    for (auto &manipulator : g_midi_manipulators)
-      if (manipulator) manipulator->stop();
-    g_midi_manipulators.clear();
-    logging::log<logging::LogLevel::Trace>("frsonic_stop: manipulators done");
-
-    if (g_midi_sync_sender) {
-      g_midi_sync_sender->stop();
-      g_midi_sync_sender = nullptr;
-    }
-    logging::log<logging::LogLevel::Trace>("frsonic_stop: midi sync sender done");
-
-    if (g_sync_client) {
-      logging::log<logging::LogLevel::Trace>("frsonic_stop: stopping sync client");
-      g_sync_client->stop();
-      logging::log<logging::LogLevel::Trace>("frsonic_stop: sync client stopped");
-      g_sync_client = nullptr;
-      logging::log<logging::LogLevel::Trace>("frsonic_stop: sync client released");
-    }
-    if (g_sync_master) {
-      g_sync_master->stop();
-      logging::log<logging::LogLevel::Trace>("frsonic_stop: sync master stop() returned");
-      g_sync_master = nullptr;
-      logging::log<logging::LogLevel::Trace>("frsonic_stop: sync master released");
-    }
-    // g_monitor thread already stopped; destructor has no PW ops.
-    logging::log<logging::LogLevel::Trace>("frsonic_stop: releasing monitor");
-    if (g_monitor)
-      g_monitor = nullptr;
-    logging::log<logging::LogLevel::Trace>("frsonic_stop: releasing midi processor");
-    // Receiver/Sender destructors call pw_stream_destroy — safe under lock.
-    if (g_midi)
-      g_midi = nullptr;
-    logging::log<logging::LogLevel::Trace>("frsonic_stop: midi processor released");
-
+    cleanup_owned_objects();
     logging::log<logging::LogLevel::Trace>("frsonic_stop: releasing loop lock");
     pw_thread_loop_unlock(g_owned_pipewire->thread_loop());
     logging::log<logging::LogLevel::Trace>("frsonic_stop: loop lock released");
