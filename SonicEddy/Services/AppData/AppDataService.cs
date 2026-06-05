@@ -8,6 +8,7 @@ using SonicEddy.Contracts.FilterGraph;
 using SonicEddy.Contracts.MidiRouter;
 using SonicEddy.Contracts.MidiSync;
 using SonicEddy.Contracts.Mixers;
+using SonicEddy.Contracts.VirtualInputs;
 
 namespace SonicEddy.Services.AppData;
 
@@ -117,5 +118,25 @@ public class AppDataService(
         var bytes = await File.ReadAllBytesAsync(filePath);
         using var memoryStream = new MemoryStream(bytes);
         return Serializer.Deserialize<MidiRouterConfig>(memoryStream);
+    }
+
+    public async Task StoreVirtualInputsConfig(VirtualInputsConfig config)
+    {
+        var filePath =
+            Path.Combine(preferencesFolderPath, "virtual-inputs.grpc");
+        await using var file = File.Create(filePath);
+        Serializer.Serialize(file, config);
+        await file.FlushAsync();
+    }
+
+    public async Task<VirtualInputsConfig?> LoadVirtualInputsConfig()
+    {
+        var filePath =
+            Path.Combine(preferencesFolderPath, "virtual-inputs.grpc");
+        if (!File.Exists(filePath)) return null;
+
+        var bytes = await File.ReadAllBytesAsync(filePath);
+        using var memoryStream = new MemoryStream(bytes);
+        return Serializer.Deserialize<VirtualInputsConfig>(memoryStream);
     }
 }

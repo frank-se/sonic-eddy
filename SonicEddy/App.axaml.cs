@@ -100,6 +100,7 @@ public class App : Application
             new VirtualInputService(appDataService, wireplumberService);
         Locator.CurrentMutable.Register<IVirtualInputService>(() =>
             virtualInputService);
+        _ = virtualInputService.InitializeAsync();
 
         var monitoringService = new MonitoringService(FrSonic.Monitor,
             loggerFactory.CreateLogger<MonitoringService>());

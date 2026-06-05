@@ -9,6 +9,8 @@ public interface IVirtualInputService
 {
     List<VirtualInput> VirtualInputs { get; }
 
+    Task InitializeAsync();
+
     Task AddVirtualInput(string name, Node node, Port[] ports);
 
     event Action<VirtualInput>? Added;

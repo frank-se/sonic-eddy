@@ -5,6 +5,7 @@ using SonicEddy.Contracts.FilterGraph;
 using SonicEddy.Contracts.MidiRouter;
 using SonicEddy.Contracts.MidiSync;
 using SonicEddy.Contracts.Mixers;
+using SonicEddy.Contracts.VirtualInputs;
 
 namespace SonicEddy.Services.AppData;
 
@@ -35,4 +36,8 @@ public interface IAppDataService
     Task StoreMidiRouterConfig(MidiRouterConfig config);
 
     Task<MidiRouterConfig?> LoadMidiRouterConfig();
+
+    Task StoreVirtualInputsConfig(VirtualInputsConfig config);
+
+    Task<VirtualInputsConfig?> LoadVirtualInputsConfig();
 }
