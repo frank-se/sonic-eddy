@@ -12,6 +12,7 @@ using SonicEddy.Services.AppData;
 using SonicEddy.Services.Midi;
 using SonicEddy.Services.MidiRouter;
 using SonicEddy.Services.MidiSync;
+using SonicEddy.Services.ClickSync;
 using SonicEddy.Services.MixerServiceV2;
 using SonicEddy.Services.MixerPersistence;
 using SonicEddy.Services.MixerViewModels;
@@ -148,6 +149,11 @@ public class App : Application
         Locator.CurrentMutable.Register<IMidiSyncLinkService>(() =>
             midiSyncLinkService);
         _ = midiSyncLinkService.InitializeAsync();
+
+        var clickSyncService = new ClickSyncService(appDataService);
+        Locator.CurrentMutable.Register<IClickSyncService>(() =>
+            clickSyncService);
+        _ = clickSyncService.InitializeAsync();
 
         var mixerViewModelServiceLogger =
             loggerFactory.CreateLogger<MixerViewModelService>();

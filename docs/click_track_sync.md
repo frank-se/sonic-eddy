@@ -8,8 +8,8 @@ that ppqn can be defined per click track converter, while it is given for midi.
 
 ## The click track converter
 
-The click track converter creates two playback nodes with mono outputs. The
-first node, she click node, plays a click track, it creates short audio pulses a
+The click track converter creates three playback nodes with mono outputs. The
+first node, the click node, plays a click track, it creates short audio pulses
 every beat, or configured interval.
 
 It has a `pulses_per_quarter_note` setting, which defines how the click track is
@@ -23,6 +23,11 @@ Changing these settings requires creating a new converter.
 The click track is produced when the transport is running.
 
 The second output creates a reset signal, a single pulse, when playback starts.
+
+The third output creates a run signal. It is high at the configured pulse
+amplitude while the transport is `start_scheduled` at or after the scheduled
+start beat, or `playing`, and low while the transport is stopped. Scheduled
+start and stop transitions occur at their scheduled beat sample.
 
 ## Timing and transport
 
@@ -86,15 +91,17 @@ manually, in order to be able to share click tracks. We add a click sync UI that
 allows creation of click track converters with different settings, and lets us
 select the capture ports to which this should be connected.
 
-The connections for both nodes need to be freely selectable.
+The connections for all three nodes need to be freely selectable.
 
 Each converter output supports independent fan-out:
 
 - The click output can connect to zero or more capture ports.
 - The reset output can connect to zero or more capture ports.
+- The run output can connect to zero or more capture ports.
 
-The same converter can therefore share one generated click/reset signal with
-multiple external devices. Click and reset target sets are managed separately.
+The same converter can therefore share its generated click, reset, and run
+signals with multiple external devices. All three target sets are managed
+separately.
 
 ## Node identity
 
@@ -103,9 +110,10 @@ Each converter uses its stable converter ID in its PipeWire node names:
 ```text
 se.click_sync.<converter-id>.click
 se.click_sync.<converter-id>.reset
+se.click_sync.<converter-id>.run
 ```
 
-Both nodes expose one mono output port. Their display names may use the
+All three nodes expose one mono output port. Their display names may use the
 converter's user-facing name, but discovery and connection management use the
 stable node names above.
 
@@ -123,6 +131,7 @@ For each converter, persist:
 - Pulse amplitude
 - Click-output target ports
 - Reset-output target ports
+- Run-output target ports
 
 Target ports are identified by stable node name plus port name and alias, not by
 PipeWire object ID or object serial. If a configured port is unavailable, retain

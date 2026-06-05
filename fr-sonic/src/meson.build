@@ -56,6 +56,7 @@ libfrsonic = shared_library(
         # Sync subsystem
         'sync/SyncMaster.cpp',
         'sync/SyncClient.cpp',
+        'sync/ClickSyncConverter.cpp',
         # Silence producers
         'silence/SilenceProducer.cpp',
         # Looper subsystem

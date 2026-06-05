@@ -12,4 +12,7 @@ internal static class PmxConstants
         "midi-manipulator-capture";
     internal const string PurposeMidiManipulatorPlayback =
         "midi-manipulator-playback";
+    internal const string PurposeClickSyncClick = "click-sync-click";
+    internal const string PurposeClickSyncReset = "click-sync-reset";
+    internal const string PurposeClickSyncRun = "click-sync-run";
 }

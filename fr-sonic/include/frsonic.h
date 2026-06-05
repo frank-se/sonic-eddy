@@ -103,6 +103,15 @@ struct frsonic_midi_manipulator_config {
   const char *description;
 };
 
+struct frsonic_click_sync_config {
+  const char *id;
+  const char *name;
+  const char *tag;
+  uint32_t pulses_per_quarter_note;
+  double pulse_length_ms;
+  float pulse_amplitude;
+};
+
 extern "C" {
 
 /* ── lifecycle ───────────────────────────────────────────────────────────── */
@@ -130,6 +139,12 @@ FRSONIC_API bool
 frsonic_create_midi_manipulator(const frsonic_midi_manipulator_config *config,
                                 size_t *out_handle);
 FRSONIC_API void frsonic_destroy_midi_manipulator(size_t manipulator_handle);
+
+/* ── click sync converters ──────────────────────────────────────────────── */
+FRSONIC_API bool
+frsonic_create_click_sync_converter(const frsonic_click_sync_config *config,
+                                    size_t *out_handle);
+FRSONIC_API void frsonic_destroy_click_sync_converter(size_t converter_handle);
 
 /* ── wireplumber / object model ──────────────────────────────────────────── */
 FRSONIC_API void frsonic_set_volumes(uint64_t object_id, const double *volumes,

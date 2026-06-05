@@ -43,6 +43,11 @@ public static class FrSonic
     public static IMidiManipulatorFactory MidiManipulatorFactory =>
         _midiManipulatorFactory;
 
+    private static readonly ClickSyncConverterFactory
+        _clickSyncConverterFactory = new(ModuleRegistry);
+    public static IClickSyncConverterFactory ClickSyncConverterFactory =>
+        _clickSyncConverterFactory;
+
     private static readonly LinkFactory _linkFactory = new();
     public static ILinkFactory LinkFactory => _linkFactory;
 
@@ -264,6 +269,8 @@ public static class FrSonic
                 _moduleFactory.UpdateNodesForWaitingModules(nodeMessage.Node);
                 _looperFactory.UpdateNodesForWaitingLoopers(nodeMessage.Node);
                 _midiManipulatorFactory.UpdateNodesForWaitingManipulators(
+                    nodeMessage.Node);
+                _clickSyncConverterFactory.UpdateNodesForWaitingConverters(
                     nodeMessage.Node);
 
                 var serial = nodeMessage.Node.ObjectSerial;

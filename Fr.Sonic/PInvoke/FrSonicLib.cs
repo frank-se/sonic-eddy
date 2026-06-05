@@ -129,6 +129,17 @@ internal struct FrSonicLooperConfig
     internal IntPtr PlaybackAudioPosition;
 }
 
+[StructLayout(LayoutKind.Sequential)]
+internal struct FrSonicClickSyncConfig
+{
+    internal IntPtr Id;
+    internal IntPtr Name;
+    internal IntPtr Tag;
+    internal uint PulsesPerQuarterNote;
+    internal double PulseLengthMs;
+    internal float PulseAmplitude;
+}
+
 /* ── P/Invoke declarations ───────────────────────────────────────────────── */
 
 internal static partial class FrSonicLib
@@ -174,6 +185,16 @@ internal static partial class FrSonicLib
 
     [LibraryImport(LIB, EntryPoint = "frsonic_destroy_midi_manipulator")]
     internal static partial void DestroyMidiManipulatorC(UIntPtr handle);
+
+    [LibraryImport(LIB, EntryPoint = "frsonic_create_click_sync_converter")]
+    [return: MarshalAs(UnmanagedType.U1)]
+    internal static partial bool CreateClickSyncConverterC(
+        in FrSonicClickSyncConfig config,
+        out UIntPtr handle
+    );
+
+    [LibraryImport(LIB, EntryPoint = "frsonic_destroy_click_sync_converter")]
+    internal static partial void DestroyClickSyncConverterC(UIntPtr handle);
 
     /* wireplumber object model */
     [LibraryImport(LIB, EntryPoint = "frsonic_set_volumes")]

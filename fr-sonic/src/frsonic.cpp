@@ -8,6 +8,7 @@
 #include "midi/Processor.h"
 #include "monitoring/Monitor.h"
 #include "silence/SilenceProducer.h"
+#include "sync/ClickSyncConverter.h"
 #include "sync/SyncClient.h"
 #include "sync/SyncMaster.h"
 #include "wireplumber/modules/module_factory.h"
@@ -36,6 +37,9 @@ static std::shared_ptr<midi::MidiSyncSender> g_midi_sync_sender = nullptr;
 static std::vector<std::shared_ptr<looper::Looper>> g_loopers;
 static std::vector<size_t> g_free_looper_handles;
 static std::vector<std::shared_ptr<midi::MidiManipulator>> g_midi_manipulators;
+static std::vector<std::shared_ptr<sesync::ClickSyncConverter>>
+    g_click_sync_converters;
+static std::vector<size_t> g_free_click_sync_converter_handles;
 
 class OwnedPipewireRuntime {
 public:
@@ -250,6 +254,21 @@ store_midi_manipulator(std::shared_ptr<midi::MidiManipulator> manipulator) {
   return g_midi_manipulators.size() - 1;
 }
 
+static size_t store_click_sync_converter(
+    std::shared_ptr<sesync::ClickSyncConverter> converter) {
+  if (!g_free_click_sync_converter_handles.empty()) {
+    const auto handle = g_free_click_sync_converter_handles.back();
+    g_free_click_sync_converter_handles.pop_back();
+    if (handle < g_click_sync_converters.size()) {
+      g_click_sync_converters[handle] = std::move(converter);
+      return handle;
+    }
+  }
+
+  g_click_sync_converters.push_back(std::move(converter));
+  return g_click_sync_converters.size() - 1;
+}
+
 void frsonic_start() {
   g_core->start(); // blocks until the GLib main loop is running
 
@@ -311,6 +330,8 @@ void frsonic_stop() {
     for (auto &looper : g_loopers)
       if (looper) looper->stop();
     logging::log<logging::LogLevel::Trace>("frsonic_stop: loopers stopped");
+    for (auto &converter : g_click_sync_converters)
+      if (converter) converter->stop();
 
     // Phase 2 — with the PW loop paused under pw_thread_loop_lock, do all
     // remaining PW-object cleanup from the main thread.  Looper stream
@@ -323,6 +344,11 @@ void frsonic_stop() {
     g_loopers.clear();
     g_free_looper_handles.clear();
     logging::log<logging::LogLevel::Trace>("frsonic_stop: loopers done");
+
+    g_click_sync_converters.clear();
+    g_free_click_sync_converter_handles.clear();
+    logging::log<logging::LogLevel::Trace>(
+        "frsonic_stop: click sync converters done");
 
     logging::log<logging::LogLevel::Trace>("frsonic_stop: stopping manipulators");
     for (auto &manipulator : g_midi_manipulators)
@@ -477,6 +503,52 @@ void frsonic_destroy_midi_manipulator(const size_t manipulator_handle) {
 
     (*slot)->stop();
     slot->reset();
+  };
+  invoke_owned_pipewire_sync(callback);
+}
+
+bool frsonic_create_click_sync_converter(
+    const frsonic_click_sync_config *config, size_t *out_handle) {
+  if (config == nullptr || out_handle == nullptr || !g_owned_pipewire ||
+      !g_sync_client || config->id == nullptr || config->id[0] == '\0' ||
+      config->pulses_per_quarter_note == 0)
+    return false;
+
+  bool result = false;
+  auto callback = [&] {
+    sesync::ClickSyncConfig converter_config{
+        .id = optional_c_string(config->id),
+        .name = optional_c_string(config->name, "Click sync"),
+        .tag = optional_c_string(config->tag),
+        .pulses_per_quarter_note = config->pulses_per_quarter_note,
+        .pulse_length_ms = std::clamp(config->pulse_length_ms, 0.1, 20.0),
+        .pulse_amplitude = std::clamp(config->pulse_amplitude, 0.0f, 1.0f),
+    };
+
+    auto converter = std::make_shared<sesync::ClickSyncConverter>(
+        g_owned_pipewire->loop(), std::move(converter_config), g_sync_client);
+    if (!converter->start())
+      return;
+
+    *out_handle = store_click_sync_converter(std::move(converter));
+    result = true;
+  };
+  invoke_owned_pipewire_sync(callback);
+  return result;
+}
+
+void frsonic_destroy_click_sync_converter(const size_t converter_handle) {
+  if (!g_owned_pipewire)
+    return;
+
+  auto callback = [converter_handle] {
+    if (converter_handle >= g_click_sync_converters.size() ||
+        !g_click_sync_converters[converter_handle])
+      return;
+
+    auto converter = std::move(g_click_sync_converters[converter_handle]);
+    g_free_click_sync_converter_handles.push_back(converter_handle);
+    converter->stop();
   };
   invoke_owned_pipewire_sync(callback);
 }

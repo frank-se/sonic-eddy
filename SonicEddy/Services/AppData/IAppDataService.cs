@@ -7,6 +7,7 @@ using SonicEddy.Contracts.MidiSync;
 using SonicEddy.Contracts.Mixers;
 using SonicEddy.Contracts.VirtualInputs;
 using SonicEddy.Contracts.VirtualOutputs;
+using SonicEddy.Contracts.ClickSync;
 
 namespace SonicEddy.Services.AppData;
 
@@ -45,4 +46,8 @@ public interface IAppDataService
     Task StoreVirtualOutputsConfig(VirtualOutputsConfig config);
 
     Task<VirtualOutputsConfig?> LoadVirtualOutputsConfig();
+
+    Task StoreClickSyncConfig(ClickSyncConfig config);
+
+    Task<ClickSyncConfig?> LoadClickSyncConfig();
 }

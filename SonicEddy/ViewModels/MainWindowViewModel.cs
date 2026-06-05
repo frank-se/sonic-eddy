@@ -28,6 +28,7 @@ using SonicEddy.ViewModels.ModuleManagerViewModels;
 using SonicEddy.ViewModels.ObjectBrowserViewModels;
 using SonicEddy.ViewModels.PreferencesViewModels;
 using SonicEddy.ViewModels.MidiSyncViewModels;
+using SonicEddy.ViewModels.ClickSyncViewModels;
 using SonicEddy.ViewModels.SynchronizationViewModels;
 using SonicEddy.ViewModels.MonitoringViewModels;
 using SonicEddy.ViewModels.TransportViewModels;
@@ -43,6 +44,7 @@ using SonicEddy.Views.ModuleManagerViews;
 using SonicEddy.Views.ObjectBrowserViews;
 using SonicEddy.Views.PreferencesViews;
 using SonicEddy.Views.MidiSyncViews;
+using SonicEddy.Views.ClickSyncViews;
 using SonicEddy.Views.MixerPersistenceViews;
 using SonicEddy.Views.SynchronizationViews;
 using SonicEddy.Views.MonitoringViews;
@@ -115,6 +117,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     private Window? _preferencesWindow;
     private Window? _synchronizationWindow;
     private Window? _midiSyncWindow;
+    private Window? _clickSyncWindow;
     private Window? _midiRouterWindow;
     private readonly SemaphoreSlim _layerInitializationLock = new(1, 1);
     private GlobalMasterViewModel? _globalMasterViewModel;
@@ -572,6 +575,21 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         };
 
         _midiSyncWindow.Show();
+    }
+
+    public void ShowClickSyncWindow()
+    {
+        _logger.LogTrace("ShowClickSyncWindow");
+
+        if (_clickSyncWindow is not null &&
+            _clickSyncWindow.IsVisible) return;
+
+        _clickSyncWindow = new ClickSyncWindow()
+        {
+            DataContext = new ClickSyncViewModel()
+        };
+
+        _clickSyncWindow.Show();
     }
 
     public void ShowMidiRouterWindow()

@@ -10,6 +10,7 @@ using SonicEddy.Contracts.MidiSync;
 using SonicEddy.Contracts.Mixers;
 using SonicEddy.Contracts.VirtualInputs;
 using SonicEddy.Contracts.VirtualOutputs;
+using SonicEddy.Contracts.ClickSync;
 
 namespace SonicEddy.Services.AppData;
 
@@ -159,5 +160,25 @@ public class AppDataService(
         var bytes = await File.ReadAllBytesAsync(filePath);
         using var memoryStream = new MemoryStream(bytes);
         return Serializer.Deserialize<VirtualOutputsConfig>(memoryStream);
+    }
+
+    public async Task StoreClickSyncConfig(ClickSyncConfig config)
+    {
+        var filePath =
+            Path.Combine(preferencesFolderPath, "click-sync.grpc");
+        await using var file = File.Create(filePath);
+        Serializer.Serialize(file, config);
+        await file.FlushAsync();
+    }
+
+    public async Task<ClickSyncConfig?> LoadClickSyncConfig()
+    {
+        var filePath =
+            Path.Combine(preferencesFolderPath, "click-sync.grpc");
+        if (!File.Exists(filePath)) return null;
+
+        var bytes = await File.ReadAllBytesAsync(filePath);
+        using var memoryStream = new MemoryStream(bytes);
+        return Serializer.Deserialize<ClickSyncConfig>(memoryStream);
     }
 }
