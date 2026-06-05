@@ -13,6 +13,7 @@ using SonicEddy.Services.TraktorZ1;
 using SonicEddy.Services.MixerViewModels;
 using SonicEddy.Services.Preferences;
 using SonicEddy.Services.VirtualInputs;
+using SonicEddy.Services.VirtualOutputs;
 using SonicEddy.Services.Wireplumber;
 using SonicEddy.ViewModels.FilterGraphManagerViewModels;
 using SonicEddy.ViewModels.MetadataViewModels;
@@ -28,6 +29,7 @@ using SonicEddy.ViewModels.MonitoringViewModels;
 using SonicEddy.ViewModels.TransportViewModels;
 using SonicEddy.ViewModels.GlobalMasterViewModels;
 using SonicEddy.ViewModels.VirtualInputsViewModels;
+using SonicEddy.ViewModels.VirtualOutputsViewModels;
 using SonicEddy.Views.FilterGraphManagerViews;
 using SonicEddy.Views.GlobalMasterViews;
 using SonicEddy.Views.MetadataViews;
@@ -40,6 +42,7 @@ using SonicEddy.Views.MidiSyncViews;
 using SonicEddy.Views.SynchronizationViews;
 using SonicEddy.Views.MonitoringViews;
 using SonicEddy.Views.VirtualInputsViews;
+using SonicEddy.Views.VirtualOutputsViews;
 using Splat;
 using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
@@ -103,6 +106,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     private Window? _moduleManagerWindow;
     private Window? _filterGraphWindow;
     private Window? _virtualInputsWindow;
+    private Window? _virtualOutputsWindow;
     private Window? _preferencesWindow;
     private Window? _synchronizationWindow;
     private Window? _midiSyncWindow;
@@ -488,6 +492,28 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         };
 
         _virtualInputsWindow.Show();
+    }
+
+    public void ShowVirtualOutputsWindow()
+    {
+        _logger.LogTrace("ShowVirtualOutputsWindow");
+
+        if (_virtualOutputsWindow is not null &&
+            _virtualOutputsWindow.IsVisible) return;
+
+        var virtualOutputService =
+            Locator.Current.GetService<IVirtualOutputService>();
+        var wireplumberService =
+            Locator.Current.GetService<IWireplumberService>();
+
+        _virtualOutputsWindow = new VirtualOutputsWindow
+        {
+            DataContext = new VirtualOutputsViewModel(
+                wireplumberService!,
+                virtualOutputService!)
+        };
+
+        _virtualOutputsWindow.Show();
     }
 
     public void ShowFilterGraphManagerWindow()

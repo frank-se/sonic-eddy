@@ -71,7 +71,8 @@
                           Command="{Binding ShowObjectBrowserWindow}" />
                 <MenuItem Header="Virtual Inputs ..."
                           Command="{Binding ShowVirtualInputsWindow}" />
-                <MenuItem Header="Virtual Outputs ..." />
+                <MenuItem Header="Virtual Outputs ..."
+                          Command="{Binding ShowVirtualOutputsWindow}" />
             </MenuItem>
         </Menu>
 

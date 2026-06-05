@@ -1,0 +1,58 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:viewModels="clr-namespace:SonicEddy.ViewModels.VirtualOutputsViewModels"
+        mc:Ignorable="d"
+        d:DesignWidth="400"
+        d:DesignHeight="300"
+        Width="400"
+        Height="300"
+        x:Class="SonicEddy.Views.VirtualOutputsViews.AddVirtualOutputDialogView"
+        x:DataType="viewModels:AddVirtualOutputDialogViewModel"
+        Title="Add Virtual Output">
+
+    <StackPanel>
+        <Grid ColumnDefinitions="Auto,*"
+              RowDefinitions="Auto,Auto,Auto,Auto">
+            <Label Grid.Row="0" Grid.Column="0"
+                   Target="NameTextBox" Content="Name" />
+            <TextBox Grid.Row="0" Grid.Column="1"
+                     x:Name="NameTextBox" Text="{Binding Name}" />
+
+            <Label Grid.Row="1" Grid.Column="0"
+                   Target="NodeComboBox" Content="Node" />
+            <ComboBox Grid.Row="1" Grid.Column="1"
+                      x:Name="NodeComboBox"
+                      DisplayMemberBinding="{Binding Description}"
+                      ItemsSource="{Binding PotentialNodes}"
+                      SelectedItem="{Binding SelectedNode}" />
+
+            <Label Grid.Row="2" Grid.Column="0"
+                   Target="LeftPortComboBox" Content="Left Port" />
+            <ComboBox Grid.Row="2" Grid.Column="1"
+                      x:Name="LeftPortComboBox"
+                      DisplayMemberBinding="{Binding Alias}"
+                      ItemsSource="{Binding PotentialPorts}"
+                      SelectedItem="{Binding SelectedLeftPort}" />
+
+            <Label Grid.Row="3" Grid.Column="0"
+                   Target="RightPortComboBox" Content="Right Port" />
+            <ComboBox Grid.Row="3" Grid.Column="1"
+                      x:Name="RightPortComboBox"
+                      DisplayMemberBinding="{Binding Alias}"
+                      ItemsSource="{Binding PotentialPorts}"
+                      SelectedItem="{Binding SelectedRightPort}" />
+        </Grid>
+
+        <StackPanel Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Spacing="8"
+                    Margin="4">
+            <Button Content="Cancel" Command="{Binding Cancel}" />
+            <Button Content="Add Stream"
+                    Command="{Binding Add}"
+                    IsEnabled="{Binding IsButtonEnabled}" />
+        </StackPanel>
+    </StackPanel>
+</Window>

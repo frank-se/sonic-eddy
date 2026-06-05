@@ -17,6 +17,7 @@ using SonicEddy.Services.MixerViewModels;
 using SonicEddy.Services.Monitoring;
 using SonicEddy.Services.Preferences;
 using SonicEddy.Services.VirtualInputs;
+using SonicEddy.Services.VirtualOutputs;
 using SonicEddy.Services.TraktorZ1;
 using SonicEddy.Services.Wireplumber;
 using SonicEddy.ViewModels;
@@ -101,6 +102,12 @@ public class App : Application
         Locator.CurrentMutable.Register<IVirtualInputService>(() =>
             virtualInputService);
         _ = virtualInputService.InitializeAsync();
+
+        var virtualOutputService =
+            new VirtualOutputService(appDataService, wireplumberService);
+        Locator.CurrentMutable.Register<IVirtualOutputService>(() =>
+            virtualOutputService);
+        _ = virtualOutputService.InitializeAsync();
 
         var monitoringService = new MonitoringService(FrSonic.Monitor,
             loggerFactory.CreateLogger<MonitoringService>());

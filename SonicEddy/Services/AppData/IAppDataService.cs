@@ -6,6 +6,7 @@ using SonicEddy.Contracts.MidiRouter;
 using SonicEddy.Contracts.MidiSync;
 using SonicEddy.Contracts.Mixers;
 using SonicEddy.Contracts.VirtualInputs;
+using SonicEddy.Contracts.VirtualOutputs;
 
 namespace SonicEddy.Services.AppData;
 
@@ -40,4 +41,8 @@ public interface IAppDataService
     Task StoreVirtualInputsConfig(VirtualInputsConfig config);
 
     Task<VirtualInputsConfig?> LoadVirtualInputsConfig();
+
+    Task StoreVirtualOutputsConfig(VirtualOutputsConfig config);
+
+    Task<VirtualOutputsConfig?> LoadVirtualOutputsConfig();
 }
