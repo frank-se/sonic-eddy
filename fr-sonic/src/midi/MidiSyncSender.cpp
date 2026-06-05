@@ -245,17 +245,17 @@ midi::MidiSyncSender::tick_nsec(const sesync::SyncSnapshot &snapshot,
   const auto pulse = tick % PulsesPerBeat;
 
   const auto &history = snapshot.beat_history;
-  const auto current =
-      std::ranges::find(history, beat, &sesync::BeatScheduleEntry::beat);
-  if (current == history.end())
+  const auto current = std::ranges::lower_bound(
+      history, beat, {}, &sesync::BeatScheduleEntry::beat);
+  if (current == history.end() || current->beat != beat)
     return std::nullopt;
 
   if (pulse == 0)
     return current->nsec;
 
-  const auto next =
-      std::ranges::find(history, beat + 1, &sesync::BeatScheduleEntry::beat);
-  if (next == history.end() || next->nsec <= current->nsec)
+  const auto next = std::next(current);
+  if (next == history.end() || next->beat != beat + 1 ||
+      next->nsec <= current->nsec)
     return std::nullopt;
 
   return current->nsec +

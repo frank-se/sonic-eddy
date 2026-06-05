@@ -81,8 +81,7 @@ bool sesync::ClickSyncConverter::setup_output(Output &output) {
       PW_KEY_MEDIA_ROLE, "DSP", PW_KEY_MEDIA_CLASS, "Stream/Output/Audio",
       PW_KEY_NODE_NAME, name.c_str(), PW_KEY_NODE_DESCRIPTION,
       node_description.c_str(), "se.role", purpose, "pmx.purpose", purpose,
-      "node.linger", "true", "node.passive", "false",
-      PW_KEY_NODE_ALWAYS_PROCESS, "true", nullptr);
+      "node.linger", "true", "node.passive", "false", nullptr);
   if (!_config.tag.empty())
     pw_properties_set(properties, "pmx.tag", _config.tag.c_str());
 
@@ -176,9 +175,21 @@ void sesync::ClickSyncConverter::render_click(
   const auto cycle_end_nsec =
       cycle_start_nsec + frame_nsec(frames, sample_rate);
   const auto &beats = snapshot.beat_history;
-  for (auto current = beats.begin(); current != beats.end(); ++current) {
+  if (beats.size() < 2)
+    return;
+
+  auto current = std::ranges::lower_bound(
+      beats, cycle_start_nsec, {}, &BeatScheduleEntry::nsec);
+  if (current != beats.begin())
+    --current;
+
+  for (; current != beats.end(); ++current) {
     const auto next = std::next(current);
     if (next == beats.end() || next->nsec <= current->nsec)
+      break;
+    if (next->nsec <= cycle_start_nsec)
+      continue;
+    if (current->nsec >= cycle_end_nsec)
       break;
     if (snapshot.transport_state_at(current->beat) == TransportState::Stopped)
       continue;
@@ -254,17 +265,40 @@ void sesync::ClickSyncConverter::render_run(
   if (snapshot.beat_history.empty())
     return;
 
-  for (uint32_t frame = 0; frame < frames; ++frame) {
-    const auto sample_nsec =
-        cycle_start_nsec + frame_nsec(frame, sample_rate);
-    const auto next = std::ranges::upper_bound(
-        snapshot.beat_history, sample_nsec, {}, &BeatScheduleEntry::nsec);
-    if (next == snapshot.beat_history.begin())
+  const auto cycle_end_nsec =
+      cycle_start_nsec + frame_nsec(frames, sample_rate);
+  const auto &beats = snapshot.beat_history;
+  auto current = std::ranges::upper_bound(
+      beats, cycle_start_nsec, {}, &BeatScheduleEntry::nsec);
+  if (current == beats.begin())
+    return;
+  --current;
+
+  const auto to_frame = [sample_rate](const uint64_t nsec) {
+    return (nsec * sample_rate + 999'999'999ull) / 1'000'000'000ull;
+  };
+
+  for (; current != beats.end() && current->nsec < cycle_end_nsec; ++current) {
+    const auto next = std::next(current);
+    const auto interval_end =
+        next == beats.end() ? cycle_end_nsec
+                            : std::min(next->nsec, cycle_end_nsec);
+    if (interval_end <= cycle_start_nsec)
       continue;
 
-    const auto &beat = *std::prev(next);
-    if (snapshot.transport_state_at(beat.beat) != TransportState::Stopped)
-      samples[frame] = _config.pulse_amplitude;
+    if (snapshot.transport_state_at(current->beat) != TransportState::Stopped) {
+      const auto start =
+          current->nsec <= cycle_start_nsec
+              ? uint64_t{0}
+              : to_frame(current->nsec - cycle_start_nsec);
+      const auto end = to_frame(interval_end - cycle_start_nsec);
+      std::fill(samples + std::min<uint64_t>(start, frames),
+                samples + std::min<uint64_t>(end, frames),
+                _config.pulse_amplitude);
+    }
+
+    if (next == beats.end() || next->nsec >= cycle_end_nsec)
+      break;
   }
 }
 

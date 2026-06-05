@@ -85,7 +85,7 @@ public class PanAndVolumeViewModelV2 : ReactiveObject, IPanAndVolume,
         if (externalVolumes.Length < 2)
         {
             Pan = 0.0f;
-            Volume = 0.0f;
+            Volume = 1.0f;
             return;
         }
 

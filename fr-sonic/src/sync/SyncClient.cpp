@@ -141,13 +141,11 @@ const pw_node_events node_events = {
 
 std::optional<sesync::BeatScheduleEntry>
 sesync::SyncSnapshot::current_beat(const uint64_t now_nsec) const {
-  std::optional<BeatScheduleEntry> current;
-  for (const auto &entry : beat_history) {
-    if (entry.nsec > now_nsec)
-      break;
-    current = entry;
-  }
-  return current;
+  const auto next = std::ranges::upper_bound(
+      beat_history, now_nsec, {}, &BeatScheduleEntry::nsec);
+  if (next == beat_history.begin())
+    return std::nullopt;
+  return *std::prev(next);
 }
 
 sesync::TransportState
