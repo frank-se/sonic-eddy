@@ -12,9 +12,9 @@
     </ItemGroup>
 
     <ItemGroup>
-        <None Include="..\fr-sonic\build\src\libfrsonic.so.0.4.0"
+        <None Include="..\fr-sonic\build\src\libfrsonic.so.0.5.0"
               CopyToOutputDirectory="PreserveNewest"
-              Link="libfrsonic.so.0.4.0" />
+              Link="libfrsonic.so.0.5.0" />
     </ItemGroup>
 
 </Project>

@@ -194,7 +194,7 @@ public sealed class LooperSlotDetailsViewModel
         Level = $"rms {state.Rms:0.###}, peak {state.Peak:0.###}";
         Range = $"{state.Min:0.###}..{state.Max:0.###}";
         Bpm = state.Bpm?.ToString("0.##") ?? "-";
-        CanPlay = string.Equals(state.State, "filled",
+        CanPlay = !string.Equals(state.State, "empty",
             StringComparison.OrdinalIgnoreCase);
         CanArchive = CanPlay;
         PlayCommand = ReactiveCommand.Create(() => play(LoopNumber));

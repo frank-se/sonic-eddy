@@ -41,6 +41,11 @@ public:
                                     size_t plugin_id, char *name, float min,
                                     float max) = 0;
 
+  virtual void set_looper_slot_state(ChannelType channel_type,
+                                     size_t channel_id, size_t loop_position,
+                                     bool available, bool loaded,
+                                     bool playing) {}
+
   virtual ~IController() = default;
 };
 

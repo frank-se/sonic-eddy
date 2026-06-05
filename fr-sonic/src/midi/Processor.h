@@ -4,6 +4,7 @@
 #include "Receiver.h"
 #include "Sender.h"
 #include "controllers/ChannelType.h"
+#include "controllers/LaunchpadMini.h"
 #include "controllers/MidiMix.h"
 
 #include <condition_variable>
@@ -50,6 +51,14 @@ public:
   std::optional<size_t> create_fader_fox_pc4_port(const char *pmx_purpose,
                                                   const char *pmx_tag);
 
+  std::optional<size_t> create_launchpad_mini_port(
+      const char *pmx_purpose, const char *pmx_tag,
+      const LayerSelectCallback &layer_select_callback,
+      const controllers::LaunchpadMiniLoopPressedCallback
+          &loop_pressed_callback,
+      const controllers::LaunchpadMiniFaderChangedCallback
+          &fader_changed_callback);
+
   void start();
   void stop();
   bool process_queues();
@@ -72,15 +81,23 @@ public:
   void add_filter_parameter(controllers::ChannelType channel_type,
                             size_t channel_id, size_t plugin_id, char *name,
                             float min, float max);
+  void set_launchpad_mini_looper_slot_state(
+      controllers::ChannelType channel_type, size_t channel_id,
+      size_t loop_position, bool available, bool loaded, bool playing);
 
 private:
+  struct ReceiverBinding {
+    ReceiverPointer receiver;
+    ControllerPtr controller;
+  };
+
   pw_loop *_loop;
   std::unique_ptr<Registry> _registry;
   controllers::MidiControlChangeUpdateCallback _controller_update_callback;
 
   std::mutex _controllers_mutex;
   std::vector<ControllerPtr> _controllers{};
-  Receivers _receivers{};
+  std::vector<ReceiverBinding> _receiver_bindings{};
 
   std::thread _midi_processing_thread;
   std::mutex _queue_wait_mutex;

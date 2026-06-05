@@ -53,6 +53,15 @@ internal static class Program
             Console.WriteLine(e.Message);
         }
 
+        try
+        {
+            var launchpadMiniPort = midiPortFactory!.CreateLaunchpadMiniPort().Result;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+        }
+
         BuildAvaloniaApp()
             .StartWithClassicDesktopLifetime(args);
 

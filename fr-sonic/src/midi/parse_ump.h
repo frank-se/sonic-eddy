@@ -13,6 +13,6 @@ constexpr uint8_t MIDI_MESSAGE_TYPE_8_BYTE_DATA = 0x3;
 constexpr uint8_t MIDI_MESSAGE_TYPE_MIDI_2_CHANNEL_VOICE = 0x4;
 constexpr uint8_t MIDI_MESSAGE_TYPE_MIDI_2_16_BYTE_DATA = 0x5;
 
-std::optional<Message> parse_ump(const void *data);
+std::optional<Message> parse_ump(const void *data, uint32_t length);
 
 }

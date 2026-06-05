@@ -53,7 +53,8 @@ public class MasterChannelViewModel : ChannelViewModelBase, IMasterChannel
         _globalMasterPlaybackNode = globalMasterPlaybackNode;
         MasterChannel = masterChannel;
         Looper = new LooperSectionViewModel(
-            masterChannel.PreFxLooper, masterChannel.PostFxLooper);
+            masterChannel.PreFxLooper, masterChannel.PostFxLooper,
+            midiControllerSetupService, ChannelType.Master, (ulong)layerId);
         IsFilterMidiControlled = true;
 
         var side = layerId == 0 ? TraktorZ1Side.Left : TraktorZ1Side.Right;

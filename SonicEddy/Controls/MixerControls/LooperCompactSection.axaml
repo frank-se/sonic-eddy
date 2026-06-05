@@ -36,7 +36,7 @@
             <Button Content="&#xF608;"
                     FontFamily="{StaticResource FluentIconsRegular}"
                     FontSize="18"
-                    Foreground="{Binding ActionForeground}"
+                    Foreground="{Binding PlayForeground}"
                     Command="{Binding CutPlayCommand}">
                 <ToolTip.Tip>Cut and play</ToolTip.Tip>
             </Button>

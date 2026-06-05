@@ -26,6 +26,18 @@ public record MidiControlChangeUpdateEventArgs(
     float NormalizedKnownValue,
     bool CatchingUp);
 
+public record LaunchpadLoopPressedEventArgs(
+    ulong LayerId,
+    ChannelType ChannelType,
+    ulong ChannelId,
+    ulong LoopPosition);
+
+public record LaunchpadFaderChangedEventArgs(
+    ulong LayerId,
+    ChannelType ChannelType,
+    ulong ChannelId,
+    float NormalizedValue);
+
 /// <summary>
 /// MIDI controller mapping facade.
 /// </summary>
@@ -40,6 +52,8 @@ public static class FrSonicMidi
     public static event Action<FilterParamsSectionMovePagesEventArgs>? FilterParamsSectionMovedRight;
     public static event Action<FilterParamsSectionMovePagesEventArgs>? FilterParamsSectionMovedLeft;
     public static event Action<MidiControlChangeUpdateEventArgs>? MidiControlChangeUpdate;
+    public static event Action<LaunchpadLoopPressedEventArgs>? LaunchpadLoopPressed;
+    public static event Action<LaunchpadFaderChangedEventArgs>? LaunchpadFaderChanged;
 
     /* ── internal callbacks ──────────────────────────────────────────────── */
 
@@ -49,6 +63,16 @@ public static class FrSonicMidi
         MidiControlChangeUpdate?.Invoke(new(channelType, channelId, objectId,
             Marshal.PtrToStringUTF8(parameterName) ?? string.Empty,
             normalizedValue, normalizedKnownValue, catchingUp));
+
+    internal static void OnLaunchpadLoopPressed(ulong layerId,
+        ChannelType channelType, ulong channelId, ulong loopPosition) =>
+        LaunchpadLoopPressed?.Invoke(new(layerId, channelType, channelId,
+            loopPosition));
+
+    internal static void OnLaunchpadFaderChanged(ulong layerId,
+        ChannelType channelType, ulong channelId, float normalizedValue) =>
+        LaunchpadFaderChanged?.Invoke(new(layerId, channelType, channelId,
+            normalizedValue));
 
     internal static void OnLayerSelect(ulong layerId) =>
         LayerChanged?.Invoke(new(layerId));
@@ -108,4 +132,10 @@ public static class FrSonicMidi
     public static void AddFilterParameter(ChannelType channelType, ulong channelId,
         ulong pluginId, string name, float min, float max) =>
         FrSonicLib.AddFilterParameterC(channelType, channelId, pluginId, name, min, max);
+
+    public static void SetLaunchpadMiniLooperSlotState(ChannelType channelType,
+        ulong channelId, ulong loopPosition, bool available, bool loaded,
+        bool playing) =>
+        FrSonicLib.SetLaunchpadMiniLooperSlotStateC(channelType, channelId,
+            loopPosition, available, loaded, playing);
 }

@@ -586,6 +586,27 @@ size_t frsonic_create_fader_fox_pc4_port(const char *pmx_purpose,
   return *g_midi->create_fader_fox_pc4_port(pmx_purpose, pmx_tag);
 }
 
+size_t frsonic_create_launchpad_mini_port(
+    const char *pmx_purpose, const char *pmx_tag,
+    layer_select_callback_t layer_cb,
+    launchpad_loop_pressed_callback_t loop_pressed_cb,
+    launchpad_fader_changed_callback_t fader_changed_cb) {
+  return *g_midi->create_launchpad_mini_port(
+      pmx_purpose, pmx_tag, layer_cb,
+      [loop_pressed_cb](const size_t layer_id, controllers::ChannelType ct,
+                        const size_t channel_id,
+                        const size_t loop_position) {
+        loop_pressed_cb(layer_id, static_cast<ChannelType>(ct), channel_id,
+                        loop_position);
+      },
+      [fader_changed_cb](const size_t layer_id, controllers::ChannelType ct,
+                         const size_t channel_id,
+                         const float normalized_value) {
+        fader_changed_cb(layer_id, static_cast<ChannelType>(ct), channel_id,
+                         normalized_value);
+      });
+}
+
 void frsonic_set_selected_plugin_page(size_t plugin_id, size_t page_number) {
   g_midi->set_selected_plugin_page(plugin_id, page_number);
 }
@@ -630,6 +651,14 @@ void frsonic_add_filter_parameter(ChannelType channel_type, size_t channel_id,
                                   float max) {
   g_midi->add_filter_parameter(to_ct(channel_type), channel_id, plugin_id, name,
                                min, max);
+}
+
+void frsonic_set_launchpad_mini_looper_slot_state(
+    ChannelType channel_type, size_t channel_id, size_t loop_position,
+    bool available, bool loaded, bool playing) {
+  g_midi->set_launchpad_mini_looper_slot_state(
+      to_ct(channel_type), channel_id, loop_position, available, loaded,
+      playing);
 }
 
 /* ── lv2 ─────────────────────────────────────────────────────────────────── */

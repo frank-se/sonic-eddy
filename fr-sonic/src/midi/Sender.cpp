@@ -69,6 +69,10 @@ void midi::Sender::process() {
           } else if constexpr (std::is_same_v<T, std::array<uint32_t, 2>>) {
             spa_pod_builder_control(&builder, 0, SPA_CONTROL_UMP);
             spa_pod_builder_bytes(&builder, arg.data(), 8);
+          } else if constexpr (std::is_same_v<T, midi::RawUmpMessage>) {
+            spa_pod_builder_control(&builder, 0, SPA_CONTROL_UMP);
+            spa_pod_builder_bytes(&builder, arg.words.data(),
+                                  arg.word_count * 4);
           }
         },
         message);

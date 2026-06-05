@@ -16,7 +16,9 @@ public class MidiPortFactory : IMidiPortFactory, IDisposable
         DialModeCallback dialSectionModeSelectCallback,
         FilterSectionCallback filterParamsSectionSelectCallback,
         PagesRightCallback filterParamsSectionMovePagesRightCallback,
-        PagesLeftCallback filterParamsSectionMovePagesLeftCallback)
+        PagesLeftCallback filterParamsSectionMovePagesLeftCallback,
+        LaunchpadLoopPressedCallback launchpadLoopPressedCallback,
+        LaunchpadFaderChangedCallback launchpadFaderChangedCallback)
     {
         nodeRegistry.Added += HandleNodeAddedEvent;
         _nodeRegistry = nodeRegistry;
@@ -31,6 +33,8 @@ public class MidiPortFactory : IMidiPortFactory, IDisposable
             filterParamsSectionMovePagesRightCallback;
         _filterParamsSectionMovePagesLeftCallback =
             filterParamsSectionMovePagesLeftCallback;
+        _launchpadLoopPressedCallback = launchpadLoopPressedCallback;
+        _launchpadFaderChangedCallback = launchpadFaderChangedCallback;
     }
 
     private readonly LayerSelectCallback _layerSelectCallback;
@@ -39,6 +43,8 @@ public class MidiPortFactory : IMidiPortFactory, IDisposable
     private readonly FilterSectionCallback _filterParamsSectionSelectCallback;
     private readonly PagesRightCallback _filterParamsSectionMovePagesRightCallback;
     private readonly PagesLeftCallback _filterParamsSectionMovePagesLeftCallback;
+    private readonly LaunchpadLoopPressedCallback _launchpadLoopPressedCallback;
+    private readonly LaunchpadFaderChangedCallback _launchpadFaderChangedCallback;
 
     private void HandleNodeAddedEvent(Node? node)
     {
@@ -50,6 +56,12 @@ public class MidiPortFactory : IMidiPortFactory, IDisposable
 
         if (tag is null)
             throw new ApplicationException("Tag is null but purpose is set!");
+
+        if (_pendingLaunchpadMiniPorts.TryGetValue(tag, out var launchpadPending))
+        {
+            HandleLaunchpadMiniNodeAdded(node, launchpadPending);
+            return;
+        }
 
         MidiPort? midiPort;
         TaskCompletionSource<MidiPort>? tcs;
@@ -116,6 +128,55 @@ public class MidiPortFactory : IMidiPortFactory, IDisposable
         _linkFactory.CreateLink(myOutputPort, inputPort);
     }
 
+    private void HandleLaunchpadMiniNodeAdded(Node node,
+        PendingLaunchpadMiniPort pending)
+    {
+        MidiPort? midiPort = null;
+
+        using (_updatePendingLock.EnterScope())
+        {
+            switch (node)
+            {
+                case { Media.Class: "Stream/Output/Midi", Name: string name }
+                    when name.Contains("Launchpad Mini MI"):
+                    pending.MiSender = node;
+                    break;
+                case { Media.Class: "Stream/Output/Midi", Name: string name }
+                    when name.Contains("Launchpad Mini DA"):
+                    pending.DaSender = node;
+                    break;
+                case { Media.Class: "Stream/Input/Midi", Name: string name }
+                    when name.Contains("Launchpad Mini MI"):
+                    pending.MiReceiver = node;
+                    break;
+                case { Media.Class: "Stream/Input/Midi", Name: string name }
+                    when name.Contains("Launchpad Mini DA"):
+                    pending.DaReceiver = node;
+                    break;
+            }
+
+            if (!pending.IsComplete)
+                return;
+
+            _pendingLaunchpadMiniPorts.TryRemove(pending.Tag, out _);
+            midiPort = new(pending.MidiPortId, pending.DaSender,
+                pending.DaReceiver!);
+        }
+
+        var miInput = GetNodePort(pending.MiReceiver!);
+        var daInput = GetNodePort(pending.DaReceiver!);
+        var miOutput = GetNodePort(pending.MiSender!);
+        var daOutput = GetNodePort(pending.DaSender!);
+
+        _linkFactory.CreateLink(pending.MiControllerOutputPort, miInput);
+        _linkFactory.CreateLink(pending.DaControllerOutputPort, daInput);
+        _linkFactory.CreateLink(miOutput, pending.MiControllerInputPort);
+        _linkFactory.CreateLink(daOutput, pending.DaControllerInputPort);
+
+        pending.TaskCompletionSource.TrySetResult(midiPort);
+        _midiPortRegistry.AddPort(midiPort);
+    }
+
     public Task<MidiPort> CreateMidiMixPort()
     {
         var (inputPort, outputPort) =
@@ -172,6 +233,38 @@ public class MidiPortFactory : IMidiPortFactory, IDisposable
         _pendingMidiPorts[tag] = pending;
 
         return pending.TaskCompletionSource.Task;
+    }
+
+    public Task<MidiPort> CreateLaunchpadMiniPort()
+    {
+        var (miInput, miOutput) = GetPotentialPorts(
+            "Launchpad Mini MK3:Launchpad Mini MK3 LPMiniMK3 MI");
+        var (daInput, daOutput) = GetPotentialPorts(
+            "Launchpad Mini MK3:Launchpad Mini MK3 LPMiniMK3 DA");
+
+        var tag = GenerateTag();
+
+        var id = FrSonicLib.CreateLaunchpadMiniPortC(FrSonicMidi.PmxPurpose,
+            tag, _layerSelectCallback, _launchpadLoopPressedCallback,
+            _launchpadFaderChangedCallback);
+
+        var pending = new PendingLaunchpadMiniPort(id, tag, new(), miInput,
+            miOutput, daInput, daOutput);
+
+        _pendingLaunchpadMiniPorts[tag] = pending;
+
+        return pending.TaskCompletionSource.Task;
+    }
+
+    private Port GetNodePort(Node node)
+    {
+        var port = _portRegistry.Objects.FirstOrDefault(p =>
+            p.Node.Id == node.ObjectId);
+        if (port is null)
+            throw new ApplicationException(
+                $"Couldn't find port for node id {node.ObjectId}");
+
+        return port;
     }
 
     private (Port input, Port output) GetPotentialPorts(string portAlias)
@@ -250,4 +343,7 @@ public class MidiPortFactory : IMidiPortFactory, IDisposable
 
     private readonly ConcurrentDictionary<string, PendingMidiPort>
         _pendingMidiPorts = [];
+
+    private readonly ConcurrentDictionary<string, PendingLaunchpadMiniPort>
+        _pendingLaunchpadMiniPorts = [];
 }

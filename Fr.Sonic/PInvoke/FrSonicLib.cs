@@ -11,6 +11,7 @@ public enum ChannelType
 {
     Channel = 0,
     GroupChannel = 1,
+    Master = 2,
 }
 
 public enum DialMode
@@ -93,6 +94,22 @@ public delegate void MidiCcUpdateCallback(
     float normalizedValue,
     float normalizedKnownValue,
     [MarshalAs(UnmanagedType.U1)] bool catchingUp
+);
+
+[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+public delegate void LaunchpadLoopPressedCallback(
+    ulong layerId,
+    ChannelType channelType,
+    ulong channelId,
+    ulong loopPosition
+);
+
+[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+public delegate void LaunchpadFaderChangedCallback(
+    ulong layerId,
+    ChannelType channelType,
+    ulong channelId,
+    float normalizedValue
 );
 
 /* ── structs ─────────────────────────────────────────────────────────────── */
@@ -268,6 +285,19 @@ internal static partial class FrSonicLib
     )]
     internal static partial ulong CreateFaderFoxPc4PortC(string pmxPurpose, string pmxTag);
 
+    [LibraryImport(
+        LIB,
+        EntryPoint = "frsonic_create_launchpad_mini_port",
+        StringMarshalling = StringMarshalling.Utf8
+    )]
+    internal static partial ulong CreateLaunchpadMiniPortC(
+        string pmxPurpose,
+        string pmxTag,
+        LayerSelectCallback layerCb,
+        LaunchpadLoopPressedCallback loopPressedCb,
+        LaunchpadFaderChangedCallback faderChangedCb
+    );
+
     [LibraryImport(LIB, EntryPoint = "frsonic_set_selected_plugin_page")]
     internal static partial void SetSelectedPluginPageC(ulong pluginId, ulong pageNumber);
 
@@ -320,6 +350,16 @@ internal static partial class FrSonicLib
         string name,
         float min,
         float max
+    );
+
+    [LibraryImport(LIB, EntryPoint = "frsonic_set_launchpad_mini_looper_slot_state")]
+    internal static partial void SetLaunchpadMiniLooperSlotStateC(
+        ChannelType channelType,
+        ulong channelId,
+        ulong loopPosition,
+        [MarshalAs(UnmanagedType.U1)] bool available,
+        [MarshalAs(UnmanagedType.U1)] bool loaded,
+        [MarshalAs(UnmanagedType.U1)] bool playing
     );
 
     /* silence producers */

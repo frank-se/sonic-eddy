@@ -11,6 +11,7 @@ namespace SonicEddy.ViewModels.TransportViewModels;
 public sealed class TransportToolbarViewModel : ViewModelBase, IDisposable
 {
     private const ulong BeatsPerBar = 4;
+    private const ulong StopLeadTimeBeats = 4;
     private readonly DispatcherTimer _timer;
     private readonly SyncClient? _syncClient;
 
@@ -83,7 +84,7 @@ public sealed class TransportToolbarViewModel : ViewModelBase, IDisposable
 
     private void StopPlayback()
     {
-        if (!TryGetNextBarBeat(out var beat)) return;
+        if (!TryGetStopBeat(out var beat)) return;
         _syncClient?.ScheduleTransportState(beat, SyncTransportState.Stopped);
     }
 
@@ -93,6 +94,20 @@ public sealed class TransportToolbarViewModel : ViewModelBase, IDisposable
         var current = _syncClient?.Snapshot?.CurrentBeat(MonotonicClock.NowNsec());
         if (current is null) return false;
         beat = NextBarBeat(current.Value.Beat);
+        return true;
+    }
+
+    private bool TryGetStopBeat(out ulong beat)
+    {
+        beat = 0;
+        var current = _syncClient?.Snapshot?.CurrentBeat(MonotonicClock.NowNsec());
+        if (current is null) return false;
+
+        beat = NextBarBeat(current.Value.Beat);
+        var earliest = current.Value.Beat + StopLeadTimeBeats;
+        while (beat < earliest)
+            beat += BeatsPerBar;
+
         return true;
     }
 

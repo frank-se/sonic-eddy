@@ -28,4 +28,10 @@ public class MidiControllerSetupService : IMidiControllerSetupService
         ulong pluginId, string name, float min, float max) =>
         FrSonicMidi.AddFilterParameter(channelType, channelId, pluginId, name, min,
             max);
+
+    public void SetLaunchpadMiniLooperSlotState(ChannelType channelType,
+        ulong channelId, ulong loopPosition, bool available, bool loaded,
+        bool playing) =>
+        FrSonicMidi.SetLaunchpadMiniLooperSlotState(channelType, channelId,
+            loopPosition, available, loaded, playing);
 }

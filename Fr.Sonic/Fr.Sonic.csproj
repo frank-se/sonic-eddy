@@ -14,7 +14,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <None Include="runtimes/linux-x64/libfrsonic.so.0.1.0"
+        <None Include="..\fr-sonic\build\src\libfrsonic.so.0.5.0"
               Pack="true"
               PackagePath="runtimes/linux-x64/native/" />
     </ItemGroup>

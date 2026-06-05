@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <array>
 #include <iosfwd>
 #include <ostream>
 #include <variant>
@@ -46,8 +47,14 @@ struct NoteOffV2 {
   uint16_t velocity;
 };
 
+struct RawUmpMessage {
+  std::array<uint32_t, 4> words{};
+  uint8_t word_count{};
+};
+
 using Message = std::variant<ControlChangeV1, NoteOnV1, NoteOffV1,
-                             ControlChangeV2, NoteOnV2, NoteOffV2>;
+                             ControlChangeV2, NoteOnV2, NoteOffV2,
+                             RawUmpMessage>;
 
 using MessageV1 = std::variant<ControlChangeV1, NoteOnV1, NoteOffV1>;
 
@@ -122,6 +129,10 @@ inline std::ostream &operator<<(std::ostream &lhs,
             lhs << "Note Off " << static_cast<int>(arg.note_number)
                 << std::endl;
             lhs << "Velocity " << static_cast<int>(arg.velocity) << std::endl;
+          } else if constexpr (std::is_same_v<T, midi::RawUmpMessage>) {
+            lhs << "Raw UMP" << std::endl;
+            lhs << "Word count " << static_cast<int>(arg.word_count)
+                << std::endl;
           }
         },
         midi_message);

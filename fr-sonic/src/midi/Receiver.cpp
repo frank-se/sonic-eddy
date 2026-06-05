@@ -74,11 +74,11 @@ void midi::Receiver::process() {
       const void *data = SPA_POD_BODY(&pod_control->value);
       const uint32_t length = SPA_POD_BODY_SIZE(&pod_control->value);
 
-      if (length != 8) {
+      if (length != 4 && length != 8 && length != 12 && length != 16) {
         continue;
       }
 
-      if (auto midi_message = parse_ump(data)) {
+      if (auto midi_message = parse_ump(data, length)) {
         _queue.push(*midi_message);
         _queue_wait_condition->notify_all();
       }

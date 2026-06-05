@@ -8,8 +8,10 @@ using Avalonia.Media;
 using Fr.Sonic;
 using Fr.Sonic.Loopers;
 using Fr.Sonic.Modules.Models;
+using Fr.Sonic.PInvoke;
 using Fr.Sonic.Sync;
 using ReactiveUI;
+using SonicEddy.Services.Midi;
 using SonicEddy.Tools;
 using SonicEddy.Views.MixerViewsV2;
 
@@ -26,18 +28,29 @@ public sealed class LooperSectionViewModel : ReactiveObject, IDisposable
     private readonly LooperClient _postFxClient;
     private SyncClient? _syncClient;
     private Window? _detailsWindow;
+    private readonly IMidiControllerSetupService _midiControllerSetupService;
+    private readonly ChannelType _launchpadChannelType;
+    private readonly ulong _launchpadChannelId;
+    private LooperState? _preFxState;
+    private LooperState? _postFxState;
     private readonly Action<LooperState?> _preFxStateChanged;
     private readonly Action<LooperState?> _postFxStateChanged;
 
-    public LooperSectionViewModel(Looper preFxLooper, Looper postFxLooper)
+    public LooperSectionViewModel(Looper preFxLooper, Looper postFxLooper,
+        IMidiControllerSetupService midiControllerSetupService,
+        ChannelType launchpadChannelType,
+        ulong launchpadChannelId)
     {
         _preFxLooper = preFxLooper;
         _postFxLooper = postFxLooper;
+        _midiControllerSetupService = midiControllerSetupService;
+        _launchpadChannelType = launchpadChannelType;
+        _launchpadChannelId = launchpadChannelId;
         _preFxClient = new LooperClient(preFxLooper.CaptureNode);
         _postFxClient = new LooperClient(postFxLooper.CaptureNode);
 
-        _preFxStateChanged = _ => OnLooperStateChanged();
-        _postFxStateChanged = _ => OnLooperStateChanged();
+        _preFxStateChanged = state => OnLooperStateChanged(false, state);
+        _postFxStateChanged = state => OnLooperStateChanged(true, state);
         _preFxClient.StateChanged += _preFxStateChanged;
         _postFxClient.StateChanged += _postFxStateChanged;
 
@@ -49,6 +62,9 @@ public sealed class LooperSectionViewModel : ReactiveObject, IDisposable
 
         SetMix(_preFxLooper, 0.0);
         SetMix(_postFxLooper, 0.0);
+        FrSonicMidi.LaunchpadLoopPressed += OnLaunchpadLoopPressed;
+        FrSonicMidi.LaunchpadFaderChanged += OnLaunchpadFaderChanged;
+        _ = RefreshLaunchpadStateAsync();
     }
 
     public ICommand CutPlayCommand { get; }
@@ -146,6 +162,8 @@ public sealed class LooperSectionViewModel : ReactiveObject, IDisposable
             SwitchRejected = false;
             this.RaisePropertyChanged();
             this.RaisePropertyChanged(nameof(ActivePositionIcon));
+            this.RaisePropertyChanged(nameof(PlayForeground));
+            _ = RefreshLaunchpadStateAsync();
         }
     }
 
@@ -156,14 +174,21 @@ public sealed class LooperSectionViewModel : ReactiveObject, IDisposable
         {
             this.RaiseAndSetIfChanged(ref field, value);
             this.RaisePropertyChanged(nameof(ActionForeground));
+            this.RaisePropertyChanged(nameof(PlayForeground));
         }
     }
 
     public string ActivePositionIcon => IsPostFxSelected ? "\uF69F" : "\uF695";
     public IBrush ActionForeground => SwitchRejected ? Brushes.Red : Brushes.White;
+    public IBrush PlayForeground => SwitchRejected
+        ? Brushes.Red
+        : ActiveState?.ActivePlayback is not null
+            ? Brushes.Green
+            : Brushes.White;
 
     private Looper ActiveLooper => IsPostFxSelected ? _postFxLooper : _preFxLooper;
     private LooperClient ActiveClient => IsPostFxSelected ? _postFxClient : _preFxClient;
+    private LooperState? ActiveState => IsPostFxSelected ? _postFxState : _preFxState;
 
     private async Task CutPlayAsync()
     {
@@ -179,6 +204,25 @@ public sealed class LooperSectionViewModel : ReactiveObject, IDisposable
         };
 
         ActiveLooper.CaptureNode.SetParam("commands", JsonSerializer.Serialize(commands));
+    }
+
+    private async Task LaunchpadCutPlayAsync(uint loop)
+    {
+        if (!TryGetTargetBeat(out var beat))
+            return;
+
+        var state = await ActiveClient.GetStateAsync().ConfigureAwait(false);
+        var existing = state?.Loops.FirstOrDefault(candidate =>
+            candidate.LoopNumber == loop);
+        var loaded = IsLoaded(existing);
+
+        object[][] commands = loaded
+            ? [[beat, $"play {loop}"]]
+            : [[beat, $"cut {(ulong)SelectedBarLength * BeatsPerBar} {loop}"],
+               [beat, $"play {loop}"]];
+
+        ActiveLooper.CaptureNode.SetParam("commands",
+            JsonSerializer.Serialize(commands));
     }
 
     private void Stop()
@@ -281,8 +325,7 @@ public sealed class LooperSectionViewModel : ReactiveObject, IDisposable
         {
             var loop = state.Loops.FirstOrDefault(candidate =>
                 candidate.LoopNumber == loopNumber);
-            if (loop is null || !string.Equals(loop.State, "filled",
-                    StringComparison.OrdinalIgnoreCase))
+            if (!IsLoaded(loop))
                 return loopNumber;
         }
 
@@ -307,19 +350,78 @@ public sealed class LooperSectionViewModel : ReactiveObject, IDisposable
     private static void SetMix(Looper looper, double mix) =>
         looper.CaptureNode.SetParam("mix", (float)mix);
 
-    private void OnLooperStateChanged()
+    private void OnLooperStateChanged(bool isPostFx, LooperState? state)
     {
+        if (isPostFx)
+            _postFxState = state;
+        else
+            _preFxState = state;
+
+        this.RaisePropertyChanged(nameof(PlayForeground));
+
         if (!SwitchRejected)
+        {
+            _ = RefreshLaunchpadStateAsync();
             return;
+        }
 
         if (!IsSwitchRejected())
             SwitchRejected = false;
+
+        _ = RefreshLaunchpadStateAsync();
     }
+
+    private async Task RefreshLaunchpadStateAsync()
+    {
+        var state = await ActiveClient.GetStateAsync().ConfigureAwait(false);
+        if (IsPostFxSelected)
+            _postFxState = state;
+        else
+            _preFxState = state;
+        this.RaisePropertyChanged(nameof(PlayForeground));
+
+        for (uint loop = 0; loop < 8; loop++)
+        {
+            var loopState = state?.Loops.FirstOrDefault(candidate =>
+                candidate.LoopNumber == loop);
+            var loaded = IsLoaded(loopState);
+            var playing = state?.ActivePlayback?.LoopNumber == loop;
+            _midiControllerSetupService.SetLaunchpadMiniLooperSlotState(
+                _launchpadChannelType, _launchpadChannelId, loop, true,
+                loaded, playing);
+        }
+    }
+
+    private static bool IsLoaded(LoopState? loopState) =>
+        loopState is not null &&
+        !string.Equals(loopState.State, "empty",
+            StringComparison.OrdinalIgnoreCase);
+
+    private void OnLaunchpadLoopPressed(LaunchpadLoopPressedEventArgs args)
+    {
+        if (!IsLaunchpadTarget(args.ChannelType, args.ChannelId))
+            return;
+
+        _ = LaunchpadCutPlayAsync((uint)args.LoopPosition);
+    }
+
+    private void OnLaunchpadFaderChanged(LaunchpadFaderChangedEventArgs args)
+    {
+        if (!IsLaunchpadTarget(args.ChannelType, args.ChannelId))
+            return;
+
+        Mix = Math.Clamp(args.NormalizedValue, 0.0, 1.0);
+    }
+
+    private bool IsLaunchpadTarget(ChannelType channelType, ulong channelId) =>
+        channelType == _launchpadChannelType && channelId == _launchpadChannelId;
 
     public void Dispose()
     {
         if (_detailsWindow is not null)
             _detailsWindow.Close();
+        FrSonicMidi.LaunchpadLoopPressed -= OnLaunchpadLoopPressed;
+        FrSonicMidi.LaunchpadFaderChanged -= OnLaunchpadFaderChanged;
         _preFxClient.StateChanged -= _preFxStateChanged;
         _postFxClient.StateChanged -= _postFxStateChanged;
         _preFxClient.Dispose();

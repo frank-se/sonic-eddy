@@ -20,4 +20,8 @@ public interface IMidiControllerSetupService
 
     void AddFilterParameter(ChannelType channelType,
         ulong channelId, ulong pluginId, string name, float min, float max);
+
+    void SetLaunchpadMiniLooperSlotState(ChannelType channelType,
+        ulong channelId, ulong loopPosition, bool available, bool loaded,
+        bool playing);
 }

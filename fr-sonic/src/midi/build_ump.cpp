@@ -74,6 +74,8 @@ midi::UmpBytes midi::build_ump(const Message &message) {
                              (*midi_v1)[1] << 8 | (*midi_v1)[2];
 
           result = integer;
+        } else if constexpr (std::is_same_v<T, RawUmpMessage>) {
+          result = arg;
         }
       },
       message);

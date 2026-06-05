@@ -90,6 +90,8 @@ public static class FrSonic
     private static readonly MetadataEntryDeletedCallback _cbMetadataEntryDeleted = FrSonicWireplumber.OnMetadataEntryDeleted;
     private static readonly PeakCallback                 _cbPeak                 = FrSonicMonitoring.OnPeak;
     private static readonly MidiCcUpdateCallback         _cbMidiCcUpdate         = FrSonicMidi.OnMidiCcUpdate;
+    private static readonly LaunchpadLoopPressedCallback _cbLaunchpadLoopPressed = FrSonicMidi.OnLaunchpadLoopPressed;
+    private static readonly LaunchpadFaderChangedCallback _cbLaunchpadFaderChanged = FrSonicMidi.OnLaunchpadFaderChanged;
 
     /* ── lifecycle ───────────────────────────────────────────────────────── */
 
@@ -123,7 +125,9 @@ public static class FrSonic
             FrSonicMidi.OnDialSectionModeSelect,
             FrSonicMidi.OnFilterParamsSectionSelect,
             FrSonicMidi.OnFilterParamsSectionMoveRight,
-            FrSonicMidi.OnFilterParamsSectionMoveLeft);
+            FrSonicMidi.OnFilterParamsSectionMoveLeft,
+            _cbLaunchpadLoopPressed,
+            _cbLaunchpadFaderChanged);
 
         _processingThread = new(ProcessPipewireUpdatesThread);
         _processingThread.Start();

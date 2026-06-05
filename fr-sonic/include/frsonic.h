@@ -59,7 +59,7 @@ using peak_callback_t = void (*)(uint64_t object_serial, float left_peak,
                                  float right_average);
 
 /* midi — ChannelType / DialMode kept as independent enums matching C# values */
-enum class ChannelType : int { Channel = 0, GroupChannel = 1 };
+enum class ChannelType : int { Channel = 0, GroupChannel = 1, Master = 2 };
 enum class DialMode : int { Sends = 1, FilterParams = 2 };
 
 using layer_select_callback_t = void (*)(size_t layer_id);
@@ -76,6 +76,12 @@ using midi_cc_update_callback_t =
     void (*)(ChannelType channel_type, uint64_t channel_id, uint64_t object_id,
              const char *parameter_name, float normalized_value,
              float normalized_known_value, bool catching_up);
+using launchpad_loop_pressed_callback_t =
+    void (*)(size_t layer_id, ChannelType channel_type, size_t channel_id,
+             size_t loop_position);
+using launchpad_fader_changed_callback_t =
+    void (*)(size_t layer_id, ChannelType channel_type, size_t channel_id,
+             float normalized_value);
 
 struct frsonic_looper_config {
   const char *name;
@@ -168,6 +174,12 @@ FRSONIC_API size_t frsonic_create_mm1_port(
 FRSONIC_API size_t frsonic_create_fader_fox_pc4_port(const char *pmx_purpose,
                                                      const char *pmx_tag);
 
+FRSONIC_API size_t frsonic_create_launchpad_mini_port(
+    const char *pmx_purpose, const char *pmx_tag,
+    layer_select_callback_t layer_cb,
+    launchpad_loop_pressed_callback_t loop_pressed_cb,
+    launchpad_fader_changed_callback_t fader_changed_cb);
+
 FRSONIC_API void frsonic_set_selected_plugin_page(size_t plugin_id,
                                                   size_t page_number);
 FRSONIC_API void frsonic_set_selected_channel(ChannelType channel_type,
@@ -192,6 +204,9 @@ FRSONIC_API void frsonic_add_filter_parameter(ChannelType channel_type,
                                               size_t channel_id,
                                               size_t plugin_id, char *name,
                                               float min, float max);
+FRSONIC_API void frsonic_set_launchpad_mini_looper_slot_state(
+    ChannelType channel_type, size_t channel_id, size_t loop_position,
+    bool available, bool loaded, bool playing);
 
 /* ── lv2 ─────────────────────────────────────────────────────────────────── */
 FRSONIC_API void frsonic_lv2_init();

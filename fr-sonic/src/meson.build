@@ -45,6 +45,7 @@ libfrsonic = shared_library(
         'midi/controllers/FaderfoxPc4.cpp',
         'midi/controllers/MidiMix.cpp',
         'midi/controllers/CmdMm1.cpp',
+        'midi/controllers/LaunchpadMini.cpp',
         'midi/controllers/Channel.cpp',
         'midi/controllers/CatchUpHandler.cpp',
         'midi/Registry.cpp',

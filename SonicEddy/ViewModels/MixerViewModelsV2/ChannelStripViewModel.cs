@@ -42,7 +42,8 @@ public class ChannelStripViewModel : ChannelWithSendsViewModelBase,
         AudioFromRoutingTargets = audioFromRoutingTargets;
         SelectedAudioToRoutingTarget = selectedAudioToRoutingTarget;
         ChannelStrip = channelStrip;
-        Looper = new(channelStrip.PreFxLooper, channelStrip.PostFxLooper);
+        Looper = new(channelStrip.PreFxLooper, channelStrip.PostFxLooper,
+            midiControllerSetupService, ChannelType.Channel, channelId);
 
         this.WhenAnyValue(x => x.SelectedAudioFromRoutingTarget)
             .Subscribe(routingTarget =>

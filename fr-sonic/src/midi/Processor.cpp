@@ -1,6 +1,7 @@
 #include "Processor.h"
 #include "controllers/CmdMm1.h"
 #include "controllers/FaderfoxPc4.h"
+#include "controllers/LaunchpadMini.h"
 #include "logging/log.h"
 
 /* ── lifecycle ───────────────────────────────────────────────────────────── */
@@ -98,7 +99,7 @@ std::optional<size_t> midi::Processor::create_midi_mix_port(
       _controller_update_callback);
 
   _controllers.push_back(midi_mix);
-  _receivers.push_back(receiver);
+  _receiver_bindings.push_back({.receiver = receiver, .controller = midi_mix});
   midi_mix->add_current_state_as_feedback();
   return port_id;
 }
@@ -162,7 +163,8 @@ std::optional<size_t> midi::Processor::create_mm_1_port(
       _controller_update_callback);
 
   _controllers.push_back(cmd_mm_1);
-  _receivers.push_back(receiver);
+  _receiver_bindings.push_back(
+      {.receiver = receiver, .controller = cmd_mm_1});
   cmd_mm_1->add_current_state_as_feedback();
   return port_id;
 }
@@ -186,7 +188,69 @@ std::optional<size_t> midi::Processor::create_fader_fox_pc4_port(
       *_registry, _loop);
 
   _controllers.push_back(faderfox_pc4);
-  _receivers.push_back(receiver);
+  _receiver_bindings.push_back(
+      {.receiver = receiver, .controller = faderfox_pc4});
+  return port_id;
+}
+
+std::optional<size_t> midi::Processor::create_launchpad_mini_port(
+    const char *pmx_purpose, const char *pmx_tag,
+    const LayerSelectCallback &layer_select_callback,
+    const controllers::LaunchpadMiniLoopPressedCallback &loop_pressed_callback,
+    const controllers::LaunchpadMiniFaderChangedCallback
+        &fader_changed_callback) {
+  logging::log<logging::LogLevel::Trace>(
+      "Processor::create_launchpad_mini_port");
+
+  std::lock_guard controllers_lock(_controllers_mutex);
+  const auto port_id = _controllers.size();
+
+  const auto mi_receiver_name =
+      std::format("midi-receiver {} Launchpad Mini MI", port_id);
+  const auto da_receiver_name =
+      std::format("midi-receiver {} Launchpad Mini DA", port_id);
+  const auto mi_sender_name =
+      std::format("midi-sender {} Launchpad Mini MI", port_id);
+  const auto da_sender_name =
+      std::format("midi-sender {} Launchpad Mini DA", port_id);
+
+  const auto mi_receiver = std::make_shared<Receiver>(
+      pmx_purpose, pmx_tag, mi_receiver_name, _loop, MidiVersion::UMP,
+      &_queue_wait_mutex, &_queue_wait_condition);
+  pw_loop_invoke(_loop, setup_receiver_function, SPA_ID_INVALID, nullptr, 0,
+                 false, mi_receiver.get());
+
+  const auto da_receiver = std::make_shared<Receiver>(
+      pmx_purpose, pmx_tag, da_receiver_name, _loop, MidiVersion::UMP,
+      &_queue_wait_mutex, &_queue_wait_condition);
+  pw_loop_invoke(_loop, setup_receiver_function, SPA_ID_INVALID, nullptr, 0,
+                 false, da_receiver.get());
+
+  const auto mi_sender =
+      std::make_shared<Sender>(pmx_purpose, pmx_tag, mi_sender_name, _loop);
+  pw_loop_invoke(_loop, setup_sender_function, SPA_ID_INVALID, nullptr, 0,
+                 false, mi_sender.get());
+
+  const auto da_sender =
+      std::make_shared<Sender>(pmx_purpose, pmx_tag, da_sender_name, _loop);
+  pw_loop_invoke(_loop, setup_sender_function, SPA_ID_INVALID, nullptr, 0,
+                 false, da_sender.get());
+
+  const auto launchpad = std::make_shared<controllers::LaunchpadMini>(
+      mi_sender, da_sender,
+      [this, layer_select_callback](const size_t layer_id) {
+        for (const auto &c : _controllers)
+          c->set_layer_from_processor(layer_id);
+        layer_select_callback(layer_id);
+      },
+      loop_pressed_callback, fader_changed_callback);
+
+  _controllers.push_back(launchpad);
+  _receiver_bindings.push_back(
+      {.receiver = mi_receiver, .controller = launchpad});
+  _receiver_bindings.push_back(
+      {.receiver = da_receiver, .controller = launchpad});
+  launchpad->add_current_state_as_feedback();
   return port_id;
 }
 
@@ -195,9 +259,9 @@ std::optional<size_t> midi::Processor::create_fader_fox_pc4_port(
 bool midi::Processor::process_queues() {
   auto controllers_lock = std::lock_guard(_controllers_mutex);
   auto message_processed = false;
-  for (size_t i = 0; i < _receivers.size(); i++) {
-    if (const auto message = _receivers[i]->pop()) {
-      _controllers[i]->process(*message);
+  for (const auto &binding : _receiver_bindings) {
+    if (const auto message = binding.receiver->pop()) {
+      binding.controller->process(*message);
       message_processed = true;
     }
   }
@@ -273,4 +337,14 @@ void midi::Processor::add_filter_parameter(
   std::lock_guard lock(_controllers_mutex);
   for (const auto &c : _controllers)
     c->add_filter_parameter(channel_type, channel_id, plugin_id, name, min, max);
+}
+
+void midi::Processor::set_launchpad_mini_looper_slot_state(
+    const controllers::ChannelType channel_type, const size_t channel_id,
+    const size_t loop_position, const bool available, const bool loaded,
+    const bool playing) {
+  std::lock_guard lock(_controllers_mutex);
+  for (const auto &c : _controllers)
+    c->set_looper_slot_state(channel_type, channel_id, loop_position, available,
+                             loaded, playing);
 }

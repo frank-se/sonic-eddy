@@ -39,7 +39,8 @@ public class GroupChannelViewModel(
 {
     public GroupChannel GroupChannel { get; } = groupChannel;
     public LooperSectionViewModel Looper { get; } =
-        new(groupChannel.PreFxLooper, groupChannel.PostFxLooper);
+        new(groupChannel.PreFxLooper, groupChannel.PostFxLooper,
+            midiControllerSetupService, ChannelType.GroupChannel, channelId);
 
     protected override void Dispose(bool disposing)
     {
