@@ -81,6 +81,7 @@ private:
   static constexpr uint8_t _layer_b_cc = 79;
   static constexpr uint8_t _channel_mode_cc = 69;
   static constexpr uint8_t _group_master_mode_cc = 59;
+  static constexpr uint8_t _fader_layout_cc = 19;
 
   static constexpr uint8_t _off = 0;
   static constexpr uint8_t _dark_green = 21;
@@ -127,6 +128,7 @@ private:
   void refresh_all();
   void refresh_layer_buttons();
   void refresh_mode_buttons();
+  void refresh_layout_button();
   void refresh_grid();
 
   [[nodiscard]] std::optional<Target> target_for_column(size_t column) const;

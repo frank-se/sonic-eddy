@@ -111,6 +111,13 @@ void controllers::LaunchpadMini::handle_control_change(const uint8_t index,
     return;
   }
 
+  if (index == _fader_layout_cc) {
+    switch_layout(_layout == LaunchpadMiniLayout::Fader
+                      ? LaunchpadMiniLayout::Session
+                      : LaunchpadMiniLayout::Fader);
+    return;
+  }
+
   if (index <= 7) {
     std::optional<Target> target;
     {
@@ -273,6 +280,7 @@ void controllers::LaunchpadMini::send_fader_setup() const {
 void controllers::LaunchpadMini::refresh_all() {
   refresh_layer_buttons();
   refresh_mode_buttons();
+  refresh_layout_button();
   refresh_grid();
 }
 
@@ -287,6 +295,11 @@ void controllers::LaunchpadMini::refresh_mode_buttons() {
   send_cc(_group_master_mode_cc,
           _mode == LaunchpadMiniMode::GroupAndMaster ? _bright_blue
                                                      : _dark_blue);
+}
+
+void controllers::LaunchpadMini::refresh_layout_button() {
+  send_cc(_fader_layout_cc,
+          _layout == LaunchpadMiniLayout::Fader ? _bright_blue : _dark_blue);
 }
 
 void controllers::LaunchpadMini::refresh_grid() {
