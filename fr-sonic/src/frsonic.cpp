@@ -307,17 +307,19 @@ void frsonic_stop() {
     for (auto &looper : g_loopers)
       if (looper) looper->stop_copy_thread();
 
+    logging::log<logging::LogLevel::Trace>("frsonic_stop: stopping loopers");
+    for (auto &looper : g_loopers)
+      if (looper) looper->stop();
+    logging::log<logging::LogLevel::Trace>("frsonic_stop: loopers stopped");
+
     // Phase 2 — with the PW loop paused under pw_thread_loop_lock, do all
-    // PW-object cleanup from the main thread.  No background threads remain
-    // that could call pw_loop_invoke, so holding the lock is safe.
+    // remaining PW-object cleanup from the main thread.  Looper stream
+    // destruction happens before the lock because pw_stream_destroy can wait
+    // for loop-thread work during shutdown.
     logging::log<logging::LogLevel::Trace>("frsonic_stop: acquiring loop lock");
     pw_thread_loop_lock(g_owned_pipewire->thread_loop());
     logging::log<logging::LogLevel::Trace>("frsonic_stop: loop lock acquired");
 
-    // stop() is idempotent: copy thread is already done; only stream destroy runs.
-    logging::log<logging::LogLevel::Trace>("frsonic_stop: stopping loopers");
-    for (auto &looper : g_loopers)
-      if (looper) looper->stop();
     g_loopers.clear();
     g_free_looper_handles.clear();
     logging::log<logging::LogLevel::Trace>("frsonic_stop: loopers done");

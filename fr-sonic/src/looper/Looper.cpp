@@ -234,14 +234,16 @@ bool looper::Looper::start() {
 }
 
 void looper::Looper::stop() {
+  destroy_streams();
+
   if (_capture_stream != nullptr) {
-    pw_stream_destroy(_capture_stream);
-    _capture_stream = nullptr;
+    logging::log<logging::LogLevel::Error>(
+        "Looper '{}' capture stream survived destroy_streams", _config.name);
   }
 
   if (_playback_stream != nullptr) {
-    pw_stream_destroy(_playback_stream);
-    _playback_stream = nullptr;
+    logging::log<logging::LogLevel::Error>(
+        "Looper '{}' playback stream survived destroy_streams", _config.name);
   }
 
   for (auto &slot : _loop_slots) {
@@ -258,6 +260,36 @@ void looper::Looper::stop() {
   }
 
   stop_copy_thread();
+}
+
+void looper::Looper::destroy_streams() {
+  if (_capture_stream == nullptr && _playback_stream == nullptr)
+    return;
+
+  pw_loop_invoke(
+      _loop,
+      [](spa_loop *loop, bool async, uint32_t seq, const void *data,
+         size_t size, void *user_data) {
+        (void)loop;
+        (void)async;
+        (void)seq;
+        (void)data;
+        (void)size;
+        auto *looper = static_cast<Looper *>(user_data);
+
+        if (looper->_capture_stream != nullptr) {
+          pw_stream_destroy(looper->_capture_stream);
+          looper->_capture_stream = nullptr;
+        }
+
+        if (looper->_playback_stream != nullptr) {
+          pw_stream_destroy(looper->_playback_stream);
+          looper->_playback_stream = nullptr;
+        }
+
+        return 0;
+      },
+      0, nullptr, 0, true, this);
 }
 
 void looper::Looper::start_copy_thread() {

@@ -171,6 +171,7 @@ public:
   bool start();
   void stop();
   void stop_copy_thread();
+  void destroy_streams();
   void process();
 
   [[nodiscard]] pw_stream *capture_stream() const { return _capture_stream; }
