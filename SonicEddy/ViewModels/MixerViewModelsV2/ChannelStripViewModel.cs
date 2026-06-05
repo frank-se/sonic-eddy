@@ -54,6 +54,16 @@ public class ChannelStripViewModel : ChannelWithSendsViewModelBase,
                     channel.PlaybackNodeObjectSerial.ToString());
             })
             .DisposeWith(Disposables);
+
+        this.WhenAnyValue(x => x.Trim)
+            .Subscribe(trim =>
+            {
+                var gain = trim <= 0.0
+                    ? trim + 1.0
+                    : 1.0 + trim * 3.0;
+                ChannelStrip.PreFxLooper.CaptureNode.SetVolumes([gain, gain]);
+            })
+            .DisposeWith(Disposables);
     }
 
     public ChannelStrip ChannelStrip { get; }
@@ -68,6 +78,12 @@ public class ChannelStripViewModel : ChannelWithSendsViewModelBase,
     }
 
     public IRoutingTarget? SelectedAudioFromRoutingTarget
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
+    public double Trim
     {
         get;
         set => this.RaiseAndSetIfChanged(ref field, value);

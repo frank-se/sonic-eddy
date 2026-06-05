@@ -102,6 +102,17 @@ public partial class ChannelStrip : UserControl
         set => SetValue(SelectedAudioFromRoutingTargetProperty, value);
     }
 
+    public static readonly StyledProperty<double> TrimProperty =
+        AvaloniaProperty.Register<ChannelStrip, double>(
+            nameof(Trim),
+            defaultBindingMode: BindingMode.TwoWay);
+
+    public double Trim
+    {
+        get => GetValue(TrimProperty);
+        set => SetValue(TrimProperty, value);
+    }
+
     /*
      * Send section
      */

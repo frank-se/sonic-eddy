@@ -2,13 +2,14 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:controls="clr-namespace:SonicEddy.Controls"
              xmlns:mixerControls="clr-namespace:SonicEddy.Controls.MixerControls"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="SonicEddy.Controls.MixerControls.ChannelStrip">
 
     <Panel Background="MidnightBlue">
         <Grid ColumnDefinitions="120"
-              RowDefinitions="Auto,Auto,132,160,Auto,100,100,100,*,Auto"
+              RowDefinitions="Auto,Auto,40,132,160,Auto,100,100,100,*,Auto"
               Margin="2">
 
             <mixerControls:ChannelHeader Grid.Row="0"
@@ -24,7 +25,12 @@
                                            SelectedRoutingTarget="{Binding $parent[mixerControls:ChannelStrip].SelectedAudioFromRoutingTarget}"
                                            RoutingTargets="{Binding $parent[mixerControls:ChannelStrip].AudioFromRoutingTargets}" />
 
-            <mixerControls:SendSection Grid.Row="2"
+            <controls:PanSlider Grid.Row="2"
+                                Margin="4"
+                                Text="Trim"
+                                Value="{Binding $parent[mixerControls:ChannelStrip].Trim}" />
+
+            <mixerControls:SendSection Grid.Row="3"
                                        Margin="4,4,4,16"
                                        Send1Trim="{Binding $parent[mixerControls:ChannelStrip].Send1Trim}"
                                        Send2Trim="{Binding $parent[mixerControls:ChannelStrip].Send2Trim}"
@@ -32,10 +38,10 @@
                                        Send4Trim="{Binding $parent[mixerControls:ChannelStrip].Send4Trim}"
                                        IsMidiControlled="{Binding $parent[mixerControls:ChannelStrip].IsSendMidiControlled}" />
 
-            <mixerControls:LooperCompactSection Grid.Row="3"
+            <mixerControls:LooperCompactSection Grid.Row="4"
                                                 DataContext="{ReflectionBinding Looper}" />
 
-            <mixerControls:FilterSectionHeader Grid.Row="4"
+            <mixerControls:FilterSectionHeader Grid.Row="5"
                                                HasFilter="{Binding $parent[mixerControls:ChannelStrip].HasFilter}"
                                                IsMidiControlled="{Binding $parent[mixerControls:ChannelStrip].IsFilterMidiControlled}"
                                                AddCommand="{Binding $parent[mixerControls:ChannelStrip].AddFilterCommand}"
@@ -46,25 +52,25 @@
                                                SavePresetCommand="{Binding $parent[mixerControls:ChannelStrip].SavePresetCommand}"
                                                LoadPresetCommand="{Binding $parent[mixerControls:ChannelStrip].LoadPresetCommand}" />
 
-            <mixerControls:ParameterSection Grid.Row="5"
+            <mixerControls:ParameterSection Grid.Row="6"
                                             Margin="4"
                                             IsMidiControlled="{Binding $parent[mixerControls:ChannelStrip].FirstPluginParametersMidiControlled}"
                                             Parameters="{Binding $parent[mixerControls:ChannelStrip].FirstPluginParameters}"
                                             Text="{Binding $parent[mixerControls:ChannelStrip].FirstPluginText}" />
 
-            <mixerControls:ParameterSection Grid.Row="6"
+            <mixerControls:ParameterSection Grid.Row="7"
                                             Margin="4"
                                             IsMidiControlled="{Binding $parent[mixerControls:ChannelStrip].SecondPluginParametersMidiControlled}"
                                             Parameters="{Binding $parent[mixerControls:ChannelStrip].SecondPluginParameters}"
                                             Text="{Binding $parent[mixerControls:ChannelStrip].SecondPluginText}" />
 
-            <mixerControls:ParameterSection Grid.Row="7"
+            <mixerControls:ParameterSection Grid.Row="8"
                                             Margin="4"
                                             IsMidiControlled="{Binding $parent[mixerControls:ChannelStrip].ThirdPluginParametersMidiControlled}"
                                             Parameters="{Binding $parent[mixerControls:ChannelStrip].ThirdPluginParameters}"
                                             Text="{Binding $parent[mixerControls:ChannelStrip].ThirdPluginText}" />
 
-            <mixerControls:PanAndVolumeSectionWithMonitor Grid.Row="8"
+            <mixerControls:PanAndVolumeSectionWithMonitor Grid.Row="9"
                                                           Margin="0,12,0,0"
                                                           LeftAverage="{Binding $parent[mixerControls:ChannelStrip].LeftAverage}"
                                                           RightAverage="{Binding $parent[mixerControls:ChannelStrip].RightAverage}"
@@ -73,7 +79,7 @@
                                                           Volume="{Binding $parent[mixerControls:ChannelStrip].Volume}"
                                                           Pan="{Binding $parent[mixerControls:ChannelStrip].Pan}" />
 
-            <mixerControls:RoutingComboBox Grid.Row="9"
+            <mixerControls:RoutingComboBox Grid.Row="10"
                                            Text="Audio To"
                                            SelectedRoutingTarget="{Binding $parent[mixerControls:ChannelStrip].SelectedAudioToRoutingTarget}"
                                            RoutingTargets="{Binding $parent[mixerControls:ChannelStrip].AudioToRoutingTargets}" />

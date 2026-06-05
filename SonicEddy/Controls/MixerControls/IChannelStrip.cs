@@ -14,6 +14,8 @@ public interface IChannelStrip : IChannel
     ulong ChannelId { get; }
 
     public IRoutingTarget? SelectedAudioFromRoutingTarget { get; set; }
+
+    public double Trim { get; set; }
     
     bool IsSendMidiControlled { get; set; }
     

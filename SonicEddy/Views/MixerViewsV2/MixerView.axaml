@@ -57,6 +57,7 @@
                                                     DeleteCommand="{Binding DeleteAction}"
                                                     AudioFromRoutingTargets="{Binding AudioFromRoutingTargets}"
                                                     SelectedAudioFromRoutingTarget="{Binding SelectedAudioFromRoutingTarget}"
+                                                    Trim="{Binding Trim}"
                                                     Send1Trim="{Binding Send1Trim}"
                                                     Send2Trim="{Binding Send2Trim}"
                                                     Send3Trim="{Binding Send3Trim}"
