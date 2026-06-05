@@ -28,6 +28,7 @@
             <controls:PanSlider Grid.Row="2"
                                 Margin="4"
                                 Text="Trim"
+                                Background="DimGray"
                                 Value="{Binding $parent[mixerControls:ChannelStrip].Trim}" />
 
             <mixerControls:SendSection Grid.Row="3"
