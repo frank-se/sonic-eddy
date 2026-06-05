@@ -508,6 +508,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
             var viewModelService =
                 Locator.Current.GetService<IMixerViewModelService>();
             if (mixerService is null || viewModelService is null) return;
+            var createdDefaultMixer = mixerService.CurrentMixer is null;
             if (mixerService.CurrentMixer is null)
                 await CreateMixer();
 
@@ -515,8 +516,33 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
                 await viewModelService.ConvertCurrentMixerToViewModel(0);
             LayerBViewModel ??=
                 await viewModelService.ConvertCurrentMixerToViewModel(1);
-            if (LayerAViewModel is not null)
+            if (LayerAViewModel is not null && LayerBViewModel is not null)
             {
+                if (createdDefaultMixer &&
+                    mixerService.CurrentMixer?.GlobalMaster is { } globalMaster &&
+                    LayerAViewModel.MasterChannels?
+                        .OfType<MasterChannelViewModel>().FirstOrDefault()
+                        is { } layerA &&
+                    LayerBViewModel.MasterChannels?
+                        .OfType<MasterChannelViewModel>().FirstOrDefault()
+                        is { } layerB)
+                {
+                    _globalMasterViewModel = new(globalMaster, layerA, layerB,
+                        mixerService.CurrentMixer.Cue);
+
+                    var configurationService =
+                        Locator.Current.GetService<MixerConfigurationService>();
+                    if (configurationService is not null)
+                    {
+                        var defaultConfiguration =
+                            configurationService.CreateDefault(LayerAViewModel,
+                                LayerBViewModel, _globalMasterViewModel);
+                        await configurationService.ApplyAsync(
+                            defaultConfiguration, LayerAViewModel,
+                            LayerBViewModel, _globalMasterViewModel);
+                    }
+                }
+
                 IsInitialized = true;
                 viewModelService.SetupControllers();
             }

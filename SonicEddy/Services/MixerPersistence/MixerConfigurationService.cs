@@ -57,6 +57,45 @@ public sealed class MixerConfigurationService : IDisposable
         }
     };
 
+    public Mixer CreateDefault(MixerLayerViewModel layerA,
+        MixerLayerViewModel layerB, GlobalMasterViewModel globalMaster)
+    {
+        var configuration = Capture(Guid.Empty, "Default Mixer", layerA,
+            layerB, globalMaster);
+
+        configuration.MainCrossFader = new();
+        configuration.CueCrossFader = new();
+        configuration.Cue.Pan = 0.0;
+        configuration.Cue.Volume = 1.0;
+
+        foreach (var layer in configuration.Layers)
+        {
+            foreach (var channel in layer.Channels)
+                ResetChannel(channel);
+            foreach (var group in layer.Groups)
+                ResetChannel(group);
+
+            ResetChannel(layer.Master);
+
+            foreach (var channel in layer.Returns)
+            {
+                channel.Pan = 0.0;
+                channel.Volume = 1.0;
+            }
+        }
+
+        return configuration;
+    }
+
+    private static void ResetChannel(ChannelConfig channel)
+    {
+        channel.Pan = 0.0;
+        channel.Volume = 1.0;
+        channel.Trim = 0.0;
+        channel.Sends = channel.Sends.Select(_ => 0.0).ToList();
+        channel.Looper = new();
+    }
+
     public async Task ApplyAsync(Mixer configuration,
         MixerLayerViewModel layerA, MixerLayerViewModel layerB,
         GlobalMasterViewModel globalMaster)
