@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using SonicEddy.Contracts.FilterGraph;
+using SonicEddy.Contracts.MidiRouter;
 using SonicEddy.Contracts.MidiSync;
 using SonicEddy.Contracts.Mixers;
 
@@ -30,4 +31,8 @@ public interface IAppDataService
     Task StoreMidiSyncConfig(MidiSyncConfig config);
 
     Task<MidiSyncConfig?> LoadMidiSyncConfig();
+
+    Task StoreMidiRouterConfig(MidiRouterConfig config);
+
+    Task<MidiRouterConfig?> LoadMidiRouterConfig();
 }

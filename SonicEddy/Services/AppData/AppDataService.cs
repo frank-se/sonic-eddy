@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using ProtoBuf;
 using SonicEddy.Contracts.FilterGraph;
+using SonicEddy.Contracts.MidiRouter;
 using SonicEddy.Contracts.MidiSync;
 using SonicEddy.Contracts.Mixers;
 
@@ -98,5 +99,23 @@ public class AppDataService(
         var bytes = await File.ReadAllBytesAsync(filePath);
         using var memoryStream = new MemoryStream(bytes);
         return Serializer.Deserialize<MidiSyncConfig>(memoryStream);
+    }
+
+    public async Task StoreMidiRouterConfig(MidiRouterConfig config)
+    {
+        var filePath = Path.Combine(preferencesFolderPath, "midi-router.grpc");
+        await using var file = File.Create(filePath);
+        Serializer.Serialize(file, config);
+        await file.FlushAsync();
+    }
+
+    public async Task<MidiRouterConfig?> LoadMidiRouterConfig()
+    {
+        var filePath = Path.Combine(preferencesFolderPath, "midi-router.grpc");
+        if (!File.Exists(filePath)) return null;
+
+        var bytes = await File.ReadAllBytesAsync(filePath);
+        using var memoryStream = new MemoryStream(bytes);
+        return Serializer.Deserialize<MidiRouterConfig>(memoryStream);
     }
 }

@@ -20,7 +20,8 @@ public sealed class MidiRouterViewModel : ViewModelBase, IDisposable
     public MidiRouterViewModel()
     {
         _routerService = Locator.Current.GetService<IMidiRouterService>() ??
-                         new MidiRouterService();
+                         throw new InvalidOperationException(
+                             "MIDI router service is not registered.");
         _routerService.RoutesChanged += OnRoutesChanged;
         ConnectCommand = ReactiveCommand.CreateFromTask(ConnectAsync);
         RefreshCommand = ReactiveCommand.Create(Refresh);

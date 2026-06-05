@@ -10,6 +10,8 @@ public interface IMidiRouterService
     IReadOnlyCollection<MidiRoute> Routes { get; }
     event Action? RoutesChanged;
 
+    Task InitializeAsync();
+
     Task<MidiRoute> CreateRouteAsync(Port source, Port target,
         MidiManipulationConfig manipulation);
 

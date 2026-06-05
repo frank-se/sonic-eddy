@@ -126,9 +126,10 @@ public class App : Application
             new MidiControllerService(midiControllerServiceLogger);
 
         var setupService = new MidiControllerSetupService();
-        var midiRouterService = new MidiRouterService();
+        var midiRouterService = new MidiRouterService(appDataService);
         Locator.CurrentMutable.Register<IMidiRouterService>(() =>
             midiRouterService);
+        _ = midiRouterService.InitializeAsync();
 
         var midiSyncLinkService = new MidiSyncLinkService(appDataService);
         Locator.CurrentMutable.Register<IMidiSyncLinkService>(() =>
