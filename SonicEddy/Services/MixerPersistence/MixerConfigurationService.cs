@@ -54,7 +54,8 @@ public sealed class MixerConfigurationService : IDisposable
                     globalMaster.CueChannel?.SelectedAudioToRoutingTarget),
             Pan = globalMaster.CueChannel?.PanAndVolume.Pan ?? 0.0,
             Volume = globalMaster.CueChannel?.PanAndVolume.Volume ?? 1.0
-        }
+        },
+        GlobalMasterInsert = globalMaster.CaptureInsertProcessor()
     };
 
     public Mixer CreateDefault(MixerLayerViewModel layerA,
@@ -117,6 +118,8 @@ public sealed class MixerConfigurationService : IDisposable
         globalMaster.CueXfade = configuration.CueCrossFader.Position;
         globalMaster.CueShapeIndex = configuration.CueCrossFader.Shape;
         globalMaster.CueModeIndex = configuration.CueCrossFader.Mode;
+        await globalMaster.ApplyInsertProcessorAsync(
+            configuration.GlobalMasterInsert);
 
         if (globalMaster.CueChannel is not null)
         {
@@ -142,7 +145,7 @@ public sealed class MixerConfigurationService : IDisposable
             .Select((channel, index) => new ReturnChannelConfig
             {
                 Index = index,
-                Filter = channel.CaptureFilterConfiguration(),
+                InsertProcessor = channel.CaptureFilterConfiguration(),
                 Pan = channel.PanAndVolume.Pan,
                 Volume = channel.PanAndVolume.Volume
             }).ToList() ?? []
@@ -165,7 +168,7 @@ public sealed class MixerConfigurationService : IDisposable
             ChannelId = channel.ChannelId,
             AudioToNodeName =
                 GetRoutingNodeName(channel.SelectedAudioToRoutingTarget),
-            Filter = channel.CaptureFilterConfiguration(),
+            InsertProcessor = channel.CaptureFilterConfiguration(),
             Pan = channel.PanAndVolume.Pan,
             Volume = channel.PanAndVolume.Volume
         };
@@ -237,7 +240,7 @@ public sealed class MixerConfigurationService : IDisposable
                 continue;
 
             await channel.ApplyFilterConfigurationAsync((int)config.LayerId,
-                returnConfig.Index, returnConfig.Filter);
+                returnConfig.Index, returnConfig.InsertProcessor);
             channel.PanAndVolume.Pan = returnConfig.Pan;
             channel.PanAndVolume.Volume = returnConfig.Volume;
         }
@@ -246,7 +249,7 @@ public sealed class MixerConfigurationService : IDisposable
     private static async Task ApplyChannelAsync(ChannelConfig config,
         ChannelViewModelBase channel)
     {
-        await channel.ApplyFilterConfigurationAsync(config.Filter);
+        await channel.ApplyFilterConfigurationAsync(config.InsertProcessor);
         channel.PanAndVolume.Pan = config.Pan;
         channel.PanAndVolume.Volume = config.Volume;
 

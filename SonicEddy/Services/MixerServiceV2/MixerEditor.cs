@@ -12,11 +12,13 @@ using Fr.Sonic.Modules.Models;
 using SonicEddy.Contracts.FilterGraph;
 using SonicEddy.Conversions;
 using SonicEddy.Services.Midi;
+using SonicEddy.Services.ExternalEffects;
 using SonicEddy.Services.Wireplumber;
 
 namespace SonicEddy.Services.MixerServiceV2;
 
-public class MixerEditor(IWireplumberService wireplumberService)
+public class MixerEditor(IWireplumberService wireplumberService,
+    IExternalEffectService externalEffectService)
 {
 
     public async Task<MixerLayer> AddFilterToChannelStrip(
@@ -77,20 +79,43 @@ public class MixerEditor(IWireplumberService wireplumberService)
                 .ObjectSerial.ToString());
         }
 
-        var oldFilter = channel.FilterChain;
+        var oldProcessor = channel.InsertProcessor;
         var newChannel = channel with
         {
-            FilterChain = filterChain,
-            FilterGraph = filterGraph
+            InsertProcessor =
+                new FilterChainInsertProcessor(filterChain, filterGraph)
         };
 
         var newList = mixerLayer.Channels.Select(c =>
             c.ChannelId == channelId ? newChannel : c).ToList();
 
-        oldFilter?.Destroy();
+        oldProcessor?.Destroy();
         return mixerLayer with
         {
             Channels = newList
+        };
+    }
+
+    public async Task<MixerLayer> AddExternalEffectToChannelStrip(
+        MixerLayer mixerLayer, ulong channelId, Guid effectId)
+    {
+        var channel = mixerLayer.Channels.First(candidate =>
+            candidate.ChannelId == channelId);
+        var processor = await externalEffectService.CreateInsertAsync(effectId,
+            channel.PreFxLooper.PlaybackNode,
+            channel.OutputLoopback.CaptureNode,
+            $"Layer {mixerLayer.layerId + 1} Channel {channelId}");
+        RetargetChannelProcessor(channel.PreFxLooper.PlaybackNode,
+            channel.OutputLoopback.CaptureNode, channel.SendLoopbacks,
+            processor);
+        var oldProcessor = channel.InsertProcessor;
+        var replacement = channel with { InsertProcessor = processor };
+        oldProcessor?.Destroy();
+        return mixerLayer with
+        {
+            Channels = mixerLayer.Channels.Select(candidate =>
+                    candidate.ChannelId == channelId ? replacement : candidate)
+                .ToList()
         };
     }
 
@@ -152,18 +177,41 @@ public class MixerEditor(IWireplumberService wireplumberService)
                 .ObjectSerial.ToString());
         }
 
-        var oldFilter = channel.FilterChain;
+        var oldProcessor = channel.InsertProcessor;
         var newChannel = channel with
         {
-            FilterChain = filterChain,
-            FilterGraph = filterGraph
+            InsertProcessor =
+                new FilterChainInsertProcessor(filterChain, filterGraph)
         };
 
         var newList = mixerLayer.GroupChannels.Select(c =>
             c.ChannelId == channelId ? newChannel : c).ToList();
 
-        oldFilter?.Destroy();
+        oldProcessor?.Destroy();
         return mixerLayer with { GroupChannels = newList };
+    }
+
+    public async Task<MixerLayer> AddExternalEffectToGroupChannel(
+        MixerLayer mixerLayer, ulong channelId, Guid effectId)
+    {
+        var channel = mixerLayer.GroupChannels.First(candidate =>
+            candidate.ChannelId == channelId);
+        var processor = await externalEffectService.CreateInsertAsync(effectId,
+            channel.PreFxLooper.PlaybackNode,
+            channel.OutputLoopback.CaptureNode,
+            $"Layer {mixerLayer.layerId + 1} Group {channelId}");
+        RetargetChannelProcessor(channel.PreFxLooper.PlaybackNode,
+            channel.OutputLoopback.CaptureNode, channel.SendLoopbacks,
+            processor);
+        var oldProcessor = channel.InsertProcessor;
+        var replacement = channel with { InsertProcessor = processor };
+        oldProcessor?.Destroy();
+        return mixerLayer with
+        {
+            GroupChannels = mixerLayer.GroupChannels.Select(candidate =>
+                    candidate.ChannelId == channelId ? replacement : candidate)
+                .ToList()
+        };
     }
 
     public async Task<MixerLayer> AddFilterToMasterChannel(
@@ -213,22 +261,38 @@ public class MixerEditor(IWireplumberService wireplumberService)
         channel.OutputLoopback.CaptureNode.OverrideTargetObject(
             filterChain.PlaybackNode.ObjectSerial.ToString());
 
-        var oldFilter = channel.FilterChain;
+        var oldProcessor = channel.InsertProcessor;
         var newMaster = channel with
         {
-            FilterChain = filterChain,
-            FilterGraph = filterGraph
+            InsertProcessor =
+                new FilterChainInsertProcessor(filterChain, filterGraph)
         };
 
-        oldFilter?.Destroy();
+        oldProcessor?.Destroy();
         return mixerLayer with { MasterChannel = newMaster };
+    }
+
+    public async Task<MixerLayer> AddExternalEffectToMasterChannel(
+        MixerLayer mixerLayer, Guid effectId)
+    {
+        var channel = mixerLayer.MasterChannel;
+        var processor = await externalEffectService.CreateInsertAsync(effectId,
+            channel.PreFxLooper.PlaybackNode,
+            channel.OutputLoopback.CaptureNode,
+            $"Layer {mixerLayer.layerId + 1} Master");
+        RetargetChannelProcessor(channel.PreFxLooper.PlaybackNode,
+            channel.OutputLoopback.CaptureNode, [], processor);
+        var oldProcessor = channel.InsertProcessor;
+        var replacement = channel with { InsertProcessor = processor };
+        oldProcessor?.Destroy();
+        return mixerLayer with { MasterChannel = replacement };
     }
 
     public MixerLayer RemoveFilterFromChannelStrip(MixerLayer mixerLayer,
         ulong channelId)
     {
         var channel = mixerLayer.Channels.First(c => c.ChannelId == channelId);
-        if (channel.FilterChain is null) return mixerLayer;
+        if (channel.InsertProcessor is null) return mixerLayer;
 
         channel.PreFxLooper.PlaybackNode.OverrideTargetObject(
             channel.OutputLoopback.CaptureNode.ObjectSerial.ToString());
@@ -238,8 +302,8 @@ public class MixerEditor(IWireplumberService wireplumberService)
             send.CaptureNode.OverrideTargetObject(
                 channel.PreFxLooper.PlaybackNode.ObjectSerial.ToString());
 
-        channel.FilterChain.Destroy();
-        var replacement = channel with { FilterChain = null, FilterGraph = null };
+        channel.InsertProcessor.Destroy();
+        var replacement = channel with { InsertProcessor = null };
         return mixerLayer with
         {
             Channels = mixerLayer.Channels.Select(candidate =>
@@ -253,7 +317,7 @@ public class MixerEditor(IWireplumberService wireplumberService)
     {
         var channel =
             mixerLayer.GroupChannels.First(c => c.ChannelId == channelId);
-        if (channel.FilterChain is null) return mixerLayer;
+        if (channel.InsertProcessor is null) return mixerLayer;
 
         channel.PreFxLooper.PlaybackNode.OverrideTargetObject(
             channel.OutputLoopback.CaptureNode.ObjectSerial.ToString());
@@ -263,8 +327,8 @@ public class MixerEditor(IWireplumberService wireplumberService)
             send.CaptureNode.OverrideTargetObject(
                 channel.PreFxLooper.PlaybackNode.ObjectSerial.ToString());
 
-        channel.FilterChain.Destroy();
-        var replacement = channel with { FilterChain = null, FilterGraph = null };
+        channel.InsertProcessor.Destroy();
+        var replacement = channel with { InsertProcessor = null };
         return mixerLayer with
         {
             GroupChannels = mixerLayer.GroupChannels.Select(candidate =>
@@ -276,17 +340,17 @@ public class MixerEditor(IWireplumberService wireplumberService)
     public MixerLayer RemoveFilterFromMasterChannel(MixerLayer mixerLayer)
     {
         var channel = mixerLayer.MasterChannel;
-        if (channel.FilterChain is null) return mixerLayer;
+        if (channel.InsertProcessor is null) return mixerLayer;
 
         channel.PreFxLooper.PlaybackNode.OverrideTargetObject(
             channel.OutputLoopback.CaptureNode.ObjectSerial.ToString());
         channel.OutputLoopback.CaptureNode.OverrideTargetObject(
             channel.PreFxLooper.PlaybackNode.ObjectSerial.ToString());
-        channel.FilterChain.Destroy();
+        channel.InsertProcessor.Destroy();
         return mixerLayer with
         {
             MasterChannel =
-                channel with { FilterChain = null, FilterGraph = null }
+                channel with { InsertProcessor = null }
         };
     }
 
@@ -324,30 +388,60 @@ public class MixerEditor(IWireplumberService wireplumberService)
 
         channel.OutputLoopback.CaptureNode.OverrideTargetObject(
             filterChain.PlaybackNode.ObjectSerial.ToString());
-        var oldFilter = channel.FilterChain;
+        var oldProcessor = channel.InsertProcessor;
         var replacement = channel with
         {
-            FilterChain = filterChain,
-            FilterGraph = filterGraph
+            InsertProcessor =
+                new FilterChainInsertProcessor(filterChain, filterGraph)
         };
-        oldFilter?.Destroy();
+        oldProcessor?.Destroy();
         var returns = mixerLayer.SendReturns.ToList();
         returns[index] = replacement;
         return mixerLayer with { SendReturns = returns };
+    }
+
+    public async Task<MixerLayer> AddExternalEffectToReturnChannel(
+        MixerLayer mixerLayer, int index, Guid effectId)
+    {
+        var channel = mixerLayer.SendReturns[index];
+        var processor = await externalEffectService.CreateInsertAsync(effectId,
+            channel.InputLoopback.PlaybackNode,
+            channel.OutputLoopback.CaptureNode,
+            $"Layer {mixerLayer.layerId + 1} Return {index + 1}");
+        channel.OutputLoopback.CaptureNode.OverrideTargetObject(
+            processor.OutputNode.ObjectSerial.ToString());
+        var oldProcessor = channel.InsertProcessor;
+        var replacement = channel with { InsertProcessor = processor };
+        oldProcessor?.Destroy();
+        var returns = mixerLayer.SendReturns.ToList();
+        returns[index] = replacement;
+        return mixerLayer with { SendReturns = returns };
+    }
+
+    private static void RetargetChannelProcessor(Node upstream,
+        Node downstream, IEnumerable<LoopbackModule> sends,
+        InsertProcessor processor)
+    {
+        upstream.OverrideTargetObject(processor.InputNode.ObjectSerial.ToString());
+        downstream.OverrideTargetObject(
+            processor.OutputNode.ObjectSerial.ToString());
+        foreach (var send in sends)
+            send.CaptureNode.OverrideTargetObject(
+                processor.OutputNode.ObjectSerial.ToString());
     }
 
     public MixerLayer RemoveFilterFromReturnChannel(MixerLayer mixerLayer,
         int index)
     {
         var channel = mixerLayer.SendReturns[index];
-        if (channel.FilterChain is null) return mixerLayer;
+        if (channel.InsertProcessor is null) return mixerLayer;
 
         channel.OutputLoopback.CaptureNode.OverrideTargetObject(
             channel.InputLoopback.PlaybackNode.ObjectSerial.ToString());
-        channel.FilterChain.Destroy();
+        channel.InsertProcessor.Destroy();
         var returns = mixerLayer.SendReturns.ToList();
         returns[index] =
-            channel with { FilterChain = null, FilterGraph = null };
+            channel with { InsertProcessor = null };
         return mixerLayer with { SendReturns = returns };
     }
 
@@ -395,6 +489,57 @@ public class MixerEditor(IWireplumberService wireplumberService)
                     Links = []
                 }
             });
+    }
+
+    public async Task<GlobalMasterChannel> AddFilterToGlobalMaster(
+        GlobalMasterChannel globalMaster, FilterGraph filterGraph)
+    {
+        var filterChain = await Fr.Sonic.FrSonic.ModuleFactory
+            .CreateFilterChainAsync("global-master-insert", new()
+            {
+                CaptureProps = CaptureBasePropsWithTargetObject(true,
+                    globalMaster.CrossFader.PlaybackNode.ObjectSerial.ToString(),
+                    "global-master-insert-capture", passive: false),
+                PlaybackProps = PlaybackBasePropsWithTargetObject(true,
+                    globalMaster.OutputTargetObject.ObjectSerial.ToString(),
+                    "global-master-insert-playback"),
+                FilterGraph = filterGraph.ToFilterGraphConfig()
+            });
+        globalMaster.CrossFader.PlaybackNode.OverrideTargetObject(
+            filterChain.CaptureNode.ObjectSerial.ToString());
+        var oldProcessor = globalMaster.InsertProcessor;
+        var replacement = globalMaster with
+        {
+            InsertProcessor =
+                new FilterChainInsertProcessor(filterChain, filterGraph)
+        };
+        oldProcessor?.Destroy();
+        return replacement;
+    }
+
+    public async Task<GlobalMasterChannel> AddExternalEffectToGlobalMaster(
+        GlobalMasterChannel globalMaster, Guid effectId)
+    {
+        var processor = await externalEffectService.CreateInsertAsync(effectId,
+            globalMaster.CrossFader.PlaybackNode,
+            globalMaster.OutputTargetObject,
+            "Global Master");
+        globalMaster.CrossFader.PlaybackNode.OverrideTargetObject(
+            processor.InputNode.ObjectSerial.ToString());
+        var oldProcessor = globalMaster.InsertProcessor;
+        var replacement = globalMaster with { InsertProcessor = processor };
+        oldProcessor?.Destroy();
+        return replacement;
+    }
+
+    public GlobalMasterChannel RemoveGlobalMasterInsert(
+        GlobalMasterChannel globalMaster)
+    {
+        if (globalMaster.InsertProcessor is null) return globalMaster;
+        globalMaster.CrossFader.PlaybackNode.OverrideTargetObject(
+            globalMaster.OutputTargetObject.ObjectSerial.ToString());
+        globalMaster.InsertProcessor.Destroy();
+        return globalMaster with { InsertProcessor = null };
     }
 
     // The cue filter chain's capture targets the GlobalMaster capture node.
@@ -584,7 +729,6 @@ public class MixerEditor(IWireplumberService wireplumberService)
             preFxLooper,
             preFxLooper,
             null,
-            null,
             postFxLooper,
             defaultOutput.CaptureNode);
     }
@@ -652,7 +796,6 @@ public class MixerEditor(IWireplumberService wireplumberService)
             preFxLooper,
             preFxLooper,
             null,
-            null,
             postFxLooper,
             sendLoopbacks,
             masterChannel.InputLoopback.CaptureNode,
@@ -713,7 +856,6 @@ public class MixerEditor(IWireplumberService wireplumberService)
         return new(
             $"Return {sendId}",
             inputLoopback,
-            null,
             null,
             outputLoopback);
     }
@@ -785,7 +927,6 @@ public class MixerEditor(IWireplumberService wireplumberService)
             id,
             preFxLooper,
             preFxLooper,
-            null,
             null,
             postFxLooper,
             sendLoopbacks.ToList(),

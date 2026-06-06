@@ -35,6 +35,17 @@ public interface IMixerService
     Task<FilterChain?> AddFilterToReturnChannel(int layerId, int index,
         FilterGraph filterGraph);
     Task RemoveFilterFromReturnChannel(int layerId, int index);
+    Task<InsertProcessor?> AddExternalEffectToChannelStrip(int layerId,
+        ulong channelId, Guid effectId);
+    Task<InsertProcessor?> AddExternalEffectToGroupChannel(int layerId,
+        ulong channelId, Guid effectId);
+    Task<InsertProcessor?> AddExternalEffectToMasterChannel(int layerId,
+        Guid effectId);
+    Task<InsertProcessor?> AddExternalEffectToReturnChannel(int layerId,
+        int index, Guid effectId);
+    Task<InsertProcessor?> SetGlobalMasterInsertProcessor(
+        InsertProcessorRequest? request);
+    void SetGlobalMasterOutputTarget(ulong objectSerial);
 
     event Action<List<InputChannel>>? InputsChanged;
     event Action<List<OutputChannel>>? OutputsChanged;

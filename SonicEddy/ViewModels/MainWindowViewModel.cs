@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using ReactiveUI;
 using SonicEddy.Services.AppData;
 using SonicEddy.Services.DrumMixer;
+using SonicEddy.Services.ExternalEffects;
 using SonicEddy.Services.Midi;
 using SonicEddy.Services.MixerServiceV2;
 using SonicEddy.Services.MixerPersistence;
@@ -21,6 +22,7 @@ using SonicEddy.Services.VirtualOutputs;
 using SonicEddy.Services.Wireplumber;
 using SonicEddy.ViewModels.FilterGraphManagerViewModels;
 using SonicEddy.ViewModels.DrumMixerViewModels;
+using SonicEddy.ViewModels.ExternalEffectsViewModels;
 using SonicEddy.ViewModels.MetadataViewModels;
 using SonicEddy.ViewModels.MidiParameterChangeMonitorViewModels;
 using SonicEddy.ViewModels.MidiRouterViewModels;
@@ -39,6 +41,7 @@ using SonicEddy.ViewModels.VirtualInputsViewModels;
 using SonicEddy.ViewModels.VirtualOutputsViewModels;
 using SonicEddy.Views.FilterGraphManagerViews;
 using SonicEddy.Views.DrumMixerViews;
+using SonicEddy.Views.ExternalEffectsViews;
 using SonicEddy.Views.GlobalMasterViews;
 using SonicEddy.Views.MetadataViews;
 using SonicEddy.Views.MidiParameterChangeMonitorView;
@@ -117,6 +120,8 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
 
     private Window? _globalMasterWindow;
     private Window? _drumMixerWindow;
+    private Window? _externalEffectsWindow;
+    private ExternalEffectsViewModel? _externalEffectsViewModel;
     private DrumMixerViewModel? _drumMixerViewModel;
     private Window? _monitoringWindow;
     private Window? _midiParameterMonitorWindow;
@@ -215,6 +220,31 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
             _drumMixerWindow = null;
         };
         _drumMixerWindow.Show();
+    }
+
+    public void ShowExternalEffectsWindow()
+    {
+        if (_externalEffectsWindow is not null)
+        {
+            _externalEffectsWindow.Activate();
+            return;
+        }
+
+        var service = Locator.Current.GetService<IExternalEffectService>();
+        var wireplumber = Locator.Current.GetService<IWireplumberService>();
+        if (service is null || wireplumber is null) return;
+        _externalEffectsViewModel = new(service, wireplumber);
+        _externalEffectsWindow = new ExternalEffectsWindow
+        {
+            DataContext = _externalEffectsViewModel
+        };
+        _externalEffectsWindow.Closed += (_, _) =>
+        {
+            _externalEffectsViewModel?.Dispose();
+            _externalEffectsViewModel = null;
+            _externalEffectsWindow = null;
+        };
+        _externalEffectsWindow.Show();
     }
 
     private void OnTraktorZ1FilterSectionChanged(TraktorZ1Side side, int sectionIndex)
@@ -884,6 +914,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     {
         Transport.Dispose();
         _drumMixerWindow?.Close();
+        _externalEffectsWindow?.Close();
         _drumMixerViewModel?.Dispose();
         if (_drumMixerService is not null)
             _drumMixerService.Changed -= OnDrumMixerChanged;

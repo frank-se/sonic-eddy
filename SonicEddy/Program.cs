@@ -5,6 +5,8 @@ using Avalonia;
 using Fr.Sonic;
 using ReactiveUI.Avalonia;
 using SonicEddy.Services.DrumMixer;
+using SonicEddy.Services.ExternalEffects;
+using SonicEddy.Services.MixerServiceV2;
 using Splat;
 
 namespace SonicEddy;
@@ -67,6 +69,9 @@ internal static class Program
         BuildAvaloniaApp()
             .StartWithClassicDesktopLifetime(args);
 
+        (Locator.Current.GetService<IMixerService>() as IDisposable)?.Dispose();
+        (Locator.Current.GetService<IExternalEffectService>() as IDisposable)
+            ?.Dispose();
         (Locator.Current.GetService<IDrumMixerService>() as IDisposable)
             ?.Dispose();
         FrSonicLv2.Destroy();

@@ -12,6 +12,7 @@ public sealed class Mixer
     [ProtoMember(4)] public CrossFaderConfig MainCrossFader { get; set; } = new();
     [ProtoMember(5)] public CrossFaderConfig CueCrossFader { get; set; } = new();
     [ProtoMember(6)] public CueChannelConfig Cue { get; set; } = new();
+    [ProtoMember(7)] public InsertProcessorConfig? GlobalMasterInsert { get; set; }
 }
 
 [ProtoContract]
@@ -30,7 +31,7 @@ public sealed class ChannelConfig
     [ProtoMember(1)] public ulong ChannelId { get; set; }
     [ProtoMember(2)] public string? AudioFromNodeName { get; set; }
     [ProtoMember(3)] public string? AudioToNodeName { get; set; }
-    [ProtoMember(4)] public FilterConfig? Filter { get; set; }
+    [ProtoMember(4)] public InsertProcessorConfig? InsertProcessor { get; set; }
     [ProtoMember(5)] public double Pan { get; set; }
     [ProtoMember(6)] public double Volume { get; set; } = 1.0;
     [ProtoMember(7)] public List<double> Sends { get; set; } = [];
@@ -42,17 +43,24 @@ public sealed class ChannelConfig
 public sealed class ReturnChannelConfig
 {
     [ProtoMember(1)] public int Index { get; set; }
-    [ProtoMember(2)] public FilterConfig? Filter { get; set; }
+    [ProtoMember(2)] public InsertProcessorConfig? InsertProcessor { get; set; }
     [ProtoMember(3)] public double Pan { get; set; }
     [ProtoMember(4)] public double Volume { get; set; } = 1.0;
 }
 
 [ProtoContract]
-public sealed class FilterConfig
+public sealed class InsertProcessorConfig
 {
-    [ProtoMember(1)] public Guid FilterGraphId { get; set; }
-    [ProtoMember(2)]
+    [ProtoMember(1)] public InsertProcessorType Type { get; set; }
+    [ProtoMember(2)] public Guid ProcessorId { get; set; }
+    [ProtoMember(3)]
     public List<FilterChainPresetValue> Values { get; set; } = [];
+}
+
+public enum InsertProcessorType
+{
+    FilterChain = 1,
+    ExternalEffect = 2
 }
 
 [ProtoContract]

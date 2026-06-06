@@ -15,6 +15,7 @@ using SonicEddy.Contracts.FilterGraph;
 using SonicEddy.Contracts.Mixers;
 using SonicEddy.Controls.MixerControls;
 using SonicEddy.Services.AppData;
+using SonicEddy.Services.ExternalEffects;
 using SonicEddy.Services.Midi;
 using SonicEddy.Services.MixerServiceV2;
 using SonicEddy.Services.Monitoring;
@@ -22,6 +23,7 @@ using SonicEddy.Tools;
 using SonicEddy.Views.MixerViewsV2;
 using SonicEddy.Views.SavePresetDialogViews;
 using SonicEddy.ViewModels.SavePresetDialogViewModels;
+using Splat;
 using ChannelStrip = SonicEddy.Services.MixerServiceV2.ChannelStrip;
 
 namespace SonicEddy.ViewModels.MixerViewModelsV2;
@@ -66,6 +68,9 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
 
         FilterGraph = filterGraph;
         FilterChain = filterChain;
+        ExternalEffectId = null;
+        _externalEffectService =
+            Locator.Current.GetService<IExternalEffectService>()!;
 
         if (enableMonitoring)
         {
@@ -239,6 +244,7 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
     public string InputNodeName => _inputLoopback.CaptureNode.Name ?? string.Empty;
     protected readonly IAppDataService _appDataService;
     protected readonly IMixerService _mixerService;
+    private readonly IExternalEffectService _externalEffectService;
     private readonly IMidiControllerSetupService _midiSetupService;
     protected readonly int _layerId;
     private readonly ulong _midiControllerChannelId;
@@ -250,6 +256,12 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
     }
 
     public FilterGraph? FilterGraph
+    {
+        get;
+        protected set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
+    public Guid? ExternalEffectId
     {
         get;
         protected set => this.RaiseAndSetIfChanged(ref field, value);
@@ -298,7 +310,8 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
 
     public virtual async Task AddFilterAction()
     {
-        var dialogViewModel = new AddFilterChainViewModel(_appDataService);
+        var dialogViewModel = new AddFilterChainViewModel(_appDataService,
+            _externalEffectService);
         var dialog = new AddFilterChainView()
         {
             DataContext = dialogViewModel
@@ -306,34 +319,66 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
 
         await dialog.ShowDialog(WindowTools.GetMainWindow()!);
 
-        if (dialogViewModel is not
-            { DialogResult: true, SelectedFilterGraph: not null })
-            return;
+        if (!dialogViewModel.DialogResult) return;
 
-        FilterGraph = dialogViewModel.SelectedFilterGraph;
-        if (_channelType == ChannelType.GroupChannel)
+        if (dialogViewModel.SelectedFilterGraph is { } graph)
         {
-            FilterChain = await _mixerService.AddFilterToGroupChannel(
-                _layerId, ChannelId, dialogViewModel.SelectedFilterGraph);
+            ExternalEffectId = null;
+            FilterGraph = graph;
+            if (this is MasterChannelViewModel)
+                FilterChain = await _mixerService.AddFilterToMasterChannel(
+                    _layerId, graph);
+            else if (_channelType == ChannelType.GroupChannel)
+                FilterChain = await _mixerService.AddFilterToGroupChannel(
+                    _layerId, ChannelId, graph);
+            else
+                FilterChain = (await _mixerService.AddFilterToChannelStrip(
+                    _layerId, ChannelId, graph)).FilterChain;
         }
-        else
+        else if (dialogViewModel.SelectedExternalEffect is { } effect)
         {
-            var channelStrip = await _mixerService.AddFilterToChannelStrip(
-                _layerId, ChannelId, dialogViewModel.SelectedFilterGraph);
-            FilterChain = channelStrip.FilterChain;
+            FilterChain = null;
+            FilterGraph = null;
+            InsertProcessor? processor;
+            if (this is MasterChannelViewModel)
+                processor = await _mixerService.AddExternalEffectToMasterChannel(
+                    _layerId, effect.Config.Id);
+            else if (_channelType == ChannelType.GroupChannel)
+                processor = await _mixerService.AddExternalEffectToGroupChannel(
+                    _layerId, ChannelId, effect.Config.Id);
+            else
+                processor = await _mixerService.AddExternalEffectToChannelStrip(
+                    _layerId, ChannelId, effect.Config.Id);
+            ExternalEffectId = processor?.ExternalEffectId;
+            HasFilter = ExternalEffectId is not null;
+            Parameters = null;
         }
-
     }
 
-    public void DeleteFilterAction()
+    public void DeleteFilterAction() => _ = DeleteInsertProcessorAsync();
+
+    private async Task DeleteInsertProcessorAsync()
     {
+        if (this is MasterChannelViewModel)
+            await _mixerService.RemoveFilterFromMasterChannel(_layerId);
+        else if (_channelType == ChannelType.GroupChannel)
+            await _mixerService.RemoveFilterFromGroupChannel(_layerId,
+                ChannelId);
+        else
+            await _mixerService.RemoveFilterFromChannelStrip(_layerId,
+                ChannelId);
+        FilterChain = null;
+        FilterGraph = null;
+        ExternalEffectId = null;
+        HasFilter = false;
+        Parameters = null;
     }
 
-    public async Task ApplyFilterConfigurationAsync(FilterConfig? config)
+    public async Task ApplyFilterConfigurationAsync(InsertProcessorConfig? config)
     {
         if (config is null)
         {
-            if (FilterChain is null) return;
+            if (FilterChain is null && ExternalEffectId is null) return;
 
             if (this is MasterChannelViewModel)
                 await _mixerService.RemoveFilterFromMasterChannel(_layerId);
@@ -346,10 +391,31 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
 
             FilterChain = null;
             FilterGraph = null;
+            ExternalEffectId = null;
             return;
         }
 
-        var graph = await _appDataService.GetFilterGraph(config.FilterGraphId);
+        if (config.Type == InsertProcessorType.ExternalEffect)
+        {
+            InsertProcessor? processor;
+            if (this is MasterChannelViewModel)
+                processor = await _mixerService.AddExternalEffectToMasterChannel(
+                    _layerId, config.ProcessorId);
+            else if (_channelType == ChannelType.GroupChannel)
+                processor = await _mixerService.AddExternalEffectToGroupChannel(
+                    _layerId, ChannelId, config.ProcessorId);
+            else
+                processor = await _mixerService.AddExternalEffectToChannelStrip(
+                    _layerId, ChannelId, config.ProcessorId);
+            FilterChain = null;
+            FilterGraph = null;
+            ExternalEffectId = processor?.ExternalEffectId;
+            HasFilter = ExternalEffectId is not null;
+            Parameters = null;
+            return;
+        }
+
+        var graph = await _appDataService.GetFilterGraph(config.ProcessorId);
         if (FilterGraph?.Id != graph.Id || FilterChain is null)
         {
             FilterGraph = graph;
@@ -370,14 +436,23 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
             node.SetParam(value.FullyQualifiedName, value.Value);
     }
 
-    public FilterConfig? CaptureFilterConfiguration() =>
-        FilterGraph is null
+    public InsertProcessorConfig? CaptureFilterConfiguration()
+    {
+        if (ExternalEffectId is { } externalEffectId)
+            return new()
+            {
+                Type = InsertProcessorType.ExternalEffect,
+                ProcessorId = externalEffectId
+            };
+        return FilterGraph is null
             ? null
             : new()
             {
-                FilterGraphId = FilterGraph.Id,
+                Type = InsertProcessorType.FilterChain,
+                ProcessorId = FilterGraph.Id,
                 Values = CaptureFilterValues()
             };
+    }
 
     private List<FilterChainPresetValue> CaptureFilterValues()
     {

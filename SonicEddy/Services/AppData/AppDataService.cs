@@ -12,6 +12,7 @@ using SonicEddy.Contracts.VirtualInputs;
 using SonicEddy.Contracts.VirtualOutputs;
 using SonicEddy.Contracts.ClickSync;
 using SonicEddy.Contracts.DrumMixer;
+using SonicEddy.Contracts.ExternalEffects;
 
 namespace SonicEddy.Services.AppData;
 
@@ -201,5 +202,25 @@ public class AppDataService(
         var bytes = await File.ReadAllBytesAsync(filePath);
         using var memoryStream = new MemoryStream(bytes);
         return Serializer.Deserialize<DrumMixerConfig>(memoryStream);
+    }
+
+    public async Task StoreExternalEffectsConfig(ExternalEffectsConfig config)
+    {
+        var filePath =
+            Path.Combine(preferencesFolderPath, "external-effects.grpc");
+        await using var file = File.Create(filePath);
+        Serializer.Serialize(file, config);
+        await file.FlushAsync();
+    }
+
+    public async Task<ExternalEffectsConfig?> LoadExternalEffectsConfig()
+    {
+        var filePath =
+            Path.Combine(preferencesFolderPath, "external-effects.grpc");
+        if (!File.Exists(filePath)) return null;
+
+        var bytes = await File.ReadAllBytesAsync(filePath);
+        using var memoryStream = new MemoryStream(bytes);
+        return Serializer.Deserialize<ExternalEffectsConfig>(memoryStream);
     }
 }

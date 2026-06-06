@@ -17,8 +17,10 @@ using SonicEddy.Services.Midi;
 using SonicEddy.Services.MixerServiceV2;
 using SonicEddy.Services.Monitoring;
 using SonicEddy.Services.TraktorZ1;
+using SonicEddy.Services.ExternalEffects;
 using SonicEddy.Tools;
 using SonicEddy.Views.MixerViewsV2;
+using Splat;
 
 namespace SonicEddy.ViewModels.MixerViewModelsV2;
 
@@ -86,7 +88,10 @@ public class MasterChannelViewModel : ChannelViewModelBase, IMasterChannel
 
     public override async Task AddFilterAction()
     {
-        var dialogViewModel = new AddFilterChainViewModel(_appDataService);
+        var externalEffects =
+            Locator.Current.GetService<IExternalEffectService>()!;
+        var dialogViewModel = new AddFilterChainViewModel(_appDataService,
+            externalEffects);
         var dialog = new AddFilterChainView()
         {
             DataContext = dialogViewModel
@@ -94,13 +99,25 @@ public class MasterChannelViewModel : ChannelViewModelBase, IMasterChannel
 
         await dialog.ShowDialog(WindowTools.GetMainWindow()!);
 
-        if (dialogViewModel is not
-            { DialogResult: true, SelectedFilterGraph: not null })
-            return;
-
-        FilterGraph = dialogViewModel.SelectedFilterGraph;
-        FilterChain = await _mixerService.AddFilterToMasterChannel(
-            _layerId, dialogViewModel.SelectedFilterGraph);
+        if (!dialogViewModel.DialogResult) return;
+        if (dialogViewModel.SelectedFilterGraph is { } graph)
+        {
+            ExternalEffectId = null;
+            FilterGraph = graph;
+            FilterChain = await _mixerService.AddFilterToMasterChannel(
+                _layerId, graph);
+        }
+        else if (dialogViewModel.SelectedExternalEffect is { } effect)
+        {
+            FilterChain = null;
+            FilterGraph = null;
+            var processor =
+                await _mixerService.AddExternalEffectToMasterChannel(
+                    _layerId, effect.Config.Id);
+            ExternalEffectId = processor?.ExternalEffectId;
+            HasFilter = ExternalEffectId is not null;
+            Parameters = null;
+        }
     }
 
     protected override void ApplyAudioRoutingTarget(IRoutingTarget? routingTarget)
@@ -111,7 +128,8 @@ public class MasterChannelViewModel : ChannelViewModelBase, IMasterChannel
         switch (routingTarget.Channel)
         {
             case OutputChannelViewModel output:
-                node.OverrideTargetObject(output.CaptureNodeObjectSerial.ToString());
+                _mixerService.SetGlobalMasterOutputTarget(
+                    output.CaptureNodeObjectSerial);
                 break;
         }
     }

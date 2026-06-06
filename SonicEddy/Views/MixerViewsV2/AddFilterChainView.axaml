@@ -7,26 +7,34 @@
              x:Class="SonicEddy.Views.MixerViewsV2.AddFilterChainView"
              x:DataType="mixerViewModels:AddFilterChainViewModel">
     <HeaderedContentControl Margin="4"
-                            Header="Add Filter Chain">
+                            Header="Select Insert Processor">
         <Grid RowDefinitions="*,Auto">
-            <DataGrid Grid.Row="0"
-                      AutoGenerateColumns="False"
-                      CanUserReorderColumns="True"
-                      CanUserResizeColumns="True"
-                      CanUserSortColumns="True"
-                      GridLinesVisibility="All"
-                      VerticalAlignment="Stretch"
-                      HorizontalAlignment="Stretch"
-                      SelectionMode="Single"
-                      IsReadOnly="True"
-                      ItemsSource="{Binding FilterGraphs}"
-                      SelectedItem="{Binding SelectedFilterGraph}">
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="Name"
-                                        Binding="{Binding Name}"
-                                        IsReadOnly="True" />
-                </DataGrid.Columns>
-            </DataGrid>
+            <TabControl Grid.Row="0">
+                <TabItem Header="Filter Chains">
+                    <DataGrid AutoGenerateColumns="False"
+                              SelectionMode="Single" IsReadOnly="True"
+                              ItemsSource="{Binding FilterGraphs}"
+                              SelectedItem="{Binding SelectedFilterGraph}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Name"
+                                                Binding="{Binding Name}" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </TabItem>
+                <TabItem Header="External Effects">
+                    <DataGrid AutoGenerateColumns="False"
+                              SelectionMode="Single" IsReadOnly="True"
+                              ItemsSource="{Binding ExternalEffects}"
+                              SelectedItem="{Binding SelectedExternalEffect}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Name"
+                                                Binding="{Binding Name}" />
+                            <DataGridTextColumn Header="Status"
+                                                Binding="{Binding Status}" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </TabItem>
+            </TabControl>
             <StackPanel Grid.Row="1"
                         Orientation="Horizontal"
                         HorizontalAlignment="Right"
@@ -34,7 +42,7 @@
                         Margin="4">
                 <Button Content="Cancel"
                         Command="{Binding CancelAction}" />
-                <Button Content="Create Module"
+                <Button Content="Select"
                         Command="{Binding AddModuleAction}"
                         IsEnabled="{Binding IsButtonEnabled}" />
             </StackPanel>

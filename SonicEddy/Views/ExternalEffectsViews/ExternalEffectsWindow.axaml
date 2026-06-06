@@ -1,0 +1,34 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:SonicEddy.ViewModels.ExternalEffectsViewModels"
+        x:Class="SonicEddy.Views.ExternalEffectsViews.ExternalEffectsWindow"
+        x:DataType="vm:ExternalEffectsViewModel"
+        Width="760" Height="480"
+        Title="External Effects">
+    <DockPanel>
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal"
+                    Spacing="8" Margin="8">
+            <Button Content="Create" Command="{Binding Create}" />
+            <Button Content="Edit" Command="{Binding Edit}"
+                    IsEnabled="{Binding CanEditOrDelete}" />
+            <Button Content="Delete" Command="{Binding Delete}"
+                    IsEnabled="{Binding CanEditOrDelete}" />
+        </StackPanel>
+        <DataGrid ItemsSource="{Binding Effects}"
+                  SelectedItem="{Binding SelectedEffect}"
+                  AutoGenerateColumns="False" IsReadOnly="True"
+                  SelectionMode="Single">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Name" Binding="{Binding Name}" />
+                <DataGridTextColumn Header="Status"
+                                    Binding="{Binding Availability}" />
+                <DataGridTextColumn Header="Used By"
+                                    Binding="{Binding UsedBy}" />
+                <DataGridTextColumn Header="Input Node"
+                                    Binding="{Binding Config.InputNodeName}" />
+                <DataGridTextColumn Header="Output Node"
+                                    Binding="{Binding Config.OutputNodeName}" />
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+</Window>

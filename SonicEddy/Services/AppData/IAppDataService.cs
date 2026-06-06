@@ -9,6 +9,7 @@ using SonicEddy.Contracts.VirtualInputs;
 using SonicEddy.Contracts.VirtualOutputs;
 using SonicEddy.Contracts.ClickSync;
 using SonicEddy.Contracts.DrumMixer;
+using SonicEddy.Contracts.ExternalEffects;
 
 namespace SonicEddy.Services.AppData;
 
@@ -55,4 +56,8 @@ public interface IAppDataService
     Task StoreDrumMixerConfig(DrumMixerConfig config);
 
     Task<DrumMixerConfig?> LoadDrumMixerConfig();
+
+    Task StoreExternalEffectsConfig(ExternalEffectsConfig config);
+
+    Task<ExternalEffectsConfig?> LoadExternalEffectsConfig();
 }

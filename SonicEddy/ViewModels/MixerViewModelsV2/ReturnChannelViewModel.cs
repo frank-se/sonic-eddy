@@ -15,6 +15,10 @@ using SonicEddy.Contracts.Mixers;
 using SonicEddy.Services.AppData;
 using SonicEddy.Services.MixerServiceV2;
 using SonicEddy.Services.Monitoring;
+using SonicEddy.Services.ExternalEffects;
+using Splat;
+using SonicEddy.Tools;
+using SonicEddy.Views.MixerViewsV2;
 
 namespace SonicEddy.ViewModels.MixerViewModelsV2;
 
@@ -33,7 +37,7 @@ public class ReturnChannelViewModel : ReactiveObject, IReturnChannel,
         LoopbackModule inputLoopback, LoopbackModule outbackLoopback,
         FilterChain? filterChain, FilterGraph? filterGraph,
         IMonitoringService monitoringService, IAppDataService appDataService,
-        IMixerService mixerService)
+        IMixerService mixerService, int layerId, int index)
     {
         Text = text;
         SelectChannelCommand = selectChannelCommand;
@@ -41,6 +45,10 @@ public class ReturnChannelViewModel : ReactiveObject, IReturnChannel,
         _outbackLoopback = outbackLoopback;
         _appDataService = appDataService;
         _mixerService = mixerService;
+        _layerId = layerId;
+        _index = index;
+        _externalEffects =
+            Locator.Current.GetService<IExternalEffectService>()!;
         FilterGraph = filterGraph;
 
         this.WhenAnyValue(x => x.FilterChain)
@@ -86,21 +94,37 @@ public class ReturnChannelViewModel : ReactiveObject, IReturnChannel,
 
     private readonly IAppDataService _appDataService;
     private readonly IMixerService _mixerService;
+    private readonly IExternalEffectService _externalEffects;
+    private readonly int _layerId;
+    private readonly int _index;
+    public Guid? ExternalEffectId { get; private set; }
 
     public async Task ApplyFilterConfigurationAsync(int layerId, int index,
-        FilterConfig? config)
+        InsertProcessorConfig? config)
     {
         if (config is null)
         {
-            if (FilterChain is null) return;
+            if (FilterChain is null && ExternalEffectId is null) return;
 
             await _mixerService.RemoveFilterFromReturnChannel(layerId, index);
             FilterChain = null;
             FilterGraph = null;
+            ExternalEffectId = null;
             return;
         }
 
-        var graph = await _appDataService.GetFilterGraph(config.FilterGraphId);
+        if (config.Type == InsertProcessorType.ExternalEffect)
+        {
+            var processor = await _mixerService.AddExternalEffectToReturnChannel(
+                layerId, index, config.ProcessorId);
+            FilterChain = null;
+            FilterGraph = null;
+            ExternalEffectId = processor?.ExternalEffectId;
+            HasFilter = ExternalEffectId is not null;
+            return;
+        }
+
+        var graph = await _appDataService.GetFilterGraph(config.ProcessorId);
         if (FilterGraph?.Id != graph.Id || FilterChain is null)
         {
             FilterChain = await _mixerService.AddFilterToReturnChannel(
@@ -114,14 +138,23 @@ public class ReturnChannelViewModel : ReactiveObject, IReturnChannel,
             node.SetParam(value.FullyQualifiedName, value.Value);
     }
 
-    public FilterConfig? CaptureFilterConfiguration() =>
-        FilterGraph is null
+    public InsertProcessorConfig? CaptureFilterConfiguration()
+    {
+        if (ExternalEffectId is { } externalEffectId)
+            return new()
+            {
+                Type = InsertProcessorType.ExternalEffect,
+                ProcessorId = externalEffectId
+            };
+        return FilterGraph is null
             ? null
             : new()
             {
-                FilterGraphId = FilterGraph.Id,
+                Type = InsertProcessorType.FilterChain,
+                ProcessorId = FilterGraph.Id,
                 Values = CaptureFilterValues()
             };
+    }
 
     private List<FilterChainPresetValue> CaptureFilterValues()
     {
@@ -171,14 +204,39 @@ public class ReturnChannelViewModel : ReactiveObject, IReturnChannel,
     public void OnSelectChannel() =>
         SelectChannelCommand.Execute(this);
 
-    public void OnAddFilter(IOutputChannel channel)
+    public async void OnAddFilter(IOutputChannel channel)
     {
-        throw new System.NotImplementedException();
+        var viewModel = new AddFilterChainViewModel(_appDataService,
+            _externalEffects);
+        var dialog = new AddFilterChainView { DataContext = viewModel };
+        await dialog.ShowDialog(WindowTools.GetMainWindow()!);
+        if (!viewModel.DialogResult) return;
+
+        if (viewModel.SelectedFilterGraph is { } graph)
+        {
+            ExternalEffectId = null;
+            FilterChain = await _mixerService.AddFilterToReturnChannel(
+                _layerId, _index, graph);
+            FilterGraph = graph;
+        }
+        else if (viewModel.SelectedExternalEffect is { } effect)
+        {
+            FilterChain = null;
+            FilterGraph = null;
+            var processor = await _mixerService.AddExternalEffectToReturnChannel(
+                _layerId, _index, effect.Config.Id);
+            ExternalEffectId = processor?.ExternalEffectId;
+            HasFilter = ExternalEffectId is not null;
+        }
     }
 
-    public void OnDeleteFilter(IOutputChannel channel)
+    public async void OnDeleteFilter(IOutputChannel channel)
     {
-        throw new System.NotImplementedException();
+        await _mixerService.RemoveFilterFromReturnChannel(_layerId, _index);
+        FilterChain = null;
+        FilterGraph = null;
+        ExternalEffectId = null;
+        HasFilter = false;
     }
 
     public void Dispose()

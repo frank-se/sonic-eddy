@@ -1,0 +1,44 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:SonicEddy.ViewModels.ExternalEffectsViewModels"
+        x:Class="SonicEddy.Views.ExternalEffectsViews.ExternalEffectEditorWindow"
+        x:DataType="vm:ExternalEffectEditorViewModel"
+        Width="560" Height="360"
+        Title="External Effect">
+    <Grid RowDefinitions="*,Auto" Margin="8">
+        <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+              ColumnSpacing="8" RowSpacing="6">
+            <TextBlock Grid.Row="0" Text="Name" VerticalAlignment="Center" />
+            <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Name}" />
+            <TextBlock Grid.Row="1" Text="Effect Input" VerticalAlignment="Center" />
+            <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding InputNodes}"
+                      SelectedItem="{Binding SelectedInputNode}"
+                      DisplayMemberBinding="{Binding Description}" />
+            <TextBlock Grid.Row="2" Text="Input FL" VerticalAlignment="Center" />
+            <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding InputPorts}"
+                      SelectedItem="{Binding SelectedInputLeft}"
+                      DisplayMemberBinding="{Binding Alias}" />
+            <TextBlock Grid.Row="3" Text="Input FR" VerticalAlignment="Center" />
+            <ComboBox Grid.Row="3" Grid.Column="1" ItemsSource="{Binding InputPorts}"
+                      SelectedItem="{Binding SelectedInputRight}"
+                      DisplayMemberBinding="{Binding Alias}" />
+            <TextBlock Grid.Row="4" Text="Effect Output" VerticalAlignment="Center" />
+            <ComboBox Grid.Row="4" Grid.Column="1" ItemsSource="{Binding OutputNodes}"
+                      SelectedItem="{Binding SelectedOutputNode}"
+                      DisplayMemberBinding="{Binding Description}" />
+            <TextBlock Grid.Row="5" Text="Output FL" VerticalAlignment="Center" />
+            <ComboBox Grid.Row="5" Grid.Column="1" ItemsSource="{Binding OutputPorts}"
+                      SelectedItem="{Binding SelectedOutputLeft}"
+                      DisplayMemberBinding="{Binding Alias}" />
+            <TextBlock Grid.Row="6" Text="Output FR" VerticalAlignment="Center" />
+            <ComboBox Grid.Row="6" Grid.Column="1" ItemsSource="{Binding OutputPorts}"
+                      SelectedItem="{Binding SelectedOutputRight}"
+                      DisplayMemberBinding="{Binding Alias}" />
+        </Grid>
+        <StackPanel Grid.Row="1" Orientation="Horizontal"
+                    HorizontalAlignment="Right" Spacing="8">
+            <Button Content="Cancel" Command="{Binding Cancel}" />
+            <Button Content="Save" Command="{Binding Save}" />
+        </StackPanel>
+    </Grid>
+</Window>

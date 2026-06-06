@@ -111,8 +111,9 @@ public class MixerViewModelService(
             audioToRoutingTargetsGroupChannels.Add(
                 new RoutingTargetViewModel("Master", masterChannel));
 
-            var returnChannels = layer.SendReturns.Select(s =>
-                ConvertReturnChannel(s, selectChannelCommand));
+            var returnChannels = layer.SendReturns.Select((channel, index) =>
+                ConvertReturnChannel(channel, selectChannelCommand, layerId,
+                    index));
 
             mixerModel.ReturnChannels = new(returnChannels);
 
@@ -264,11 +265,13 @@ public class MixerViewModelService(
 
     private ReturnChannelViewModel ConvertReturnChannel(
         ReturnChannel channel,
-        ICommand selectChannelCommand) =>
+        ICommand selectChannelCommand,
+        int layerId,
+        int index) =>
         new(channel.Name, selectChannelCommand,
             channel.InputLoopback, channel.OutputLoopback, channel.FilterChain,
             channel.FilterGraph, monitoringService, appDataService,
-            mixerService);
+            mixerService, layerId, index);
 
     public OutputChannelViewModel
         ConvertOutputChannel(OutputChannel channel,

@@ -14,6 +14,7 @@ using SonicEddy.Services.MidiRouter;
 using SonicEddy.Services.MidiSync;
 using SonicEddy.Services.ClickSync;
 using SonicEddy.Services.DrumMixer;
+using SonicEddy.Services.ExternalEffects;
 using SonicEddy.Services.MixerServiceV2;
 using SonicEddy.Services.MixerPersistence;
 using SonicEddy.Services.MixerViewModels;
@@ -106,6 +107,12 @@ public class App : Application
         Locator.CurrentMutable.Register<IWireplumberService>(() =>
             wireplumberService);
 
+        var externalEffectService = new ExternalEffectService(appDataService,
+            wireplumberService);
+        Locator.CurrentMutable.Register<IExternalEffectService>(() =>
+            externalEffectService);
+        _ = externalEffectService.InitializeAsync();
+
         var virtualInputService =
             new VirtualInputService(appDataService, wireplumberService);
         Locator.CurrentMutable.Register<IVirtualInputService>(() =>
@@ -126,7 +133,8 @@ public class App : Application
         var mixerServiceLogger = loggerFactory.CreateLogger<MixerService>();
         var mixerServiceV2 =
             new MixerService(appDataService,
-                wireplumberService, preferencesService, mixerServiceLogger);
+                wireplumberService, preferencesService, externalEffectService,
+                mixerServiceLogger);
 
         Locator.CurrentMutable
             .Register<IMixerService>(() =>

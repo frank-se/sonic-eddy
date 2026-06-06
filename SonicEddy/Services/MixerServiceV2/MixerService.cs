@@ -10,6 +10,8 @@ using Fr.Sonic.Modules.Models;
 using Microsoft.Extensions.Logging;
 using SonicEddy.Contracts.FilterGraph;
 using SonicEddy.Services.AppData;
+using SonicEddy.Services.ExternalEffects;
+using SonicEddy.Services.DrumMixer;
 using SonicEddy.Services.Midi;
 using SonicEddy.Services.Preferences;
 using SonicEddy.Services.Wireplumber;
@@ -26,12 +28,13 @@ public class MixerService : IMixerService, IDisposable
     public MixerService(IAppDataService appDataService,
         IWireplumberService wireplumberService,
         IPreferenceService preferenceService,
+        IExternalEffectService externalEffectService,
         ILogger<MixerService> logger)
     {
         _wireplumberService = wireplumberService;
         _preferenceService = preferenceService;
         _logger = logger;
-        _editor = new(wireplumberService);
+        _editor = new(wireplumberService, externalEffectService);
 
         _wireplumberService.NodeAdded += OnNodeAdded;
         _wireplumberService.NodeDeleted += OnNodeDeleted;
@@ -68,6 +71,7 @@ public class MixerService : IMixerService, IDisposable
 
             try
             {
+                DestroyInsertProcessors(CurrentMixer);
                 _myNodeIds.Clear();
 
                 var prefs = _preferenceService.Preferences ?? new();
@@ -92,7 +96,8 @@ public class MixerService : IMixerService, IDisposable
 
                 var globalMasterCaptureSerial =
                     xfade.CaptureNode.ObjectSerial.ToString();
-                var globalMaster = new GlobalMasterChannel(xfade);
+                var globalMaster = new GlobalMasterChannel(xfade,
+                    physicalOutput);
 
                 _myNodeIds.Add(xfade.CaptureNode.ObjectSerial);
                 _myNodeIds.Add(xfade.PlaybackNode.ObjectSerial);
@@ -540,6 +545,106 @@ public class MixerService : IMixerService, IDisposable
             Task.FromResult(_editor.RemoveFilterFromReturnChannel(
                 layer, index)));
 
+    public async Task<InsertProcessor?> AddExternalEffectToChannelStrip(
+        int layerId, ulong channelId, Guid effectId)
+    {
+        await ModifyLayer(layerId, layer =>
+            _editor.AddExternalEffectToChannelStrip(layer, channelId, effectId));
+        return CurrentMixer?.Layers[layerId].Channels.First(channel =>
+            channel.ChannelId == channelId).InsertProcessor;
+    }
+
+    public async Task<InsertProcessor?> AddExternalEffectToGroupChannel(
+        int layerId, ulong channelId, Guid effectId)
+    {
+        await ModifyLayer(layerId, layer =>
+            _editor.AddExternalEffectToGroupChannel(layer, channelId, effectId));
+        return CurrentMixer?.Layers[layerId].GroupChannels.First(channel =>
+            channel.ChannelId == channelId).InsertProcessor;
+    }
+
+    public async Task<InsertProcessor?> AddExternalEffectToMasterChannel(
+        int layerId, Guid effectId)
+    {
+        await ModifyLayer(layerId, layer =>
+            _editor.AddExternalEffectToMasterChannel(layer, effectId));
+        return CurrentMixer?.Layers[layerId].MasterChannel.InsertProcessor;
+    }
+
+    public async Task<InsertProcessor?> AddExternalEffectToReturnChannel(
+        int layerId, int index, Guid effectId)
+    {
+        await ModifyLayer(layerId, layer =>
+            _editor.AddExternalEffectToReturnChannel(layer, index, effectId));
+        return CurrentMixer?.Layers[layerId].SendReturns[index].InsertProcessor;
+    }
+
+    public async Task<InsertProcessor?> SetGlobalMasterInsertProcessor(
+        InsertProcessorRequest? request)
+    {
+        await _externalChange.WaitAsync();
+        try
+        {
+            if (CurrentMixer?.GlobalMaster is not { } globalMaster)
+                return null;
+            await _internalChange.WaitAsync();
+            try
+            {
+                CurrentMixer = CurrentMixer with
+                {
+                    GlobalMaster = request switch
+                    {
+                        FilterChainInsertRequest filter =>
+                            await _editor.AddFilterToGlobalMaster(globalMaster,
+                                filter.FilterGraph),
+                        ExternalEffectInsertRequest external =>
+                            await _editor.AddExternalEffectToGlobalMaster(
+                                globalMaster, external.ExternalEffectId),
+                        null => _editor.RemoveGlobalMasterInsert(globalMaster),
+                        _ => throw new ArgumentOutOfRangeException(
+                            nameof(request))
+                    }
+                };
+                RegisterProcessorNodes(
+                    CurrentMixer.GlobalMaster.InsertProcessor);
+            }
+            finally
+            {
+                _internalChange.Release();
+            }
+        }
+        finally
+        {
+            _externalChange.Release();
+        }
+        return CurrentMixer?.GlobalMaster?.InsertProcessor;
+    }
+
+    private void RegisterProcessorNodes(InsertProcessor? processor)
+    {
+        if (processor is null) return;
+        if (!_myNodeIds.Contains(processor.InputNode.ObjectSerial))
+            _myNodeIds.Add(processor.InputNode.ObjectSerial);
+        if (!_myNodeIds.Contains(processor.OutputNode.ObjectSerial))
+            _myNodeIds.Add(processor.OutputNode.ObjectSerial);
+    }
+
+    public void SetGlobalMasterOutputTarget(ulong objectSerial)
+    {
+        if (CurrentMixer?.GlobalMaster is not { } globalMaster) return;
+        var node = Fr.Sonic.FrSonic.NodeRegistry.GetByObjectSerial(objectSerial);
+        if (node is null) return;
+        if (globalMaster.InsertProcessor is { } processor)
+            processor.OutputNode.OverrideTargetObject(objectSerial.ToString());
+        else
+            globalMaster.CrossFader.PlaybackNode.OverrideTargetObject(
+                objectSerial.ToString());
+        CurrentMixer = CurrentMixer with
+        {
+            GlobalMaster = globalMaster with { OutputTargetObject = node }
+        };
+    }
+
     private async Task ModifyLayer(int layerId,
         Func<MixerLayer, Task<MixerLayer>> update)
     {
@@ -584,21 +689,16 @@ public class MixerService : IMixerService, IDisposable
 
     private void RegisterFilterNodes(MixerLayer layer)
     {
-        IEnumerable<FilterChain?> filters =
+        IEnumerable<InsertProcessor?> processors =
         [
-            layer.MasterChannel.FilterChain,
-            .. layer.Channels.Select(channel => channel.FilterChain),
-            .. layer.GroupChannels.Select(channel => channel.FilterChain),
-            .. layer.SendReturns.Select(channel => channel.FilterChain)
+            layer.MasterChannel.InsertProcessor,
+            .. layer.Channels.Select(channel => channel.InsertProcessor),
+            .. layer.GroupChannels.Select(channel => channel.InsertProcessor),
+            .. layer.SendReturns.Select(channel => channel.InsertProcessor)
         ];
 
-        foreach (var filter in filters.OfType<FilterChain>())
-        {
-            if (!_myNodeIds.Contains(filter.CaptureNode.ObjectSerial))
-                _myNodeIds.Add(filter.CaptureNode.ObjectSerial);
-            if (!_myNodeIds.Contains(filter.PlaybackNode.ObjectSerial))
-                _myNodeIds.Add(filter.PlaybackNode.ObjectSerial);
-        }
+        foreach (var processor in processors)
+            RegisterProcessorNodes(processor);
     }
 
     public event Action<List<InputChannel>>? InputsChanged;
@@ -647,7 +747,9 @@ public class MixerService : IMixerService, IDisposable
 
     private static bool IsInternalNode(Node node) =>
         node.Name?.StartsWith("silence-") == true ||
-        node.Name?.StartsWith("monitor ") == true;
+        node.Name?.StartsWith("monitor ") == true ||
+        (!string.IsNullOrEmpty(node.Pmx.Tag) &&
+         node.Name != DrumMixerService.PlaybackNodeName);
 
     private async Task ProcessNodeAddedEvent(Node node)
     {
@@ -701,7 +803,23 @@ public class MixerService : IMixerService, IDisposable
     {
         _wireplumberService.NodeAdded -= OnNodeAdded;
         _wireplumberService.NodeDeleted -= OnNodeDeleted;
+        DestroyInsertProcessors(CurrentMixer);
 
         GC.SuppressFinalize(this);
+    }
+
+    private static void DestroyInsertProcessors(Mixer? mixer)
+    {
+        if (mixer is null) return;
+        foreach (var processor in mixer.Layers.SelectMany(layer =>
+                     layer.Channels.Select(channel => channel.InsertProcessor)
+                         .Concat(layer.GroupChannels.Select(channel =>
+                             channel.InsertProcessor))
+                         .Concat(layer.SendReturns.Select(channel =>
+                             channel.InsertProcessor))
+                         .Append(layer.MasterChannel.InsertProcessor))
+                 .OfType<InsertProcessor>())
+            processor.Destroy();
+        mixer.GlobalMaster?.InsertProcessor?.Destroy();
     }
 }

@@ -59,6 +59,8 @@
                 <MenuItem Header="Drum Mixer ..."
                           IsEnabled="{Binding IsDrumMixerEnabled}"
                           Command="{Binding ShowDrumMixerWindow}" />
+                <MenuItem Header="External Effects ..."
+                          Command="{Binding ShowExternalEffectsWindow}" />
                 <Separator />
                 <MenuItem Header="Monitoring ..."
                           IsVisible="{Binding IsMonitoringEnabled}"
