@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using Avalonia;
 using Fr.Sonic;
 using ReactiveUI.Avalonia;
+using SonicEddy.Services.DrumMixer;
+using Splat;
 
 namespace SonicEddy;
 
@@ -65,6 +67,8 @@ internal static class Program
         BuildAvaloniaApp()
             .StartWithClassicDesktopLifetime(args);
 
+        (Locator.Current.GetService<IDrumMixerService>() as IDisposable)
+            ?.Dispose();
         FrSonicLv2.Destroy();
         FrSonic.Stop();
     }

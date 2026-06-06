@@ -445,20 +445,6 @@ public sealed class DrumMixerService : IDrumMixerService, IDisposable
         FrSonic.LinkRegistry.Deleted -= OnObjectChanged;
         _storeDebounce?.Cancel();
         _storeDebounce?.Dispose();
-        if (_initialized)
-        {
-            _storeLock.Wait();
-            try
-            {
-                _appDataService.StoreDrumMixerConfig(State).GetAwaiter()
-                    .GetResult();
-            }
-            finally
-            {
-                _storeLock.Release();
-            }
-        }
         _filterChain?.Destroy();
-        _storeLock.Dispose();
     }
 }

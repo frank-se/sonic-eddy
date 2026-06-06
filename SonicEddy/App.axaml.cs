@@ -50,8 +50,6 @@ public class App : Application
             desktop.Exit += (_, _) =>
             {
                 (desktop.MainWindow.DataContext as IDisposable)?.Dispose();
-                (Locator.Current.GetService<IDrumMixerService>() as IDisposable)
-                    ?.Dispose();
             };
         }
 
