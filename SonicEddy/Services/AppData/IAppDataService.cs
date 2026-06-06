@@ -8,6 +8,7 @@ using SonicEddy.Contracts.Mixers;
 using SonicEddy.Contracts.VirtualInputs;
 using SonicEddy.Contracts.VirtualOutputs;
 using SonicEddy.Contracts.ClickSync;
+using SonicEddy.Contracts.DrumMixer;
 
 namespace SonicEddy.Services.AppData;
 
@@ -50,4 +51,8 @@ public interface IAppDataService
     Task StoreClickSyncConfig(ClickSyncConfig config);
 
     Task<ClickSyncConfig?> LoadClickSyncConfig();
+
+    Task StoreDrumMixerConfig(DrumMixerConfig config);
+
+    Task<DrumMixerConfig?> LoadDrumMixerConfig();
 }

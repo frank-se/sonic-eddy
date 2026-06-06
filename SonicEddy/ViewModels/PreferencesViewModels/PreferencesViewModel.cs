@@ -96,6 +96,14 @@ public class PreferencesViewModel : ViewModelBase
             })
             .DisposeWith(_disposable);
 
+        this.WhenAnyValue(x => x.DrumMixerEnabled)
+            .Subscribe(_ =>
+            {
+                _changed = true;
+                UpdateButtonStates();
+            })
+            .DisposeWith(_disposable);
+
         _ = FillFromPreferences();
     }
 
@@ -149,6 +157,12 @@ public class PreferencesViewModel : ViewModelBase
         set => this.RaiseAndSetIfChanged(ref field, value);
     } = "/dev/hidraw3";
 
+    public bool DrumMixerEnabled
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
     public bool IsSaveEnabled
     {
         get;
@@ -167,7 +181,8 @@ public class PreferencesViewModel : ViewModelBase
             DefaultMonitorOutputName = SelectedDefaultMonitorOutput?.Name,
             MonitoringChannelEnabled = MonitoringChannelEnabled,
             TraktorZ1HidrawPath = TraktorZ1HidrawPath,
-            DefaultCueOutputName = SelectedDefaultCueOutput?.Name
+            DefaultCueOutputName = SelectedDefaultCueOutput?.Name,
+            DrumMixerEnabled = DrumMixerEnabled
         };
         await _preferenceService.UpdateAndSave(preferences);
     }
@@ -209,6 +224,7 @@ public class PreferencesViewModel : ViewModelBase
         TraktorZ1HidrawPath = preferences.TraktorZ1HidrawPath ?? "/dev/hidraw3";
         SelectedDefaultCueOutput = Nodes.FirstOrDefault(n =>
             n.Name == preferences.DefaultCueOutputName);
+        DrumMixerEnabled = preferences.DrumMixerEnabled;
     }
 
     private void UpdateButtonStates()

@@ -6,11 +6,11 @@
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="SonicEddy.Views.PreferencesViews.PreferencesWindow"
         x:DataType="preferencesViewModels:PreferencesViewModel"
-        Width="520" Height="360"
+        Width="520" Height="400"
         Title="Preferences">
 
     <StackPanel>
-        <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,*"
+        <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,*"
               ColumnDefinitions="Auto,*"
               RowSpacing="6"
               Margin="12">
@@ -99,6 +99,17 @@
                      Grid.Column="1"
                      x:Name="TraktorZ1HidrawPathTextBox"
                      Text="{Binding TraktorZ1HidrawPath}" />
+
+            <StackPanel Grid.Row="8"
+                        Grid.Column="0"
+                        Grid.ColumnSpan="2">
+                <CheckBox Content="Enable Drum Mixer"
+                          IsChecked="{Binding DrumMixerEnabled}" />
+                <TextBlock Text="Requires an application restart."
+                           FontSize="11"
+                           Opacity="0.7"
+                           Margin="24,0,0,0" />
+            </StackPanel>
 
         </Grid>
         

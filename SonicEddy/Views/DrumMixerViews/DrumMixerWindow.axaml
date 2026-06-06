@@ -1,0 +1,139 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:controls="clr-namespace:SonicEddy.Controls"
+        xmlns:mixerControls="clr-namespace:SonicEddy.Controls.MixerControls"
+        xmlns:vm="clr-namespace:SonicEddy.ViewModels.DrumMixerViewModels"
+        mc:Ignorable="d"
+        x:Class="SonicEddy.Views.DrumMixerViews.DrumMixerWindow"
+        x:DataType="vm:DrumMixerViewModel"
+        Width="1500"
+        Height="850"
+        Title="Drum Mixer">
+    <Grid RowDefinitions="*,330">
+        <ScrollViewer Grid.Row="0"
+                      HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Disabled">
+            <StackPanel Orientation="Horizontal" Spacing="4">
+                <ItemsControl ItemsSource="{Binding Channels}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" Spacing="4" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:DrumMixerChannelViewModel">
+                            <Border Width="124"
+                                    Height="500"
+                                    Background="MidnightBlue"
+                                    Padding="2">
+                                <Grid RowDefinitions="30,54,48,48,*"
+                                      RowSpacing="4">
+                                    <mixerControls:ChannelHeader
+                                        Grid.Row="0"
+                                        Text="{Binding Name}"
+                                        IsSelected="{Binding IsSelected}"
+                                        IsDeleteButtonVisible="False"
+                                        SelectCommand="{Binding Select}" />
+                                    <ComboBox Grid.Row="1"
+                                              ItemsSource="{Binding $parent[Window].((vm:DrumMixerViewModel)DataContext).Sources}"
+                                              SelectedItem="{Binding SelectedSource}"
+                                              DisplayMemberBinding="{Binding Name}"
+                                              PlaceholderText="Audio From" />
+                                    <controls:ValueSlider Grid.Row="2"
+                                                          Text="Room"
+                                                          Background="DimGray"
+                                                          Minimum="0"
+                                                          Maximum="1"
+                                                          Value="{Binding RoomSend}" />
+                                    <controls:ValueSlider Grid.Row="3"
+                                                          Text="Plate"
+                                                          Background="DimGray"
+                                                          Minimum="0"
+                                                          Maximum="1"
+                                                          Value="{Binding PlateSend}" />
+                                    <controls:ValueSlider Grid.Row="4"
+                                                          Text="Volume"
+                                                          Background="Gray"
+                                                          IsVertical="True"
+                                                          Minimum="0"
+                                                          Maximum="1"
+                                                          Value="{Binding Volume}" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <Border Width="124" Height="500" Background="DarkSlateBlue" Padding="2">
+                    <Grid RowDefinitions="30,*">
+                        <mixerControls:ChannelHeader Text="Room"
+                                                     IsSelected="{Binding IsRoomSelected}"
+                                                     IsDeleteButtonVisible="False"
+                                                     SelectCommand="{Binding SelectRoom}" />
+                        <controls:ValueSlider Grid.Row="1"
+                                              Text="Return"
+                                              Background="Gray"
+                                              IsVertical="True"
+                                              Minimum="0"
+                                              Maximum="1"
+                                              Value="{Binding RoomVolume}" />
+                    </Grid>
+                </Border>
+                <Border Width="124" Height="500" Background="DarkSlateBlue" Padding="2">
+                    <Grid RowDefinitions="30,*">
+                        <mixerControls:ChannelHeader Text="Plate"
+                                                     IsSelected="{Binding IsPlateSelected}"
+                                                     IsDeleteButtonVisible="False"
+                                                     SelectCommand="{Binding SelectPlate}" />
+                        <controls:ValueSlider Grid.Row="1"
+                                              Text="Return"
+                                              Background="Gray"
+                                              IsVertical="True"
+                                              Minimum="0"
+                                              Maximum="1"
+                                              Value="{Binding PlateVolume}" />
+                    </Grid>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <ScrollViewer Grid.Row="1"
+                      HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Disabled">
+            <Panel>
+                <Grid IsVisible="{Binding IsChannelParametersVisible}"
+                      ColumnDefinitions="2*,*,*,*"
+                      MinWidth="1200">
+                    <mixerControls:ParameterGrid Grid.Column="0"
+                                                 Text="FIL4"
+                                                 NumberOfColumns="4"
+                                                 NumberOfRows="5"
+                                                 Parameters="{Binding Fil4Parameters}" />
+                    <mixerControls:ParameterGrid Grid.Column="1"
+                                                 Text="Transient Designer"
+                                                 NumberOfColumns="2"
+                                                 NumberOfRows="4"
+                                                 Parameters="{Binding TransientParameters}" />
+                    <mixerControls:ParameterGrid Grid.Column="2"
+                                                 Text="Compressor"
+                                                 NumberOfColumns="2"
+                                                 NumberOfRows="5"
+                                                 Parameters="{Binding CompressorParameters}" />
+                    <mixerControls:ParameterGrid Grid.Column="3"
+                                                 Text="Saturator"
+                                                 NumberOfColumns="2"
+                                                 NumberOfRows="3"
+                                                 Parameters="{Binding SaturatorParameters}" />
+                </Grid>
+                <mixerControls:ParameterGrid
+                    IsVisible="{Binding IsReturnParametersVisible}"
+                    Text="Reverb"
+                    NumberOfColumns="4"
+                    NumberOfRows="3"
+                    Parameters="{Binding ReturnParameters}" />
+            </Panel>
+        </ScrollViewer>
+    </Grid>
+</Window>

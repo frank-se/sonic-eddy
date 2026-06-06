@@ -46,7 +46,13 @@ public class FilterGraphNode
     /// </list>
     /// </summary>
     [JsonPropertyName("plugin")]
-    public required string Plugin { get; set; }
+    public string? Plugin { get; set; }
+
+    /// <summary>
+    /// The built-in plugin label, such as <c>copy</c> or <c>mixer</c>.
+    /// </summary>
+    [JsonPropertyName("label")]
+    public string? Label { get; set; }
 
     /// <summary>
     /// The initial control values, given as a dictionary with the port name as

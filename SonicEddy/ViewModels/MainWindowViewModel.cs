@@ -8,6 +8,7 @@ using Fr.Sonic.PInvoke;
 using Microsoft.Extensions.Logging;
 using ReactiveUI;
 using SonicEddy.Services.AppData;
+using SonicEddy.Services.DrumMixer;
 using SonicEddy.Services.Midi;
 using SonicEddy.Services.MixerServiceV2;
 using SonicEddy.Services.MixerPersistence;
@@ -19,6 +20,7 @@ using SonicEddy.Services.VirtualInputs;
 using SonicEddy.Services.VirtualOutputs;
 using SonicEddy.Services.Wireplumber;
 using SonicEddy.ViewModels.FilterGraphManagerViewModels;
+using SonicEddy.ViewModels.DrumMixerViewModels;
 using SonicEddy.ViewModels.MetadataViewModels;
 using SonicEddy.ViewModels.MidiParameterChangeMonitorViewModels;
 using SonicEddy.ViewModels.MidiRouterViewModels;
@@ -36,6 +38,7 @@ using SonicEddy.ViewModels.GlobalMasterViewModels;
 using SonicEddy.ViewModels.VirtualInputsViewModels;
 using SonicEddy.ViewModels.VirtualOutputsViewModels;
 using SonicEddy.Views.FilterGraphManagerViews;
+using SonicEddy.Views.DrumMixerViews;
 using SonicEddy.Views.GlobalMasterViews;
 using SonicEddy.Views.MetadataViews;
 using SonicEddy.Views.MidiParameterChangeMonitorView;
@@ -79,6 +82,13 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
             };
         }
 
+        _drumMixerService = Locator.Current.GetService<IDrumMixerService>();
+        if (_drumMixerService is not null)
+        {
+            IsDrumMixerEnabled = _drumMixerService.IsAvailable;
+            _drumMixerService.Changed += OnDrumMixerChanged;
+        }
+
         _midiControllerService.LayerChanged += OnLayerSelected;
         _midiControllerService.FilterParamsSectionMovedRight +=
             OnMoveFilterParamsPageRight;
@@ -106,6 +116,8 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     private const int NumberOfChannelsPerLayer = NumberOfChannels / 2;
 
     private Window? _globalMasterWindow;
+    private Window? _drumMixerWindow;
+    private DrumMixerViewModel? _drumMixerViewModel;
     private Window? _monitoringWindow;
     private Window? _midiParameterMonitorWindow;
     private Window? _objectBrowserWindow;
@@ -133,6 +145,12 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     public TransportToolbarViewModel Transport { get; } = new();
 
     public bool IsMonitoringEnabled
+    {
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
+    public bool IsDrumMixerEnabled
     {
         get;
         private set => this.RaiseAndSetIfChanged(ref field, value);
@@ -166,6 +184,38 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     private readonly ITraktorZ1Service _traktorZ1Service;
     private readonly ILogger<MainWindowViewModel> _logger;
     private readonly ILoggerFactory _loggerFactory;
+    private readonly IDrumMixerService? _drumMixerService;
+
+    private void OnDrumMixerChanged()
+    {
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            IsDrumMixerEnabled = _drumMixerService?.IsAvailable ?? false);
+    }
+
+    public void ShowDrumMixerWindow()
+    {
+        if (_drumMixerService is not { IsAvailable: true })
+            return;
+
+        if (_drumMixerWindow is not null)
+        {
+            _drumMixerWindow.Activate();
+            return;
+        }
+
+        _drumMixerViewModel = new DrumMixerViewModel(_drumMixerService);
+        _drumMixerWindow = new DrumMixerWindow
+        {
+            DataContext = _drumMixerViewModel
+        };
+        _drumMixerWindow.Closed += (_, _) =>
+        {
+            _drumMixerViewModel?.Dispose();
+            _drumMixerViewModel = null;
+            _drumMixerWindow = null;
+        };
+        _drumMixerWindow.Show();
+    }
 
     private void OnTraktorZ1FilterSectionChanged(TraktorZ1Side side, int sectionIndex)
     {
@@ -833,6 +883,10 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     public void Dispose()
     {
         Transport.Dispose();
+        _drumMixerWindow?.Close();
+        _drumMixerViewModel?.Dispose();
+        if (_drumMixerService is not null)
+            _drumMixerService.Changed -= OnDrumMixerChanged;
         _globalMasterViewModel?.Dispose();
         Locator.Current.GetService<MixerConfigurationService>()?.Dispose();
         _layerInitializationLock.Dispose();

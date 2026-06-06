@@ -11,6 +11,7 @@ using SonicEddy.Contracts.Mixers;
 using SonicEddy.Contracts.VirtualInputs;
 using SonicEddy.Contracts.VirtualOutputs;
 using SonicEddy.Contracts.ClickSync;
+using SonicEddy.Contracts.DrumMixer;
 
 namespace SonicEddy.Services.AppData;
 
@@ -180,5 +181,25 @@ public class AppDataService(
         var bytes = await File.ReadAllBytesAsync(filePath);
         using var memoryStream = new MemoryStream(bytes);
         return Serializer.Deserialize<ClickSyncConfig>(memoryStream);
+    }
+
+    public async Task StoreDrumMixerConfig(DrumMixerConfig config)
+    {
+        var filePath =
+            Path.Combine(preferencesFolderPath, "drum-mixer.grpc");
+        await using var file = File.Create(filePath);
+        Serializer.Serialize(file, config);
+        await file.FlushAsync();
+    }
+
+    public async Task<DrumMixerConfig?> LoadDrumMixerConfig()
+    {
+        var filePath =
+            Path.Combine(preferencesFolderPath, "drum-mixer.grpc");
+        if (!File.Exists(filePath)) return null;
+
+        var bytes = await File.ReadAllBytesAsync(filePath);
+        using var memoryStream = new MemoryStream(bytes);
+        return Serializer.Deserialize<DrumMixerConfig>(memoryStream);
     }
 }

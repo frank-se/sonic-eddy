@@ -13,6 +13,7 @@ using SonicEddy.Services.Midi;
 using SonicEddy.Services.MidiRouter;
 using SonicEddy.Services.MidiSync;
 using SonicEddy.Services.ClickSync;
+using SonicEddy.Services.DrumMixer;
 using SonicEddy.Services.MixerServiceV2;
 using SonicEddy.Services.MixerPersistence;
 using SonicEddy.Services.MixerViewModels;
@@ -41,10 +42,18 @@ public class App : Application
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime
             desktop)
+        {
             desktop.MainWindow = new MainWindow
             {
                 DataContext = Locator.Current.GetService<MainWindowViewModel>()
             };
+            desktop.Exit += (_, _) =>
+            {
+                (desktop.MainWindow.DataContext as IDisposable)?.Dispose();
+                (Locator.Current.GetService<IDrumMixerService>() as IDisposable)
+                    ?.Dispose();
+            };
+        }
 
         base.OnFrameworkInitializationCompleted();
     }
@@ -154,6 +163,13 @@ public class App : Application
         Locator.CurrentMutable.Register<IClickSyncService>(() =>
             clickSyncService);
         _ = clickSyncService.InitializeAsync();
+
+        var drumMixerService = new DrumMixerService(appDataService,
+            preferencesService,
+            loggerFactory.CreateLogger<DrumMixerService>());
+        Locator.CurrentMutable.Register<IDrumMixerService>(() =>
+            drumMixerService);
+        _ = drumMixerService.InitializeAsync();
 
         var mixerViewModelServiceLogger =
             loggerFactory.CreateLogger<MixerViewModelService>();
