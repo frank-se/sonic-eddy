@@ -6,7 +6,6 @@
 #include <array>
 #include <charconv>
 #include <cstring>
-#include <map>
 #include <regex>
 #include <string_view>
 
@@ -21,7 +20,6 @@ namespace {
 
 constexpr auto SyncNodeName = "se.sync_master";
 constexpr auto SyncRole = "sync-master";
-constexpr size_t MaxBeatHistory = 1024;
 
 spa_pod *pod_body(const spa_pod *pod) {
   return reinterpret_cast<spa_pod *>(reinterpret_cast<uintptr_t>(pod) +
@@ -38,7 +36,6 @@ std::vector<sesync::BeatScheduleEntry> parse_schedule(const std::string &json) {
                       .nsec = std::stoull((*it)[2].str())});
   }
 
-  std::ranges::sort(result, {}, &sesync::BeatScheduleEntry::beat);
   return result;
 }
 
@@ -108,21 +105,25 @@ parse_transport_states(const std::string &json) {
 }
 
 std::vector<sesync::BeatScheduleEntry>
-merge_history(const std::vector<sesync::BeatScheduleEntry> &old_history,
-              const std::vector<sesync::BeatScheduleEntry> &schedule) {
-  std::map<uint64_t, uint64_t> by_beat;
-  for (const auto &entry : old_history)
-    by_beat[entry.beat] = entry.nsec;
-  for (const auto &entry : schedule)
-    by_beat[entry.beat] = entry.nsec;
-
-  while (by_beat.size() > MaxBeatHistory)
-    by_beat.erase(by_beat.begin());
+build_beat_window(const std::vector<sesync::BeatScheduleEntry> &old_window,
+                  const std::vector<sesync::BeatScheduleEntry> &schedule) {
+  if (schedule.empty())
+    return {};
 
   std::vector<sesync::BeatScheduleEntry> result;
-  result.reserve(by_beat.size());
-  for (const auto &[beat, nsec] : by_beat)
-    result.push_back({.beat = beat, .nsec = nsec});
+  result.reserve(schedule.size() + 1);
+
+  const auto first_scheduled_beat = schedule.front().beat;
+  const sesync::BeatScheduleEntry *previous = nullptr;
+  for (const auto &entry : old_window) {
+    if (entry.beat < first_scheduled_beat &&
+        (previous == nullptr || entry.beat > previous->beat))
+      previous = &entry;
+  }
+  if (previous != nullptr)
+    result.push_back(*previous);
+
+  result.insert(result.end(), schedule.begin(), schedule.end());
   return result;
 }
 
@@ -141,11 +142,13 @@ const pw_node_events node_events = {
 
 std::optional<sesync::BeatScheduleEntry>
 sesync::SyncSnapshot::current_beat(const uint64_t now_nsec) const {
-  const auto next = std::ranges::upper_bound(
-      beat_history, now_nsec, {}, &BeatScheduleEntry::nsec);
-  if (next == beat_history.begin())
-    return std::nullopt;
-  return *std::prev(next);
+  std::optional<BeatScheduleEntry> current;
+  for (const auto &entry : beat_history) {
+    if (entry.nsec > now_nsec)
+      break;
+    current = entry;
+  }
+  return current;
 }
 
 sesync::TransportState
@@ -358,9 +361,9 @@ void sesync::SyncClient::apply_params(const std::string &schedule_json,
 
   const auto previous = snapshot();
   next->beat_history =
-      merge_history(previous ? previous->beat_history
-                             : std::vector<BeatScheduleEntry>{},
-                    next->beat_schedule);
+      build_beat_window(previous ? previous->beat_history
+                                 : std::vector<BeatScheduleEntry>{},
+                        next->beat_schedule);
 
   std::atomic_store(&_snapshot,
                     std::static_pointer_cast<const SyncSnapshot>(next));

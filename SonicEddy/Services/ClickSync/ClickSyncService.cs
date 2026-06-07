@@ -263,15 +263,6 @@ public sealed class ClickSyncService : IClickSyncService, IDisposable
                     Matches(candidate, target)))
             .OfType<Port>()
             .ToArray();
-        var targetPortIds = targetPorts
-            .Select(port => port.ObjectId)
-            .ToHashSet();
-
-        foreach (var link in FrSonic.LinkRegistry.Objects.Where(link =>
-                     link.OutputPortId == source.ObjectId &&
-                     !targetPortIds.Contains(link.InputPortId)).ToList())
-            FrSonic.LinkFactory.DeleteLink(link);
-
         foreach (var port in targetPorts)
         {
             if (!HasLink(source, port))

@@ -116,3 +116,20 @@ executable(
     ],
     include_directories : [all_inc, build_inc],
     dependencies : [pipewire_dep, wireplumber_dep, boost_dep, lv2_dep, lilv_dep])
+
+executable(
+    'se-simple-producer',
+    sources : [
+        'apps/simple_producer.cpp',
+    ],
+    include_directories : [all_inc, build_inc],
+    dependencies : [pipewire_dep])
+
+executable(
+    'se-sync-producer',
+    sources : [
+        'apps/sync_producer.cpp',
+        'sync/SyncClient.cpp',
+    ],
+    include_directories : [all_inc, build_inc],
+    dependencies : [pipewire_dep])

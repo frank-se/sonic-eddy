@@ -28,7 +28,7 @@
                                     Height="500"
                                     Background="MidnightBlue"
                                     Padding="2">
-                                <Grid RowDefinitions="30,54,48,48,*"
+                                <Grid RowDefinitions="30,54,34,48,48,*"
                                       RowSpacing="4">
                                     <mixerControls:ChannelHeader
                                         Grid.Row="0"
@@ -41,19 +41,22 @@
                                               SelectedItem="{Binding SelectedSource}"
                                               DisplayMemberBinding="{Binding Name}"
                                               PlaceholderText="Audio From" />
-                                    <controls:ValueSlider Grid.Row="2"
+                                    <TextBox Grid.Row="2"
+                                             Text="{Binding Name}"
+                                             PlaceholderText="Channel name" />
+                                    <controls:ValueSlider Grid.Row="3"
                                                           Text="Room"
                                                           Background="DimGray"
                                                           Minimum="0"
                                                           Maximum="1"
                                                           Value="{Binding RoomSend}" />
-                                    <controls:ValueSlider Grid.Row="3"
+                                    <controls:ValueSlider Grid.Row="4"
                                                           Text="Plate"
                                                           Background="DimGray"
                                                           Minimum="0"
                                                           Maximum="1"
                                                           Value="{Binding PlateSend}" />
-                                    <controls:ValueSlider Grid.Row="4"
+                                    <controls:ValueSlider Grid.Row="5"
                                                           Text="Volume"
                                                           Background="Gray"
                                                           IsVertical="True"
