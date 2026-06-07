@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Fr.Sonic.Model.Config.LoopbackModule;
 using Fr.Sonic.Model.Objects;
 using Fr.Sonic.Modules.Models;
+using SonicEddy.Services.DrumMixer;
 
 namespace SonicEddy.Services.Wireplumber;
 
@@ -41,7 +42,9 @@ public class WireplumberService : IWireplumberService, IDisposable
 
     private static bool IsInternalNode(Node node) =>
         node.Name?.StartsWith("silence-") == true ||
-        node.Name?.StartsWith("monitor ") == true;
+        node.Name?.StartsWith("monitor ") == true ||
+        (!string.IsNullOrEmpty(node.Pmx.Tag) &&
+         node.Name != DrumMixerService.PlaybackNodeName);
 
     public bool IsPlaybackNode(Node node) =>
         node.Media.Class is "Audio/Source" or "Stream/Output/Audio";
