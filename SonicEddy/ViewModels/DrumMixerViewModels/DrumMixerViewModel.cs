@@ -207,6 +207,8 @@ public sealed class DrumMixerViewModel : ViewModelBase, IDisposable
     {
         Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
+            foreach (var channel in Channels)
+                channel.BeginLoad();
             RefreshSources();
             foreach (var channel in Channels)
                 channel.RefreshSource();
@@ -316,6 +318,8 @@ public sealed class DrumMixerChannelViewModel : ReactiveObject
             if (!_loading) _service.SetSource(Index, value?.Port);
         }
     }
+
+    internal void BeginLoad() => _loading = true;
 
     internal void RefreshSource()
     {
