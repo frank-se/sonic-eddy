@@ -221,11 +221,44 @@ private:
                   const uint32_t sample_rate,
                   const uint64_t cycle_start_nsec,
                   const SyncSnapshot &snapshot) const {
-    const auto current = snapshot.current_beat(cycle_start_nsec);
-    if (!current ||
-        snapshot.transport_state_at(current->beat) == TransportState::Stopped)
-      return;
-    std::fill_n(samples, frames, _config.pulse_amplitude);
+    const auto cycle_end_nsec =
+        cycle_start_nsec + frame_nsec(frames, sample_rate);
+
+    std::optional<uint64_t> beat;
+    for (const auto &entry : snapshot.beat_history) {
+      if (entry.nsec <= cycle_start_nsec && (!beat || entry.beat > *beat))
+        beat = entry.beat;
+    }
+    if (!beat) {
+      if (snapshot.beat_history.empty()) return;
+      const auto first = snapshot.beat_history.front().beat;
+      beat = first > 0 ? first - 1 : 0;
+    }
+
+    const auto to_frame = [&](const uint64_t nsec) -> uint32_t {
+      const uint64_t offset = nsec - cycle_start_nsec;
+      const uint64_t f = (offset * sample_rate + uint64_t{999'999'999}) /
+                         uint64_t{1'000'000'000};
+      return static_cast<uint32_t>(std::min(f, static_cast<uint64_t>(frames)));
+    };
+
+    auto state = snapshot.transport_state_at(*beat);
+    uint32_t pos = 0;
+
+    for (const auto &entry : snapshot.beat_history) {
+      if (entry.nsec <= cycle_start_nsec || entry.nsec >= cycle_end_nsec)
+        continue;
+      const auto new_state = snapshot.transport_state_at(entry.beat);
+      if (new_state == state) continue;
+      if (state != TransportState::Stopped)
+        std::fill_n(samples + pos, to_frame(entry.nsec) - pos,
+                    _config.pulse_amplitude);
+      pos = to_frame(entry.nsec);
+      state = new_state;
+    }
+
+    if (state != TransportState::Stopped)
+      std::fill_n(samples + pos, frames - pos, _config.pulse_amplitude);
   }
 
   void render_pulse(float *samples, const uint32_t frames,
