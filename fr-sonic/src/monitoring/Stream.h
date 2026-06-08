@@ -34,7 +34,7 @@ public:
   [[nodiscard]] float right_held_peak() const { return _right_held_peak; }
   [[nodiscard]] uint64_t object_serial()const { return _object_serial; }
 
-  void destroy() const { pw_stream_destroy(_stream); }
+  void destroy();
   [[nodiscard]] pw_stream *get_stream() const { return _stream; }
 
 private:

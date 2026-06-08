@@ -138,6 +138,12 @@ void monitoring::Stream::compute_metrics(uint32_t window_ms) {
   }
 }
 
+void monitoring::Stream::destroy() {
+  pw_stream_disconnect(_stream);
+  pw_stream_destroy(_stream);
+  _stream = nullptr;
+}
+
 void monitoring::Stream::setup() {
   const auto name          = std::format("monitor {}", _object_serial);
   const auto target_object = std::to_string(_object_serial);

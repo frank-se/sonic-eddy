@@ -51,7 +51,7 @@ void monitoring::Monitor::stop_monitor_node(uint64_t object_serial) {
   auto stream = *it;
   std::erase(_monitoring_streams, stream);
   pw_loop_invoke(_loop, destroy_stream_function, SPA_ID_INVALID,
-                 nullptr, 0, false, stream.get());
+                 nullptr, 0, true, stream.get());
 }
 
 void monitoring::Monitor::forward_measures() {
