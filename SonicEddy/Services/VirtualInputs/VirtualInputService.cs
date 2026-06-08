@@ -18,6 +18,12 @@ public class VirtualInputService(
 {
     private const string CaptureNodeMediaClass = "Stream/Input/Audio";
     private const string PlaybackNodeMediaClass = "Stream/Output/Audio";
+    private const string NodeNamePrefix = "virtual-input-";
+    private const string PlaybackNodeNameSuffix = "-playback";
+
+    public static bool IsVirtualInputPlaybackNode(Node node) =>
+        node.Name?.StartsWith(NodeNamePrefix) == true &&
+        node.Name.EndsWith(PlaybackNodeNameSuffix);
     private static readonly List<string> StereoAudioPosition = ["FL", "FR"];
     private readonly List<VirtualInputConfig> _configuredInputs = [];
     private readonly HashSet<Guid> _activeInputs = [];

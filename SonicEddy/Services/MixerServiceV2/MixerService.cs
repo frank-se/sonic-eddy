@@ -13,6 +13,7 @@ using SonicEddy.Services.AppData;
 using SonicEddy.Services.ExternalEffects;
 using SonicEddy.Services.DrumMixer;
 using SonicEddy.Services.Midi;
+using SonicEddy.Services.VirtualInputs;
 using SonicEddy.Services.Preferences;
 using SonicEddy.Services.Wireplumber;
 
@@ -749,7 +750,8 @@ public class MixerService : IMixerService, IDisposable
         node.Name?.StartsWith("silence-") == true ||
         node.Name?.StartsWith("monitor ") == true ||
         (!string.IsNullOrEmpty(node.Pmx.Tag) &&
-         node.Name != DrumMixerService.PlaybackNodeName);
+         node.Name != DrumMixerService.PlaybackNodeName &&
+         !VirtualInputService.IsVirtualInputPlaybackNode(node));
 
     private async Task ProcessNodeAddedEvent(Node node)
     {
