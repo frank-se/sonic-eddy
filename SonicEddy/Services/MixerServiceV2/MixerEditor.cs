@@ -598,8 +598,8 @@ public class MixerEditor(IWireplumberService wireplumberService,
         int numberOfChannels,
         int numberOfGroupChannels,
         int numberOfReturnChannels,
-        ulong[]? ignoreSerials = null,
-        string? globalMasterCaptureSerial = null)
+        string globalMasterCaptureSerial,
+        ulong[]? ignoreSerials = null)
     {
         ignoreSerials ??= [];
 
@@ -692,7 +692,7 @@ public class MixerEditor(IWireplumberService wireplumberService,
     }
 
     private async Task<MasterChannel> CreateMasterChannel(ulong layerId,
-        OutputChannel defaultOutput, string? globalMasterCaptureSerial = null)
+        OutputChannel defaultOutput, string globalMasterCaptureSerial)
     {
         var preFxLooper = await CreateLooper(
             layerId,
@@ -702,14 +702,8 @@ public class MixerEditor(IWireplumberService wireplumberService,
             null,
             null);
 
-        // When a GlobalMaster exists the postFx looper routes into it;
-        // layer position (0→AUX0/1, 1→AUX2/3) determines which xfade input pair.
-        // Without a GlobalMaster it routes straight to the physical output.
-        var masterTarget = globalMasterCaptureSerial
-            ?? defaultOutput.CaptureNode.ObjectSerial.ToString();
-        var playbackAudioPosition = globalMasterCaptureSerial is not null
-            ? (layerId == 0 ? "AUX0,AUX1" : "AUX2,AUX3")
-            : null;
+        var masterTarget = globalMasterCaptureSerial;
+        var playbackAudioPosition = layerId == 0 ? "AUX0,AUX1" : "AUX2,AUX3";
 
         var postFxLooper = await CreateLooper(
             layerId,
@@ -722,6 +716,7 @@ public class MixerEditor(IWireplumberService wireplumberService,
 
         preFxLooper.PlaybackNode.OverrideTargetObject(
             postFxLooper.CaptureNode.ObjectSerial.ToString());
+        postFxLooper.PlaybackNode.OverrideTargetObject(globalMasterCaptureSerial);
 
         return new(
             "Master",

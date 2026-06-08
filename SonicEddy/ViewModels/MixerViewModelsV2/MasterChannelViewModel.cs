@@ -26,8 +26,6 @@ namespace SonicEddy.ViewModels.MixerViewModelsV2;
 
 public class MasterChannelViewModel : ChannelViewModelBase, IMasterChannel
 {
-    private readonly Node? _globalMasterPlaybackNode;
-
     public MasterChannelViewModel(
         ulong channelId,
         string text,
@@ -44,15 +42,13 @@ public class MasterChannelViewModel : ChannelViewModelBase, IMasterChannel
         IMonitoringService monitoringService,
         int layerId,
         IMidiControllerSetupService midiControllerSetupService,
-        ITraktorZ1SetupService traktorZ1SetupService,
-        Node? globalMasterPlaybackNode = null)
+        ITraktorZ1SetupService traktorZ1SetupService)
         : base(channelId, text, selectChannelCommand,
             inputLoopback, outputLoopback, filterChain, filterGraph,
             audioToRoutingTargets, selectedAudioToRoutingTarget,
             appDataService, mixerService, monitoringService,
             true, layerId, midiControllerSetupService, ChannelType.Channel)
     {
-        _globalMasterPlaybackNode = globalMasterPlaybackNode;
         MasterChannel = masterChannel;
         Looper = new LooperSectionViewModel(
             masterChannel.PreFxLooper, masterChannel.PostFxLooper,
@@ -122,16 +118,8 @@ public class MasterChannelViewModel : ChannelViewModelBase, IMasterChannel
 
     protected override void ApplyAudioRoutingTarget(IRoutingTarget? routingTarget)
     {
-        if (routingTarget is null) return;
-        var node = _globalMasterPlaybackNode;
-        if (node is null) { base.ApplyAudioRoutingTarget(routingTarget); return; }
-        switch (routingTarget.Channel)
-        {
-            case OutputChannelViewModel output:
-                _mixerService.SetGlobalMasterOutputTarget(
-                    output.CaptureNodeObjectSerial);
-                break;
-        }
+        if (routingTarget?.Channel is not OutputChannelViewModel output) return;
+        _mixerService.SetGlobalMasterOutputTarget(output.CaptureNodeObjectSerial);
     }
 
     protected override void Dispose(bool disposing)

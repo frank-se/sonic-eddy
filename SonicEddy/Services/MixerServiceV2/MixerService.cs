@@ -105,8 +105,7 @@ public class MixerService : IMixerService, IDisposable
 
                 var firstLayer = await _editor.Create(masterOutputName, 0,
                     numberOfChannels, numberOfGroupChannels,
-                    numberOfReturnChannels,
-                    globalMasterCaptureSerial: globalMasterCaptureSerial);
+                    numberOfReturnChannels, globalMasterCaptureSerial);
 
                 var layerOneIds =
                     CollectMixerLayerNodeIds(firstLayer).ToArray();
@@ -130,8 +129,8 @@ public class MixerService : IMixerService, IDisposable
 
                 var secondLayer = await _editor.Create(masterOutputName, 1,
                     numberOfChannels, numberOfGroupChannels,
-                    numberOfReturnChannels, layerOneIds,
-                    globalMasterCaptureSerial: globalMasterCaptureSerial);
+                    numberOfReturnChannels, globalMasterCaptureSerial,
+                    layerOneIds);
 
                 _myNodeIds.AddRange(CollectMixerLayerNodeIds(secondLayer));
 
