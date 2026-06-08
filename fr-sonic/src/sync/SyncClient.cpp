@@ -368,12 +368,6 @@ void sesync::SyncClient::apply_params(const std::string &schedule_json,
   std::atomic_store(&_snapshot,
                     std::static_pointer_cast<const SyncSnapshot>(next));
 
-  logging::log<logging::LogLevel::Debug>(
-      "Sync client updated snapshot: {} scheduled beats, {} bpm entries, {} "
-      "transport entries",
-      next->beat_schedule.size(), next->bpm.size(),
-      next->transport_states.size());
-
   if (_snapshot_callback)
     _snapshot_callback(next);
 }
