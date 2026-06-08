@@ -160,5 +160,9 @@ public class ChannelHeader : Grid
         if (change.Property == IsSelectedProperty)
             if (change.NewValue is bool isSelected)
                 UpdateSelectedVisuals(isSelected);
+
+        if (change.Property == IsDeleteButtonVisibleProperty)
+            if (change.NewValue is bool isVisible)
+                _deleteButton.IsVisible = isVisible;
     }
 }

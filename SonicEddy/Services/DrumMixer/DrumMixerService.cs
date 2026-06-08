@@ -60,6 +60,14 @@ public sealed class DrumMixerService : IDrumMixerService, IDisposable
             await _preferences.Load();
         State = Normalize(await _appDataService.LoadDrumMixerConfig());
 
+        _logger.LogInformation("DrumMixer: IsConfigured={IsConfigured}, channels={Count}",
+            IsConfigured, State.Channels.Count);
+        for (var i = 0; i < State.Channels.Count; i++)
+            _logger.LogInformation("  ch{Index}: name={Name} src={Node}/{Port}",
+                i, State.Channels[i].Name,
+                State.Channels[i].SourceNodeName ?? "(null)",
+                State.Channels[i].SourcePortName ?? "(null)");
+
         if (!IsConfigured)
         {
             Changed?.Invoke();
@@ -101,6 +109,13 @@ public sealed class DrumMixerService : IDrumMixerService, IDisposable
                     FilterGraph = DrumMixerGraphBuilder.Build(State)
                 });
             IsAvailable = true;
+            _logger.LogInformation("DrumMixer: filter chain created, capture node ObjectId={Id}",
+                _filterChain.CaptureNode.ObjectId);
+            var sourcePorts = GetSourcePorts();
+            _logger.LogInformation("DrumMixer: {Count} source ports available: [{Ports}]",
+                sourcePorts.Count,
+                string.Join(", ", sourcePorts.Take(8).Select(p =>
+                    $"{PortKey(p).NodeName}/{PortKey(p).PortName}")));
             ApplyAllRuntimeValues();
             ReconcileLinks();
         }
@@ -156,6 +171,15 @@ public sealed class DrumMixerService : IDrumMixerService, IDisposable
             channel.SourceNodeName = key.NodeName;
             channel.SourcePortName = key.PortName;
         }
+
+        if (channel.SourceNodeName is null && channel.SourcePortName is null)
+            _logger.LogWarning("SetSource ch{Index}: clearing source",
+                channelIndex);
+        else
+            _logger.LogInformation("SetSource ch{Index}: node={Node} port={Port}",
+                channelIndex,
+                channel.SourceNodeName ?? "(null)",
+                channel.SourcePortName ?? "(null)");
 
         ReconcileChannelLink(channelIndex);
         StateChanged();

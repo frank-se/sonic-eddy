@@ -34,8 +34,9 @@
                                         Grid.Row="0"
                                         Text="{Binding Name}"
                                         IsSelected="{Binding IsSelected}"
-                                        IsDeleteButtonVisible="False"
-                                        SelectCommand="{Binding Select}" />
+                                        IsDeleteButtonVisible="{Binding SelectedSource, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                        SelectCommand="{Binding Select}"
+                                        DeleteCommand="{Binding ClearSource}" />
                                     <ComboBox Grid.Row="1"
                                               ItemsSource="{Binding $parent[Window].((vm:DrumMixerViewModel)DataContext).Sources}"
                                               SelectedItem="{Binding SelectedSource}"

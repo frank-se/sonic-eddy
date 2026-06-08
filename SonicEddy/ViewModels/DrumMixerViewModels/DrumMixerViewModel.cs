@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reactive;
+using System.Reactive.Disposables;
+using System.Reactive.Disposables.Fluent;
+using System.Reactive.Linq;
 using Fr.Sonic;
 using Fr.Sonic.Model.Lv2;
 using Fr.Sonic.Model.Objects;
@@ -31,6 +34,8 @@ public sealed class DrumMixerViewModel : ViewModelBase, IDisposable
 
         _service.Changed += OnServiceChanged;
         RefreshSources();
+        foreach (var channel in Channels)
+            channel.RefreshSource();
         SelectChannel(0);
     }
 
@@ -230,13 +235,16 @@ public sealed class DrumMixerViewModel : ViewModelBase, IDisposable
     public void Dispose()
     {
         _service.Changed -= OnServiceChanged;
+        foreach (var channel in Channels)
+            channel.Dispose();
     }
 }
 
-public sealed class DrumMixerChannelViewModel : ReactiveObject
+public sealed class DrumMixerChannelViewModel : ReactiveObject, IDisposable
 {
     private readonly DrumMixerViewModel _owner;
     private readonly IDrumMixerService _service;
+    private readonly CompositeDisposable _disposables = new();
     private bool _loading;
     private string _name;
     private bool _isSelected;
@@ -254,20 +262,54 @@ public sealed class DrumMixerChannelViewModel : ReactiveObject
         _roomSend = state.RoomSend;
         _plateSend = state.PlateSend;
         Select = ReactiveCommand.Create(() => owner.SelectChannel(index));
+        ClearSource = ReactiveCommand.Create(() =>
+        {
+            _loading = true;
+            SelectedSource = null;
+            _loading = false;
+            _service.SetSource(Index, null);
+        });
+        Select.DisposeWith(_disposables);
+        ClearSource.DisposeWith(_disposables);
+
+        this.WhenAnyValue(x => x.Name)
+            .Skip(1)
+            .Where(_ => !_loading)
+            .Subscribe(v => _service.SetChannelName(Index, v))
+            .DisposeWith(_disposables);
+        this.WhenAnyValue(x => x.Volume)
+            .Skip(1)
+            .Where(_ => !_loading)
+            .Subscribe(v => _service.SetChannelVolume(Index, v))
+            .DisposeWith(_disposables);
+        this.WhenAnyValue(x => x.RoomSend)
+            .Skip(1)
+            .Where(_ => !_loading)
+            .Subscribe(v => _service.SetSend(Index, true, v))
+            .DisposeWith(_disposables);
+        this.WhenAnyValue(x => x.PlateSend)
+            .Skip(1)
+            .Where(_ => !_loading)
+            .Subscribe(v => _service.SetSend(Index, false, v))
+            .DisposeWith(_disposables);
+        this.WhenAnyValue(x => x.SelectedSource)
+            .Skip(1)
+            .Where(_ => !_loading)
+            .Where(v => v?.Port is not null)
+            .Subscribe(v => _service.SetSource(Index, v!.Port))
+            .DisposeWith(_disposables);
+
         RefreshSource();
     }
 
     public int Index { get; }
     public ReactiveCommand<Unit, Unit> Select { get; }
+    public ReactiveCommand<Unit, Unit> ClearSource { get; }
 
     public string Name
     {
         get => _name;
-        set
-        {
-            this.RaiseAndSetIfChanged(ref _name, value);
-            if (!_loading) _service.SetChannelName(Index, value);
-        }
+        set => this.RaiseAndSetIfChanged(ref _name, value);
     }
 
     public bool IsSelected
@@ -280,43 +322,27 @@ public sealed class DrumMixerChannelViewModel : ReactiveObject
     public float Volume
     {
         get => _volume;
-        set
-        {
-            this.RaiseAndSetIfChanged(ref _volume, value);
-            if (!_loading) _service.SetChannelVolume(Index, value);
-        }
+        set => this.RaiseAndSetIfChanged(ref _volume, value);
     }
 
     private float _roomSend;
     public float RoomSend
     {
         get => _roomSend;
-        set
-        {
-            this.RaiseAndSetIfChanged(ref _roomSend, value);
-            if (!_loading) _service.SetSend(Index, true, value);
-        }
+        set => this.RaiseAndSetIfChanged(ref _roomSend, value);
     }
 
     private float _plateSend;
     public float PlateSend
     {
         get => _plateSend;
-        set
-        {
-            this.RaiseAndSetIfChanged(ref _plateSend, value);
-            if (!_loading) _service.SetSend(Index, false, value);
-        }
+        set => this.RaiseAndSetIfChanged(ref _plateSend, value);
     }
 
     public DrumMixerSourceViewModel? SelectedSource
     {
         get => _selectedSource;
-        set
-        {
-            this.RaiseAndSetIfChanged(ref _selectedSource, value);
-            if (!_loading) _service.SetSource(Index, value?.Port);
-        }
+        set => this.RaiseAndSetIfChanged(ref _selectedSource, value);
     }
 
     internal void BeginLoad() => _loading = true;
@@ -325,35 +351,57 @@ public sealed class DrumMixerChannelViewModel : ReactiveObject
     {
         _loading = true;
         var port = _service.ResolveSource(Index);
-        SelectedSource = port is null
-            ? null
-            : _owner.Sources.FirstOrDefault(source =>
-                source.Port.ObjectId == port.ObjectId);
+        if (port is not null)
+        {
+            SelectedSource = _owner.Sources.FirstOrDefault(source =>
+                source.Port?.ObjectId == port.ObjectId);
+        }
+        else
+        {
+            var channel = _service.State.Channels[Index];
+            SelectedSource = channel.SourceNodeName is not null ||
+                             channel.SourcePortName is not null
+                ? new DrumMixerSourceViewModel(channel.SourceNodeName,
+                    channel.SourcePortName)
+                : null;
+        }
         _loading = false;
     }
+
+    public void Dispose() => _disposables.Dispose();
 }
 
-public sealed class DrumMixerSourceViewModel(Port port)
+public sealed class DrumMixerSourceViewModel
 {
-    public Port Port { get; } = port;
+    private readonly Node? _node;
+
+    public DrumMixerSourceViewModel(Port port)
+    {
+        Port = port;
+        _node = FrSonic.NodeRegistry.GetByObjectId(port.Node.Id);
+        NodeName = _node?.Name;
+        PortName = port.Name ?? port.Alias ?? port.Channel;
+    }
+
+    public DrumMixerSourceViewModel(string? nodeName, string? portName)
+    {
+        NodeName = nodeName;
+        PortName = portName;
+    }
+
+    public Port? Port { get; }
+    public string? NodeName { get; }
+    public string? PortName { get; }
+
     public string Name
     {
         get
         {
-            var node = FrSonic.NodeRegistry.GetByObjectId(Port.Node.Id);
-            var nodeName = node?.Description ?? node?.Name ?? "Unknown";
-            var portName = Port.Alias ?? Port.Name ?? Port.Channel ??
-                           $"Port {Port.PortId}";
+            var nodeName = _node?.Description ?? _node?.Name ?? NodeName ?? "Unknown";
+            var portName = Port?.Alias ?? Port?.Name ?? Port?.Channel ?? PortName ?? "Unknown";
             return $"{nodeName}: {portName}";
         }
     }
 
-    public string Key
-    {
-        get
-        {
-            var node = FrSonic.NodeRegistry.GetByObjectId(Port.Node.Id);
-            return $"{node?.Name}:{Port.Name ?? Port.Alias ?? Port.Channel}";
-        }
-    }
+    public string Key => $"{NodeName}:{PortName}";
 }
