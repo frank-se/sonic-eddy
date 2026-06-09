@@ -38,7 +38,9 @@ void sesync::LinkSyncAdapter::enable(bool enable) {
     push_state();
     schedule_timer();
     logging::log<logging::LogLevel::Info>(
-        "Ableton Link enabled, {} peer(s)", _link.numPeers());
+        "Ableton Link enabled — peers={} bpm={:.2f} playing={} clock_offset_ns={}",
+        _link.numPeers(), _master->current_bpm(), _master->is_playing(),
+        _clock_offset_ns);
   } else {
     if (_timer_queue)
       pw_timer_queue_cancel(&_timer);
@@ -50,6 +52,8 @@ void sesync::LinkSyncAdapter::set_peers_callback(
     std::function<void(std::size_t)> cb) {
   _peers_callback = std::move(cb);
   _link.setNumPeersCallback([this](const std::size_t peers) {
+    logging::log<logging::LogLevel::Info>(
+        "Ableton Link peers changed: {}", peers);
     if (_peers_callback)
       _peers_callback(peers);
   });
@@ -84,8 +88,8 @@ void sesync::LinkSyncAdapter::push_state() {
   const auto mono_ns  = now_nsec();
   const auto link_now = mono_to_link(mono_ns);
 
-  const auto beat   = static_cast<double>(_master->current_beat_now());
-  const auto bpm    = _master->current_bpm();
+  const auto beat    = static_cast<double>(_master->current_beat_now());
+  const auto bpm     = _master->current_bpm();
   const auto playing = _master->is_playing();
 
   auto state = _link.captureAppSessionState();

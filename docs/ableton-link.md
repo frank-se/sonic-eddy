@@ -4,10 +4,10 @@ Ableton Link lets Sonic Eddy act as the authoritative beat clock for a Link
 session, so connected apps (MPC, Ableton Live, etc.) follow Sonic Eddy's tempo
 and transport over the local network.
 
-Link has no formal master/slave distinction — all peers are equal in the protocol
-— but continuously committing Sonic Eddy's current beat position and tempo on
-every timer fire means peers always converge to our timeline. Incoming tempo
-changes from peers are ignored.
+Link has no formal master/slave distinction — all peers are equal in the
+protocol — but continuously committing Sonic Eddy's current beat position and
+tempo on every timer fire means peers always converge to our timeline. Incoming
+tempo changes from peers are ignored.
 
 ## Goals
 
@@ -37,8 +37,8 @@ UI / C# layer                                          Link network
 
 `LinkSyncAdapter` lives on the PipeWire main loop thread. On each timer fire it
 reads the current sync master state and commits it to Link's app-thread session
-state. No Link callbacks are registered for tempo or transport — incoming changes
-from peers are simply never applied.
+state. No Link callbacks are registered for tempo or transport — incoming
+changes from peers are simply never applied.
 
 ---
 
@@ -99,8 +99,8 @@ Transport start/stop is committed to Link alongside beat and tempo. When Sonic
 Eddy starts playback, set `state.setIsPlaying(true, link_time_now)` before
 committing. When stopped, `state.setIsPlaying(false, link_time_now)`.
 
-Link distributes the start/stop to peers. Peers with start/stop sync enabled will
-follow at the next quantum boundary per their own quantum setting.
+Link distributes the start/stop to peers. Peers with start/stop sync enabled
+will follow at the next quantum boundary per their own quantum setting.
 
 The adapter mirrors the sync master's transport state on every timer fire, so no
 separate path is needed for transport changes — they are picked up automatically
@@ -110,16 +110,16 @@ on the next commit.
 
 ## Quantum
 
-The quantum controls phase alignment as seen by Link peers. It does not affect the
-sync master's internal beat numbering.
+The quantum controls phase alignment as seen by Link peers. It does not affect
+the sync master's internal beat numbering.
 
 Default: **4 beats** (one bar of 4/4).
 
-For the `requestBeatAtTime` call the adapter uses **quantum = 1.0** so that every
-integer beat from the sync master maps cleanly to a Link beat boundary. The
-`_quantum` field is exposed to the UI but is only passed to Link's
-`beatAtTime`/`phaseAtTime` queries if those are ever needed for UI display (e.g.,
-a bar-phase indicator). It is not used in the commit path.
+For the `requestBeatAtTime` call the adapter uses **quantum = 1.0** so that
+every integer beat from the sync master maps cleanly to a Link beat boundary.
+The `_quantum` field is exposed to the UI but is only passed to Link's
+`beatAtTime`/`phaseAtTime` queries if those are ever needed for UI display
+(e.g., a bar-phase indicator). It is not used in the commit path.
 
 ---
 
@@ -127,8 +127,8 @@ a bar-phase indicator). It is not used in the commit path.
 
 `link.numPeers()` counts other participants (not counting Sonic Eddy itself).
 Register `link.setNumPeersCallback` to be notified when peers join or leave. The
-callback fires on a Link background thread; post to the PipeWire main loop before
-touching any state.
+callback fires on a Link background thread; post to the PipeWire main loop
+before touching any state.
 
 ---
 
@@ -235,8 +235,8 @@ link_inc = include_directories(
 add_project_arguments('-DLINK_PLATFORM_LINUX=1', language: 'cpp')
 ```
 
-Link requires threading support (`-pthread`), provided by `dependency('threads')`
-which Meson adds by default on Linux.
+Link requires threading support (`-pthread`), provided by
+`dependency('threads')` which Meson adds by default on Linux.
 
 ---
 
@@ -247,8 +247,18 @@ which Meson adds by default on Linux.
    `SyncMaster::activate_due_changes` handles this automatically or whether the
    adapter needs to send a second commit after the start beat arrives.
 
-2. **Beat phase on peer join**: When a new peer joins mid-session it receives the
-   current Link beat position. Since the adapter commits integer beats with
-   fractional part = 0, the peer's phase alignment depends on how far through the
-   current beat we are at commit time. Consider whether sub-beat accuracy matters
-   for the MPC use case or if ±1 beat drift on join is acceptable.
+2. **Beat phase on peer join**: When a new peer joins mid-session it receives
+   the current Link beat position. Since the adapter commits integer beats with
+   fractional part = 0, the peer's phase alignment depends on how far through
+   the current beat we are at commit time. Consider whether sub-beat accuracy
+   matters for the MPC use case or if ±1 beat drift on join is acceptable.
+
+## Firewall settings
+
+Ableton link needs multicast for operation, with firewalld apply the following
+to open up zone `home` for Ableton link.
+
+```bash
+sudo firewall-cmd --permanent --zone=home --add-rich-rule='rule family="ipv4" destination address="224.76.78.75/32" port port="20808" protocol="udp" accept'
+sudo firewall-cmd --reload
+```
