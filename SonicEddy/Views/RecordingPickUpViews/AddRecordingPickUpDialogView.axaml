@@ -3,35 +3,47 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:SonicEddy.ViewModels.RecordingPickUpViewModels"
-        mc:Ignorable="d" d:DesignWidth="420" d:DesignHeight="220"
-        Width="420" Height="220"
+        mc:Ignorable="d" d:DesignWidth="420" d:DesignHeight="280"
+        Width="420" Height="280"
         x:Class="SonicEddy.Views.RecordingPickUpViews.AddRecordingPickUpDialogView"
         x:DataType="vm:AddRecordingPickUpDialogViewModel"
         Title="Add Recording Pick Up">
 
     <StackPanel Margin="16" Spacing="0">
-        <Grid ColumnDefinitions="90,*"
-              RowDefinitions="Auto,Auto,Auto"
+        <Grid ColumnDefinitions="100,*"
+              RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto"
               ColumnSpacing="10"
               RowSpacing="8">
-            <Label Grid.Row="0" Grid.Column="0"
-                   VerticalAlignment="Center"
-                   Content="Name" />
-            <TextBox Grid.Row="0" Grid.Column="1"
-                     Text="{Binding Name}" />
 
-            <Label Grid.Row="1" Grid.Column="0"
-                   VerticalAlignment="Center"
-                   Content="Source" />
+            <Label Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Content="Name" />
+            <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Name}" />
+
+            <Label Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Content="Layer" />
             <ComboBox Grid.Row="1" Grid.Column="1"
-                      DisplayMemberBinding="{Binding Description}"
-                      ItemsSource="{Binding SourceNodes}"
-                      SelectedItem="{Binding SelectedSourceNode}" />
+                      ItemsSource="{Binding Layers}"
+                      SelectedItem="{Binding SelectedLayer}" />
 
-            <Label Grid.Row="2" Grid.Column="0"
-                   VerticalAlignment="Center"
-                   Content="Destination" />
+            <Label Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Content="Channel type" />
             <ComboBox Grid.Row="2" Grid.Column="1"
+                      ItemsSource="{Binding ChannelTypes}"
+                      SelectedItem="{Binding SelectedChannelType}" />
+
+            <Label Grid.Row="3" Grid.Column="0"
+                   VerticalAlignment="Center"
+                   Content="Channel"
+                   IsVisible="{Binding ChannelIndexVisible}" />
+            <ComboBox Grid.Row="3" Grid.Column="1"
+                      ItemsSource="{Binding ChannelIndices}"
+                      SelectedItem="{Binding SelectedChannelIndex}"
+                      IsVisible="{Binding ChannelIndexVisible}" />
+
+            <Label Grid.Row="4" Grid.Column="0" VerticalAlignment="Center" Content="Pick-up point" />
+            <ComboBox Grid.Row="4" Grid.Column="1"
+                      ItemsSource="{Binding Positions}"
+                      SelectedItem="{Binding SelectedPosition}" />
+
+            <Label Grid.Row="5" Grid.Column="0" VerticalAlignment="Center" Content="Destination" />
+            <ComboBox Grid.Row="5" Grid.Column="1"
                       DisplayMemberBinding="{Binding Description}"
                       ItemsSource="{Binding DestNodes}"
                       SelectedItem="{Binding SelectedDestNode}" />

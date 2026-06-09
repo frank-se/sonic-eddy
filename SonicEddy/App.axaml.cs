@@ -126,12 +126,6 @@ public class App : Application
             virtualOutputService);
         _ = virtualOutputService.InitializeAsync();
 
-        var recordingPickUpService =
-            new RecordingPickUpService(appDataService, wireplumberService);
-        Locator.CurrentMutable.Register<IRecordingPickUpService>(() =>
-            recordingPickUpService);
-        _ = recordingPickUpService.InitializeAsync();
-
         var monitoringService = new MonitoringService(FrSonic.Monitor,
             loggerFactory.CreateLogger<MonitoringService>());
         Locator.CurrentMutable.Register<IMonitoringService>(() =>
@@ -154,6 +148,12 @@ public class App : Application
         var monitoringLinkService = new MonitoringLinkService(mixerServiceV2);
         Locator.CurrentMutable.Register<IMonitoringLinkService>(() =>
             monitoringLinkService);
+
+        var recordingPickUpService =
+            new RecordingPickUpService(appDataService, wireplumberService, monitoringLinkService);
+        Locator.CurrentMutable.Register<IRecordingPickUpService>(() =>
+            recordingPickUpService);
+        _ = recordingPickUpService.InitializeAsync();
 
         var midiControllerServiceLogger =
             loggerFactory.CreateLogger<MidiControllerService>();

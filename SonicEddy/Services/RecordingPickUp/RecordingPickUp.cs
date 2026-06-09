@@ -9,6 +9,6 @@ public record RecordingPickUp(
     string Name,
     bool IsActive,
     double Trim,
-    Node SourceNode,
+    string SourceLabel,
     Node DestNode,
     LoopbackModule Loopback);

@@ -3,7 +3,6 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using DynamicData;
-using Fr.Sonic.Model.Objects;
 using SonicEddy.Services.RecordingPickUp;
 using SonicEddy.Services.Wireplumber;
 using SonicEddy.Tools;
@@ -31,10 +30,10 @@ public class RecordingPickUpsViewModel : ViewModelBase, IDisposable
 
     public async Task AddPickUp()
     {
-        var sourceNodes = new ObservableCollection<Node>(_wireplumberService.GetPlaybackNodes());
-        var destNodes = new ObservableCollection<Node>(_wireplumberService.GetCaptureNodes());
+        var destNodes = new ObservableCollection<Fr.Sonic.Model.Objects.Node>(
+            _wireplumberService.GetCaptureNodes());
 
-        var viewModel = new AddRecordingPickUpDialogViewModel(sourceNodes, destNodes);
+        var viewModel = new AddRecordingPickUpDialogViewModel(destNodes);
         var dialog = new AddRecordingPickUpDialogView { DataContext = viewModel };
 
         await dialog.ShowDialog(WindowTools.GetMainWindow()!);
@@ -43,7 +42,8 @@ public class RecordingPickUpsViewModel : ViewModelBase, IDisposable
         {
             await _service.AddPickUp(
                 viewModel.Name,
-                viewModel.SelectedSourceNode!,
+                viewModel.BuildSourceKey(),
+                viewModel.SelectedPosition!.Value,
                 viewModel.SelectedDestNode!);
         }
 

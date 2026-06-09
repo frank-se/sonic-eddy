@@ -68,6 +68,9 @@ public class MonitoringLinkService(IMixerService mixerService) : IMonitoringLink
             FrSonic.LinkFactory.CreateLink(outputPorts[i], inputPorts[i]);
     }
 
+    public Node? ResolvePickUpNode(MonitoringChannelKey key, MonitoringSource source) =>
+        ResolveNode(key, source);
+
     private Node? ResolveNode(MonitoringChannelKey key, MonitoringSource source)
     {
         if (source == MonitoringSource.None || Mixer is null) return null;

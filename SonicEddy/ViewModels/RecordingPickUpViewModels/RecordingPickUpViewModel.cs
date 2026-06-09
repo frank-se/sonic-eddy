@@ -15,7 +15,7 @@ public class RecordingPickUpViewModel : ViewModelBase
         Name = pickUp.Name;
         _isActive = pickUp.IsActive;
         _trim = pickUp.Trim;
-        SourceLabel = pickUp.SourceNode.Description ?? pickUp.SourceNode.Name ?? "—";
+        SourceLabel = pickUp.SourceLabel;
         DestLabel = pickUp.DestNode.Description ?? pickUp.DestNode.Name ?? "—";
     }
 

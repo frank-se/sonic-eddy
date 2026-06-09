@@ -4,19 +4,21 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fr.Sonic;
-using Fr.Sonic.Model.Config.LoopbackModule;
 using Fr.Sonic.Model.Config;
-using Fr.Sonic.Modules.Models;
+using Fr.Sonic.Model.Config.LoopbackModule;
 using Fr.Sonic.Model.Objects;
+using Fr.Sonic.Modules.Models;
 using SonicEddy.Contracts.RecordingPickUp;
 using SonicEddy.Services.AppData;
+using SonicEddy.Services.Monitoring;
 using SonicEddy.Services.Wireplumber;
 
 namespace SonicEddy.Services.RecordingPickUp;
 
 public class RecordingPickUpService(
     IAppDataService appDataService,
-    IWireplumberService wireplumberService)
+    IWireplumberService wireplumberService,
+    IMonitoringLinkService monitoringLinkService)
     : IRecordingPickUpService, IDisposable
 {
     private const string CaptureMediaClass = "Stream/Input/Audio";
@@ -57,22 +59,29 @@ public class RecordingPickUpService(
         }
     }
 
-    public async Task AddPickUp(string name, Node sourceNode, Node destNode)
+    public async Task AddPickUp(string name, MonitoringChannelKey sourceKey,
+        MonitoringSource sourcePosition, Node destNode)
     {
         await InitializeAsync();
 
         var id = Guid.NewGuid();
-        await CreatePickUpAsync(id, name, sourceNode, destNode, true, 0.0);
+        var sourceNode = monitoringLinkService.ResolvePickUpNode(sourceKey, sourcePosition);
+        if (sourceNode is null) return;
+
+        await CreatePickUpAsync(id, name, sourceKey, sourcePosition, sourceNode, destNode, true, 0.0);
 
         lock (_lock)
             _configuredEntries.Add(new RecordingPickUpEntry
             {
                 Id = id,
                 Name = name,
-                SourceNodeName = sourceNode.Name ?? string.Empty,
                 DestNodeName = destNode.Name ?? string.Empty,
                 IsActive = true,
-                Trim = 0.0
+                Trim = 0.0,
+                SourceLayerIndex = sourceKey.LayerIndex,
+                SourceChannelType = (int)sourceKey.ChannelType,
+                SourceChannelIndex = sourceKey.ChannelIndex,
+                SourcePickUpPosition = (int)sourcePosition
             });
 
         await StoreConfigAsync();
@@ -129,8 +138,9 @@ public class RecordingPickUpService(
             return _configuredEntries.FirstOrDefault(e => e.Id == id)?.Trim ?? 0.0;
     }
 
-    private async Task CreatePickUpAsync(Guid id, string name, Node sourceNode,
-        Node destNode, bool isActive, double trim)
+    private async Task CreatePickUpAsync(Guid id, string name,
+        MonitoringChannelKey sourceKey, MonitoringSource sourcePosition,
+        Node sourceNode, Node destNode, bool isActive, double trim)
     {
         var fullName = $"{NodeNamePrefix}{name}";
 
@@ -160,7 +170,8 @@ public class RecordingPickUpService(
                 }
             });
 
-        var pickUp = new RecordingPickUp(id, name, isActive, trim, sourceNode, destNode, loopback);
+        var label = BuildSourceLabel(sourceKey, sourcePosition);
+        var pickUp = new RecordingPickUp(id, name, isActive, trim, label, destNode, loopback);
         PickUps.Add(pickUp);
         lock (_lock)
             _activePickUps.Add(id);
@@ -187,16 +198,21 @@ public class RecordingPickUpService(
             {
                 try
                 {
-                    var sourceNode = FrSonic.NodeRegistry.Objects.FirstOrDefault(n =>
-                        string.Equals(n.Name, entry.SourceNodeName, StringComparison.Ordinal));
+                    var sourceKey = new MonitoringChannelKey(
+                        entry.SourceLayerIndex,
+                        (MonitoringChannelType)entry.SourceChannelType,
+                        entry.SourceChannelIndex);
+                    var sourcePosition = (MonitoringSource)entry.SourcePickUpPosition;
+
+                    var sourceNode = monitoringLinkService.ResolvePickUpNode(sourceKey, sourcePosition);
                     if (sourceNode is null) continue;
 
                     var destNode = FrSonic.NodeRegistry.Objects.FirstOrDefault(n =>
                         string.Equals(n.Name, entry.DestNodeName, StringComparison.Ordinal));
                     if (destNode is null) continue;
 
-                    await CreatePickUpAsync(entry.Id, entry.Name, sourceNode, destNode,
-                        entry.IsActive, entry.Trim);
+                    await CreatePickUpAsync(entry.Id, entry.Name, sourceKey, sourcePosition,
+                        sourceNode, destNode, entry.IsActive, entry.Trim);
                 }
                 catch
                 {
@@ -233,6 +249,28 @@ public class RecordingPickUpService(
         {
             _storeLock.Release();
         }
+    }
+
+    internal static string BuildSourceLabel(MonitoringChannelKey key, MonitoringSource source)
+    {
+        var layer = $"L{key.LayerIndex + 1}";
+        var channel = key.ChannelType switch
+        {
+            MonitoringChannelType.Strip  => $"CH{key.ChannelIndex + 1}",
+            MonitoringChannelType.Group  => $"GR{key.ChannelIndex + 1}",
+            MonitoringChannelType.Master => "MST",
+            MonitoringChannelType.Return => $"RT{key.ChannelIndex + 1}",
+            _                            => "?"
+        };
+        var pos = source switch
+        {
+            MonitoringSource.Pre          => "Pre",
+            MonitoringSource.Post         => "Post",
+            MonitoringSource.OutPreFader  => "Out Pre",
+            MonitoringSource.OutPostFader => "Out Post",
+            _                             => "?"
+        };
+        return $"{layer} / {channel} / {pos}";
     }
 
     private void OnNodeAdded(Node node) => _ = ApplyConfiguredPickUpsAsync();
