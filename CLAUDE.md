@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-# Build the solution
+# Build the solution (also copies the native libfrsonic .so from fr-sonic/build/src/)
 dotnet build SonicEddy.sln
 
 # Run the app
@@ -17,8 +17,8 @@ dotnet test SonicEddy.Tests/
 # Run a specific test
 dotnet test SonicEddy.Tests/ --filter "FullyQualifiedName~TestClassName"
 
-# Build the native MIDI library (requires meson, ninja)
-./update_pw_midi_library.fish
+# Build the native fr-sonic library (run before dotnet build when C++ changes)
+ninja -C fr-sonic/build
 ```
 
 ## Architecture Overview
@@ -65,8 +65,6 @@ When applied to a channel strip, `MixerEditor.AddFilterToChannelStrip` converts 
 ### MIDI
 
 `pw-midi-mapper/` is a C++ Meson library (`libfrmidimapper.so.0.0.4`) that opens PipeWire MIDI ports and calls registered C callbacks on MIDI events. `Fr.Pw.Midi/PInvoke/FrPwMidiLib.cs` P/Invokes into this library. `Fr.Pw.Midi/FrPwMidi.cs` is the static C# facade that starts the MIDI processor and raises typed events. `MidiControllerService` (`Services/Midi/`) subscribes to those events and re-raises them for the view model layer.
-
-After rebuilding the native library, the `.so` file is copied into `SonicEddy/runtimes/linux-x64/` and `Fr.Pw.Midi.Console/runtimes/linux-x64/` by `update_pw_midi_library.fish`.
 
 ### Data persistence
 

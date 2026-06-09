@@ -233,4 +233,13 @@ FRSONIC_API const char *frsonic_lv2_plugin_classes_json();
 FRSONIC_API void *frsonic_create_silence_producer(uint64_t target_serial);
 FRSONIC_API void frsonic_destroy_silence_producer(void *handle);
 
+/* ── Ableton Link ────────────────────────────────────────────────────────── */
+using link_peers_callback_t = void (*)(size_t peers);
+
+FRSONIC_API void   frsonic_link_enable(bool enable);
+FRSONIC_API bool   frsonic_link_is_enabled();
+FRSONIC_API size_t frsonic_link_num_peers();
+FRSONIC_API void   frsonic_link_set_quantum(double quantum);
+FRSONIC_API void   frsonic_link_set_peers_callback(link_peers_callback_t callback);
+
 } // extern "C"

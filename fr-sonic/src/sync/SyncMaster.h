@@ -35,6 +35,10 @@ public:
   void start();
   void stop();
 
+  [[nodiscard]] uint64_t current_beat_now() const;
+  [[nodiscard]] double   current_bpm() const { return _config.bpm; }
+  [[nodiscard]] bool     is_playing()   const { return _transport_state != "stopped"; }
+
   static int set_param(void *object, uint32_t id, uint32_t flags,
                        const spa_pod *param);
 

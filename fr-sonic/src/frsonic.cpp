@@ -9,6 +9,7 @@
 #include "monitoring/Monitor.h"
 #include "silence/SilenceProducer.h"
 #include "sync/ClickSyncConverter.h"
+#include "sync/LinkSyncAdapter.h"
 #include "sync/SyncClient.h"
 #include "sync/SyncMaster.h"
 #include "wireplumber/modules/module_factory.h"
@@ -32,6 +33,7 @@ static std::shared_ptr<Core> g_core = nullptr;
 static std::shared_ptr<monitoring::Monitor> g_monitor = nullptr;
 static std::shared_ptr<midi::Processor> g_midi = nullptr;
 static std::shared_ptr<sesync::SyncMaster> g_sync_master = nullptr;
+static std::shared_ptr<sesync::LinkSyncAdapter> g_link_adapter = nullptr;
 static std::shared_ptr<sesync::SyncClient> g_sync_client = nullptr;
 static std::shared_ptr<midi::MidiSyncSender> g_midi_sync_sender = nullptr;
 static std::vector<std::shared_ptr<looper::Looper>> g_loopers;
@@ -284,6 +286,9 @@ void frsonic_start() {
         pw_core_ptr, loop, sesync::SyncMasterConfig{});
     g_sync_master->start();
 
+    g_link_adapter = std::make_shared<sesync::LinkSyncAdapter>(
+        loop, g_sync_master.get());
+
     g_sync_client = std::make_shared<sesync::SyncClient>(pw_core_ptr, loop);
     g_sync_client->start();
 
@@ -370,6 +375,8 @@ void frsonic_stop() {
         logging::log<logging::LogLevel::Trace>(
             "frsonic_stop: sync client released");
       }
+      g_link_adapter = nullptr;
+
       if (g_sync_master) {
         g_sync_master->stop();
         logging::log<logging::LogLevel::Trace>(
@@ -793,4 +800,29 @@ void frsonic_destroy_silence_producer(void *handle) {
         return 0;
       },
       0, nullptr, 0, true, &data);
+}
+
+/* ── Ableton Link ────────────────────────────────────────────────────────── */
+
+void frsonic_link_enable(bool enable) {
+  if (g_link_adapter)
+    g_link_adapter->enable(enable);
+}
+
+bool frsonic_link_is_enabled() {
+  return g_link_adapter && g_link_adapter->is_enabled();
+}
+
+size_t frsonic_link_num_peers() {
+  return g_link_adapter ? g_link_adapter->num_peers() : 0;
+}
+
+void frsonic_link_set_quantum(double quantum) {
+  if (g_link_adapter)
+    g_link_adapter->set_quantum(quantum);
+}
+
+void frsonic_link_set_peers_callback(link_peers_callback_t callback) {
+  if (g_link_adapter)
+    g_link_adapter->set_peers_callback(callback);
 }

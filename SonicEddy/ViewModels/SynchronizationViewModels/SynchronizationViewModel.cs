@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using Avalonia.Threading;
@@ -28,6 +29,7 @@ public sealed class SynchronizationViewModel : ViewModelBase, IDisposable
         _timer.Tick += OnTimerTick;
         _timer.Start();
 
+        AbletonLink.NumPeersChanged += OnLinkPeersChanged;
         UpdateStatus();
     }
 
@@ -101,6 +103,35 @@ public sealed class SynchronizationViewModel : ViewModelBase, IDisposable
         get;
         set => this.RaiseAndSetIfChanged(ref field, value);
     } = "none";
+
+    public bool IsLinkEnabled
+    {
+        get => AbletonLink.IsEnabled;
+        set
+        {
+            AbletonLink.IsEnabled = value;
+            this.RaisePropertyChanged();
+            this.RaisePropertyChanged(nameof(LinkPeers));
+        }
+    }
+
+    public string LinkPeers
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    } = "0";
+
+    public IReadOnlyList<double> LinkQuantumOptions { get; } = [1, 2, 4, 8];
+
+    public double LinkQuantum
+    {
+        get;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref field, value);
+            AbletonLink.Quantum = value;
+        }
+    } = 4;
 
     public void StartPlayback() =>
         ScheduleTransportState(SyncTransportState.Playing);
@@ -226,8 +257,12 @@ public sealed class SynchronizationViewModel : ViewModelBase, IDisposable
         return pending.Count == 0 ? "none" : string.Join(", ", pending);
     }
 
+    private void OnLinkPeersChanged(object? sender, int peers) =>
+        Dispatcher.UIThread.Post(() => LinkPeers = peers.ToString());
+
     public void Dispose()
     {
+        AbletonLink.NumPeersChanged -= OnLinkPeersChanged;
         _timer.Stop();
         _timer.Tick -= OnTimerTick;
         if (_syncClient is not null)

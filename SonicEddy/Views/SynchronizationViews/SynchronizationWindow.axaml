@@ -9,7 +9,7 @@
         x:Class="SonicEddy.Views.SynchronizationViews.SynchronizationWindow"
         x:DataType="syncVm:SynchronizationViewModel"
         Title="Synchronization">
-    <Grid RowDefinitions="Auto,Auto,*"
+    <Grid RowDefinitions="Auto,Auto,Auto,*"
           RowSpacing="14"
           Margin="16">
         <Grid ColumnDefinitions="Auto,*,Auto"
@@ -62,7 +62,38 @@
                     Content="Stop" />
         </StackPanel>
 
-        <Grid Grid.Row="2"
+        <Border Grid.Row="2"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                BorderThickness="1"
+                CornerRadius="4"
+                Padding="10,8">
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto"
+                  RowDefinitions="Auto,Auto"
+                  ColumnSpacing="10"
+                  RowSpacing="8">
+                <TextBlock Grid.Row="0" Grid.Column="0"
+                           VerticalAlignment="Center"
+                           FontWeight="SemiBold"
+                           Text="Ableton Link" />
+                <CheckBox Grid.Row="0" Grid.Column="1"
+                          IsChecked="{Binding IsLinkEnabled}"
+                          Content="Enable" />
+                <TextBlock Grid.Row="0" Grid.Column="2"
+                           VerticalAlignment="Center"
+                           Text="Peers:" />
+                <TextBlock Grid.Row="0" Grid.Column="3"
+                           VerticalAlignment="Center"
+                           Text="{Binding LinkPeers}" />
+                <TextBlock Grid.Row="1" Grid.Column="0"
+                           VerticalAlignment="Center"
+                           Text="Quantum" />
+                <ComboBox Grid.Row="1" Grid.Column="1"
+                          ItemsSource="{Binding LinkQuantumOptions}"
+                          SelectedItem="{Binding LinkQuantum}" />
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="3"
               ColumnDefinitions="Auto,*"
               RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto"
               ColumnSpacing="12"

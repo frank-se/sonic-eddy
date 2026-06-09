@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Fr.Sonic;
+using Fr.Sonic.Sync;
 using ReactiveUI.Avalonia;
 using SonicEddy.Services.DrumMixer;
 using SonicEddy.Services.ExternalEffects;
@@ -22,6 +23,7 @@ internal static class Program
         FrSonic.Init(TimeSpan.FromMilliseconds(250));
         FrSonic.Start();
         FrSonicLv2.Init();
+        AbletonLink.Initialize();
 
         /*
          * TODO: Update to wait for the availability of the midi bridge directly

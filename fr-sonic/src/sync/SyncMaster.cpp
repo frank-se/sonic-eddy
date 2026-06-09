@@ -181,6 +181,10 @@ void sesync::SyncMaster::setup_node_info() {
   _info.n_params = static_cast<uint32_t>(_params.size());
 }
 
+uint64_t sesync::SyncMaster::current_beat_now() const {
+  return current_beat(now_nsec());
+}
+
 uint64_t sesync::SyncMaster::now_nsec() const {
   timespec ts{};
   clock_gettime(CLOCK_MONOTONIC, &ts);

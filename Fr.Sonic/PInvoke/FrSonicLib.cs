@@ -402,4 +402,22 @@ internal static partial class FrSonicLib
 
     [LibraryImport(LIB, EntryPoint = "frsonic_lv2_plugin_classes_json")]
     internal static partial IntPtr Lv2PluginClassesJsonC();
+
+    /* ── Ableton Link ─────────────────────────────────────────────────────── */
+
+    [LibraryImport(LIB, EntryPoint = "frsonic_link_enable")]
+    internal static partial void LinkEnable([MarshalAs(UnmanagedType.Bool)] bool enable);
+
+    [LibraryImport(LIB, EntryPoint = "frsonic_link_is_enabled")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static partial bool LinkIsEnabled();
+
+    [LibraryImport(LIB, EntryPoint = "frsonic_link_num_peers")]
+    internal static partial nuint LinkNumPeers();
+
+    [LibraryImport(LIB, EntryPoint = "frsonic_link_set_quantum")]
+    internal static partial void LinkSetQuantum(double quantum);
+
+    [LibraryImport(LIB, EntryPoint = "frsonic_link_set_peers_callback")]
+    internal static partial void LinkSetPeersCallback(IntPtr callback);
 }

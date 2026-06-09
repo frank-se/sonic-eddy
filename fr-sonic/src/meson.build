@@ -9,7 +9,7 @@ sync_inc    = include_directories('sync')
 looper_inc  = include_directories('looper')
 silence_inc  = include_directories('silence')
 
-all_inc = [public_inc, src_inc, core_inc, wp_inc, mon_inc, midi_inc, lv2_inc, sync_inc, silence_inc, looper_inc]
+all_inc = [public_inc, src_inc, core_inc, wp_inc, mon_inc, midi_inc, lv2_inc, sync_inc, silence_inc, looper_inc, link_inc]
 
 libfrsonic = shared_library(
     'frsonic',
@@ -57,6 +57,7 @@ libfrsonic = shared_library(
         'sync/SyncMaster.cpp',
         'sync/SyncClient.cpp',
         'sync/ClickSyncConverter.cpp',
+        'sync/LinkSyncAdapter.cpp',
         # Silence producers
         'silence/SilenceProducer.cpp',
         # Looper subsystem
@@ -66,7 +67,7 @@ libfrsonic = shared_library(
     version : meson.project_version(),
     soversion : '0',
     link_args : ['-latomic'],
-    dependencies : [pipewire_dep, wireplumber_dep, boost_dep, lv2_dep, lilv_dep, flac_dep])
+    dependencies : [pipewire_dep, wireplumber_dep, boost_dep, lv2_dep, lilv_dep, flac_dep, threads_dep])
 
 conf_data = configuration_data()
 conf_data.set('LIBFRSONIC_VERSION', meson.project_version())

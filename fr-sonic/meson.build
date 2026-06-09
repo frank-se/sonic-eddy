@@ -15,5 +15,13 @@ boost_dep = dependency('boost')
 lv2_dep = dependency('lv2')
 lilv_dep = dependency('lilv-0')
 flac_dep = dependency('flac')
+threads_dep = dependency('threads')
+
+add_project_arguments('-DLINK_PLATFORM_LINUX=1', language : 'cpp')
+
+link_inc = include_directories(
+    'third_party/link/include',
+    'third_party/link/modules/asio-standalone/asio/include'
+)
 
 subdir('src')
