@@ -13,6 +13,7 @@ using SonicEddy.Contracts.VirtualOutputs;
 using SonicEddy.Contracts.ClickSync;
 using SonicEddy.Contracts.DrumMixer;
 using SonicEddy.Contracts.ExternalEffects;
+using SonicEddy.Contracts.RecordingPickUp;
 
 namespace SonicEddy.Services.AppData;
 
@@ -222,5 +223,25 @@ public class AppDataService(
         var bytes = await File.ReadAllBytesAsync(filePath);
         using var memoryStream = new MemoryStream(bytes);
         return Serializer.Deserialize<ExternalEffectsConfig>(memoryStream);
+    }
+
+    public async Task StoreRecordingPickUpConfig(RecordingPickUpConfig config)
+    {
+        var filePath =
+            Path.Combine(preferencesFolderPath, "recording-pickups.grpc");
+        await using var file = File.Create(filePath);
+        Serializer.Serialize(file, config);
+        await file.FlushAsync();
+    }
+
+    public async Task<RecordingPickUpConfig?> LoadRecordingPickUpConfig()
+    {
+        var filePath =
+            Path.Combine(preferencesFolderPath, "recording-pickups.grpc");
+        if (!File.Exists(filePath)) return null;
+
+        var bytes = await File.ReadAllBytesAsync(filePath);
+        using var memoryStream = new MemoryStream(bytes);
+        return Serializer.Deserialize<RecordingPickUpConfig>(memoryStream);
     }
 }

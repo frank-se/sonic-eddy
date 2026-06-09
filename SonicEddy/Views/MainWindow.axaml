@@ -71,6 +71,9 @@
                           Command="{Binding ShowVirtualInputsWindow}" />
                 <MenuItem Header="Virtual Outputs ..."
                           Command="{Binding ShowVirtualOutputsWindow}" />
+                <Separator />
+                <MenuItem Header="Recording Pick Ups ..."
+                          Command="{Binding ShowRecordingPickUpsWindow}" />
             </MenuItem>
 
             <MenuItem Header="Sync">

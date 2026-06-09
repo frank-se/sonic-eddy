@@ -1,0 +1,48 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:SonicEddy.ViewModels.RecordingPickUpViewModels"
+        mc:Ignorable="d" d:DesignWidth="420" d:DesignHeight="220"
+        Width="420" Height="220"
+        x:Class="SonicEddy.Views.RecordingPickUpViews.AddRecordingPickUpDialogView"
+        x:DataType="vm:AddRecordingPickUpDialogViewModel"
+        Title="Add Recording Pick Up">
+
+    <StackPanel Margin="16" Spacing="0">
+        <Grid ColumnDefinitions="90,*"
+              RowDefinitions="Auto,Auto,Auto"
+              ColumnSpacing="10"
+              RowSpacing="8">
+            <Label Grid.Row="0" Grid.Column="0"
+                   VerticalAlignment="Center"
+                   Content="Name" />
+            <TextBox Grid.Row="0" Grid.Column="1"
+                     Text="{Binding Name}" />
+
+            <Label Grid.Row="1" Grid.Column="0"
+                   VerticalAlignment="Center"
+                   Content="Source" />
+            <ComboBox Grid.Row="1" Grid.Column="1"
+                      DisplayMemberBinding="{Binding Description}"
+                      ItemsSource="{Binding SourceNodes}"
+                      SelectedItem="{Binding SelectedSourceNode}" />
+
+            <Label Grid.Row="2" Grid.Column="0"
+                   VerticalAlignment="Center"
+                   Content="Destination" />
+            <ComboBox Grid.Row="2" Grid.Column="1"
+                      DisplayMemberBinding="{Binding Description}"
+                      ItemsSource="{Binding DestNodes}"
+                      SelectedItem="{Binding SelectedDestNode}" />
+        </Grid>
+
+        <StackPanel Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Spacing="8"
+                    Margin="0,16,0,0">
+            <Button Content="Cancel" Command="{Binding Cancel}" />
+            <Button Content="Add" Command="{Binding Add}" IsEnabled="{Binding IsButtonEnabled}" />
+        </StackPanel>
+    </StackPanel>
+</Window>

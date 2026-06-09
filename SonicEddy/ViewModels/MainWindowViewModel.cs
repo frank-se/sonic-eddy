@@ -17,6 +17,7 @@ using SonicEddy.Services.TraktorZ1;
 using SonicEddy.Tools;
 using SonicEddy.Services.MixerViewModels;
 using SonicEddy.Services.Preferences;
+using SonicEddy.Services.RecordingPickUp;
 using SonicEddy.Services.VirtualInputs;
 using SonicEddy.Services.VirtualOutputs;
 using SonicEddy.Services.Wireplumber;
@@ -37,6 +38,7 @@ using SonicEddy.ViewModels.SynchronizationViewModels;
 using SonicEddy.ViewModels.MonitoringViewModels;
 using SonicEddy.ViewModels.TransportViewModels;
 using SonicEddy.ViewModels.GlobalMasterViewModels;
+using SonicEddy.ViewModels.RecordingPickUpViewModels;
 using SonicEddy.ViewModels.VirtualInputsViewModels;
 using SonicEddy.ViewModels.VirtualOutputsViewModels;
 using SonicEddy.Views.FilterGraphManagerViews;
@@ -54,6 +56,7 @@ using SonicEddy.Views.ClickSyncViews;
 using SonicEddy.Views.MixerPersistenceViews;
 using SonicEddy.Views.SynchronizationViews;
 using SonicEddy.Views.MonitoringViews;
+using SonicEddy.Views.RecordingPickUpViews;
 using SonicEddy.Views.VirtualInputsViews;
 using SonicEddy.Views.VirtualOutputsViews;
 using Splat;
@@ -131,6 +134,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     private Window? _filterGraphWindow;
     private Window? _virtualInputsWindow;
     private Window? _virtualOutputsWindow;
+    private Window? _recordingPickUpsWindow;
     private Window? _preferencesWindow;
     private Window? _synchronizationWindow;
     private Window? _midiSyncWindow;
@@ -759,6 +763,24 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         };
 
         _virtualOutputsWindow.Show();
+    }
+
+    public void ShowRecordingPickUpsWindow()
+    {
+        _logger.LogTrace("ShowRecordingPickUpsWindow");
+
+        if (_recordingPickUpsWindow is not null &&
+            _recordingPickUpsWindow.IsVisible) return;
+
+        var service = Locator.Current.GetService<IRecordingPickUpService>();
+        var wireplumberService = Locator.Current.GetService<IWireplumberService>();
+
+        _recordingPickUpsWindow = new RecordingPickUpsWindow
+        {
+            DataContext = new RecordingPickUpsViewModel(service!, wireplumberService!)
+        };
+
+        _recordingPickUpsWindow.Show();
     }
 
     public void ShowFilterGraphManagerWindow()

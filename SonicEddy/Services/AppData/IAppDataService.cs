@@ -10,6 +10,7 @@ using SonicEddy.Contracts.VirtualOutputs;
 using SonicEddy.Contracts.ClickSync;
 using SonicEddy.Contracts.DrumMixer;
 using SonicEddy.Contracts.ExternalEffects;
+using SonicEddy.Contracts.RecordingPickUp;
 
 namespace SonicEddy.Services.AppData;
 
@@ -60,4 +61,8 @@ public interface IAppDataService
     Task StoreExternalEffectsConfig(ExternalEffectsConfig config);
 
     Task<ExternalEffectsConfig?> LoadExternalEffectsConfig();
+
+    Task StoreRecordingPickUpConfig(RecordingPickUpConfig config);
+
+    Task<RecordingPickUpConfig?> LoadRecordingPickUpConfig();
 }
