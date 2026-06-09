@@ -365,6 +365,18 @@ void sesync::SyncClient::apply_params(const std::string &schedule_json,
                                  : std::vector<BeatScheduleEntry>{},
                         next->beat_schedule);
 
+  // Carry over the last known transport state for beats before the new
+  // schedule's first entry so a snapshot transition at beat N never makes
+  // beats < N briefly appear stopped.
+  if (previous && !next->transport_states.empty()) {
+    const auto first_new_beat = next->transport_states.front().beat;
+    if (first_new_beat > 0) {
+      next->transport_states.insert(
+          next->transport_states.begin(),
+          TransportStateEntry{0, previous->transport_state_at(first_new_beat - 1)});
+    }
+  }
+
   std::atomic_store(&_snapshot,
                     std::static_pointer_cast<const SyncSnapshot>(next));
 
