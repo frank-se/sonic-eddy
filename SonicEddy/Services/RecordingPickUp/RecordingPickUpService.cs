@@ -163,7 +163,6 @@ public class RecordingPickUpService(
                     Name = $"{fullName}-playback",
                     Description = $"{fullName}-playback",
                     DontFallback = true,
-                    AutoConnect = false,
                     MediaClass = PlaybackMediaClass,
                     TargetObject = destNode.ObjectSerial.ToString(),
                     AudioPosition = StereoPosition

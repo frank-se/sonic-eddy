@@ -18,7 +18,13 @@ public sealed class VirtualOutputService(
 {
     private const string CaptureNodeMediaClass = "Stream/Input/Audio";
     private const string PlaybackNodeMediaClass = "Stream/Output/Audio";
+    private const string NodeNamePrefix = "virtual-output-";
+    private const string CaptureNodeNameSuffix = "-capture";
     private static readonly List<string> StereoAudioPosition = ["FL", "FR"];
+
+    public static bool IsVirtualOutputCaptureNode(Node node) =>
+        node.Name?.StartsWith(NodeNamePrefix) == true &&
+        node.Name.EndsWith(CaptureNodeNameSuffix);
     private readonly List<VirtualOutputConfig> _configuredOutputs = [];
     private readonly HashSet<Guid> _activeOutputs = [];
     private readonly HashSet<Guid> _outputsBeingCreated = [];
