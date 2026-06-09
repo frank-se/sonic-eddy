@@ -3,7 +3,9 @@
 #include <functional>
 #include <future>
 #include <memory>
+#include <mutex>
 #include <thread>
+#include <unordered_map>
 #include <utility>
 
 #include <glib-unix.h>
@@ -101,6 +103,8 @@ private:
   pw_loop *_pipewire_loop = nullptr;
 
   metadata::MetadataCollection _metadata_collection;
+  std::unordered_map<gpointer, gulong> _params_changed_handler_ids;
+  std::mutex _params_changed_handler_ids_mutex;
 
   static void g_signal_object_added_callback(WpObjectManager *object_manager,
                                              gpointer object,

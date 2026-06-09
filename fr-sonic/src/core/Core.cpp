@@ -290,8 +290,12 @@ void Core::g_signal_object_added_callback(WpObjectManager *object_manager,
     this_->trigger_object_added_callback(node);
 
     if (node.type == models::objects::wireplumber_object_type::node) {
-      g_signal_connect(object, "params-changed",
+      gulong handler_id = g_signal_connect(object, "params-changed",
                        G_CALLBACK(g_signal_params_changed_callback), this_);
+      {
+        std::lock_guard<std::mutex> lock(this_->_params_changed_handler_ids_mutex);
+        this_->_params_changed_handler_ids[object] = handler_id;
+      }
 
       auto pw_object = static_cast<WpPipewireObject *>(object);
       wp_pipewire_object_enum_params(pw_object, "Props", nullptr, nullptr,
@@ -309,6 +313,15 @@ void Core::g_signal_object_removed_callback(WpObjectManager *object_manager,
                                             gpointer object,
                                             gpointer user_data) {
   const auto this_ = static_cast<Core *>(user_data);
+
+  if (WP_IS_NODE(object)) {
+    std::lock_guard<std::mutex> lock(this_->_params_changed_handler_ids_mutex);
+    auto it = this_->_params_changed_handler_ids.find(object);
+    if (it != this_->_params_changed_handler_ids.end()) {
+      g_signal_handler_disconnect(object, it->second);
+      this_->_params_changed_handler_ids.erase(it);
+    }
+  }
 
   const auto wireplumber_object = static_cast<WpPipewireObject *>(object);
 
