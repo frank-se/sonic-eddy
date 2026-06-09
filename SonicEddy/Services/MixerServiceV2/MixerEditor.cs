@@ -718,6 +718,8 @@ public class MixerEditor(IWireplumberService wireplumberService,
             postFxLooper.CaptureNode.ObjectSerial.ToString());
         postFxLooper.PlaybackNode.OverrideTargetObject(globalMasterCaptureSerial);
 
+        preFxLooper.CaptureNode.SetVolumes([1.0, 1.0]);
+
         return new(
             "Master",
             0,
@@ -784,6 +786,10 @@ public class MixerEditor(IWireplumberService wireplumberService,
 
         var silenceHandle = Fr.Sonic.FrSonic.CreateSilenceProducer(
             preFxLooper.CaptureNode.ObjectSerial);
+
+        preFxLooper.CaptureNode.SetVolumes([1.0, 1.0]);
+        foreach (var send in sendLoopbacks)
+            send.PlaybackNode.SetVolumes([0.0, 0.0]);
 
         return new(
             $"Group {index}",
@@ -916,6 +922,10 @@ public class MixerEditor(IWireplumberService wireplumberService,
 
         var silenceHandle = Fr.Sonic.FrSonic.CreateSilenceProducer(
             preFxLooper.CaptureNode.ObjectSerial);
+
+        preFxLooper.CaptureNode.SetVolumes([1.0, 1.0]);
+        foreach (var send in sendLoopbacks)
+            send.PlaybackNode.SetVolumes([0.0, 0.0]);
 
         return new(
             name,
