@@ -53,41 +53,52 @@
                           Command="{Binding ExitCommand}" />
             </MenuItem>
 
-            <MenuItem Header="Tools">
+            <MenuItem Header="Mixer">
                 <MenuItem Header="Global Master ..."
                           Command="{Binding ShowGlobalMasterWindow}" />
                 <MenuItem Header="Drum Mixer ..."
                           IsEnabled="{Binding IsDrumMixerEnabled}"
                           Command="{Binding ShowDrumMixerWindow}" />
+            </MenuItem>
+
+            <MenuItem Header="Audio">
                 <MenuItem Header="External Effects ..."
                           Command="{Binding ShowExternalEffectsWindow}" />
+                <MenuItem Header="Filter Graphs ..."
+                          Command="{Binding ShowFilterGraphManagerWindow}" />
                 <Separator />
-                <MenuItem Header="Monitoring ..."
-                          IsVisible="{Binding IsMonitoringEnabled}"
-                          Command="{Binding ShowMonitoringWindow}" />
+                <MenuItem Header="Virtual Inputs ..."
+                          Command="{Binding ShowVirtualInputsWindow}" />
+                <MenuItem Header="Virtual Outputs ..."
+                          Command="{Binding ShowVirtualOutputsWindow}" />
+            </MenuItem>
+
+            <MenuItem Header="Sync">
                 <MenuItem Header="Synchronization ..."
                           Command="{Binding ShowSynchronizationWindow}" />
                 <MenuItem Header="MIDI Sync ..."
                           Command="{Binding ShowMidiSyncWindow}" />
                 <MenuItem Header="Click Sync ..."
                           Command="{Binding ShowClickSyncWindow}" />
+            </MenuItem>
+
+            <MenuItem Header="MIDI">
                 <MenuItem Header="MIDI Router ..."
                           Command="{Binding ShowMidiRouterWindow}" />
-                <Separator />
-                <MenuItem Header="Midi Parameter Change Monitor ..."
+                <MenuItem Header="Parameter Change Monitor ..."
                           Command="{Binding ShowMidiParameterChangeMonitorWindow}" />
-                <MenuItem Header="Filter Graphs ..."
-                          Command="{Binding ShowFilterGraphManagerWindow}" />
+            </MenuItem>
+
+            <MenuItem Header="Tools">
+                <MenuItem Header="Monitoring ..."
+                          IsVisible="{Binding IsMonitoringEnabled}"
+                          Command="{Binding ShowMonitoringWindow}" />
                 <MenuItem Header="Modules ..."
                           Command="{Binding ShowModuleManagerWindow}" />
                 <MenuItem Header="Metadata ..."
                           Command="{Binding ShowMetadataBrowserWindow}" />
                 <MenuItem Header="Objects ..."
                           Command="{Binding ShowObjectBrowserWindow}" />
-                <MenuItem Header="Virtual Inputs ..."
-                          Command="{Binding ShowVirtualInputsWindow}" />
-                <MenuItem Header="Virtual Outputs ..."
-                          Command="{Binding ShowVirtualOutputsWindow}" />
             </MenuItem>
         </Menu>
 
