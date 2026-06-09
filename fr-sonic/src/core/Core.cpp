@@ -314,6 +314,7 @@ void Core::g_signal_object_removed_callback(WpObjectManager *object_manager,
 
   const char *object_serial_string =
       wp_pipewire_object_get_property(wireplumber_object, PW_KEY_OBJECT_SERIAL);
+  if (object_serial_string == nullptr) return;
 
   uint64_t object_serial = strtoull(object_serial_string, nullptr, 10);
 
@@ -517,8 +518,8 @@ void Core::g_signal_params_changed_callback(WpPipewireObject *self,
                                             const gchar *key,
                                             gpointer user_data) {
   const auto this_ = static_cast<Core *>(user_data);
-  uint64_t object_serial;
-  fill_uint64(object_serial, self, PW_KEY_OBJECT_SERIAL);
+  if (wp_pipewire_object_get_property(self, PW_KEY_OBJECT_SERIAL) == nullptr)
+    return;
   if (strcmp(key, "Props") == 0) {
     auto iterator_pointer =
         wp_pipewire_object_enum_params_sync(self, key, nullptr);
