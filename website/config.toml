@@ -1,6 +1,6 @@
 base_url = "https://sonic-eddy.example.com"
 title = "Sonic Eddy"
-description = "A performance-focused audio mixer for Linux"
+description = "A performance, and hardware-focused audio mixer for Linux"
 compile_sass = false
 generate_feeds = false
 
