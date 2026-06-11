@@ -81,6 +81,7 @@ public sealed class DrumMixerService : IDrumMixerService, IDisposable
                 "drum-mixer", new FilterChainModuleConfig
                 {
                     MediaName = "Sonic Eddy Drum Mixer",
+                    Lv2CommBufferSize = 32768,
                     LinkGroup = "se.drum-mixer",
                     CaptureProps = new NodePropertiesConfig
                     {

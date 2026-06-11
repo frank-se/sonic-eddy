@@ -37,6 +37,13 @@ public class FilterChainModuleConfig
     public required NodePropertiesConfig PlaybackProps { get; set; }
 
     /// <summary>
+    /// LV2 atom communication buffer size in bytes. Increase when plugins
+    /// report insufficient comm-buffersize (e.g. fil4.lv2 needs ~16608).
+    /// </summary>
+    [JsonPropertyName("lv2.comm-buffersize")]
+    public int? Lv2CommBufferSize { get; set; }
+
+    /// <summary>
     /// The filter graph configuration.
     /// </summary>
     [JsonPropertyName("filter.graph")]
