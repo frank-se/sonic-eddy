@@ -528,6 +528,7 @@ void Core::g_signal_params_changed_callback(WpPipewireObject *self,
                                             const gchar *key,
                                             gpointer user_data) {
   const auto this_ = static_cast<Core *>(user_data);
+  if (wp_pipewire_object_get_properties(self) == nullptr) return;
   if (wp_pipewire_object_get_property(self, PW_KEY_OBJECT_SERIAL) == nullptr)
     return;
   if (strcmp(key, "Props") == 0) {
