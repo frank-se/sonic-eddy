@@ -66,8 +66,6 @@ void params::params_handling::build_set_params_pod(
   auto pod =
       static_cast<spa_pod *>(spa_pod_builder_pop(&builder, &object_frame));
 
-  spa_debug_pod(0, nullptr, pod);
-
   data.pod = wp_spa_pod_new_wrap(pod);
 }
 

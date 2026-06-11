@@ -192,7 +192,6 @@ void Core::wp_process_object_enum_prop_info_callback(GObject *source_object,
                     *result);
               } else {
                 std::cerr << "Error: " << result.error() << std::endl;
-                spa_debug_pod(4, nullptr, prop_info_pod);
                 continue;
               }
             } else if (choice_type == SPA_CHOICE_Enum) {
@@ -205,7 +204,6 @@ void Core::wp_process_object_enum_prop_info_callback(GObject *source_object,
                      values_array[2] ? true : false});
               } else {
                 std::cerr << "Error: unknown enum type" << std::endl;
-                spa_debug_pod(4, nullptr, prop_info_pod);
               }
             } else if (choice_type == SPA_CHOICE_Step) {
               if (number_of_values == 4) {
@@ -222,8 +220,7 @@ void Core::wp_process_object_enum_prop_info_callback(GObject *source_object,
                       *result);
                 } else {
                   std::cerr << "Error: " << result.error() << std::endl;
-                  spa_debug_pod(4, nullptr, prop_info_pod);
-                  continue;
+                    continue;
                 }
               } else {
                 std::cerr
