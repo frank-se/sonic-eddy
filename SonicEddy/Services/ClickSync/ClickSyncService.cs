@@ -29,6 +29,7 @@ public sealed class ClickSyncService : IClickSyncService, IDisposable
     private readonly object _lock = new();
     private SyncClient? _syncClient;
     private bool _initialized;
+    private CancellationTokenSource? _debounceCts;
 
     public event Action? Changed;
 
@@ -305,19 +306,30 @@ public sealed class ClickSyncService : IClickSyncService, IDisposable
     {
         _ = node;
         EnsureSyncClient();
-        if (_initialized)
-            _ = ApplyConfiguredConvertersAsync().ContinueWith(_ =>
-            {
-                ApplyConfiguredLinks();
-                Changed?.Invoke();
-            });
+        if (_initialized) ScheduleApply();
     }
 
     private void OnPortAdded(Port _)
     {
         if (!_initialized) return;
-        ApplyConfiguredLinks();
-        Changed?.Invoke();
+        ScheduleApply();
+    }
+
+    private void ScheduleApply()
+    {
+        CancellationTokenSource cts;
+        lock (_lock)
+        {
+            _debounceCts?.Cancel();
+            _debounceCts = cts = new CancellationTokenSource();
+        }
+        _ = Task.Delay(400, cts.Token).ContinueWith(async t =>
+        {
+            if (!t.IsCompletedSuccessfully) return;
+            await ApplyConfiguredConvertersAsync();
+            ApplyConfiguredLinks();
+            Changed?.Invoke();
+        });
     }
 
     private void OnLinkChanged<T>(T _)
@@ -401,6 +413,8 @@ public sealed class ClickSyncService : IClickSyncService, IDisposable
         FrSonic.PortRegistry.Added -= OnPortAdded;
         FrSonic.LinkRegistry.Added -= OnLinkChanged;
         FrSonic.LinkRegistry.Deleted -= OnLinkChanged;
+        _debounceCts?.Cancel();
+        _debounceCts?.Dispose();
         if (_syncClient is not null)
         {
             _syncClient.SnapshotChanged -= OnSyncSnapshotChanged;

@@ -18,6 +18,8 @@ public sealed class MidiSyncLinkService : IMidiSyncLinkService
     private readonly object _lock = new();
     private readonly SemaphoreSlim _storeLock = new(1, 1);
     private bool _initialized;
+    private CancellationTokenSource? _debounceCts;
+    private readonly object _debounceLock = new();
 
     public event Action? Changed;
 
@@ -142,11 +144,24 @@ public sealed class MidiSyncLinkService : IMidiSyncLinkService
 
     private void OnPipeWireObjectChanged<T>(T _)
     {
-        if (!_initialized)
-            return;
+        if (!_initialized) return;
+        ScheduleApplyLinks();
+    }
 
-        ApplyConfiguredLinks();
-        Changed?.Invoke();
+    private void ScheduleApplyLinks()
+    {
+        CancellationTokenSource cts;
+        lock (_debounceLock)
+        {
+            _debounceCts?.Cancel();
+            _debounceCts = cts = new CancellationTokenSource();
+        }
+        _ = Task.Delay(400, cts.Token).ContinueWith(t =>
+        {
+            if (!t.IsCompletedSuccessfully) return;
+            ApplyConfiguredLinks();
+            Changed?.Invoke();
+        });
     }
 
     private static Port? FindSyncOutputPort()
