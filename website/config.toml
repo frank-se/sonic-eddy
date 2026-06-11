@@ -1,0 +1,15 @@
+base_url = "https://sonic-eddy.example.com"
+title = "Sonic Eddy"
+description = "A performance-focused audio mixer for Linux"
+compile_sass = false
+generate_feeds = false
+
+[markdown]
+
+[extra]
+nav = [
+  { name = "Features", url = "/features" },
+  { name = "Installation", url = "/installation" },
+  { name = "Documentation", url = "/docs" },
+  { name = "How-To", url = "/how-to" },
+]

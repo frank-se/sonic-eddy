@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}{{ config.title }}{% endblock %}</title>
+  <meta name="description" content="{{ config.description }}">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header>
+    <nav>
+      <a href="/" class="site-title">Sonic Eddy</a>
+      <ul>
+        {% for item in config.extra.nav %}
+        <li><a href="{{ item.url }}"{% if current_path and current_path is starting_with(item.url) %} class="active"{% endif %}>{{ item.name }}</a></li>
+        {% endfor %}
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer>
+    <p>Sonic Eddy &mdash; <a href="https://git.sr.ht/~frank6/sonic-eddy">Source</a></p>
+  </footer>
+</body>
+</html>
