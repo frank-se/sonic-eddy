@@ -19,6 +19,12 @@ threads_dep = dependency('threads')
 
 add_project_arguments('-DLINK_PLATFORM_LINUX=1', language : 'cpp')
 
+if get_option('buildtype') == 'release' or get_option('buildtype') == 'minsize'
+  add_project_arguments('-DFRSONIC_LOG_LEVEL=2', language : 'cpp')  # Warning
+else
+  add_project_arguments('-DFRSONIC_LOG_LEVEL=6', language : 'cpp')  # Trace
+endif
+
 link_inc = include_directories(
     'third_party/link/include',
     'third_party/link/modules/asio-standalone/asio/include'
