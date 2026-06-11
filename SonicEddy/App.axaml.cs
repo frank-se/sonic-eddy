@@ -223,7 +223,11 @@ public class App : Application
     private static ILoggerFactory CreateLoggerFactory()
     {
         Log.Logger = new LoggerConfiguration()
+#if DEBUG
             .MinimumLevel.Verbose()
+#else
+            .MinimumLevel.Warning()
+#endif
             .Enrich.FromLogContext()
             .WriteTo.Console()
             .CreateLogger();

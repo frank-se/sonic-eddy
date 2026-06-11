@@ -22,12 +22,12 @@ Sonic Eddy also depends on the following LV2 plugins.
 - <urn:dragonfly:room>
 - <urn:dragonfly:plate>
 
-## Installation
+## Installation from source
 
 ### Checkout the source code
 
 ```bash
-git clone git clone --recurse-submodules https://git.sr.ht/~frank6/sonic-eddy
+git clone https://git.sr.ht/~frank6/sonic-eddy
 ```
 
 ### Build the c library
@@ -35,4 +35,13 @@ git clone git clone --recurse-submodules https://git.sr.ht/~frank6/sonic-eddy
 ```bash
 cd sonic-eddy/fr-sonic
 meson setup build --buildtype release
+cd build
+meson compile
+```
+
+### Build and run the C# application
+
+```bash
+cd ../../SonicEddy/
+dotnet run --project SonicEddy -c Release
 ```
