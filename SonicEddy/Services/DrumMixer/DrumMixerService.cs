@@ -28,6 +28,7 @@ public sealed class DrumMixerService : IDrumMixerService, IDisposable
     private readonly Dictionary<int, (ulong Output, ulong Input)> _ownedLinks =
         [];
     private CancellationTokenSource? _storeDebounce;
+    private CancellationTokenSource? _reconcileDebounce;
     private FilterChain? _filterChain;
     private bool _initialized;
 
@@ -387,8 +388,23 @@ public sealed class DrumMixerService : IDrumMixerService, IDisposable
     private void OnObjectChanged<T>(T _)
     {
         if (!_initialized || !IsAvailable) return;
-        ReconcileLinks();
-        Changed?.Invoke();
+        ScheduleReconcile();
+    }
+
+    private void ScheduleReconcile()
+    {
+        CancellationTokenSource cts;
+        lock (_stateLock)
+        {
+            _reconcileDebounce?.Cancel();
+            _reconcileDebounce = cts = new CancellationTokenSource();
+        }
+        _ = Task.Delay(400, cts.Token).ContinueWith(t =>
+        {
+            if (!t.IsCompletedSuccessfully) return;
+            ReconcileLinks();
+            Changed?.Invoke();
+        });
     }
 
     private static (string? NodeName, string? PortName) PortKey(Port port)
@@ -470,6 +486,8 @@ public sealed class DrumMixerService : IDrumMixerService, IDisposable
         FrSonic.LinkRegistry.Deleted -= OnObjectChanged;
         _storeDebounce?.Cancel();
         _storeDebounce?.Dispose();
+        _reconcileDebounce?.Cancel();
+        _reconcileDebounce?.Dispose();
         _filterChain?.Destroy();
     }
 }
