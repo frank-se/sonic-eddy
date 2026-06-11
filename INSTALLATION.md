@@ -2,7 +2,7 @@
 
 ## Pre-Requisites
 
-Sonic Eddy depends on the following c/c++ libraries that need to be installed
+Sonic Eddy depends on the following C/C++ libraries that need to be installed
 with the package manager of the distribution.
 
 - `pipewire`
@@ -11,7 +11,6 @@ with the package manager of the distribution.
 - `lv2`
 - `lilv`
 - `flac`
-- `threads`
 
 Sonic Eddy also depends on the following LV2 plugins.
 
@@ -22,6 +21,25 @@ Sonic Eddy also depends on the following LV2 plugins.
 - <urn:dragonfly:room>
 - <urn:dragonfly:plate>
 
+The .NET 10 SDK is required to build and run the C# application. Install it
+from <https://dotnet.microsoft.com/download> or via your distribution's package
+manager.
+
+## PipeWire file descriptor limit
+
+PipeWire's default file descriptor limit is too low for the many nodes
+Sonic Eddy creates. Raise it before starting the app:
+
+```bash
+mkdir -p ~/.config/systemd/user/pipewire.service.d
+cat > ~/.config/systemd/user/pipewire.service.d/limits.conf << 'EOF'
+[Service]
+LimitNOFILE=65536
+EOF
+systemctl --user daemon-reload
+systemctl --user restart pipewire
+```
+
 ## Installation from source
 
 ### Checkout the source code
@@ -30,18 +48,17 @@ Sonic Eddy also depends on the following LV2 plugins.
 git clone https://git.sr.ht/~frank6/sonic-eddy
 ```
 
-### Build the c library
+### Build the native library
 
 ```bash
 cd sonic-eddy/fr-sonic
 meson setup build --buildtype release
-cd build
-meson compile
+meson compile -C build
 ```
 
-### Build and run the C# application
+### Build and run the application
 
 ```bash
-cd ../../SonicEddy/
+cd ..
 dotnet run --project SonicEddy -c Release
 ```
