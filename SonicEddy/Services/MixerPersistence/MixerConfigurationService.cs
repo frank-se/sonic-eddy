@@ -18,6 +18,7 @@ public sealed class MixerConfigurationService : IDisposable
     private MixerLayerViewModel? _layerA;
     private MixerLayerViewModel? _layerB;
     private GlobalMasterViewModel? _globalMaster;
+    private readonly HashSet<ChannelViewModelBase> _routingApplied = [];
 
     public MixerConfigurationService(IWireplumberService wireplumberService)
     {
@@ -105,6 +106,7 @@ public sealed class MixerConfigurationService : IDisposable
         _layerA = layerA;
         _layerB = layerB;
         _globalMaster = globalMaster;
+        _routingApplied.Clear();
 
         foreach (var layerConfig in configuration.Layers)
         {
@@ -333,9 +335,10 @@ public sealed class MixerConfigurationService : IDisposable
             channel.SelectedAudioFromRoutingTarget = target;
     }
 
-    private static void ApplyAudioTo(string? nodeName,
+    private void ApplyAudioTo(string? nodeName,
         ChannelViewModelBase channel, MixerLayerViewModel layer)
     {
+        if (_routingApplied.Contains(channel)) return;
         if (nodeName is null) return;
         IEnumerable<IRoutingTarget> targets = channel switch
         {
@@ -346,7 +349,10 @@ public sealed class MixerConfigurationService : IDisposable
         var target = targets.FirstOrDefault(candidate =>
             GetRoutingNodeName(candidate) == nodeName);
         if (target is not null)
+        {
             channel.SelectedAudioToRoutingTarget = target;
+            _routingApplied.Add(channel);
+        }
     }
 
     private static string? GetRoutingNodeName(IRoutingTarget? target) =>

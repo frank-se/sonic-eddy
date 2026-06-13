@@ -3,7 +3,6 @@
 #include "logging/log.h"
 
 #include <algorithm>
-#include <cmath>
 #include <cstring>
 #include <format>
 
@@ -53,7 +52,7 @@ const spa_pod *build_audio_format(spa_pod_builder &builder) {
       &builder, SPA_FORMAT_mediaType, SPA_POD_Id(SPA_MEDIA_TYPE_audio),
       SPA_FORMAT_mediaSubtype, SPA_POD_Id(SPA_MEDIA_SUBTYPE_raw),
       SPA_FORMAT_AUDIO_format,
-      SPA_POD_CHOICE_ENUM_Id(2, SPA_AUDIO_FORMAT_F32, SPA_AUDIO_FORMAT_F32P),
+      SPA_POD_Id(SPA_AUDIO_FORMAT_F32),
       0);
   return static_cast<const spa_pod *>(spa_pod_builder_pop(&builder, &frame));
 }
@@ -177,11 +176,14 @@ bool ducker::Ducker::setup_audio_capture_stream() {
   spa_pod_builder_init(&builder, buf.data(), buf.size());
   const spa_pod *params[] = {build_audio_format(builder)};
 
-  if (pw_stream_connect(
-          _audio_capture_stream, PW_DIRECTION_INPUT, PW_ID_ANY,
-          static_cast<pw_stream_flags>(PW_STREAM_FLAG_MAP_BUFFERS |
-                                       PW_STREAM_FLAG_RT_PROCESS),
-          params, 1) < 0)
+  auto capture_flags = static_cast<pw_stream_flags>(
+      PW_STREAM_FLAG_MAP_BUFFERS | PW_STREAM_FLAG_RT_PROCESS |
+      PW_STREAM_FLAG_ASYNC);
+  if (!_config.capture_target_object.empty())
+    capture_flags =
+        static_cast<pw_stream_flags>(capture_flags | PW_STREAM_FLAG_AUTOCONNECT);
+  if (pw_stream_connect(_audio_capture_stream, PW_DIRECTION_INPUT, PW_ID_ANY,
+                        capture_flags, params, 1) < 0)
     return false;
 
   publish_params();
@@ -217,12 +219,14 @@ bool ducker::Ducker::setup_audio_playback_stream() {
   spa_pod_builder_init(&builder, buf.data(), buf.size());
   const spa_pod *params[] = {build_audio_format(builder)};
 
-  return pw_stream_connect(
-             _audio_playback_stream, PW_DIRECTION_OUTPUT, PW_ID_ANY,
-             static_cast<pw_stream_flags>(PW_STREAM_FLAG_AUTOCONNECT |
-                                          PW_STREAM_FLAG_MAP_BUFFERS |
-                                          PW_STREAM_FLAG_RT_PROCESS),
-             params, 1) >= 0;
+  auto playback_flags = static_cast<pw_stream_flags>(
+      PW_STREAM_FLAG_MAP_BUFFERS | PW_STREAM_FLAG_RT_PROCESS |
+      PW_STREAM_FLAG_TRIGGER);
+  if (!_config.playback_target_object.empty())
+    playback_flags = static_cast<pw_stream_flags>(playback_flags |
+                                                   PW_STREAM_FLAG_AUTOCONNECT);
+  return pw_stream_connect(_audio_playback_stream, PW_DIRECTION_OUTPUT,
+                           PW_ID_ANY, playback_flags, params, 1) >= 0;
 }
 
 void ducker::Ducker::process_midi_capture() {
@@ -260,94 +264,88 @@ void ducker::Ducker::process_midi_capture() {
 }
 
 void ducker::Ducker::process_audio_capture() {
-  auto *pw_buf = pw_stream_dequeue_buffer(_audio_capture_stream);
-  if (!pw_buf) return;
+  if (_audio_playback_stream == nullptr) return;
 
-  auto *buf = pw_buf->buffer;
-  const auto n_channels = std::max(_audio_format.channels, 2u);
-  const uint32_t n_frames =
-      buf->n_datas > 0 && buf->datas[0].chunk
-          ? buf->datas[0].chunk->size / sizeof(float) / n_channels
-          : 0;
+  const auto result = pw_stream_trigger_process(_audio_playback_stream);
+  if (result >= 0) return;
 
-  /* Resize passthrough buffer */
-  const auto needed = n_frames * n_channels;
-  if (_passthrough_buffer.size() < needed)
-    _passthrough_buffer.resize(needed);
-  _passthrough_frames = n_frames;
-  _passthrough_channels = n_channels;
-
-  /* Drain MIDI events and update envelope */
-  MidiNoteEvent evt{};
-  while (_midi_events.pop(evt)) {
-    if (evt.note_on)
-      on_note_on(evt.note, evt.velocity);
-    else
-      on_note_off();
+  while (_audio_capture_stream != nullptr) {
+    auto *buf = pw_stream_dequeue_buffer(_audio_capture_stream);
+    if (!buf) break;
+    pw_stream_queue_buffer(_audio_capture_stream, buf);
   }
-
-  const bool bypass = _param_bypass.load(std::memory_order_relaxed);
-
-  /* Copy audio, applying gain per frame */
-  for (uint32_t f = 0; f < n_frames; ++f) {
-    const float gain = bypass ? 1.0f : advance_envelope(1);
-    for (uint32_t c = 0; c < n_channels; ++c) {
-      float sample = 0.0f;
-      if (c < buf->n_datas && buf->datas[c].data) {
-        /* planar format */
-        const auto *plane =
-            static_cast<const float *>(buf->datas[c].data);
-        if (buf->datas[c].chunk && f < buf->datas[c].chunk->size / sizeof(float))
-          sample = plane[f];
-      } else if (buf->n_datas == 1 && buf->datas[0].data) {
-        /* interleaved format */
-        const auto *interleaved =
-            static_cast<const float *>(buf->datas[0].data);
-        sample = interleaved[f * n_channels + c];
-      }
-      _passthrough_buffer[f * n_channels + c] = sample * gain;
-    }
-  }
-
-  pw_stream_queue_buffer(_audio_capture_stream, pw_buf);
 }
 
 void ducker::Ducker::process_audio_playback() {
-  auto *pw_buf = pw_stream_dequeue_buffer(_audio_playback_stream);
-  if (!pw_buf) return;
+  MidiNoteEvent evt{};
+  while (_midi_events.pop(evt)) {
+    if (evt.note_on) on_note_on(evt.note, evt.velocity);
+    else on_note_off();
+  }
 
-  auto *buf = pw_buf->buffer;
-  const auto n_channels = _passthrough_channels > 0 ? _passthrough_channels : 2u;
-  const auto n_frames = _passthrough_frames;
-
-  for (uint32_t c = 0; c < buf->n_datas && c < n_channels; ++c) {
-    if (!buf->datas[c].data) continue;
-    auto *out = static_cast<float *>(buf->datas[c].data);
-
-    if (buf->n_datas > 1) {
-      /* planar */
-      for (uint32_t f = 0; f < n_frames; ++f)
-        out[f] = _passthrough_buffer[f * n_channels + c];
-      if (buf->datas[c].chunk) {
-        buf->datas[c].chunk->offset = 0;
-        buf->datas[c].chunk->size = n_frames * sizeof(float);
-        buf->datas[c].chunk->stride = sizeof(float);
-      }
-    } else {
-      /* interleaved — single data buffer */
-      for (uint32_t f = 0; f < n_frames; ++f)
-        for (uint32_t ch = 0; ch < n_channels; ++ch)
-          out[f * n_channels + ch] = _passthrough_buffer[f * n_channels + ch];
-      if (buf->datas[0].chunk) {
-        buf->datas[0].chunk->offset = 0;
-        buf->datas[0].chunk->size = n_frames * n_channels * sizeof(float);
-        buf->datas[0].chunk->stride = static_cast<int32_t>(n_channels * sizeof(float));
-      }
-      break;
+  pw_buffer *capture_buf = nullptr;
+  if (_audio_capture_stream != nullptr) {
+    while (true) {
+      auto *next = pw_stream_dequeue_buffer(_audio_capture_stream);
+      if (!next) break;
+      if (capture_buf)
+        pw_stream_queue_buffer(_audio_capture_stream, capture_buf);
+      capture_buf = next;
     }
   }
 
-  pw_stream_queue_buffer(_audio_playback_stream, pw_buf);
+  auto *playback_buf = pw_stream_dequeue_buffer(_audio_playback_stream);
+
+  if (capture_buf && playback_buf) {
+    auto *cap_spa = capture_buf->buffer;
+    auto *play_spa = playback_buf->buffer;
+
+    if (cap_spa->n_datas > 0 && cap_spa->datas[0].data &&
+        cap_spa->datas[0].chunk && play_spa->n_datas > 0 &&
+        play_spa->datas[0].data && play_spa->datas[0].chunk) {
+      const auto *cap_data = &cap_spa->datas[0];
+      auto *play_data = &play_spa->datas[0];
+      const auto channels = std::max(_audio_format.channels, 2u);
+      const auto bytes_per_frame = channels * sizeof(float);
+      const auto cap_frames =
+          static_cast<uint32_t>(cap_data->chunk->size / bytes_per_frame);
+      const auto offset_samples = cap_data->chunk->offset / sizeof(float);
+      const auto *samples =
+          static_cast<const float *>(cap_data->data) + offset_samples;
+
+      const auto requested = playback_buf->requested;
+      const auto writable_frames =
+          requested > 0
+              ? std::min<uint32_t>(
+                    static_cast<uint32_t>(play_data->maxsize / bytes_per_frame),
+                    static_cast<uint32_t>(requested))
+              : static_cast<uint32_t>(play_data->maxsize / bytes_per_frame);
+
+      const auto output_frames = std::min(cap_frames, writable_frames);
+      auto *output = static_cast<float *>(play_data->data);
+      const bool bypass = _param_bypass.load(std::memory_order_relaxed);
+
+      for (uint32_t f = 0; f < output_frames; ++f) {
+        const float gain = bypass ? 1.0f : advance_envelope(1);
+        for (uint32_t c = 0; c < channels; ++c)
+          output[f * channels + c] = samples[f * channels + c] * gain;
+      }
+      for (uint32_t f = output_frames; f < writable_frames; ++f) {
+        for (uint32_t c = 0; c < channels; ++c)
+          output[f * channels + c] = 0.0f;
+      }
+
+      play_data->chunk->offset = 0;
+      play_data->chunk->size =
+          static_cast<uint32_t>(writable_frames * bytes_per_frame);
+      play_data->chunk->stride = static_cast<int32_t>(bytes_per_frame);
+    }
+  }
+
+  if (capture_buf)
+    pw_stream_queue_buffer(_audio_capture_stream, capture_buf);
+  if (playback_buf)
+    pw_stream_queue_buffer(_audio_playback_stream, playback_buf);
 }
 
 void ducker::Ducker::on_note_on(const uint8_t note, const uint8_t velocity) {

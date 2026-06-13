@@ -3,7 +3,6 @@
 #include <atomic>
 #include <cstdint>
 #include <string>
-#include <vector>
 
 #include <boost/lockfree/spsc_queue.hpp>
 #include <pipewire/loop.h>
@@ -76,11 +75,6 @@ private:
   std::atomic<int> _param_release_shape{0};
   std::atomic<bool> _param_bypass{false};
   std::atomic<int> _param_midi_channel{0}; /* 0-based, 0 = channel 1 */
-
-  /* Audio passthrough buffer (capture writes, playback reads) */
-  std::vector<float> _passthrough_buffer;
-  uint32_t _passthrough_frames = 0;
-  uint32_t _passthrough_channels = 0;
 
   spa_audio_info_raw _audio_format{};
   std::array<uint8_t, 4096> _params_buffer{};
