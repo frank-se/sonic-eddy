@@ -26,7 +26,7 @@ public class VirtualInputService(
         node.Name.EndsWith(PlaybackNodeNameSuffix);
     private static readonly List<string> StereoAudioPosition = ["FL", "FR"];
     private readonly List<VirtualInputConfig> _configuredInputs = [];
-    private readonly HashSet<Guid> _activeInputs = [];
+    private readonly Dictionary<Guid, VirtualInput> _activeInputs = [];
     private readonly HashSet<Guid> _inputsBeingCreated = [];
     private readonly SemaphoreSlim _initializeLock = new(1, 1);
     private readonly SemaphoreSlim _restoreLock = new(1, 1);
@@ -110,12 +110,26 @@ public class VirtualInputService(
         
         VirtualInputs.Add(virtualInput);
         lock (_lock)
-            _activeInputs.Add(id);
+            _activeInputs[id] = virtualInput;
 
         Added?.Invoke(virtualInput);
     }
 
     public event Action<VirtualInput>? Added;
+
+    public async Task DeleteVirtualInput(VirtualInput virtualInput)
+    {
+        lock (_lock)
+        {
+            var id = _activeInputs
+                .FirstOrDefault(kv => ReferenceEquals(kv.Value, virtualInput)).Key;
+            _activeInputs.Remove(id);
+            _configuredInputs.RemoveAll(c => c.Id == id);
+        }
+
+        VirtualInputs.Remove(virtualInput);
+        await StoreConfigAsync();
+    }
 
     private async Task ApplyConfiguredInputsAsync()
     {
@@ -126,7 +140,7 @@ public class VirtualInputService(
             lock (_lock)
             {
                 pending = _configuredInputs.Where(config =>
-                        !_activeInputs.Contains(config.Id) &&
+                        !_activeInputs.ContainsKey(config.Id) &&
                         _inputsBeingCreated.Add(config.Id))
                     .ToArray();
             }

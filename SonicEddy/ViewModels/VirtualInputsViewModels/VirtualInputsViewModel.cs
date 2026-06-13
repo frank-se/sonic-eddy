@@ -37,6 +37,12 @@ public class VirtualInputsViewModel : ViewModelBase, IDisposable
         VirtualInputs.Add(new(input));
     }
 
+    public async Task DeleteVirtualInput(VirtualInputViewModel viewModel)
+    {
+        await _virtualInputService.DeleteVirtualInput(viewModel.VirtualInput);
+        VirtualInputs.Remove(viewModel);
+    }
+
     public async Task AddVirtualInput()
     {
         var viewModel =

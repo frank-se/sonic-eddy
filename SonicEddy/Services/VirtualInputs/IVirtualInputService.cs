@@ -13,5 +13,7 @@ public interface IVirtualInputService
 
     Task AddVirtualInput(string name, Node node, Port[] ports);
 
+    Task DeleteVirtualInput(VirtualInput virtualInput);
+
     event Action<VirtualInput>? Added;
 }

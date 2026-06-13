@@ -38,6 +38,16 @@
                 <DataGridTextColumn Header=""
                                     Binding="{Binding Ports}"
                                     IsReadOnly="True" />
+
+                <DataGridTemplateColumn Header="">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Button Content="Delete"
+                                    Command="{Binding $parent[Window].((virtualInputsViewModels:VirtualInputsViewModel)DataContext).DeleteVirtualInput}"
+                                    CommandParameter="{Binding}" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
             </DataGrid.Columns>
             
         </DataGrid>
