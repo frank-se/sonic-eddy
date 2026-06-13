@@ -120,8 +120,18 @@ build_beat_window(const std::vector<sesync::BeatScheduleEntry> &old_window,
         (previous == nullptr || entry.beat > previous->beat))
       previous = &entry;
   }
-  if (previous != nullptr)
+
+  if (previous != nullptr) {
     result.push_back(*previous);
+  } else if (first_scheduled_beat > 0 && schedule.size() >= 2) {
+    // No prior history for the beat before the schedule window (happens on
+    // initial start and after a beat-counter reset). Derive it by
+    // extrapolating one period backwards from the first two schedule entries
+    // so current_beat() returns a valid entry and MIDI start fires on time.
+    const auto beat_period_nsec = schedule[1].nsec - schedule[0].nsec;
+    result.push_back({first_scheduled_beat - 1,
+                      schedule[0].nsec - beat_period_nsec});
+  }
 
   result.insert(result.end(), schedule.begin(), schedule.end());
   return result;
