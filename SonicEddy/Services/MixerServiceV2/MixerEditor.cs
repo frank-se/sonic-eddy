@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Fr.Sonic.PInvoke;
 using Fr.Sonic.Model.Config;
 using Fr.Sonic.Model.Config.FilterChain;
+using Fr.Sonic.Model.Config.Ducker;
 using Fr.Sonic.Model.Config.Looper;
 using Fr.Sonic.Model.Objects;
 using Fr.Sonic.Modules.Models;
@@ -171,12 +172,6 @@ public class MixerEditor(IWireplumberService wireplumberService,
         channel.OutputLoopback.CaptureNode.OverrideTargetObject(
             filterChain.PlaybackNode.ObjectSerial.ToString());
 
-        foreach (var send in channel.SendLoopbacks)
-        {
-            send.CaptureNode.OverrideTargetObject(filterChain.PlaybackNode
-                .ObjectSerial.ToString());
-        }
-
         var oldProcessor = channel.InsertProcessor;
         var newChannel = channel with
         {
@@ -323,9 +318,6 @@ public class MixerEditor(IWireplumberService wireplumberService,
             channel.OutputLoopback.CaptureNode.ObjectSerial.ToString());
         channel.OutputLoopback.CaptureNode.OverrideTargetObject(
             channel.PreFxLooper.PlaybackNode.ObjectSerial.ToString());
-        foreach (var send in channel.SendLoopbacks)
-            send.CaptureNode.OverrideTargetObject(
-                channel.PreFxLooper.PlaybackNode.ObjectSerial.ToString());
 
         channel.InsertProcessor.Destroy();
         var replacement = channel with { InsertProcessor = null };
@@ -747,23 +739,25 @@ public class MixerEditor(IWireplumberService wireplumberService,
         var channelId =
             (ulong)((index - 1) + numberOfGroupChannels * (int)layerId);
 
-        var preFxLooper = await CreateLooper(
-            layerId,
-            channelId,
-            "group",
-            "pre",
-            null,
-            null);
+        var ducker = await Fr.Sonic.FrSonic.DuckerFactory.CreateDuckerAsync(
+            new DuckerConfig($"mixer-group-{channelId}-ducker-{layerId}",
+                $"Group {index} Layer {layerId} Ducker",
+                PlaybackTargetObject: masterChannel.InputLoopback.CaptureNode.ObjectSerial.ToString()));
 
         var postFxLooper = await CreateLooper(
             layerId,
             channelId,
             "group",
             "post",
-            preFxLooper.PlaybackNode.ObjectSerial.ToString(),
-            masterChannel.InputLoopback.CaptureNode.ObjectSerial.ToString());
+            null,
+            ducker.AudioCaptureNode.ObjectSerial.ToString());
 
-        preFxLooper.PlaybackNode.OverrideTargetObject(
+        var preFxLooper = await CreateLooper(
+            layerId,
+            channelId,
+            "group",
+            "pre",
+            null,
             postFxLooper.CaptureNode.ObjectSerial.ToString());
 
         var sendLoopbacks = (await Task.WhenAll(Enumerable
@@ -773,7 +767,7 @@ public class MixerEditor(IWireplumberService wireplumberService,
                     $"send-loopback-group-{index}-send-{i}", new()
                     {
                         CaptureProps = CaptureBasePropsWithTargetObject(true,
-                            preFxLooper.PlaybackNode.ObjectSerial
+                            ducker.AudioPlaybackNode.ObjectSerial
                                 .ToString(),
                             $"group-{index}-send-{i}-loopback-capture-{layerId}"),
                         PlaybackProps = PlaybackBasePropsWithTargetObject(true,
@@ -798,6 +792,7 @@ public class MixerEditor(IWireplumberService wireplumberService,
             preFxLooper,
             null,
             postFxLooper,
+            ducker,
             sendLoopbacks,
             masterChannel.InputLoopback.CaptureNode,
             silenceHandle);

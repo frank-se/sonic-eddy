@@ -1,0 +1,66 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:controls="clr-namespace:SonicEddy.Controls"
+        xmlns:mixerViewModels="clr-namespace:SonicEddy.ViewModels.MixerViewModelsV2"
+        mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="300"
+        Width="400" Height="300"
+        WindowStartupLocation="CenterOwner"
+        x:Class="SonicEddy.Views.MixerViewsV2.DuckerDetailsWindow"
+        x:DataType="mixerViewModels:DuckerSectionViewModel"
+        Title="Duck">
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+          Margin="16"
+          RowSpacing="10">
+
+        <controls:ValueSlider Grid.Row="0"
+                              Minimum="0"
+                              Maximum="2"
+                              Text="Attack (s)"
+                              Background="DimGray"
+                              Value="{Binding Attack}" />
+
+        <controls:ValueSlider Grid.Row="1"
+                              Minimum="0"
+                              Maximum="4"
+                              Text="Release (s)"
+                              Background="DimGray"
+                              Value="{Binding Release}" />
+
+        <controls:ValueSlider Grid.Row="2"
+                              Minimum="0"
+                              Maximum="1"
+                              Text="Depth"
+                              Background="DimGray"
+                              Value="{Binding Depth}" />
+
+        <Grid Grid.Row="3"
+              ColumnDefinitions="*,*"
+              ColumnSpacing="8">
+            <StackPanel Grid.Column="0"
+                        Spacing="4">
+                <TextBlock Text="Attack shape" />
+                <ComboBox ItemsSource="{Binding ShapeOptions}"
+                          SelectedIndex="{Binding AttackShape}"
+                          HorizontalAlignment="Stretch" />
+            </StackPanel>
+            <StackPanel Grid.Column="1"
+                        Spacing="4">
+                <TextBlock Text="Release shape" />
+                <ComboBox ItemsSource="{Binding ShapeOptions}"
+                          SelectedIndex="{Binding ReleaseShape}"
+                          HorizontalAlignment="Stretch" />
+            </StackPanel>
+        </Grid>
+
+        <StackPanel Grid.Row="4"
+                    Spacing="4">
+            <TextBlock Text="MIDI channel" />
+            <ComboBox ItemsSource="{Binding MidiChannelOptions}"
+                      SelectedIndex="{Binding MidiChannel}"
+                      HorizontalAlignment="Stretch" />
+        </StackPanel>
+
+    </Grid>
+</Window>

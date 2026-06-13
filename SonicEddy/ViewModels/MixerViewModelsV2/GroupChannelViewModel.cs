@@ -41,10 +41,15 @@ public class GroupChannelViewModel(
     public LooperSectionViewModel Looper { get; } =
         new(groupChannel.PreFxLooper, groupChannel.PostFxLooper,
             midiControllerSetupService, ChannelType.GroupChannel, channelId);
+    public DuckerSectionViewModel Duck { get; } =
+        new(groupChannel.Ducker);
+
+    protected override void ApplyAudioRoutingTarget(IRoutingTarget? routingTarget) { }
 
     protected override void Dispose(bool disposing)
     {
         Looper.Dispose();
+        Duck.Dispose();
         base.Dispose(disposing);
     }
 }

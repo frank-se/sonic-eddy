@@ -12,6 +12,7 @@ public record GroupChannel(
     Looper PreFxLooper,
     InsertProcessor? InsertProcessor,
     Looper PostFxLooper,
+    Fr.Sonic.Modules.Models.Ducker Ducker,
     List<LoopbackModule> SendLoopbacks,
     Node? OutputTargetObject,
     IntPtr SilenceProducerHandle)

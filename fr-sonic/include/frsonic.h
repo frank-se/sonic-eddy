@@ -112,6 +112,14 @@ struct frsonic_click_sync_config {
   float pulse_amplitude;
 };
 
+struct frsonic_ducker_config {
+  const char *name;
+  const char *tag;
+  const char *description;
+  const char *capture_target_object;  /* may be NULL */
+  const char *playback_target_object; /* may be NULL */
+};
+
 extern "C" {
 
 /* ── lifecycle ───────────────────────────────────────────────────────────── */
@@ -139,6 +147,11 @@ FRSONIC_API bool
 frsonic_create_midi_manipulator(const frsonic_midi_manipulator_config *config,
                                 size_t *out_handle);
 FRSONIC_API void frsonic_destroy_midi_manipulator(size_t manipulator_handle);
+
+/* ── duckers ────────────────────────────────────────────────────────────── */
+FRSONIC_API bool frsonic_create_ducker(const frsonic_ducker_config *config,
+                                       size_t *out_handle);
+FRSONIC_API void frsonic_destroy_ducker(size_t ducker_handle);
 
 /* ── click sync converters ──────────────────────────────────────────────── */
 FRSONIC_API bool

@@ -130,6 +130,16 @@ internal struct FrSonicLooperConfig
 }
 
 [StructLayout(LayoutKind.Sequential)]
+internal struct FrSonicDuckerConfig
+{
+    internal IntPtr Name;
+    internal IntPtr Tag;
+    internal IntPtr Description;
+    internal IntPtr CaptureTargetObject;
+    internal IntPtr PlaybackTargetObject;
+}
+
+[StructLayout(LayoutKind.Sequential)]
 internal struct FrSonicClickSyncConfig
 {
     internal IntPtr Id;
@@ -175,6 +185,15 @@ internal static partial class FrSonicLib
 
     [LibraryImport(LIB, EntryPoint = "frsonic_destroy_looper")]
     internal static partial void DestroyLooperC(UIntPtr handle);
+
+    /* duckers */
+    [LibraryImport(LIB, EntryPoint = "frsonic_create_ducker")]
+    [return: MarshalAs(UnmanagedType.U1)]
+    internal static partial bool CreateDuckerC(in FrSonicDuckerConfig config,
+        out UIntPtr handle);
+
+    [LibraryImport(LIB, EntryPoint = "frsonic_destroy_ducker")]
+    internal static partial void DestroyDuckerC(UIntPtr handle);
 
     [LibraryImport(LIB, EntryPoint = "frsonic_create_midi_manipulator")]
     [return: MarshalAs(UnmanagedType.U1)]

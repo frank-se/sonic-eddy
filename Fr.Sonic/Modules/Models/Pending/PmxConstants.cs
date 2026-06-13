@@ -15,4 +15,7 @@ internal static class PmxConstants
     internal const string PurposeClickSyncClick = "click-sync-click";
     internal const string PurposeClickSyncReset = "click-sync-reset";
     internal const string PurposeClickSyncRun = "click-sync-run";
+    internal const string PurposeDuckerMidi = "ducker-midi";
+    internal const string PurposeDuckerCapture = "ducker-capture";
+    internal const string PurposeDuckerPlayback = "ducker-playback";
 }

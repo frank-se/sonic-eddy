@@ -8,7 +8,7 @@
 
     <Panel Background="Indigo">
         <Grid ColumnDefinitions="120"
-              RowDefinitions="Auto,160,Auto,100,100,100,132,*"
+              RowDefinitions="Auto,160,Auto,100,100,100,58,132,*"
               Margin="2">
 
             <mixerControls:ChannelHeader Grid.Row="0"
@@ -51,7 +51,10 @@
                                             Parameters="{Binding $parent[mixerControls:GroupChannelStrip].ThirdPluginParameters}"
                                             Text="{Binding $parent[mixerControls:GroupChannelStrip].ThirdPluginText}" />
 
-            <mixerControls:SendSection Grid.Row="6"
+            <mixerControls:DuckSection Grid.Row="6"
+                                       DataContext="{ReflectionBinding Duck}" />
+
+            <mixerControls:SendSection Grid.Row="7"
                                        Margin="4,4,4,8"
                                        Send1Trim="{Binding $parent[mixerControls:GroupChannelStrip].Send1Trim}"
                                        Send2Trim="{Binding $parent[mixerControls:GroupChannelStrip].Send2Trim}"
@@ -59,7 +62,7 @@
                                        Send4Trim="{Binding $parent[mixerControls:GroupChannelStrip].Send4Trim}"
                                        IsMidiControlled="{Binding $parent[mixerControls:GroupChannelStrip].IsSendMidiControlled}" />
 
-            <mixerControls:PanAndVolumeSectionWithMonitor Grid.Row="7"
+            <mixerControls:PanAndVolumeSectionWithMonitor Grid.Row="8"
                                                           Margin="0,12,0,0"
                                                           LeftAverage="{Binding $parent[mixerControls:GroupChannelStrip].LeftAverage}"
                                                           RightAverage="{Binding $parent[mixerControls:GroupChannelStrip].RightAverage}"

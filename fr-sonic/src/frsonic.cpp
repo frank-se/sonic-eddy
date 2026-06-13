@@ -1,6 +1,7 @@
 #include "../include/frsonic.h"
 
 #include "core/Core.h"
+#include "ducker/Ducker.h"
 #include "looper/Looper.h"
 #include "lv2/frlv2.h"
 #include "midi/MidiManipulator.h"
@@ -38,6 +39,8 @@ static std::shared_ptr<sesync::SyncClient> g_sync_client = nullptr;
 static std::shared_ptr<midi::MidiSyncSender> g_midi_sync_sender = nullptr;
 static std::vector<std::shared_ptr<looper::Looper>> g_loopers;
 static std::vector<size_t> g_free_looper_handles;
+static std::vector<std::shared_ptr<ducker::Ducker>> g_duckers;
+static std::vector<size_t> g_free_ducker_handles;
 static std::vector<std::shared_ptr<midi::MidiManipulator>> g_midi_manipulators;
 static std::vector<std::shared_ptr<sesync::ClickSyncConverter>>
     g_click_sync_converters;
@@ -248,6 +251,19 @@ static size_t store_looper(std::shared_ptr<looper::Looper> looper) {
 
   g_loopers.push_back(std::move(looper));
   return g_loopers.size() - 1;
+}
+
+static size_t store_ducker(std::shared_ptr<ducker::Ducker> d) {
+  if (!g_free_ducker_handles.empty()) {
+    const auto handle = g_free_ducker_handles.back();
+    g_free_ducker_handles.pop_back();
+    if (handle < g_duckers.size()) {
+      g_duckers[handle] = std::move(d);
+      return handle;
+    }
+  }
+  g_duckers.push_back(std::move(d));
+  return g_duckers.size() - 1;
 }
 
 static size_t
@@ -470,6 +486,49 @@ void frsonic_destroy_looper(const size_t looper_handle) {
     g_loopers[looper_handle]->stop();
     g_loopers[looper_handle].reset();
     g_free_looper_handles.push_back(looper_handle);
+  };
+  invoke_owned_pipewire_sync(callback);
+}
+
+bool frsonic_create_ducker(const frsonic_ducker_config *config,
+                           size_t *out_handle) {
+  if (config == nullptr || out_handle == nullptr || !g_owned_pipewire)
+    return false;
+
+  bool result = false;
+  auto callback = [&] {
+    ducker::DuckerConfig ducker_config{
+        .name = optional_c_string(config->name, "se.ducker"),
+        .tag = optional_c_string(config->tag),
+        .description =
+            optional_c_string(config->description, "Sonic Eddy ducker"),
+        .capture_target_object = optional_c_string(config->capture_target_object),
+        .playback_target_object = optional_c_string(config->playback_target_object),
+    };
+
+    auto d = std::make_shared<ducker::Ducker>(g_owned_pipewire->loop(),
+                                              std::move(ducker_config));
+    if (!d->start())
+      return;
+
+    *out_handle = store_ducker(std::move(d));
+    result = true;
+  };
+  invoke_owned_pipewire_sync(callback);
+  return result;
+}
+
+void frsonic_destroy_ducker(const size_t ducker_handle) {
+  if (!g_owned_pipewire)
+    return;
+
+  auto callback = [ducker_handle] {
+    if (ducker_handle >= g_duckers.size() || !g_duckers[ducker_handle])
+      return;
+
+    g_duckers[ducker_handle]->stop();
+    g_duckers[ducker_handle].reset();
+    g_free_ducker_handles.push_back(ducker_handle);
   };
   invoke_owned_pipewire_sync(callback);
 }

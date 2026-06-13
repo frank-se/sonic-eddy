@@ -38,6 +38,9 @@ public static class FrSonic
     private static readonly LooperFactory _looperFactory = new(ModuleRegistry);
     public static ILooperFactory LooperFactory => _looperFactory;
 
+    private static readonly DuckerFactory _duckerFactory = new(ModuleRegistry);
+    public static IDuckerFactory DuckerFactory => _duckerFactory;
+
     private static readonly MidiManipulatorFactory _midiManipulatorFactory =
         new(ModuleRegistry);
     public static IMidiManipulatorFactory MidiManipulatorFactory =>
@@ -268,6 +271,7 @@ public static class FrSonic
                 NodeRegistry.Add(nodeMessage.Node, nodeMessage.TaskCompletionSources);
                 _moduleFactory.UpdateNodesForWaitingModules(nodeMessage.Node);
                 _looperFactory.UpdateNodesForWaitingLoopers(nodeMessage.Node);
+                _duckerFactory.UpdateNodesForWaitingDuckers(nodeMessage.Node);
                 _midiManipulatorFactory.UpdateNodesForWaitingManipulators(
                     nodeMessage.Node);
                 _clickSyncConverterFactory.UpdateNodesForWaitingConverters(

@@ -1,0 +1,46 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mixerControls="clr-namespace:SonicEddy.Controls.MixerControls"
+             x:CompileBindings="False"
+             x:Class="SonicEddy.Controls.MixerControls.DuckSection">
+
+    <UserControl.Styles>
+        <Style Selector="Button, ToggleButton">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="VerticalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="0" />
+        </Style>
+    </UserControl.Styles>
+
+    <Grid RowDefinitions="30,28"
+          Margin="4,4,4,8"
+          RowSpacing="3">
+
+        <StackPanel Grid.Row="0"
+                    Orientation="Horizontal">
+            <TextBlock Text="Duck"
+                       FontSize="12"
+                       Margin="6" />
+        </StackPanel>
+
+        <UniformGrid Grid.Row="1"
+                     Columns="2"
+                     Rows="1"
+                     ColumnSpacing="2">
+            <ToggleButton IsChecked="{Binding Bypass}">
+                <ToolTip.Tip>Bypass ducker</ToolTip.Tip>
+                Bypass
+            </ToggleButton>
+            <Button Content="&#xF692;"
+                    FontFamily="{StaticResource FluentIconsRegular}"
+                    FontSize="18"
+                    Command="{Binding ShowDetailsCommand}">
+                <ToolTip.Tip>Duck details</ToolTip.Tip>
+            </Button>
+        </UniformGrid>
+
+    </Grid>
+</UserControl>

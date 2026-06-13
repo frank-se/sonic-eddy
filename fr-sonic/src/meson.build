@@ -7,9 +7,10 @@ midi_inc    = include_directories('midi')
 lv2_inc     = include_directories('lv2')
 sync_inc    = include_directories('sync')
 looper_inc  = include_directories('looper')
+ducker_inc  = include_directories('ducker')
 silence_inc  = include_directories('silence')
 
-all_inc = [public_inc, src_inc, core_inc, wp_inc, mon_inc, midi_inc, lv2_inc, sync_inc, silence_inc, looper_inc, link_inc]
+all_inc = [public_inc, src_inc, core_inc, wp_inc, mon_inc, midi_inc, lv2_inc, sync_inc, silence_inc, looper_inc, ducker_inc, link_inc]
 
 libfrsonic = shared_library(
     'frsonic',
@@ -62,6 +63,8 @@ libfrsonic = shared_library(
         'silence/SilenceProducer.cpp',
         # Looper subsystem
         'looper/Looper.cpp',
+        # Ducker subsystem
+        'ducker/Ducker.cpp',
     ],
     include_directories : all_inc,
     version : meson.project_version(),
