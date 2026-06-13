@@ -8,6 +8,7 @@ using Avalonia.Threading;
 using Fr.Sonic;
 using Fr.Sonic.Model.Objects;
 using ReactiveUI;
+using SonicEddy.Contracts.MidiRouter;
 using SonicEddy.Services.MidiRouter;
 using Splat;
 
@@ -117,10 +118,11 @@ public sealed class MidiRouterViewModel : ViewModelBase, IDisposable
                              target.Port.ObjectId == selectedTargetId) ??
                          Targets.FirstOrDefault();
 
-        foreach (var route in _routerService.Routes
-                     .OrderBy(route => DisplayName(route.Source))
-                     .ThenBy(route => DisplayName(route.Target)))
-            AddRoute(route);
+        var activeRoutes = _routerService.Routes;
+        foreach (var config in _routerService.ConfiguredRoutes
+                     .OrderBy(config => DisplayNameFromConfig(config.Source))
+                     .ThenBy(config => DisplayNameFromConfig(config.Target)))
+            AddConfiguredRoute(config, activeRoutes);
 
         Status =
             $"{Sources.Count} source ports, {Targets.Count} target ports, {RouteLinks.Count} routes.";
@@ -148,10 +150,42 @@ public sealed class MidiRouterViewModel : ViewModelBase, IDisposable
         _routerService.DeleteRoute(routeId);
     }
 
-    private void AddRoute(MidiRoute route) =>
-        RouteLinks.Add(new(route.Id, DisplayName(route.Source),
-            DisplayName(route.Target), FormatManipulation(route.Manipulation),
-            DeleteRoute));
+    private void AddConfiguredRoute(MidiRouteConfig config,
+        IReadOnlyCollection<MidiRoute> activeRoutes)
+    {
+        var active = activeRoutes.FirstOrDefault(r => r.Id == config.Id);
+
+        string sourceName, targetName, status;
+        if (active is not null)
+        {
+            sourceName = DisplayName(active.Source);
+            targetName = DisplayName(active.Target);
+            status = "Active";
+        }
+        else
+        {
+            sourceName = DisplayNameFromConfig(config.Source);
+            targetName = DisplayNameFromConfig(config.Target);
+            var sourceFound = IsPortAvailable(config.Source);
+            var targetFound = IsPortAvailable(config.Target);
+            status = (sourceFound, targetFound) switch
+            {
+                (false, false) => "Source and target missing",
+                (false, true) => "Source missing",
+                (true, false) => "Target missing",
+                _ => "Pending"
+            };
+        }
+
+        var manipulation = FormatManipulation(new MidiManipulationConfig(
+            config.DropChannels,
+            config.ChannelMap
+                .Select(e => new ChannelMapEntry(e.From, e.To))
+                .ToArray()));
+
+        RouteLinks.Add(new(config.Id, sourceName, targetName, manipulation,
+            status, DeleteRoute));
+    }
 
     private bool HasRoute(ulong sourcePortId, ulong targetPortId) =>
         _routerService.Routes.Any(route =>
@@ -184,6 +218,31 @@ public sealed class MidiRouterViewModel : ViewModelBase, IDisposable
         var portName = port.Name ?? port.Channel ?? $"Port {port.ObjectId}";
         return $"{nodeName}: {portName}";
     }
+
+    private static string DisplayNameFromConfig(MidiRoutePortConfig config)
+    {
+        if (!string.IsNullOrWhiteSpace(config.PortAlias))
+            return config.PortAlias;
+        return $"{config.NodeName}: {config.PortName}";
+    }
+
+    private static bool IsPortAvailable(MidiRoutePortConfig config)
+    {
+        var candidates = FrSonic.PortRegistry.Objects.Where(port =>
+            port.Direction == config.Direction &&
+            string.Equals(NodeName(port), config.NodeName, StringComparison.Ordinal));
+
+        if (!string.IsNullOrEmpty(config.PortAlias) &&
+            candidates.Any(port => string.Equals(port.Alias, config.PortAlias,
+                StringComparison.Ordinal)))
+            return true;
+
+        return candidates.Any(port =>
+            string.Equals(port.Name, config.PortName, StringComparison.Ordinal));
+    }
+
+    private static string NodeName(Port port) =>
+        FrSonic.NodeRegistry.GetByObjectId(port.Node.Id)?.Name ?? string.Empty;
 
     private void OnPortChanged(Port _) => PostRefresh();
     private void OnLinkChanged(Link _) => PostRefresh();

@@ -95,6 +95,9 @@
                 <DataGridTextColumn Header="Manipulation"
                                     Width="Auto"
                                     Binding="{Binding Manipulation}" />
+                <DataGridTextColumn Header="Status"
+                                    Width="Auto"
+                                    Binding="{Binding Status}" />
                 <DataGridTemplateColumn Header="Actions">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate x:DataType="midiRouterVm:MidiRouteLinkViewModel">

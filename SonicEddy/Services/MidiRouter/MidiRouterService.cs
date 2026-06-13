@@ -33,6 +33,15 @@ public sealed class MidiRouterService : IMidiRouterService, IDisposable
         }
     }
 
+    public IReadOnlyCollection<MidiRouteConfig> ConfiguredRoutes
+    {
+        get
+        {
+            lock (_lock)
+                return _configuredRoutes.ToArray();
+        }
+    }
+
     public event Action? RoutesChanged;
 
     public MidiRouterService(IAppDataService appDataService)
