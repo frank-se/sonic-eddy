@@ -8,7 +8,7 @@
 
     <Panel Background="Indigo">
         <Grid ColumnDefinitions="120"
-              RowDefinitions="Auto,132,160,Auto,100,100,100,*,Auto"
+              RowDefinitions="Auto,160,Auto,100,100,100,132,*,Auto"
               Margin="2">
 
             <mixerControls:ChannelHeader Grid.Row="0"
@@ -19,18 +19,10 @@
                                          SelectCommand="{Binding $parent[mixerControls:GroupChannelStrip].SelectCommand}"
                                          SelectCommandParameter="{Binding $parent[mixerControls:GroupChannelStrip].SelectCommandParameter}" />
 
-            <mixerControls:SendSection Grid.Row="1"
-                                       Margin="4,4,4,8"
-                                       Send1Trim="{Binding $parent[mixerControls:GroupChannelStrip].Send1Trim}"
-                                       Send2Trim="{Binding $parent[mixerControls:GroupChannelStrip].Send2Trim}"
-                                       Send3Trim="{Binding $parent[mixerControls:GroupChannelStrip].Send3Trim}"
-                                       Send4Trim="{Binding $parent[mixerControls:GroupChannelStrip].Send4Trim}"
-                                       IsMidiControlled="{Binding $parent[mixerControls:GroupChannelStrip].IsSendMidiControlled}" />
-
-            <mixerControls:LooperCompactSection Grid.Row="2"
+            <mixerControls:LooperCompactSection Grid.Row="1"
                                                 DataContext="{ReflectionBinding Looper}" />
 
-            <mixerControls:FilterSectionHeader Grid.Row="3"
+            <mixerControls:FilterSectionHeader Grid.Row="2"
                                                HasFilter="{Binding $parent[mixerControls:GroupChannelStrip].HasFilter}"
                                                IsMidiControlled="{Binding $parent[mixerControls:GroupChannelStrip].IsFilterMidiControlled}"
                                                AddCommand="{Binding $parent[mixerControls:GroupChannelStrip].AddFilterCommand}"
@@ -41,23 +33,31 @@
                                                SavePresetCommand="{Binding $parent[mixerControls:GroupChannelStrip].SavePresetCommand}"
                                                LoadPresetCommand="{Binding $parent[mixerControls:GroupChannelStrip].LoadPresetCommand}" />
 
-            <mixerControls:ParameterSection Grid.Row="4"
+            <mixerControls:ParameterSection Grid.Row="3"
                                             Margin="4"
                                             IsMidiControlled="{Binding $parent[mixerControls:GroupChannelStrip].FirstPluginParametersMidiControlled}"
                                             Parameters="{Binding $parent[mixerControls:GroupChannelStrip].FirstPluginParameters}"
                                             Text="{Binding $parent[mixerControls:GroupChannelStrip].FirstPluginText}" />
 
-            <mixerControls:ParameterSection Grid.Row="5"
+            <mixerControls:ParameterSection Grid.Row="4"
                                             Margin="4"
                                             IsMidiControlled="{Binding $parent[mixerControls:GroupChannelStrip].SecondPluginParametersMidiControlled}"
                                             Parameters="{Binding $parent[mixerControls:GroupChannelStrip].SecondPluginParameters}"
                                             Text="{Binding $parent[mixerControls:GroupChannelStrip].SecondPluginText}" />
 
-            <mixerControls:ParameterSection Grid.Row="6"
+            <mixerControls:ParameterSection Grid.Row="5"
                                             Margin="4"
                                             IsMidiControlled="{Binding $parent[mixerControls:GroupChannelStrip].ThirdPluginParametersMidiControlled}"
                                             Parameters="{Binding $parent[mixerControls:GroupChannelStrip].ThirdPluginParameters}"
                                             Text="{Binding $parent[mixerControls:GroupChannelStrip].ThirdPluginText}" />
+
+            <mixerControls:SendSection Grid.Row="6"
+                                       Margin="4,4,4,8"
+                                       Send1Trim="{Binding $parent[mixerControls:GroupChannelStrip].Send1Trim}"
+                                       Send2Trim="{Binding $parent[mixerControls:GroupChannelStrip].Send2Trim}"
+                                       Send3Trim="{Binding $parent[mixerControls:GroupChannelStrip].Send3Trim}"
+                                       Send4Trim="{Binding $parent[mixerControls:GroupChannelStrip].Send4Trim}"
+                                       IsMidiControlled="{Binding $parent[mixerControls:GroupChannelStrip].IsSendMidiControlled}" />
 
             <mixerControls:PanAndVolumeSectionWithMonitor Grid.Row="7"
                                                           Margin="0,12,0,0"
