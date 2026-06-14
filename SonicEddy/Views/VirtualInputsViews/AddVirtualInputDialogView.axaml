@@ -4,14 +4,14 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:virtualInputsViewModels="clr-namespace:SonicEddy.ViewModels.VirtualInputsViewModels"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-        Width="400" Height="300"
+        Width="400" Height="340"
         x:Class="SonicEddy.Views.VirtualInputsViews.AddVirtualInputDialogView"
         x:DataType="virtualInputsViewModels:AddVirtualInputDialogViewModel"
         Title="Add Virtual Input">
 
     <StackPanel>
         <Grid ColumnDefinitions="Auto,*"
-              RowDefinitions="Auto,Auto,Auto,Auto">
+              RowDefinitions="Auto,Auto,Auto,Auto,Auto">
             <Label Grid.Row="0"
                    Grid.Column="0"
                    Target="NameTextBox"
@@ -36,27 +36,37 @@
 
             <Label Grid.Row="2"
                    Grid.Column="0"
+                   Content="Mono" />
+
+            <CheckBox Grid.Row="2"
+                      Grid.Column="1"
+                      IsChecked="{Binding IsMono}" />
+
+            <Label Grid.Row="3"
+                   Grid.Column="0"
                    Target="LeftPortComboBox"
                    Content="Left Port" />
 
-            <ComboBox Grid.Row="2"
+            <ComboBox Grid.Row="3"
                       Grid.Column="1"
                       x:Name="LeftPortComboBox"
                       DisplayMemberBinding="{Binding Alias}"
                       ItemsSource="{Binding PotentialPorts}"
                       SelectedItem="{Binding SelectedLeftPort}" />
 
-            <Label Grid.Row="3"
+            <Label Grid.Row="4"
                    Grid.Column="0"
                    Target="RightPortComboBox"
-                   Content="Left Port" />
+                   Content="Right Port"
+                   IsVisible="{Binding !IsMono}" />
 
-            <ComboBox Grid.Row="3"
+            <ComboBox Grid.Row="4"
                       Grid.Column="1"
                       x:Name="RightPortComboBox"
                       DisplayMemberBinding="{Binding Alias}"
                       ItemsSource="{Binding PotentialPorts}"
-                      SelectedItem="{Binding SelectedRightPort}" />
+                      SelectedItem="{Binding SelectedRightPort}"
+                      IsVisible="{Binding !IsMono}" />
         </Grid>
 
         <StackPanel Orientation="Horizontal"

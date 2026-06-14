@@ -51,6 +51,14 @@ public class AddVirtualInputDialogViewModel : ViewModelBase, IDisposable
         this.WhenAnyValue(x => x.SelectedRightPort)
             .Subscribe(_ => ValidateForm())
             .DisposeWith(_disposable);
+
+        this.WhenAnyValue(x => x.IsMono)
+            .Subscribe(_ =>
+            {
+                SelectedRightPort = null;
+                ValidateForm();
+            })
+            .DisposeWith(_disposable);
     }
 
     private void ValidateForm()
@@ -86,11 +94,17 @@ public class AddVirtualInputDialogViewModel : ViewModelBase, IDisposable
         set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
+    public bool IsMono
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
     public bool DialogResult = false;
 
     public bool IsValid => SelectedNode is not null &&
                            SelectedLeftPort is not null &&
-                           SelectedRightPort is not null &&
+                           (IsMono || SelectedRightPort is not null) &&
                            Name != string.Empty;
 
     public bool IsButtonEnabled

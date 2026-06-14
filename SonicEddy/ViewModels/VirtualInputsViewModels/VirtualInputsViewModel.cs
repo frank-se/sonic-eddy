@@ -59,10 +59,13 @@ public class VirtualInputsViewModel : ViewModelBase, IDisposable
 
         if (viewModel is { DialogResult: true, IsValid: true })
         {
+            var ports = viewModel.IsMono
+                ? [viewModel.SelectedLeftPort!]
+                : new[] { viewModel.SelectedLeftPort!, viewModel.SelectedRightPort! };
             await _virtualInputService.AddVirtualInput(
                 viewModel.Name,
                 viewModel.SelectedNode!,
-                [viewModel.SelectedLeftPort!, viewModel.SelectedRightPort!]);
+                ports);
         }
     }
 
