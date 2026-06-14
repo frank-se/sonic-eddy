@@ -1302,7 +1302,7 @@ void looper::Looper::capture_passthrough_input(pw_buffer *capture_buffer) {
       _recorded_frames =
           std::min<uint64_t>(_recorded_frames + 1, _record_capacity_frames);
     }
-  } else {
+  } else if (channels != _passthrough_channels) {
     stop_recording();
   }
 }
@@ -1311,16 +1311,12 @@ bool looper::Looper::should_record_frame(const sesync::SyncSnapshot &snapshot,
                                          const uint64_t frame_nsec,
                                          const uint32_t rate) {
   const auto current = snapshot.current_beat(frame_nsec);
-  if (!current) {
-    stop_recording();
-    stop_loops();
-    return false;
-  }
+  if (!current)
+    return _recording;
 
   const auto transport = transport_state_entry_at(snapshot, current->beat);
   if (!transport || transport->state == sesync::TransportState::Stopped) {
     stop_recording();
-    stop_loops();
     return false;
   }
 
