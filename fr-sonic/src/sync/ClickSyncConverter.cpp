@@ -127,8 +127,15 @@ private:
     if (pw_stream_get_time_n(_stream, &stream_time, sizeof(stream_time)) >= 0) {
       if (stream_time.rate.denom > 0)
         sample_rate = stream_time.rate.denom;
-      if (stream_time.now > 0)
-        cycle_start_nsec = static_cast<uint64_t>(stream_time.now);
+      if (stream_time.now > 0) {
+        const uint64_t delay_nsec =
+            stream_time.delay > 0 && stream_time.rate.denom > 0
+                ? static_cast<uint64_t>(stream_time.delay) *
+                      1'000'000'000ull / stream_time.rate.denom
+                : 0;
+        cycle_start_nsec =
+            static_cast<uint64_t>(stream_time.now) + delay_nsec;
+      }
     }
 
     const auto snapshot = _sync_client ? _sync_client->snapshot() : nullptr;
