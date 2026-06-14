@@ -91,7 +91,8 @@ public class VirtualInputService(
                     DontFallback = true,
                     MediaClass = CaptureNodeMediaClass,
                     TargetObject = node.ObjectSerial.ToString(),
-                    AudioPosition = captureNodeAudioPosition
+                    AudioPosition = captureNodeAudioPosition,
+                    ChannelMixUpmixMethod = ports.Length == 1 ? "simple" : null
                 },
                 PlaybackProps = new()
                 {
