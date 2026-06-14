@@ -104,6 +104,7 @@ public class VirtualInputService(
                     MediaClass = PlaybackNodeMediaClass,
                     DontFallback = true,
                     AutoConnect = false,
+                    ChannelMixUpmixMethod = ports.Length == 1 ? "simple" : null
                 }
             });
 
