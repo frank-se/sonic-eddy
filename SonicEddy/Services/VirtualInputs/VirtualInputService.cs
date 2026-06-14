@@ -92,6 +92,7 @@ public class VirtualInputService(
                     MediaClass = CaptureNodeMediaClass,
                     TargetObject = node.ObjectSerial.ToString(),
                     AudioPosition = captureNodeAudioPosition,
+                    ChannelMixUpmix = ports.Length == 1 ? true : null,
                     ChannelMixUpmixMethod = ports.Length == 1 ? "simple" : null
                 },
                 PlaybackProps = new()
@@ -100,10 +101,11 @@ public class VirtualInputService(
                     Name = $"{fullName}-playback",
                     Description =
                         $"{fullName}-playback",
-                    AudioPosition = StereoAudioPosition,
+                    AudioPosition = ports.Length == 1 ? ["MONO"] : StereoAudioPosition,
                     MediaClass = PlaybackNodeMediaClass,
                     DontFallback = true,
                     AutoConnect = false,
+                    ChannelMixUpmix = ports.Length == 1 ? true : null,
                     ChannelMixUpmixMethod = ports.Length == 1 ? "simple" : null
                 }
             });

@@ -77,6 +77,12 @@ public class NodePropertiesConfig
     public List<string>? AudioPosition { get; set; }
 
     /// <summary>
+    /// Enables channel upmixing when true.
+    /// </summary>
+    [JsonPropertyName("channelmix.upmix")]
+    public bool? ChannelMixUpmix { get; set; }
+
+    /// <summary>
     /// Controls how mono/stereo signals are upmixed to surround channels.
     /// Set to "simple", "psd", or "karma" to enable upmixing; "none" disables it.
     /// </summary>
