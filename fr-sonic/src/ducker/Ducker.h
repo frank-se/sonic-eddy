@@ -25,7 +25,7 @@ struct MidiNoteEvent {
   uint8_t velocity;
 };
 
-enum class DuckerPhase { Idle, Attack, Release };
+enum class DuckerPhase { Idle, Attack, Hold, Release };
 
 class Ducker {
 public:
@@ -69,6 +69,7 @@ private:
 
   /* Params — written from non-RT, read in RT */
   std::atomic<float> _param_attack{0.05f};
+  std::atomic<float> _param_hold{0.1f};
   std::atomic<float> _param_release{0.15f};
   std::atomic<float> _param_depth{1.0f};
   std::atomic<int> _param_attack_shape{0};

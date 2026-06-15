@@ -367,16 +367,7 @@ void ducker::Ducker::on_note_on(const uint8_t note, const uint8_t velocity) {
 }
 
 void ducker::Ducker::on_note_off() {
-  const float release = _param_release.load(std::memory_order_relaxed);
-  const uint32_t rate = std::max(_audio_format.rate, 1u);
-
-  _start_gain = _current_gain;
-  _target_gain = 1.0f;
-  _phase = DuckerPhase::Release;
-  _phase_t = 0.0f;
-  const float duration_samples =
-      std::max(release * static_cast<float>(rate), 1.0f);
-  _phase_step = 1.0f / duration_samples;
+  /* Fixed-length ducking: note length is ignored; hold fires automatically. */
 }
 
 float ducker::Ducker::advance_envelope(const uint32_t n_samples) {
@@ -393,8 +384,23 @@ float ducker::Ducker::advance_envelope(const uint32_t n_samples) {
 
   if (_phase_t >= 1.0f) {
     _current_gain = _target_gain;
-    _phase = (_phase == DuckerPhase::Attack) ? DuckerPhase::Idle /* sustain at target */
-                                             : DuckerPhase::Idle;
+    const uint32_t rate = std::max(_audio_format.rate, 1u);
+    if (_phase == DuckerPhase::Attack) {
+      _start_gain = _target_gain;
+      _phase = DuckerPhase::Hold;
+      _phase_t = 0.0f;
+      _phase_step = 1.0f / std::max(
+          _param_hold.load(std::memory_order_relaxed) * static_cast<float>(rate), 1.0f);
+    } else if (_phase == DuckerPhase::Hold) {
+      _start_gain = _current_gain;
+      _target_gain = 1.0f;
+      _phase = DuckerPhase::Release;
+      _phase_t = 0.0f;
+      _phase_step = 1.0f / std::max(
+          _param_release.load(std::memory_order_relaxed) * static_cast<float>(rate), 1.0f);
+    } else {
+      _phase = DuckerPhase::Idle;
+    }
   }
 
   return _current_gain;
@@ -455,6 +461,8 @@ void ducker::Ducker::handle_param_value(const char *key,
 
   if (std::strcmp(key, "attack") == 0 && spa_pod_get_float(value, &f) == 0)
     _param_attack.store(std::max(f, 0.0f), std::memory_order_relaxed);
+  else if (std::strcmp(key, "hold") == 0 && spa_pod_get_float(value, &f) == 0)
+    _param_hold.store(std::max(f, 0.0f), std::memory_order_relaxed);
   else if (std::strcmp(key, "release") == 0 && spa_pod_get_float(value, &f) == 0)
     _param_release.store(std::max(f, 0.0f), std::memory_order_relaxed);
   else if (std::strcmp(key, "depth") == 0 && spa_pod_get_float(value, &f) == 0)
@@ -495,6 +503,7 @@ void ducker::Ducker::publish_params() {
   };
 
   add_float("attack", _param_attack.load(std::memory_order_relaxed));
+  add_float("hold", _param_hold.load(std::memory_order_relaxed));
   add_float("release", _param_release.load(std::memory_order_relaxed));
   add_float("depth", _param_depth.load(std::memory_order_relaxed));
   add_int("attack_shape", _param_attack_shape.load(std::memory_order_relaxed));

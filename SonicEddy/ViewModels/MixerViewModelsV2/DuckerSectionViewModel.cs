@@ -38,9 +38,19 @@ public sealed class DuckerSectionViewModel : ReactiveObject, IDisposable
         set
         {
             this.RaiseAndSetIfChanged(ref field, value);
-            SetParam("attack", (float)value);
+            SetParam("attack", (float)value / 1000f);
         }
-    } = 0.05;
+    } = 50.0;
+
+    public double Hold
+    {
+        get;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref field, value);
+            SetParam("hold", (float)value / 1000f);
+        }
+    } = 100.0;
 
     public double Release
     {
@@ -48,9 +58,9 @@ public sealed class DuckerSectionViewModel : ReactiveObject, IDisposable
         set
         {
             this.RaiseAndSetIfChanged(ref field, value);
-            SetParam("release", (float)value);
+            SetParam("release", (float)value / 1000f);
         }
-    } = 0.15;
+    } = 150.0;
 
     public double Depth
     {
@@ -99,8 +109,9 @@ public sealed class DuckerSectionViewModel : ReactiveObject, IDisposable
 
     private void ApplyParams()
     {
-        SetParam("attack", (float)Attack);
-        SetParam("release", (float)Release);
+        SetParam("attack", (float)Attack / 1000f);
+        SetParam("hold", (float)Hold / 1000f);
+        SetParam("release", (float)Release / 1000f);
         SetParam("depth", (float)Depth);
         SetIntParam("attack_shape", AttackShape);
         SetIntParam("release_shape", ReleaseShape);
