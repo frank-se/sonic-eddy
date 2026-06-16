@@ -71,6 +71,8 @@
                           Command="{Binding ShowVirtualInputsWindow}" />
                 <MenuItem Header="Virtual Outputs ..."
                           Command="{Binding ShowVirtualOutputsWindow}" />
+                <MenuItem Header="JACK Input Ports ..."
+                          Command="{Binding ShowJackInputPortsWindow}" />
                 <Separator />
                 <MenuItem Header="Recording Pick Ups ..."
                           Command="{Binding ShowRecordingPickUpsWindow}" />

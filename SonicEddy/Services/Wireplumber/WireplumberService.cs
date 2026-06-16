@@ -43,6 +43,11 @@ public class WireplumberService : IWireplumberService, IDisposable
             .Where(n => IsCaptureNode(n) && !IsInternalNode(n))
             .ToList();
 
+    public List<Node> GetJackNodes() =>
+        Fr.Sonic.FrSonic.NodeRegistry.Objects
+            .Where(n => n.Client?.Api == "jack")
+            .ToList();
+
     private static bool IsInternalNode(Node node) =>
         node.Name?.StartsWith("silence-") == true ||
         node.Name?.StartsWith("monitor ") == true ||

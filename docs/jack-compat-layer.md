@@ -4,7 +4,7 @@
 
 Jack ports are not auto routed with wireplumber. Sonic Eddy provides jack input
 ports to circumvent this issue. Jack Input Ports are created in
-`Tools -> Jack Input Ports`. Once a jack input port is created, Sonic Eddy
+`Audio -> Jack Input Ports`. Once a jack input port is created, Sonic Eddy
 creates a loopback module. Both, the playback, and the capture node of the
 module need to linger (`linger = true`).
 
@@ -24,6 +24,6 @@ to create the links.
 
 ## User Interface
 
-The user interface is a window, accessible through the tools window. It shows a
+The user interface is a window, accessible through the Audio menu. It shows a
 list of jack ports, and allows adding, and deleting them. It shows all ports,
 even the ones not connected, but shows the connection state for every port.

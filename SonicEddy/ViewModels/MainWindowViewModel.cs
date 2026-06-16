@@ -18,6 +18,7 @@ using SonicEddy.Tools;
 using SonicEddy.Services.MixerViewModels;
 using SonicEddy.Services.Preferences;
 using SonicEddy.Services.RecordingPickUp;
+using SonicEddy.Services.JackInputPorts;
 using SonicEddy.Services.VirtualInputs;
 using SonicEddy.Services.VirtualOutputs;
 using SonicEddy.Services.Wireplumber;
@@ -39,6 +40,7 @@ using SonicEddy.ViewModels.MonitoringViewModels;
 using SonicEddy.ViewModels.TransportViewModels;
 using SonicEddy.ViewModels.GlobalMasterViewModels;
 using SonicEddy.ViewModels.RecordingPickUpViewModels;
+using SonicEddy.ViewModels.JackInputPortsViewModels;
 using SonicEddy.ViewModels.VirtualInputsViewModels;
 using SonicEddy.ViewModels.VirtualOutputsViewModels;
 using SonicEddy.Views.FilterGraphManagerViews;
@@ -57,6 +59,7 @@ using SonicEddy.Views.MixerPersistenceViews;
 using SonicEddy.Views.SynchronizationViews;
 using SonicEddy.Views.MonitoringViews;
 using SonicEddy.Views.RecordingPickUpViews;
+using SonicEddy.Views.JackInputPortsViews;
 using SonicEddy.Views.VirtualInputsViews;
 using SonicEddy.Views.VirtualOutputsViews;
 using Splat;
@@ -134,6 +137,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     private Window? _filterGraphWindow;
     private Window? _virtualInputsWindow;
     private Window? _virtualOutputsWindow;
+    private Window? _jackInputPortsWindow;
     private Window? _recordingPickUpsWindow;
     private Window? _preferencesWindow;
     private Window? _synchronizationWindow;
@@ -763,6 +767,28 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         };
 
         _virtualOutputsWindow.Show();
+    }
+
+    public void ShowJackInputPortsWindow()
+    {
+        _logger.LogTrace("ShowJackInputPortsWindow");
+
+        if (_jackInputPortsWindow is not null &&
+            _jackInputPortsWindow.IsVisible) return;
+
+        var jackInputPortService =
+            Locator.Current.GetService<IJackInputPortService>();
+        var wireplumberService =
+            Locator.Current.GetService<IWireplumberService>();
+
+        _jackInputPortsWindow = new JackInputPortsWindow
+        {
+            DataContext = new JackInputPortsViewModel(
+                jackInputPortService!,
+                wireplumberService!)
+        };
+
+        _jackInputPortsWindow.Show();
     }
 
     public void ShowRecordingPickUpsWindow()

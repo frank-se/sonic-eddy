@@ -1,0 +1,59 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:jackInputPortsViewModels="clr-namespace:SonicEddy.ViewModels.JackInputPortsViewModels"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        Width="700" Height="500"
+        x:Class="SonicEddy.Views.JackInputPortsViews.JackInputPortsWindow"
+        x:DataType="jackInputPortsViewModels:JackInputPortsViewModel"
+        Title="JACK Input Ports">
+
+    <DockPanel>
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="_File">
+                <MenuItem Header="_New" Command="{Binding AddJackInputPort}" />
+            </MenuItem>
+        </Menu>
+
+        <DataGrid ItemsSource="{Binding JackInputPorts}"
+                  AutoGenerateColumns="False"
+                  CanUserReorderColumns="True"
+                  CanUserResizeColumns="True"
+                  CanUserSortColumns="True"
+                  GridLinesVisibility="All"
+                  VerticalAlignment="Stretch"
+                  HorizontalAlignment="Stretch"
+                  SelectionMode="Single">
+
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Name"
+                                    Binding="{Binding Port.Name}"
+                                    IsReadOnly="True" />
+
+                <DataGridTextColumn Header="Client Name"
+                                    Binding="{Binding Port.ClientName}"
+                                    IsReadOnly="True" />
+
+                <DataGridTextColumn Header="JACK Ports"
+                                    Binding="{Binding JackPorts}"
+                                    IsReadOnly="True" />
+
+                <DataGridCheckBoxColumn Header="Connected"
+                                        Binding="{Binding IsConnected}"
+                                        IsReadOnly="True" />
+
+                <DataGridTemplateColumn Header="">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Button Content="Delete"
+                                    Command="{Binding $parent[Window].((jackInputPortsViewModels:JackInputPortsViewModel)DataContext).DeleteJackInputPort}"
+                                    CommandParameter="{Binding}" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+
+        </DataGrid>
+    </DockPanel>
+</Window>

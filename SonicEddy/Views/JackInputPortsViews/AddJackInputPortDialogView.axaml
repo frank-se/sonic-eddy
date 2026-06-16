@@ -1,0 +1,83 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:jackInputPortsViewModels="clr-namespace:SonicEddy.ViewModels.JackInputPortsViewModels"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        Width="400" Height="340"
+        x:Class="SonicEddy.Views.JackInputPortsViews.AddJackInputPortDialogView"
+        x:DataType="jackInputPortsViewModels:AddJackInputPortDialogViewModel"
+        Title="Add JACK Input Port">
+
+    <StackPanel>
+        <Grid ColumnDefinitions="Auto,*"
+              RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+            <Label Grid.Row="0"
+                   Grid.Column="0"
+                   Target="NameTextBox"
+                   Content="Name" />
+
+            <TextBox Grid.Row="0"
+                     Grid.Column="1"
+                     x:Name="NameTextBox"
+                     Text="{Binding Name}" />
+
+            <Label Grid.Row="1"
+                   Grid.Column="0"
+                   Target="NodeComboBox"
+                   Content="JACK Client" />
+
+            <ComboBox Grid.Row="1"
+                      Grid.Column="1"
+                      x:Name="NodeComboBox"
+                      DisplayMemberBinding="{Binding Client.Name}"
+                      ItemsSource="{Binding PotentialNodes}"
+                      SelectedItem="{Binding SelectedNode}" />
+
+            <Label Grid.Row="2"
+                   Grid.Column="0"
+                   Content="Mono" />
+
+            <CheckBox Grid.Row="2"
+                      Grid.Column="1"
+                      IsChecked="{Binding IsMono}" />
+
+            <Label Grid.Row="3"
+                   Grid.Column="0"
+                   Target="LeftPortComboBox"
+                   Content="Left Port" />
+
+            <ComboBox Grid.Row="3"
+                      Grid.Column="1"
+                      x:Name="LeftPortComboBox"
+                      DisplayMemberBinding="{Binding Alias}"
+                      ItemsSource="{Binding PotentialPorts}"
+                      SelectedItem="{Binding SelectedLeftPort}" />
+
+            <Label Grid.Row="4"
+                   Grid.Column="0"
+                   Target="RightPortComboBox"
+                   Content="Right Port"
+                   IsVisible="{Binding !IsMono}" />
+
+            <ComboBox Grid.Row="4"
+                      Grid.Column="1"
+                      x:Name="RightPortComboBox"
+                      DisplayMemberBinding="{Binding Alias}"
+                      ItemsSource="{Binding PotentialPorts}"
+                      SelectedItem="{Binding SelectedRightPort}"
+                      IsVisible="{Binding !IsMono}" />
+        </Grid>
+
+        <StackPanel Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Spacing="8"
+                    Margin="4">
+            <Button Content="Cancel"
+                    Command="{Binding Cancel}" />
+            <Button Content="Add"
+                    Command="{Binding Add}"
+                    IsEnabled="{Binding IsButtonEnabled}" />
+        </StackPanel>
+    </StackPanel>
+</Window>

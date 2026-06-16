@@ -16,6 +16,7 @@ public interface IWireplumberService
     
     List<Node> GetPlaybackNodes();
     List<Node> GetCaptureNodes();
+    List<Node> GetJackNodes();
 
     bool IsPlaybackNode(Node node);
     bool IsCaptureNode(Node node);
