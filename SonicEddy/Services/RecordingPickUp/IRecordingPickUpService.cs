@@ -10,8 +10,10 @@ public interface IRecordingPickUpService
 {
     List<RecordingPickUp> PickUps { get; }
     event Action<RecordingPickUp>? Added;
+    event Action<RecordingPickUp>? Deleted;
     Task InitializeAsync();
     Task AddPickUp(string name, MonitoringChannelKey sourceKey, MonitoringSource sourcePosition, Node destNode);
+    Task DeletePickUp(RecordingPickUp pickUp);
     void SetActive(Guid id, bool active);
     void SetTrim(Guid id, double trim);
 }

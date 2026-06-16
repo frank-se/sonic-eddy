@@ -11,6 +11,7 @@ public class RecordingPickUpViewModel : ViewModelBase
     public RecordingPickUpViewModel(RecordingPickUp pickUp, IRecordingPickUpService service)
     {
         _service = service;
+        PickUp = pickUp;
         Id = pickUp.Id;
         Name = pickUp.Name;
         _isActive = pickUp.IsActive;
@@ -19,6 +20,7 @@ public class RecordingPickUpViewModel : ViewModelBase
         DestLabel = pickUp.DestNode.Description ?? pickUp.DestNode.Name ?? "—";
     }
 
+    public RecordingPickUp PickUp { get; }
     public Guid Id { get; }
     public string Name { get; }
     public string SourceLabel { get; }

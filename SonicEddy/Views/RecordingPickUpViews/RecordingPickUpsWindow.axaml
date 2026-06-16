@@ -24,7 +24,7 @@
                         <Border Padding="10,8"
                                 BorderThickness="0,0,0,1"
                                 BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
-                            <Grid ColumnDefinitions="Auto,*,180"
+                            <Grid ColumnDefinitions="Auto,*,180,Auto"
                                   ColumnSpacing="10">
                                 <CheckBox Grid.Column="0"
                                           VerticalAlignment="Center"
@@ -49,6 +49,12 @@
                                                     Maximum="1"
                                                     Height="36"
                                                     Background="DimGray" />
+
+                                <Button Grid.Column="3"
+                                        Content="Delete"
+                                        VerticalAlignment="Center"
+                                        Command="{Binding $parent[Window].((vm:RecordingPickUpsViewModel)DataContext).DeletePickUp}"
+                                        CommandParameter="{Binding}" />
                             </Grid>
                         </Border>
                     </DataTemplate>

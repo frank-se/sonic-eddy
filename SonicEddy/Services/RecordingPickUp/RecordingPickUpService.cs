@@ -37,6 +37,7 @@ public class RecordingPickUpService(
 
     public List<RecordingPickUp> PickUps { get; } = [];
     public event Action<RecordingPickUp>? Added;
+    public event Action<RecordingPickUp>? Deleted;
 
     public async Task InitializeAsync()
     {
@@ -84,6 +85,20 @@ public class RecordingPickUpService(
                 SourcePickUpPosition = (int)sourcePosition
             });
 
+        await StoreConfigAsync();
+    }
+
+    public async Task DeletePickUp(RecordingPickUp pickUp)
+    {
+        lock (_lock)
+        {
+            _activePickUps.Remove(pickUp.Id);
+            _configuredEntries.RemoveAll(e => e.Id == pickUp.Id);
+        }
+
+        PickUps.Remove(pickUp);
+        pickUp.Loopback.Destroy();
+        Deleted?.Invoke(pickUp);
         await StoreConfigAsync();
     }
 

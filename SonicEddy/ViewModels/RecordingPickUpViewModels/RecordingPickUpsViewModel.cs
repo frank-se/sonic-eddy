@@ -22,6 +22,7 @@ public class RecordingPickUpsViewModel : ViewModelBase, IDisposable
         _service = service;
         _wireplumberService = wireplumberService;
         _service.Added += OnPickUpAdded;
+        _service.Deleted += OnPickUpDeleted;
 
         PickUps.AddRange(_service.PickUps.Select(p => new RecordingPickUpViewModel(p, _service)));
     }
@@ -50,12 +51,25 @@ public class RecordingPickUpsViewModel : ViewModelBase, IDisposable
         viewModel.Dispose();
     }
 
+    public async Task DeletePickUp(RecordingPickUpViewModel viewModel)
+    {
+        await _service.DeletePickUp(viewModel.PickUp);
+    }
+
     private void OnPickUpAdded(RecordingPickUp pickUp) =>
         PickUps.Add(new RecordingPickUpViewModel(pickUp, _service));
+
+    private void OnPickUpDeleted(RecordingPickUp pickUp)
+    {
+        var vm = PickUps.FirstOrDefault(v => ReferenceEquals(v.PickUp, pickUp));
+        if (vm is not null)
+            PickUps.Remove(vm);
+    }
 
     public void Dispose()
     {
         _service.Added -= OnPickUpAdded;
+        _service.Deleted -= OnPickUpDeleted;
         GC.SuppressFinalize(this);
     }
 }
