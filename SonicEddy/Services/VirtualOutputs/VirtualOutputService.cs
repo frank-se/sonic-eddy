@@ -111,7 +111,27 @@ public sealed class VirtualOutputService(
         Added?.Invoke(virtualOutput);
     }
 
+    public async Task DeleteVirtualOutput(VirtualOutput virtualOutput)
+    {
+        lock (_lock)
+        {
+            var config = _configuredOutputs.FirstOrDefault(c =>
+                c.Name == virtualOutput.Name);
+            if (config is not null)
+            {
+                _activeOutputs.Remove(config.Id);
+                _configuredOutputs.Remove(config);
+            }
+        }
+
+        VirtualOutputs.Remove(virtualOutput);
+        virtualOutput.Loopback.Destroy();
+        Deleted?.Invoke(virtualOutput);
+        await StoreConfigAsync();
+    }
+
     public event Action<VirtualOutput>? Added;
+    public event Action<VirtualOutput>? Deleted;
 
     private async Task ApplyConfiguredOutputsAsync()
     {

@@ -22,6 +22,7 @@ public sealed class VirtualOutputsViewModel : ViewModelBase, IDisposable
         _wireplumberService = wireplumberService;
         _virtualOutputService = virtualOutputService;
         _virtualOutputService.Added += OnVirtualOutputAdded;
+        _virtualOutputService.Deleted += OnVirtualOutputDeleted;
 
         VirtualOutputs.AddRange(
             _virtualOutputService.VirtualOutputs.Select(output =>
@@ -53,12 +54,26 @@ public sealed class VirtualOutputsViewModel : ViewModelBase, IDisposable
         }
     }
 
+    public async Task DeleteVirtualOutput(VirtualOutputViewModel viewModel)
+    {
+        await _virtualOutputService.DeleteVirtualOutput(viewModel.VirtualOutput);
+    }
+
     private void OnVirtualOutputAdded(VirtualOutput output) =>
         VirtualOutputs.Add(new(output));
+
+    private void OnVirtualOutputDeleted(VirtualOutput output)
+    {
+        var vm = VirtualOutputs.FirstOrDefault(v =>
+            ReferenceEquals(v.VirtualOutput, output));
+        if (vm is not null)
+            VirtualOutputs.Remove(vm);
+    }
 
     public void Dispose()
     {
         _virtualOutputService.Added -= OnVirtualOutputAdded;
+        _virtualOutputService.Deleted -= OnVirtualOutputDeleted;
         GC.SuppressFinalize(this);
     }
 }

@@ -13,5 +13,8 @@ public interface IVirtualOutputService
 
     Task AddVirtualOutput(string name, Node node, Port[] ports);
 
+    Task DeleteVirtualOutput(VirtualOutput virtualOutput);
+
     event Action<VirtualOutput>? Added;
+    event Action<VirtualOutput>? Deleted;
 }
