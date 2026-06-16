@@ -92,6 +92,8 @@ struct wireplumber_object {
   const char *clock_name = nullptr;
 
   uint64_t client_id = 0;
+  const char *client_api = nullptr;
+  const char *client_name = nullptr;
 
   const char *debug_wav_path = "";
 

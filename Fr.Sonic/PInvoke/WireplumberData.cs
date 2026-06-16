@@ -151,6 +151,8 @@ internal struct WireplumberData()
     internal IntPtr clock_name;
 
     internal ulong client_id = 0;
+    internal IntPtr client_api;
+    internal IntPtr client_name;
 
     internal IntPtr debug_wav_path;
 

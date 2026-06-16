@@ -138,6 +138,8 @@ void models::objects::fill_node_from_object(wireplumber_object &node, WpPipewire
   fill_double(node.channel_mix_hilbert_taps, object, "channelmix.hilbert-taps");
 
   fill_uint64(node.client_id, object, PW_KEY_CLIENT_ID);
+  node.client_api = read_string(object, PW_KEY_CLIENT_API);
+  node.client_name = read_string(object, PW_KEY_CLIENT_NAME);
 
   fill_uint64(node.device_id, object, PW_KEY_DEVICE_ID);
   fill_uint64(node.device_plugged, object, PW_KEY_DEVICE_PLUGGED);

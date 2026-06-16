@@ -363,7 +363,7 @@ public record LoopNode(string? Class, string? Name);
 /// Id of the client the node belongs to
 /// </summary>
 /// <param name="Id">Object Id of the client</param>
-public record ClientNode(ulong Id);
+public record ClientNode(ulong Id, string? Api, string? Name);
 
 /// <summary>
 /// Pmx internal information, this is used to find the nodes for the modules it
@@ -676,7 +676,8 @@ public record Node(
             ),
             new(data.clock_name.ConvertToString()),
             data.client_id != 0
-                ? new(data.client_id)
+                ? new(data.client_id, data.client_api.ConvertToString(),
+                    data.client_name.ConvertToString())
                 : null,
             new(data.debug_wav_path.ConvertToString()),
             data.device_id != 0
