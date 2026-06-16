@@ -5,6 +5,7 @@ using SonicEddy.Contracts.FilterGraph;
 using SonicEddy.Contracts.MidiRouter;
 using SonicEddy.Contracts.MidiSync;
 using SonicEddy.Contracts.Mixers;
+using SonicEddy.Contracts.JackInputPorts;
 using SonicEddy.Contracts.VirtualInputs;
 using SonicEddy.Contracts.VirtualOutputs;
 using SonicEddy.Contracts.ClickSync;
@@ -49,6 +50,10 @@ public interface IAppDataService
     Task StoreVirtualOutputsConfig(VirtualOutputsConfig config);
 
     Task<VirtualOutputsConfig?> LoadVirtualOutputsConfig();
+
+    Task StoreJackInputPortsConfig(JackInputPortsConfig config);
+
+    Task<JackInputPortsConfig?> LoadJackInputPortsConfig();
 
     Task StoreClickSyncConfig(ClickSyncConfig config);
 

@@ -8,6 +8,7 @@ using SonicEddy.Contracts.FilterGraph;
 using SonicEddy.Contracts.MidiRouter;
 using SonicEddy.Contracts.MidiSync;
 using SonicEddy.Contracts.Mixers;
+using SonicEddy.Contracts.JackInputPorts;
 using SonicEddy.Contracts.VirtualInputs;
 using SonicEddy.Contracts.VirtualOutputs;
 using SonicEddy.Contracts.ClickSync;
@@ -163,6 +164,26 @@ public class AppDataService(
         var bytes = await File.ReadAllBytesAsync(filePath);
         using var memoryStream = new MemoryStream(bytes);
         return Serializer.Deserialize<VirtualOutputsConfig>(memoryStream);
+    }
+
+    public async Task StoreJackInputPortsConfig(JackInputPortsConfig config)
+    {
+        var filePath =
+            Path.Combine(preferencesFolderPath, "jack-input-ports.grpc");
+        await using var file = File.Create(filePath);
+        Serializer.Serialize(file, config);
+        await file.FlushAsync();
+    }
+
+    public async Task<JackInputPortsConfig?> LoadJackInputPortsConfig()
+    {
+        var filePath =
+            Path.Combine(preferencesFolderPath, "jack-input-ports.grpc");
+        if (!File.Exists(filePath)) return null;
+
+        var bytes = await File.ReadAllBytesAsync(filePath);
+        using var memoryStream = new MemoryStream(bytes);
+        return Serializer.Deserialize<JackInputPortsConfig>(memoryStream);
     }
 
     public async Task StoreClickSyncConfig(ClickSyncConfig config)

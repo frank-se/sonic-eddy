@@ -22,6 +22,7 @@ using SonicEddy.Services.Monitoring;
 using SonicEddy.Services.Preferences;
 using SonicEddy.Services.RecordingPickUp;
 using SonicEddy.Services.VirtualInputs;
+using SonicEddy.Services.JackInputPorts;
 using SonicEddy.Services.VirtualOutputs;
 using SonicEddy.Services.TraktorZ1;
 using SonicEddy.Services.Wireplumber;
@@ -125,6 +126,12 @@ public class App : Application
         Locator.CurrentMutable.Register<IVirtualOutputService>(() =>
             virtualOutputService);
         _ = virtualOutputService.InitializeAsync();
+
+        var jackInputPortService =
+            new JackInputPortService(appDataService, wireplumberService);
+        Locator.CurrentMutable.Register<IJackInputPortService>(() =>
+            jackInputPortService);
+        _ = jackInputPortService.InitializeAsync();
 
         var monitoringService = new MonitoringService(FrSonic.Monitor,
             loggerFactory.CreateLogger<MonitoringService>());

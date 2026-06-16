@@ -6,6 +6,7 @@ using Fr.Sonic.Model.Config.LoopbackModule;
 using Fr.Sonic.Model.Objects;
 using Fr.Sonic.Modules.Models;
 using SonicEddy.Services.DrumMixer;
+using SonicEddy.Services.JackInputPorts;
 using SonicEddy.Services.VirtualInputs;
 using SonicEddy.Services.VirtualOutputs;
 
@@ -48,7 +49,8 @@ public class WireplumberService : IWireplumberService, IDisposable
         (!string.IsNullOrEmpty(node.Pmx.Tag) &&
          node.Name != DrumMixerService.PlaybackNodeName &&
          !VirtualInputService.IsVirtualInputPlaybackNode(node) &&
-         !VirtualOutputService.IsVirtualOutputCaptureNode(node));
+         !VirtualOutputService.IsVirtualOutputCaptureNode(node) &&
+         !JackInputPortService.IsJackInputPortPlaybackNode(node));
 
     public bool IsPlaybackNode(Node node) =>
         node.Media.Class is "Audio/Source" or "Stream/Output/Audio";

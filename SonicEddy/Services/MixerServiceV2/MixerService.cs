@@ -13,6 +13,7 @@ using SonicEddy.Services.AppData;
 using SonicEddy.Services.ExternalEffects;
 using SonicEddy.Services.DrumMixer;
 using SonicEddy.Services.Midi;
+using SonicEddy.Services.JackInputPorts;
 using SonicEddy.Services.VirtualInputs;
 using SonicEddy.Services.VirtualOutputs;
 using SonicEddy.Services.Preferences;
@@ -752,7 +753,8 @@ public class MixerService : IMixerService, IDisposable
         (!string.IsNullOrEmpty(node.Pmx.Tag) &&
          node.Name != DrumMixerService.PlaybackNodeName &&
          !VirtualInputService.IsVirtualInputPlaybackNode(node) &&
-         !VirtualOutputService.IsVirtualOutputCaptureNode(node));
+         !VirtualOutputService.IsVirtualOutputCaptureNode(node) &&
+         !JackInputPortService.IsJackInputPortPlaybackNode(node));
 
     private async Task ProcessNodeAddedEvent(Node node)
     {
