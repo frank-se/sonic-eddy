@@ -101,9 +101,6 @@ void registry::Node::set_volume(const double value) {
         "Node {} needs to catch up from {} to {}", _object_id, value,
         current_pan_and_volume->volume);
 
-    logging::log<logging::LogLevel::Debug>(
-        "Calling controller update callback");
-
     _controller_update_callback(_channel_type, _channel_id, _object_id,
                                 "channel_volumes", static_cast<float>(value),
                                 current_pan_and_volume->volume, true);

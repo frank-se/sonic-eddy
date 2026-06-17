@@ -184,6 +184,37 @@ main {
   font-size: 0.9rem;
 }
 
+/* Callouts (GitHub-style alerts) */
+.markdown-alert {
+  border-left: 4px solid;
+  border-radius: 0 6px 6px 0;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  background: var(--bg-card);
+}
+
+.markdown-alert p { margin-bottom: 0; }
+.markdown-alert p + p { margin-top: 0.5rem; }
+
+.markdown-alert-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.35rem !important;
+  text-transform: capitalize;
+}
+
+.markdown-alert-note   { border-color: #4a9eff; }
+.markdown-alert-tip    { border-color: #3fb950; }
+.markdown-alert-important { border-color: #a371f7; }
+.markdown-alert-warning   { border-color: #d29922; }
+.markdown-alert-caution   { border-color: #f85149; }
+
+.markdown-alert-note    .markdown-alert-title { color: #4a9eff; }
+.markdown-alert-tip     .markdown-alert-title { color: #3fb950; }
+.markdown-alert-important .markdown-alert-title { color: #a371f7; }
+.markdown-alert-warning   .markdown-alert-title { color: #d29922; }
+.markdown-alert-caution   .markdown-alert-title { color: #f85149; }
+
 /* Footer */
 footer {
   border-top: 1px solid var(--border);

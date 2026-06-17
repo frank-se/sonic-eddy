@@ -26,6 +26,21 @@
   <footer>
     <p>Sonic Eddy &mdash; <a href="https://git.sr.ht/~frank6/sonic-eddy">Source</a></p>
   </footer>
+  <script>
+    document.querySelectorAll('blockquote > p:first-child').forEach(p => {
+      const m = p.textContent.match(/^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*/i);
+      if (!m) return;
+      const kind = m[1].toLowerCase();
+      const bq = p.parentElement;
+      bq.classList.add('markdown-alert', `markdown-alert-${kind}`);
+      const title = document.createElement('p');
+      title.className = 'markdown-alert-title';
+      title.textContent = m[1].charAt(0) + m[1].slice(1).toLowerCase();
+      p.textContent = p.textContent.slice(m[0].length);
+      bq.insertBefore(title, p);
+      if (!p.textContent.trim()) p.remove();
+    });
+  </script>
   <script type="module">
     import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
     mermaid.initialize({ startOnLoad: false, theme: 'dark' });

@@ -1,5 +1,8 @@
 # Jack Compatibility features
 
+Sonic Eddy heavily relies on wireplumber, which, as a design decision, doesn't
+support routing of wireplumber nodes.
+
 ## Jack Input Ports
 
 Jack ports are not auto routed with wireplumber. Sonic Eddy provides jack input
