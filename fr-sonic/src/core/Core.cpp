@@ -320,7 +320,8 @@ void Core::g_signal_object_removed_callback(WpObjectManager *object_manager,
     }
   }
 
-  const auto wireplumber_object = static_cast<WpPipewireObject *>(object);
+  if (!WP_IS_PIPEWIRE_OBJECT(object)) return;
+  const auto wireplumber_object = WP_PIPEWIRE_OBJECT(object);
 
   const char *object_serial_string =
       wp_pipewire_object_get_property(wireplumber_object, PW_KEY_OBJECT_SERIAL);

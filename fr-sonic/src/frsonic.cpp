@@ -351,6 +351,11 @@ void frsonic_stop() {
     // All background threads are joined, and Looper::stop no longer performs
     // a nested blocking invoke while the loop lock is held.
     auto cleanup_owned_objects = [] {
+      for (auto &ducker : g_duckers)
+        if (ducker) ducker->stop();
+      g_duckers.clear();
+      g_free_ducker_handles.clear();
+
       logging::log<logging::LogLevel::Trace>("frsonic_stop: stopping loopers");
       for (auto &looper : g_loopers)
         if (looper) looper->stop();

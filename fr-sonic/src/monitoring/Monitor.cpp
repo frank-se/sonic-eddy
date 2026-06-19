@@ -86,4 +86,14 @@ void monitoring::Monitor::stop_updates_thread() {
 }
 
 void monitoring::Monitor::start() { start_updates_thread(); }
-void monitoring::Monitor::stop()  { stop_updates_thread(); }
+
+void monitoring::Monitor::stop() {
+  stop_updates_thread();
+
+  std::lock_guard lock(_monitoring_streams_mutex);
+  for (auto &stream : _monitoring_streams) {
+    pw_loop_invoke(_loop, destroy_stream_function, SPA_ID_INVALID,
+                   nullptr, 0, true, stream.get());
+  }
+  _monitoring_streams.clear();
+}
