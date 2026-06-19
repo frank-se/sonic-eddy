@@ -148,21 +148,23 @@ public sealed class MidiRouterService : IMidiRouterService, IDisposable
     {
         MidiRoute? route;
         lock (_lock)
-            route = _routes.FirstOrDefault(route => route.Id == routeId);
-        if (route is null)
-            return;
+            route = _routes.FirstOrDefault(r => r.Id == routeId);
 
-        foreach (var linkId in route.OwnedLinkIds)
+        if (route is not null)
         {
-            var link = FrSonic.LinkRegistry.GetByObjectId(linkId);
-            if (link is not null)
-                FrSonic.LinkFactory.DeleteLink(link);
+            foreach (var linkId in route.OwnedLinkIds)
+            {
+                var link = FrSonic.LinkRegistry.GetByObjectId(linkId);
+                if (link is not null)
+                    FrSonic.LinkFactory.DeleteLink(link);
+            }
+            route.Manipulator?.Destroy();
         }
 
-        route.Manipulator?.Destroy();
         lock (_lock)
         {
-            _routes.Remove(route);
+            if (route is not null)
+                _routes.Remove(route);
             _configuredRoutes.RemoveAll(config => config.Id == routeId);
         }
 
