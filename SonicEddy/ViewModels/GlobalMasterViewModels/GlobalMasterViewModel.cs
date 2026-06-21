@@ -2,21 +2,21 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 using Fr.Sonic.Model.Objects;
 using Fr.Sonic.Model.Params;
 using ReactiveUI;
-using SonicEddy.Services.MixerServiceV2;
-using SonicEddy.Services.TraktorZ1;
-using SonicEddy.ViewModels.MixerViewModelsV2;
-using SonicEddy.Contracts.Mixers;
 using SonicEddy.Contracts.FilterGraph;
+using SonicEddy.Contracts.Mixers;
+using SonicEddy.Controls.MixerControls;
 using SonicEddy.Services.AppData;
 using SonicEddy.Services.ExternalEffects;
+using SonicEddy.Services.MixerServiceV2;
+using SonicEddy.Services.TraktorZ1;
 using SonicEddy.Tools;
+using SonicEddy.ViewModels.MixerViewModelsV2;
 using SonicEddy.Views.MixerViewsV2;
-using SonicEddy.Controls.MixerControls;
 using Splat;
-using System.Threading.Tasks;
 using UiParameter = SonicEddy.Controls.MixerControls.IParameter;
 
 namespace SonicEddy.ViewModels.GlobalMasterViewModels;
@@ -33,17 +33,27 @@ public class GlobalMasterViewModel : ReactiveObject, IDisposable
 
     public GlobalMasterViewModel(GlobalMasterChannel globalMaster,
         MasterChannelViewModel layerA, MasterChannelViewModel layerB,
-        CueChannel? cue)
+        CueChannel? cue,
+        ObservableCollection<IRoutingTarget> audioToRoutingTargets)
     {
-
         LayerA = layerA;
         LayerB = layerB;
         HasCue = cue is not null;
+        AudioToRoutingTargets = audioToRoutingTargets;
         _mixerService = Locator.Current.GetService<IMixerService>()!;
         _appDataService = Locator.Current.GetService<IAppDataService>()!;
         _externalEffects =
             Locator.Current.GetService<IExternalEffectService>()!;
         SetProcessorState(globalMaster.InsertProcessor);
+
+        _internal = true;
+        SelectedAudioToRoutingTarget = audioToRoutingTargets.FirstOrDefault(
+            t => t.Channel is OutputChannelViewModel output &&
+                 globalMaster.OutputTargetObject is not null &&
+                 output.CaptureNodeObjectSerial ==
+                 globalMaster.OutputTargetObject.ObjectSerial)
+            ?? audioToRoutingTargets.FirstOrDefault();
+        _internal = false;
 
         _xfadeNode = globalMaster.CrossFader.CaptureNode;
         _xfadeNode.ParamsChanged += OnXfadeParamsChanged;
@@ -92,6 +102,20 @@ public class GlobalMasterViewModel : ReactiveObject, IDisposable
     public MasterChannelViewModel LayerB { get; }
     public CueChannelViewModel? CueChannel { get; }
     public bool HasCue { get; }
+    public ObservableCollection<IRoutingTarget> AudioToRoutingTargets { get; }
+
+    public IRoutingTarget? SelectedAudioToRoutingTarget
+    {
+        get;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref field, value);
+            if (!_internal && value?.Channel is OutputChannelViewModel output)
+                _mixerService.SetGlobalMasterOutputTarget(
+                    output.CaptureNodeObjectSerial);
+        }
+    }
+
     public string XfadeNodeSerial => _xfadeNode.ObjectSerial.ToString();
     public string? CueNodeSerial => _cueNode?.ObjectSerial.ToString();
 

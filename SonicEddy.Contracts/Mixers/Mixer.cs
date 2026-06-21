@@ -13,6 +13,7 @@ public sealed class Mixer
     [ProtoMember(5)] public CrossFaderConfig CueCrossFader { get; set; } = new();
     [ProtoMember(6)] public CueChannelConfig Cue { get; set; } = new();
     [ProtoMember(7)] public InsertProcessorConfig? GlobalMasterInsert { get; set; }
+    [ProtoMember(8)] public string? GlobalMasterAudioToNodeName { get; set; }
 }
 
 [ProtoContract]

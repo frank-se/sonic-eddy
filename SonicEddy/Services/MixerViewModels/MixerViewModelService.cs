@@ -84,24 +84,9 @@ public class MixerViewModelService(
                 outputChannels.Select(c =>
                     new RoutingTargetViewModel(c.Name, c)));
 
-            var masterSelectedRoutingTarget =
-                audioToRoutingTargetsMasterChannel.FirstOrDefault(target =>
-                {
-                    if (target.Channel is not OutputChannelViewModel output)
-                        return false;
-
-                    if (layer.MasterChannel.OutputTargetObject is null)
-                        return false;
-
-                    return output.CaptureNodeObjectSerial == layer.MasterChannel
-                        .OutputTargetObject.ObjectSerial;
-                });
-
             var masterChannel = ConvertMasterChannel(layerId,
                 layer.MasterChannel,
-                selectChannelCommand, audioToRoutingTargetsMasterChannel,
-                masterSelectedRoutingTarget ??
-                audioToRoutingTargetsMasterChannel.First());
+                selectChannelCommand);
 
             mixerModel.MasterChannels = [masterChannel];
 
@@ -235,14 +220,10 @@ public class MixerViewModelService(
 
     private MasterChannelViewModel ConvertMasterChannel(int layerId,
         MasterChannel channel,
-        ICommand selectedChannelCommand,
-        ObservableCollection<IRoutingTarget> audioToRoutingTargets,
-        IRoutingTarget selectedAudioToRoutingTarget
+        ICommand selectedChannelCommand
     ) => new(channel.ChannelId, channel.Name,
         selectedChannelCommand, channel.InputLoopback,
         channel.OutputLoopback, channel.FilterChain, channel.FilterGraph,
-        audioToRoutingTargets,
-        selectedAudioToRoutingTarget,
         appDataService, mixerService, channel, monitoringService, layerId,
         controllerSetupService, traktorZ1SetupService);
 

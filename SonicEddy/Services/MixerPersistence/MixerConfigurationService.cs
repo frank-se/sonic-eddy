@@ -56,7 +56,9 @@ public sealed class MixerConfigurationService : IDisposable
             Pan = globalMaster.CueChannel?.PanAndVolume.Pan ?? 0.0,
             Volume = globalMaster.CueChannel?.PanAndVolume.Volume ?? 1.0
         },
-        GlobalMasterInsert = globalMaster.CaptureInsertProcessor()
+        GlobalMasterInsert = globalMaster.CaptureInsertProcessor(),
+        GlobalMasterAudioToNodeName =
+            GetRoutingNodeName(globalMaster.SelectedAudioToRoutingTarget)
     };
 
     public Mixer CreateDefault(MixerLayerViewModel layerA,
@@ -308,10 +310,18 @@ public sealed class MixerConfigurationService : IDisposable
                 if (channel is not null)
                     ApplyAudioTo(config.AudioToNodeName, channel, layer);
             }
+        }
 
-            if (layer.MasterChannels?.OfType<MasterChannelViewModel>()
-                    .FirstOrDefault() is { } master)
-                ApplyAudioTo(layerConfig.Master.AudioToNodeName, master, layer);
+        var globalMasterAudioToNodeName =
+            _pendingConfiguration.GlobalMasterAudioToNodeName
+            ?? _pendingConfiguration.Layers.FirstOrDefault()?.Master.AudioToNodeName;
+        if (globalMasterAudioToNodeName is not null)
+        {
+            var target = _globalMaster.AudioToRoutingTargets.FirstOrDefault(
+                candidate => GetRoutingNodeName(candidate) ==
+                             globalMasterAudioToNodeName);
+            if (target is not null)
+                _globalMaster.SelectedAudioToRoutingTarget = target;
         }
 
         var cue = _globalMaster.CueChannel;
@@ -342,7 +352,6 @@ public sealed class MixerConfigurationService : IDisposable
         if (nodeName is null) return;
         IEnumerable<IRoutingTarget> targets = channel switch
         {
-            MasterChannelViewModel => layer.AudioToRoutingTargetsMasterChannel,
             GroupChannelViewModel => layer.AudioToRoutingTargetsGroupChannels,
             _ => layer.AudioToRoutingTargetsChannelStrips
         };

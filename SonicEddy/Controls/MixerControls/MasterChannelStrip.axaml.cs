@@ -353,33 +353,6 @@ public partial class MasterChannelStrip : UserControl
         set => SetValue(ThirdPluginParametersMidiControlledProperty, value);
     }
 
-    /*
-     * Audio to routing box
-     */
-    public static readonly StyledProperty<ObservableCollection<IRoutingTarget>?>
-        AudioToRoutingTargetsProperty =
-            AvaloniaProperty
-                .Register<ChannelStrip, ObservableCollection<IRoutingTarget> ?>(
-                    nameof(AudioToRoutingTargets));
-
-    public ObservableCollection<IRoutingTarget>? AudioToRoutingTargets
-    {
-        get => GetValue(AudioToRoutingTargetsProperty);
-        set => SetValue(AudioToRoutingTargetsProperty, value);
-    }
-
-    public static readonly StyledProperty<IRoutingTarget?>
-        SelectedAudioToRoutingTargetProperty =
-            AvaloniaProperty.Register<ChannelStrip, IRoutingTarget?>(
-                nameof(SelectedAudioToRoutingTarget),
-                defaultBindingMode: BindingMode.TwoWay);
-
-    public IRoutingTarget? SelectedAudioToRoutingTarget
-    {
-        get => GetValue(SelectedAudioToRoutingTargetProperty);
-        set => SetValue(SelectedAudioToRoutingTargetProperty, value);
-    }
-
     public MasterChannelStrip()
     {
         InitializeComponent();

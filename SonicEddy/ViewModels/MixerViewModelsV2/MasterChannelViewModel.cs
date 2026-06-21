@@ -1,5 +1,4 @@
 using System;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reactive;
 using System.Reactive.Disposables;
@@ -34,8 +33,6 @@ public class MasterChannelViewModel : ChannelViewModelBase, IMasterChannel
         TwoNodePipewireModule outputLoopback,
         FilterChain? filterChain,
         FilterGraph? filterGraph,
-        ObservableCollection<IRoutingTarget> audioToRoutingTargets,
-        IRoutingTarget? selectedAudioToRoutingTarget,
         IAppDataService appDataService,
         IMixerService mixerService,
         MasterChannel masterChannel,
@@ -45,7 +42,7 @@ public class MasterChannelViewModel : ChannelViewModelBase, IMasterChannel
         ITraktorZ1SetupService traktorZ1SetupService)
         : base(channelId, text, selectChannelCommand,
             inputLoopback, outputLoopback, filterChain, filterGraph,
-            audioToRoutingTargets, selectedAudioToRoutingTarget,
+            [], null,
             appDataService, mixerService, monitoringService,
             true, layerId, midiControllerSetupService, ChannelType.Channel)
     {
@@ -114,12 +111,6 @@ public class MasterChannelViewModel : ChannelViewModelBase, IMasterChannel
             HasFilter = ExternalEffectId is not null;
             Parameters = null;
         }
-    }
-
-    protected override void ApplyAudioRoutingTarget(IRoutingTarget? routingTarget)
-    {
-        if (routingTarget?.Channel is not OutputChannelViewModel output) return;
-        _mixerService.SetGlobalMasterOutputTarget(output.CaptureNodeObjectSerial);
     }
 
     protected override void Dispose(bool disposing)

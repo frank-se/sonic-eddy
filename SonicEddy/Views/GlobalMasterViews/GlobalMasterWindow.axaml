@@ -55,8 +55,6 @@
                 RightAverage="{Binding PanAndVolume.RightAverage}"
                 LeftPeak="{Binding PanAndVolume.LeftPeak}"
                 RightPeak="{Binding PanAndVolume.RightPeak}"
-                AudioToRoutingTargets="{Binding AudioToRoutingTargets}"
-                SelectedAudioToRoutingTarget="{Binding SelectedAudioToRoutingTarget}"
                 IsFilterMidiControlled="{Binding IsFilterMidiControlled}"
                 FirstPluginParametersMidiControlled="{Binding FirstPluginSelectedForMidi}"
                 SecondPluginParametersMidiControlled="{Binding SecondPluginSelectedForMidi}"
@@ -86,8 +84,6 @@
                 RightAverage="{Binding PanAndVolume.RightAverage}"
                 LeftPeak="{Binding PanAndVolume.LeftPeak}"
                 RightPeak="{Binding PanAndVolume.RightPeak}"
-                AudioToRoutingTargets="{Binding AudioToRoutingTargets}"
-                SelectedAudioToRoutingTarget="{Binding SelectedAudioToRoutingTarget}"
                 IsFilterMidiControlled="{Binding IsFilterMidiControlled}"
                 FirstPluginParametersMidiControlled="{Binding FirstPluginSelectedForMidi}"
                 SecondPluginParametersMidiControlled="{Binding SecondPluginSelectedForMidi}"
@@ -106,6 +102,10 @@
                 BorderThickness="1"
                 BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
             <StackPanel Spacing="8">
+                <mixerControls:RoutingComboBox
+                    Text="Audio To"
+                    RoutingTargets="{Binding AudioToRoutingTargets}"
+                    SelectedRoutingTarget="{Binding SelectedAudioToRoutingTarget, Mode=TwoWay}" />
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <TextBlock Text="Post Global Master Insert:"
                                VerticalAlignment="Center" />

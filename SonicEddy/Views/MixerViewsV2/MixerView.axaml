@@ -174,8 +174,6 @@
                                                           RightAverage="{Binding PanAndVolume.RightAverage}"
                                                           LeftPeak="{Binding PanAndVolume.LeftPeak}"
                                                           RightPeak="{Binding PanAndVolume.RightPeak}"
-                                                          AudioToRoutingTargets="{Binding AudioToRoutingTargets}"
-                                                          SelectedAudioToRoutingTarget="{Binding SelectedAudioToRoutingTarget}"
                                                           IsFilterMidiControlled="{Binding IsFilterMidiControlled}"
                                                           FirstPluginParametersMidiControlled="{Binding FirstPluginSelectedForMidi}"
                                                           SecondPluginParametersMidiControlled="{Binding SecondPluginSelectedForMidi}"

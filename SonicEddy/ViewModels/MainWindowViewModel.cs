@@ -583,7 +583,8 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
             return null;
 
         _globalMasterViewModel = new(globalMaster, layerA, layerB,
-            mixerService?.CurrentMixer?.Cue);
+            mixerService?.CurrentMixer?.Cue,
+            LayerAViewModel!.AudioToRoutingTargetsMasterChannel);
         return _globalMasterViewModel;
     }
 
@@ -616,7 +617,8 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
                         is { } layerB)
                 {
                     _globalMasterViewModel = new(globalMaster, layerA, layerB,
-                        mixerService.CurrentMixer.Cue);
+                        mixerService.CurrentMixer.Cue,
+                        LayerAViewModel.AudioToRoutingTargetsMasterChannel);
 
                     var configurationService =
                         Locator.Current.GetService<MixerConfigurationService>();
