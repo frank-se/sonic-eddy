@@ -45,6 +45,7 @@ static std::vector<std::shared_ptr<midi::MidiManipulator>> g_midi_manipulators;
 static std::vector<std::shared_ptr<sesync::ClickSyncConverter>>
     g_click_sync_converters;
 static std::vector<size_t> g_free_click_sync_converter_handles;
+static std::vector<silence::SilenceProducer *> g_silence_producers;
 
 class OwnedPipewireRuntime {
 public:
@@ -363,6 +364,14 @@ void frsonic_stop() {
       g_loopers.clear();
       g_free_looper_handles.clear();
       logging::log<logging::LogLevel::Trace>("frsonic_stop: loopers done");
+
+      logging::log<logging::LogLevel::Trace>(
+          "frsonic_stop: destroying silence producers");
+      for (auto *producer : g_silence_producers)
+        delete producer;
+      g_silence_producers.clear();
+      logging::log<logging::LogLevel::Trace>(
+          "frsonic_stop: silence producers done");
 
       for (auto &converter : g_click_sync_converters)
         if (converter) converter->stop();
@@ -839,7 +848,9 @@ void *frsonic_create_silence_producer(uint64_t target_serial) {
       g_owned_pipewire->loop(),
       [](spa_loop *, bool, uint32_t, const void *, size_t,
          void *user_data) -> int {
-        static_cast<InvokeData *>(user_data)->producer->setup();
+        auto *p = static_cast<InvokeData *>(user_data)->producer;
+        p->setup();
+        g_silence_producers.push_back(p);
         return 0;
       },
       0, nullptr, 0, true, &data);
@@ -860,7 +871,9 @@ void frsonic_destroy_silence_producer(void *handle) {
       g_owned_pipewire->loop(),
       [](spa_loop *, bool, uint32_t, const void *, size_t,
          void *user_data) -> int {
-        delete static_cast<InvokeData *>(user_data)->producer;
+        auto *p = static_cast<InvokeData *>(user_data)->producer;
+        std::erase(g_silence_producers, p);
+        delete p;
         return 0;
       },
       0, nullptr, 0, true, &data);

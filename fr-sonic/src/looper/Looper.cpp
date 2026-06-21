@@ -1451,12 +1451,8 @@ void looper::Looper::handle_params(const uint32_t id, const spa_pod *param) {
     return;
 
   const auto params_prop = spa_pod_find_prop(param, nullptr, SPA_PROP_params);
-  if (params_prop == nullptr) {
-    logging::log<logging::LogLevel::Warning>(
-        "Looper '{}' received Props update without SPA_PROP_params",
-        _config.name);
+  if (params_prop == nullptr)
     return;
-  }
 
   if (params_prop->value.type != SPA_TYPE_Struct) {
     logging::log<logging::LogLevel::Warning>(

@@ -14,6 +14,7 @@
 
 #include <pipewire/core.h>
 #include <pipewire/extensions/client-node.h>
+#include <pipewire/proxy.h>
 #include <pipewire/keys.h>
 #include <pipewire/node.h>
 #include <pipewire/properties.h>
@@ -164,7 +165,8 @@ void sesync::SyncMaster::stop() {
 
   if (_client_node != nullptr) {
     logging::log<logging::LogLevel::Info>("Stopping sync master");
-    pw_core_destroy(_core, _client_node);
+    spa_hook_remove(&_client_node_listener);
+    pw_proxy_destroy(reinterpret_cast<pw_proxy *>(_client_node));
     _client_node = nullptr;
     _node = nullptr;
   }

@@ -1,5 +1,6 @@
 #include <cmath>
 #include <csignal>
+#include "logging/log.h"
 #include <format>
 #include <glib.h>
 #include <iostream>
@@ -469,21 +470,29 @@ void Core::run() {
 }
 
 void Core::cleanup() {
+  logging::log<logging::LogLevel::Trace>("Core::cleanup: unref object_manager");
   g_object_unref(_object_manager);
   _object_manager = nullptr;
 
+  logging::log<logging::LogLevel::Trace>("Core::cleanup: wp_core_disconnect");
   wp_core_disconnect(_wireplumber_core);
+  logging::log<logging::LogLevel::Trace>("Core::cleanup: unref wireplumber_core");
   g_object_unref(_wireplumber_core);
   _wireplumber_core = nullptr;
 
+  logging::log<logging::LogLevel::Trace>("Core::cleanup: unref main_loop");
   g_main_loop_unref(_loop);
   _loop = nullptr;
 
+  logging::log<logging::LogLevel::Trace>("Core::cleanup: unref main_context");
   g_main_context_unref(_main_context);
   _main_context = nullptr;
 
+  logging::log<logging::LogLevel::Trace>("Core::cleanup: free options_context");
   g_option_context_free(_options_context);
   _options_context = nullptr;
+
+  logging::log<logging::LogLevel::Trace>("Core::cleanup: done");
 }
 
 // ReSharper disable once CppDFAUnreachableFunctionCall
