@@ -28,7 +28,7 @@ public sealed class DuckerSectionViewModel : ReactiveObject, IDisposable
         set
         {
             this.RaiseAndSetIfChanged(ref field, value);
-            SetParam("bypass", value ? 1.0f : 0.0f);
+            SetIntParam("bypass", value ? 1 : 0);
         }
     }
 
@@ -115,7 +115,7 @@ public sealed class DuckerSectionViewModel : ReactiveObject, IDisposable
         SetParam("depth", (float)Depth);
         SetIntParam("attack_shape", AttackShape);
         SetIntParam("release_shape", ReleaseShape);
-        SetParam("bypass", Bypass ? 1.0f : 0.0f);
+        SetIntParam("bypass", Bypass ? 1 : 0);
         SetIntParam("midi_channel", MidiChannel);
     }
 

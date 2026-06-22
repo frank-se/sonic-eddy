@@ -182,12 +182,8 @@ bool ducker::Ducker::setup_audio_capture_stream() {
   if (!_config.capture_target_object.empty())
     capture_flags =
         static_cast<pw_stream_flags>(capture_flags | PW_STREAM_FLAG_AUTOCONNECT);
-  if (pw_stream_connect(_audio_capture_stream, PW_DIRECTION_INPUT, PW_ID_ANY,
-                        capture_flags, params, 1) < 0)
-    return false;
-
-  publish_params();
-  return true;
+  return pw_stream_connect(_audio_capture_stream, PW_DIRECTION_INPUT, PW_ID_ANY,
+                           capture_flags, params, 1) >= 0;
 }
 
 bool ducker::Ducker::setup_audio_playback_stream() {
@@ -426,6 +422,7 @@ void ducker::Ducker::handle_audio_format(const uint32_t id,
     return;
 
   spa_format_audio_raw_parse(param, &_audio_format);
+  publish_params();
 }
 
 void ducker::Ducker::handle_audio_params(const uint32_t id,
@@ -450,8 +447,6 @@ void ducker::Ducker::handle_audio_params(const uint32_t id,
     }
     ++index;
   }
-
-  publish_params();
 }
 
 void ducker::Ducker::handle_param_value(const char *key,
