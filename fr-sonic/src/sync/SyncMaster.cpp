@@ -253,6 +253,12 @@ void sesync::SyncMaster::activate_due_changes(const uint64_t now) {
       _pending_transport_state.reset();
     }
   }
+
+  if (_reset_beat && current_beat(now) > *_reset_beat) {
+    logging::log<logging::LogLevel::Info>(
+        "Sync master clearing past reset beat {}", *_reset_beat);
+    _reset_beat.reset();
+  }
 }
 
 void sesync::SyncMaster::recompute_schedule() {
@@ -292,7 +298,11 @@ void sesync::SyncMaster::rebuild_json() {
     _params_json += std::format(R"(,[{},"{}"])", *_pending_transport_state_beat,
                                 *_pending_transport_state);
   }
-  _params_json += "]}";
+  _params_json += "]";
+  if (_reset_beat) {
+    _params_json += std::format(R"(,"reset_beats":[{}])", *_reset_beat);
+  }
+  _params_json += "}";
 }
 
 spa_pod *sesync::SyncMaster::build_props_pod() {
@@ -458,6 +468,8 @@ bool sesync::SyncMaster::apply_beat_params_patch(const std::string &json) {
       R"("bpm"\s*:\s*\[\s*\[\s*([0-9]+)\s*,\s*([0-9]+(?:\.[0-9]+)?)\s*\])");
   static const std::regex state_regex(
       R"STATE("transport_state"\s*:\s*\[\s*\[\s*([0-9]+)\s*,\s*"([^"]+)")STATE");
+  static const std::regex reset_regex(
+      R"("reset_beats"\s*:\s*\[\s*([0-9]+))");
 
   bool changed = false;
   std::smatch match;
@@ -473,6 +485,10 @@ bool sesync::SyncMaster::apply_beat_params_patch(const std::string &json) {
               changed;
   }
 
+  if (std::regex_search(json, match, reset_regex)) {
+    changed = apply_reset_beat(std::stoull(match[1].str())) || changed;
+  }
+
   if (!changed) {
     logging::log<logging::LogLevel::Warning>(
         "Sync master did not find an applicable beat.params patch in '{}'",
@@ -480,6 +496,22 @@ bool sesync::SyncMaster::apply_beat_params_patch(const std::string &json) {
   }
 
   return changed;
+}
+
+bool sesync::SyncMaster::apply_reset_beat(const uint64_t beat) {
+  const auto now = now_nsec();
+  const auto current = current_beat(now);
+  if (!accepts_change(beat, current)) {
+    logging::log<logging::LogLevel::Warning>(
+        "Sync master rejected reset beat {}; current beat is {}, lead time is {}",
+        beat, current, _config.lead_time_beats);
+    return false;
+  }
+
+  _reset_beat = beat;
+  logging::log<logging::LogLevel::Info>(
+      "Sync master scheduled reset at beat {}", beat);
+  return true;
 }
 
 bool sesync::SyncMaster::apply_bpm_change(const uint64_t beat,

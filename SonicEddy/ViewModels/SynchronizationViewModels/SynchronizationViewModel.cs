@@ -136,6 +136,12 @@ public sealed class SynchronizationViewModel : ViewModelBase, IDisposable
     public void StartPlayback() =>
         ScheduleTransportState(SyncTransportState.Playing);
 
+    public void ScheduleReset()
+    {
+        if (TryGetTargetBeat(out var target))
+            _syncClient?.ScheduleReset(target);
+    }
+
     public void StopPlayback()
     {
         if (TryGetStopTargetBeat(out var target))

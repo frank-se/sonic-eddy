@@ -71,6 +71,7 @@ private:
   std::optional<double> _pending_bpm;
   std::optional<uint64_t> _pending_transport_state_beat;
   std::optional<std::string> _pending_transport_state;
+  std::optional<uint64_t> _reset_beat;
   std::vector<BeatEntry> _schedule{};
   std::string _schedule_json;
   std::string _params_json;
@@ -88,6 +89,7 @@ private:
   bool apply_beat_params_patch(const std::string &json);
   bool apply_bpm_change(uint64_t beat, double bpm);
   bool apply_transport_state_change(uint64_t beat, std::string state);
+  bool apply_reset_beat(uint64_t beat);
   void activate_due_changes(uint64_t now);
 
   [[nodiscard]] uint64_t now_nsec() const;

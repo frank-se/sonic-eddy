@@ -70,6 +70,15 @@ public sealed class SyncClient : IDisposable
         return true;
     }
 
+    public bool ScheduleReset(ulong beat)
+    {
+        var snapshot = Snapshot;
+        Fr.Sonic.FrSonicWireplumber.SetParams(snapshot?.MasterObjectId ??
+                                             _masterNode.ObjectId,
+            [new("beat.params", $$"""{"reset_beats":[{{beat}}]}""")]);
+        return true;
+    }
+
     public bool ScheduleTransportState(
         ulong beat,
         SyncTransportState transportState)

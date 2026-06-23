@@ -21,6 +21,7 @@ internal static class SyncSnapshotParser
             [],
             [],
             [],
+            [],
             []);
 
         if (parameters is null)
@@ -31,7 +32,7 @@ internal static class SyncSnapshotParser
             return false;
 
         var schedule = ParseSchedule(scheduleJson);
-        var (bpm, transportStates) = ParseParams(paramsJson);
+        var (bpm, transportStates, resetBeats) = ParseParams(paramsJson);
         var history = MergeHistory(beatHistory, schedule);
 
         snapshot = new SyncSnapshot(
@@ -40,7 +41,8 @@ internal static class SyncSnapshotParser
             history,
             schedule,
             bpm,
-            transportStates);
+            transportStates,
+            resetBeats);
         return true;
     }
 
@@ -79,13 +81,15 @@ internal static class SyncSnapshotParser
 
     private static (
         IReadOnlyList<BpmEntry> Bpm,
-        IReadOnlyList<TransportStateEntry> TransportStates)
+        IReadOnlyList<TransportStateEntry> TransportStates,
+        IReadOnlyList<ulong> ResetBeats)
         ParseParams(string json)
     {
         using var document = JsonDocument.Parse(json);
         var root = document.RootElement;
         var bpm = new List<BpmEntry>();
         var transportStates = new List<TransportStateEntry>();
+        var resetBeats = new List<ulong>();
 
         if (root.TryGetProperty("bpm", out var bpmElement))
         {
@@ -109,9 +113,18 @@ internal static class SyncSnapshotParser
             }
         }
 
+        if (root.TryGetProperty("reset_beats", out var resetElement))
+        {
+            foreach (var item in resetElement.EnumerateArray())
+            {
+                if (item.TryGetUInt64(out var beat))
+                    resetBeats.Add(beat);
+            }
+        }
+
         bpm.Sort((a, b) => a.Beat.CompareTo(b.Beat));
         transportStates.Sort((a, b) => a.Beat.CompareTo(b.Beat));
-        return (bpm, transportStates);
+        return (bpm, transportStates, resetBeats);
     }
 
     private static SyncTransportState ParseTransportState(string? state) =>

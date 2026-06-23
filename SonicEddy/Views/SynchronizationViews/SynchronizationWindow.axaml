@@ -60,6 +60,9 @@
             <Button Padding="20,8"
                     Command="{Binding StopPlayback}"
                     Content="Stop" />
+            <Button Padding="20,8"
+                    Command="{Binding ScheduleReset}"
+                    Content="Reset" />
         </StackPanel>
 
         <Border Grid.Row="2"

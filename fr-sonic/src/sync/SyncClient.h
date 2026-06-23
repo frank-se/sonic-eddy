@@ -40,6 +40,7 @@ struct SyncSnapshot {
   std::vector<BeatScheduleEntry> beat_schedule;
   std::vector<BpmEntry> bpm;
   std::vector<TransportStateEntry> transport_states;
+  std::vector<uint64_t> reset_beats;
 
   [[nodiscard]] std::optional<BeatScheduleEntry>
   current_beat(uint64_t now_nsec) const;

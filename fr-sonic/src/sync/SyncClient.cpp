@@ -51,6 +51,24 @@ uint64_t parse_u64_prop(const char *value) {
   return result;
 }
 
+std::vector<uint64_t> parse_reset_beats(const std::string &json) {
+  static const std::regex reset_regex(R"("reset_beats"\s*:\s*\[([^\]]*)\])");
+  static const std::regex num_regex(R"([0-9]+)");
+  std::vector<uint64_t> result;
+
+  std::smatch outer;
+  if (!std::regex_search(json, outer, reset_regex))
+    return result;
+
+  const auto inner = outer[1].str();
+  for (auto it = std::sregex_iterator(inner.begin(), inner.end(), num_regex);
+       it != std::sregex_iterator(); ++it) {
+    result.push_back(std::stoull((*it)[0].str()));
+  }
+
+  return result;
+}
+
 std::vector<sesync::BpmEntry> parse_bpm(const std::string &json) {
   static const std::regex bpm_regex(
       R"(\[\s*([0-9]+)\s*,\s*([0-9]+(?:\.[0-9]+)?)\s*\])");
@@ -368,6 +386,7 @@ void sesync::SyncClient::apply_params(const std::string &schedule_json,
   next->beat_schedule = parse_schedule(schedule_json);
   next->bpm = parse_bpm(params_json);
   next->transport_states = parse_transport_states(params_json);
+  next->reset_beats = parse_reset_beats(params_json);
 
   const auto previous = snapshot();
   next->beat_history =

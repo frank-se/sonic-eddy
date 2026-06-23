@@ -234,6 +234,16 @@ private:
       }
       previous_state = state;
     }
+
+    for (const auto reset_beat : snapshot.reset_beats) {
+      const auto beat_entry = std::ranges::find(
+          snapshot.beat_history, reset_beat, &BeatScheduleEntry::beat);
+      if (beat_entry != snapshot.beat_history.end() &&
+          beat_entry->nsec >= cycle_start_nsec &&
+          beat_entry->nsec < cycle_end_nsec)
+        render_pulse(samples, frames, sample_rate, cycle_start_nsec,
+                     beat_entry->nsec, std::numeric_limits<uint64_t>::max());
+    }
   }
 
   void render_run(float *samples, const uint32_t frames,

@@ -21,7 +21,8 @@ public sealed record SyncSnapshot(
     IReadOnlyList<BeatScheduleEntry> BeatHistory,
     IReadOnlyList<BeatScheduleEntry> BeatSchedule,
     IReadOnlyList<BpmEntry> Bpm,
-    IReadOnlyList<TransportStateEntry> TransportStates)
+    IReadOnlyList<TransportStateEntry> TransportStates,
+    IReadOnlyList<ulong> ResetBeats)
 {
     public BeatScheduleEntry? CurrentBeat(ulong nowNsec)
     {
