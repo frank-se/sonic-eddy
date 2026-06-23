@@ -165,21 +165,33 @@ private:
     const auto cycle_end_nsec =
         cycle_start_nsec + frame_nsec(frames, sample_rate);
     const auto &beats = snapshot.beat_history;
-    if (beats.size() < 2)
+    if (beats.empty())
       return;
 
     for (auto current = beats.begin(); current != beats.end(); ++current) {
-      const auto next = std::next(current);
-      if (next == beats.end() || next->nsec <= current->nsec)
-        break;
-      if (next->nsec <= cycle_start_nsec)
-        continue;
       if (current->nsec >= cycle_end_nsec)
         break;
       if (snapshot.transport_state_at(current->beat) == TransportState::Stopped)
         continue;
 
-      const auto beat_interval = next->nsec - current->nsec;
+      // Derive beat interval from the next scheduled entry.  When this is the
+      // last entry in history (schedule hasn't slid forward yet), fall back to
+      // the BPM so the click keeps ticking even if the snapshot is late.
+      uint64_t beat_interval;
+      const auto next = std::next(current);
+      if (next != beats.end() && next->nsec > current->nsec) {
+        if (next->nsec <= cycle_start_nsec)
+          continue;
+        beat_interval = next->nsec - current->nsec;
+      } else {
+        const auto bpm = snapshot.bpm_at(current->beat);
+        if (bpm <= 0.0)
+          break;
+        beat_interval = static_cast<uint64_t>(60.0e9 / bpm);
+        if (current->nsec + beat_interval <= cycle_start_nsec)
+          break;
+      }
+
       for (uint32_t pulse = 0; pulse < _config.pulses_per_quarter_note;
            ++pulse) {
         const auto pulse_nsec =
