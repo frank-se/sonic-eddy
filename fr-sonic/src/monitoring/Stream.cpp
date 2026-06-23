@@ -1,11 +1,12 @@
 #include "Stream.h"
 
 #include <algorithm>
-#include <spa/param/props.h>
+#include <chrono>
 #include <cmath>
-#include <format>
-#include <iostream>
-#include <string>
+#include <cstring>
+#include <spa/param/props.h>
+#include <spa/param/audio/format-utils.h>
+#include <pipewire/pipewire.h>
 
 static void on_process(void *user_data) {
   auto stream = static_cast<monitoring::Stream *>(user_data);
@@ -52,39 +53,25 @@ static const struct pw_stream_events stream_events = {
 void monitoring::Stream::process() {
   const auto pipewire_buffer = pw_stream_dequeue_buffer(_stream);
 
-  if (pipewire_buffer == nullptr) {
-    std::cerr << "ERROR: pipewire_buffer is nullptr!" << std::endl;
+  if (pipewire_buffer == nullptr)
     return;
-  }
 
   const auto buffer  = pipewire_buffer->buffer;
   const auto samples = static_cast<const float *>(buffer->datas[0].data);
 
-  if (samples == nullptr) {
-    std::cerr << "ERROR: samples is nullptr!" << std::endl;
-    pw_stream_queue_buffer(_stream, pipewire_buffer);
-    return;
+  if (samples != nullptr) {
+    const auto raw_samples = buffer->datas[0].chunk->size / sizeof(float);
+    const auto n_samples   = static_cast<uint32_t>(
+        std::min(raw_samples, static_cast<size_t>(MAX_RAW_SAMPLES)));
+
+    RawEntry entry{};
+    entry.timestamp     = std::chrono::steady_clock::now();
+    entry.n_samples     = n_samples;
+    entry.channel_count = format.info.raw.channels;
+    std::memcpy(entry.samples, samples, n_samples * sizeof(float));
+
+    _queue.push(entry);
   }
-
-  const auto number_of_channels = format.info.raw.channels;
-  constexpr uint32_t max_channels = 2;
-  const auto number_of_samples = buffer->datas[0].chunk->size / sizeof(float);
-  const auto ch = std::min(number_of_channels, max_channels);
-
-  BufferEntry entry{};
-  entry.timestamp = std::chrono::steady_clock::now();
-  entry.samples   = static_cast<uint32_t>(number_of_samples / (ch > 0 ? ch : 1));
-
-  for (uint32_t c = 0; c < ch; c++) {
-    for (auto i = c; i < number_of_samples; i += number_of_channels) {
-      const float s = samples[i];
-      const float a = std::abs(s);
-      if (a > entry.peak[c]) entry.peak[c] = a;
-      entry.sum_sq[c] += s * s;
-    }
-  }
-
-  _queue.push(entry);  // wait-free; silently drops if queue is full
 
   pw_stream_queue_buffer(_stream, pipewire_buffer);
 }
@@ -95,8 +82,21 @@ void monitoring::Stream::compute_metrics(uint32_t window_ms) {
   const auto cutoff = now - milliseconds(window_ms);
   const auto hold   = milliseconds(HOLD_DURATION_MS);
 
-  // Drain any new entries from the RT thread into the window vector.
-  _queue.consume_all([this](const BufferEntry &e) {
+  // Drain raw entries, compute peak/sum_sq, push compact entries into window.
+  _queue.consume_all([this](const RawEntry &raw) {
+    BufferEntry e{};
+    e.timestamp = raw.timestamp;
+    const auto ch     = std::min(raw.channel_count, 2u);
+    const auto stride = raw.channel_count > 0 ? raw.channel_count : 1;
+    e.frames          = raw.n_samples / stride;
+
+    for (uint32_t c = 0; c < ch; c++) {
+      for (uint32_t i = c; i < raw.n_samples; i += stride) {
+        const float s = raw.samples[i];
+        e.peak[c]    = std::max(e.peak[c], std::abs(s));
+        e.sum_sq[c] += static_cast<double>(s) * static_cast<double>(s);
+      }
+    }
     _window.push_back(e);
   });
 
@@ -105,22 +105,22 @@ void monitoring::Stream::compute_metrics(uint32_t window_ms) {
     return e.timestamp < cutoff;
   });
 
-  float window_peak[2]   = {};
-  double total_sum_sq[2] = {};
-  uint64_t total_samples = 0;
+  float    window_peak[2]   = {};
+  double   total_sum_sq[2]  = {};
+  uint64_t total_frames     = 0;
 
   for (const auto &e : _window) {
     for (int c = 0; c < 2; c++) {
       if (e.peak[c] > window_peak[c]) window_peak[c] = e.peak[c];
       total_sum_sq[c] += e.sum_sq[c];
     }
-    total_samples += e.samples;
+    total_frames += e.frames;
   }
 
-  _left_rms  = total_samples > 0
-      ? static_cast<float>(std::sqrt(total_sum_sq[0] / total_samples)) : 0.0f;
-  _right_rms = total_samples > 0
-      ? static_cast<float>(std::sqrt(total_sum_sq[1] / total_samples)) : 0.0f;
+  _left_rms  = total_frames > 0
+      ? static_cast<float>(std::sqrt(total_sum_sq[0] / total_frames)) : 0.0f;
+  _right_rms = total_frames > 0
+      ? static_cast<float>(std::sqrt(total_sum_sq[1] / total_frames)) : 0.0f;
 
   // Peak hold per channel.
   if (window_peak[0] >= _left_held_peak) {
