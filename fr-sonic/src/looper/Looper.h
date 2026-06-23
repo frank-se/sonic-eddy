@@ -267,7 +267,6 @@ private:
   void retire_samples(std::shared_ptr<std::vector<float>> samples);
   void play_loop(uint32_t loop_number);
   void stop_loops();
-  float render_wet_sample(uint32_t channel);
   void publish_params();
   void handle_capture_format(uint32_t id, const spa_pod *param);
   void handle_playback_format(uint32_t id, const spa_pod *param);

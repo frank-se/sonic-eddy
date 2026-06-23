@@ -591,7 +591,6 @@ bool looper::Looper::setup_capture_stream() {
     return false;
   }
 
-  publish_params();
   return true;
 }
 
@@ -1193,24 +1192,6 @@ void looper::Looper::stop_loops() {
                                         _config.name);
 }
 
-float looper::Looper::render_wet_sample(const uint32_t channel) {
-  for (auto &slot : _loop_slots) {
-    if (!slot.playing || !slot.ready || slot.length_frames == 0 ||
-        slot.channels == 0)
-      continue;
-
-    const auto slot_channel = std::min<uint32_t>(channel, slot.channels - 1);
-    if (slot.owned && slot.samples) {
-      return (
-          *slot.samples)[(slot.playhead_frame * slot.channels) + slot_channel];
-    } else if (!_record_buffer.empty()) {
-      const auto ring_frame = (slot.ring_start_frame + slot.playhead_frame) %
-                              _record_capacity_frames;
-      return _record_buffer[(ring_frame * slot.channels) + slot_channel];
-    }
-  }
-  return 0.0f;
-}
 
 void looper::Looper::publish_params() {
   if (_capture_stream == nullptr)
@@ -1286,21 +1267,57 @@ void looper::Looper::capture_passthrough_input(pw_buffer *capture_buffer) {
 
   if (!_record_buffer.empty() && channels == _passthrough_channels &&
       snapshot) {
-    for (uint32_t frame = 0; frame < frames; ++frame) {
-      const auto frame_nsec =
-          buffer_start_nsec + (static_cast<uint64_t>(frame) * nsec_per_frame);
-      if (!should_record_frame(*snapshot, frame_nsec, rate))
-        continue;
-
-      const auto record_frame = _record_write_frame % _record_capacity_frames;
-      const auto record_offset = record_frame * channels;
-      const auto source_offset = frame * channels;
-      std::copy_n(_passthrough_buffer.data() + source_offset, channels,
-                  _record_buffer.data() + record_offset);
+    auto record_frame = [&](uint32_t frame) {
+      const auto rec_frame = _record_write_frame % _record_capacity_frames;
+      const auto rec_offset = rec_frame * channels;
+      const auto src_offset = frame * channels;
+      std::copy_n(_passthrough_buffer.data() + src_offset, channels,
+                  _record_buffer.data() + rec_offset);
       _record_write_frame = (_record_write_frame + 1) % _record_capacity_frames;
       ++_record_total_frames;
       _recorded_frames =
           std::min<uint64_t>(_recorded_frames + 1, _record_capacity_frames);
+    };
+
+    // Fast path: already recording and transport state is stable — skip the
+    // per-frame beat scan and just write every frame.
+    bool fast_path = false;
+    if (_recording && _transport_start_beat) {
+      const auto cur = snapshot->current_beat(buffer_start_nsec);
+      if (cur) {
+        const auto tr = transport_state_entry_at(*snapshot, cur->beat);
+        fast_path = tr &&
+                    tr->state != sesync::TransportState::Stopped &&
+                    _transport_start_beat == tr->beat;
+      }
+    }
+
+    if (fast_path) {
+      // Bulk ring-buffer copy: one or two memcpy calls instead of per-frame work.
+      const auto ring_pos = _record_write_frame % _record_capacity_frames;
+      const auto frames_to_end = _record_capacity_frames - ring_pos;
+      if (frames <= frames_to_end) {
+        std::copy_n(_passthrough_buffer.data(), frames * channels,
+                    _record_buffer.data() + ring_pos * channels);
+      } else {
+        std::copy_n(_passthrough_buffer.data(), frames_to_end * channels,
+                    _record_buffer.data() + ring_pos * channels);
+        std::copy_n(_passthrough_buffer.data() + frames_to_end * channels,
+                    (frames - frames_to_end) * channels,
+                    _record_buffer.data());
+      }
+      _record_write_frame = (_record_write_frame + frames) % _record_capacity_frames;
+      _record_total_frames += frames;
+      _recorded_frames =
+          std::min<uint64_t>(_recorded_frames + frames, _record_capacity_frames);
+    } else {
+      for (uint32_t frame = 0; frame < frames; ++frame) {
+        const auto frame_nsec =
+            buffer_start_nsec + (static_cast<uint64_t>(frame) * nsec_per_frame);
+        if (!should_record_frame(*snapshot, frame_nsec, rate))
+          continue;
+        record_frame(frame);
+      }
     }
   } else if (channels != _passthrough_channels) {
     stop_recording();
@@ -1386,21 +1403,73 @@ void looper::Looper::write_passthrough_output(pw_buffer *playback_buffer) {
       buffer_start_nsec = static_cast<uint64_t>(stream_time.now);
     }
 
-    for (uint32_t frame = 0; frame < writable_frames; ++frame) {
-      process_due_commands(frame, buffer_start_nsec,
-                           std::max(active_format().rate, 1u));
-      for (uint32_t channel = 0; channel < channels; ++channel) {
-        const auto sample = (frame * channels) + channel;
-        const auto dry_sample = dry_available && frame < _passthrough_frames
-                                    ? _passthrough_buffer[sample]
-                                    : 0.0f;
-        output[sample] =
-            (dry_sample * dry_gain) + (render_wet_sample(channel) * wet_gain);
-      }
+    // Find the active slot and pre-fetch its raw sample pointer once per
+    // quantum. process_due_commands() may change slot state mid-buffer on
+    // rare command events; the one-quantum transition latency is inaudible.
+    const LoopSlot *audio_slot = nullptr;
+    const float *audio_data = nullptr;
+    for (const auto &slot : _loop_slots) {
+      if (!slot.playing || !slot.ready || slot.length_frames == 0 ||
+          slot.channels == 0)
+        continue;
+      audio_slot = &slot;
+      if (slot.owned && slot.samples)
+        audio_data = slot.samples->data();
+      else if (!_record_buffer.empty())
+        audio_data = _record_buffer.data();
+      break;
+    }
+    const auto rate = std::max(active_format().rate, 1u);
 
-      for (auto &slot : _loop_slots) {
-        if (slot.playing && slot.ready && slot.length_frames > 0)
-          slot.playhead_frame = (slot.playhead_frame + 1) % slot.length_frames;
+    // Fast path: no loop playing and no queued commands — bulk passthrough copy.
+    if (!audio_slot && _pending_command_count == 0) {
+      if (dry_available) {
+        const auto copy_frames = std::min(writable_frames, _passthrough_frames);
+        const auto copy_samples = copy_frames * channels;
+        if (dry_gain == 1.0f) {
+          std::memcpy(output, _passthrough_buffer.data(),
+                      copy_samples * sizeof(float));
+        } else {
+          for (uint32_t i = 0; i < copy_samples; ++i)
+            output[i] = _passthrough_buffer[i] * dry_gain;
+        }
+        if (copy_frames < writable_frames)
+          std::memset(output + copy_samples, 0,
+                      (writable_frames - copy_frames) * channels * sizeof(float));
+      } else {
+        std::memset(output, 0, writable_frames * channels * sizeof(float));
+      }
+    } else {
+      for (uint32_t frame = 0; frame < writable_frames; ++frame) {
+        process_due_commands(frame, buffer_start_nsec, rate);
+
+        for (uint32_t channel = 0; channel < channels; ++channel) {
+          const auto s = (frame * channels) + channel;
+          const auto dry = (dry_available && frame < _passthrough_frames)
+                               ? _passthrough_buffer[s] * dry_gain
+                               : 0.0f;
+          float wet = 0.0f;
+          if (audio_slot && audio_data) {
+            const auto slot_ch =
+                std::min<uint32_t>(channel, audio_slot->channels - 1);
+            if (audio_slot->owned) {
+              wet =
+                  audio_data[(audio_slot->playhead_frame * audio_slot->channels) +
+                             slot_ch];
+            } else {
+              const auto ring_frame =
+                  (audio_slot->ring_start_frame + audio_slot->playhead_frame) %
+                  _record_capacity_frames;
+              wet = audio_data[(ring_frame * audio_slot->channels) + slot_ch];
+            }
+          }
+          output[s] = dry + wet * wet_gain;
+        }
+
+        for (auto &slot : _loop_slots) {
+          if (slot.playing && slot.ready && slot.length_frames > 0)
+            slot.playhead_frame = (slot.playhead_frame + 1) % slot.length_frames;
+        }
       }
     }
 
@@ -1426,6 +1495,7 @@ void looper::Looper::handle_capture_format(const uint32_t id,
     return;
 
   spa_format_audio_raw_parse(param, &_capture_format);
+  publish_params();
 }
 
 void looper::Looper::handle_playback_format(const uint32_t id,
@@ -1475,8 +1545,6 @@ void looper::Looper::handle_params(const uint32_t id, const spa_pod *param) {
     }
     ++index;
   }
-
-  publish_params();
 }
 
 void looper::Looper::handle_param_value(const char *key, const spa_pod *value) {
