@@ -136,21 +136,20 @@ public class MixerService : IMixerService, IDisposable
 
                 _myNodeIds.AddRange(CollectMixerLayerNodeIds(secondLayer));
 
-                CueChannel? cue = null;
+                string? cueOutputSerial = null;
                 if (prefs.DefaultCueOutputName is not null)
                 {
                     var cueOutput = _wireplumberService.GetCaptureNodes()
                         .FirstOrDefault(n => n.Name == prefs.DefaultCueOutputName);
                     if (cueOutput is not null)
-                    {
-                        var cueFc = await _editor.CreateCueFilterChain(
-                            globalMasterCaptureSerial,
-                            cueOutput.ObjectSerial.ToString());
-                        cue = new CueChannel(cueFc);
-                        _myNodeIds.Add(cueFc.CaptureNode.ObjectSerial);
-                        _myNodeIds.Add(cueFc.PlaybackNode.ObjectSerial);
-                    }
+                        cueOutputSerial = cueOutput.ObjectSerial.ToString();
                 }
+
+                var cueFc = await _editor.CreateCueFilterChain(
+                    globalMasterCaptureSerial, cueOutputSerial);
+                var cue = new CueChannel(cueFc);
+                _myNodeIds.Add(cueFc.CaptureNode.ObjectSerial);
+                _myNodeIds.Add(cueFc.PlaybackNode.ObjectSerial);
 
                 CurrentMixer = new([firstLayer, secondLayer],
                     monitoringLoopback, globalMaster, cue);

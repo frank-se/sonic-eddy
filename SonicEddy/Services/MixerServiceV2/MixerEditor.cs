@@ -539,7 +539,7 @@ public class MixerEditor(IWireplumberService wireplumberService,
     // connects to its monitor output ports, giving a pre-xfade tap of each layer:
     // AUX0/1 = Layer A, AUX2/3 = Layer B.
     public async Task<FilterChain> CreateCueFilterChain(
-        string globalMasterCaptureSerial, string cueOutputSerial)
+        string globalMasterCaptureSerial, string? cueOutputSerial)
     {
         return await Fr.Sonic.FrSonic.ModuleFactory
             .CreateFilterChainAsync("cue", new FilterChainModuleConfig
@@ -564,7 +564,7 @@ public class MixerEditor(IWireplumberService wireplumberService,
                     AutoConnect = true,
                     DontFallback = true,
                     Passive = false,
-                    TargetObject = cueOutputSerial,
+                    TargetObject = cueOutputSerial ?? "0",
                     MediaClass = PlaybackNodeMediaClass,
                     AudioPosition = StereoAudioPosition
                 },
