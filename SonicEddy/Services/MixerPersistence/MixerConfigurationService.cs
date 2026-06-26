@@ -104,11 +104,20 @@ public sealed class MixerConfigurationService : IDisposable
         MixerLayerViewModel layerA, MixerLayerViewModel layerB,
         GlobalMasterViewModel globalMaster)
     {
+        if (_globalMaster is not null)
+            _globalMaster.PropertyChanged -= OnGlobalMasterPropertyChanged;
+        if (_globalMaster?.CueChannel is not null)
+            _globalMaster.CueChannel.PropertyChanged -= OnCueChannelPropertyChanged;
+
         _pendingConfiguration = configuration;
         _layerA = layerA;
         _layerB = layerB;
         _globalMaster = globalMaster;
         _routingApplied.Clear();
+
+        _globalMaster.PropertyChanged += OnGlobalMasterPropertyChanged;
+        if (_globalMaster.CueChannel is not null)
+            _globalMaster.CueChannel.PropertyChanged += OnCueChannelPropertyChanged;
 
         foreach (var layerConfig in configuration.Layers)
         {
@@ -373,12 +382,36 @@ public sealed class MixerConfigurationService : IDisposable
             _ => null
         };
 
+    private void OnGlobalMasterPropertyChanged(object? sender,
+        System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (_pendingConfiguration is null || _globalMaster is null) return;
+        if (e.PropertyName != nameof(GlobalMasterViewModel.SelectedAudioToRoutingTarget))
+            return;
+        _pendingConfiguration.GlobalMasterAudioToNodeName =
+            GetRoutingNodeName(_globalMaster.SelectedAudioToRoutingTarget);
+    }
+
+    private void OnCueChannelPropertyChanged(object? sender,
+        System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (_pendingConfiguration is null || _globalMaster?.CueChannel is null) return;
+        if (e.PropertyName != nameof(CueChannelViewModel.SelectedAudioToRoutingTarget))
+            return;
+        _pendingConfiguration.Cue.AudioToNodeName =
+            GetRoutingNodeName(_globalMaster.CueChannel.SelectedAudioToRoutingTarget);
+    }
+
     private void OnNodeAdded(Fr.Sonic.Model.Objects.Node node) =>
         Dispatcher.UIThread.Post(ApplyPendingRoutes);
 
     public void Dispose()
     {
         _wireplumberService.NodeAdded -= OnNodeAdded;
+        if (_globalMaster is not null)
+            _globalMaster.PropertyChanged -= OnGlobalMasterPropertyChanged;
+        if (_globalMaster?.CueChannel is not null)
+            _globalMaster.CueChannel.PropertyChanged -= OnCueChannelPropertyChanged;
         GC.SuppressFinalize(this);
     }
 }
