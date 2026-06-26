@@ -27,10 +27,7 @@ public class PreferencesViewModel : ViewModelBase
         _wireplumberService = wireplumberService;
         _preferenceService = preferenceService;
 
-        var outputs = wireplumberService.GetCaptureNodes()
-            .Where(n => string.IsNullOrEmpty(n.Pmx.Tag));
-
-        Nodes.AddRange(outputs);
+        Nodes.AddRange(wireplumberService.GetCaptureNodes());
 
         this.WhenAnyValue(x => x.SelectedDefaultMasterOutput)
             .Subscribe(_ =>
