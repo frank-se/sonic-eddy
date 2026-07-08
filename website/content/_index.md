@@ -15,4 +15,7 @@ Ableton link for synchronization, over virtual inputs and outputs, to, thanks to
 the power of pipewire, mixing across multiple audio interfaces, including audio
 interfaces provided by synthesizers like the Roland SE-02, is also on board.
 
-<!-- Add intro content here -->
+## Development
+
+Sonic Eddy is developed as open source project in the
+[**Repository**](https://git.sr.ht/~frank6/sonic-eddy) on source hut.

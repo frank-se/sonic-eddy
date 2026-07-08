@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audio Routing &mdash; Sonic Eddy</title>
+  <meta name="description" content="A performance, and hardware-focused audio mixer for Linux">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header>
+    <nav>
+      <a href="/" class="site-title">Sonic Eddy</a>
+      <ul>
+        
+        <li><a href="&#x2F;features">Features</a></li>
+        
+        <li><a href="&#x2F;installation">Installation</a></li>
+        
+        <li><a href="&#x2F;docs" class="active">Documentation</a></li>
+        
+        <li><a href="&#x2F;how-to">How-To</a></li>
+        
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    
+<article class="page">
+  <h1>Audio Routing</h1>
+  <p>Sonic Eddy provides five channel types in order to provide the user with
+flexible ways to organize the signal flow. The normal audio channels take any
+pipewire node as input, and route its signal either to a group, or a master
+channel, and to any combination of the 4 return channels.</p>
+<p>Group and master channels allow processing of the sum of multiple channel
+signals.</p>
+<p>Sonic Eddy provides two layers, layer A and layer B. Each layer provides 8
+channels, 4 group channels, and a master channel. The master channels come
+together in the global master, where the contribution of each layer is selected
+by a cross-fader. This setup provides easy setup of two different signal path
+that can easily be used during a live session.</p>
+<p>Another live performance focused tool every channel, except the return channels
+provide, is a looper, which can record either the pre-, or post-filter signal of
+each channel, and allows replacing the live signal with a perfectly tempo
+aligned recording.</p>
+<h2 id="channels">Channels</h2>
+<p>Each channel picks up audio signals from exactly one pipewire playback node. The
+connection is managed by wireplumber and created by setting the target node on
+the relevant node of the channel. The signal goes through a trim section, where
+it can be raised, or lowered depending on the needs of the signal chain.</p>
+<p>Next follows the pre-effects looper, and then the optional filter chain. The
+send section after the filter chain allows routing the signal to one of the four
+return channels of the layer.</p>
+<p>The post-effect looper allows recording and playback of the signal effected by
+the filter chain. The following volume and pan section allows setting volume and
+pan, and the audio to routing section finally allows the selection of the
+channels destination, either the layers master channel, or one of the group
+channels.</p>
+<h2 id="group-channels">Group Channels</h2>
+<p>Group channels get their signal fed by normal channels. The signal of every
+normal channel is summed and then processed, starting with the pre-effects
+looper. The pre-effects looper is followed by the optional filter chain, the
+post-effects looper, and the send section.</p>
+<p>The following volume and pan section allows mixing the signal into the master
+channel.</p>
+<h2 id="return-channels">Return Channels</h2>
+<p>The return channels are fed by the send section of the normal channels and the
+group channels. Signal they receive is processed by an optional filter chain,
+and then a volume and pan section, mixing the signal into the layers master
+channel.</p>
+<h2 id="global-master">Global Master</h2>
+<p>The global master channel sums layer A master and layer B master together with a
+cross-fader. A filter chain can be added after the cross-fader, processing the
+summed signal.</p>
+<h2 id="channel-signal-flow">Channel Signal Flow</h2>
+<p>Sonic Eddy channels takes inputs from any pipewire playback node, connecting to
+the first two ports of the node. Virtual inputs can be used, if better control
+over the respective ports is required.</p>
+<p>The inputs are routed through a channel. Channels can have a filter chain or
+external effect, which applies LV2 plugins to the audio signal. Every channel
+also has two looper, one before the filter chain, one after. The looper allow to
+record incoming audio, and play it back perfectly synchronized. This allows, for
+example, to completely change the settings of a synthesizer while the looper
+plays the old melody.</p>
+<p>Further processing is split after the post effects looper. Four send controls
+allow passing the signal to one of the four return channels. The main audio
+stream is processed by a volume and pan section, and then forwarded either
+directly to the layer master, or to one of the group channels of the layer. The
+target is selected in the Audio To section.</p>
+<pre><code data-lang="mermaid">graph LR
+Input --&gt; LPre{{Looper Pre}} --&gt; FC([Filter Chain]) --&gt; LPost{{Looper Post}} --&gt; CV((Volume)) --&gt; A{Audio To} --&gt; Master[Layer Master]
+A --&gt; Group --&gt; Master
+LPost --&gt; S1((Send 1)) --&gt; R1[Return 1] --&gt; Master
+LPost --&gt; S2((Send 2)) --&gt; R2[Return 2] --&gt; Master
+LPost --&gt; S3((Send 3)) --&gt; R3[Return 3] --&gt; Master
+LPost --&gt; S4((Send 4)) --&gt; R4[Return 4] --&gt; Master
+</code></pre>
+<p>The group and return channels can also contain a filter chain or external
+effects, providing ample opportunities to shape the audio signal.</p>
+<h2 id="channel-controls">Channel Controls</h2>
+<p>Each channel has very similar controls, only depending on which features the
+specific channel presents to the user.</p>
+<h3 id="normal-channels">Normal Channels</h3>
+<p><img src="/channel_ui_overview.jpg" alt="Channel User Interface Overview" /></p>
+<h3 id="group-channels-1">Group Channels</h3>
+<p><img src="/group_channel_ui_overview.jpg" alt="Group Channel User Interface Overview" /></p>
+<h3 id="master-channels">Master Channels</h3>
+<p><img src="/master_channel_ui_overview.jpg" alt="Master Channel User Interface Overview" /></p>
+<h2 id="the-two-layers">The Two Layers</h2>
+<pre><code data-lang="mermaid">graph LR
+LayerA[Layer A Master] --&gt; GlobalMaster[Global Master]
+LayerB[Layer B Master] --&gt; GlobalMaster
+</code></pre>
+<h3 id="the-global-master">The Global Master</h3>
+<p>The global master channel can be accessed with the main menu at
+<code>Mixer -&gt; Global Master</code>.</p>
+<p><img src="/global_master_ui_overview.jpg" alt="Global Master Channel User Interface Overview" /></p>
+<h2 id="signal-flow">Signal Flow</h2>
+<p>The, mostly, complete signal flow is shown in the diagram below.</p>
+<pre><code data-lang="mermaid">graph LR
+  subgraph LayerA[Layer A]
+    InA[Input A] --&gt; ChA1[Channel 01] --&gt; MasterA[Master A]
+    InB[Input B] --&gt; ChA2[Channel 02] --&gt; MasterA
+    InC[Input C] --&gt; ChA3[Channel 03] --&gt; MasterA
+    InD[Input D] --&gt; ChA4[Channel 04] --&gt; MasterA
+    InE[Input E] --&gt; ChA5[Channel 05] --&gt; MasterA
+    InF[Input F] --&gt; ChA6[Channel 06] --&gt; MasterA
+    InG[Input G] --&gt; ChA7[Channel 07] --&gt; MasterA
+    InH[Input H] --&gt; ChA8[Channel 08] --&gt; MasterA
+
+    ChA1 -.-&gt; GA1([Group 1]) -.-&gt; MasterA
+    ChA2 -.-&gt; GA1
+    ChA3 -.-&gt; GA1
+    ChA4 -.-&gt; GA1
+    ChA5 -.-&gt; GA1
+    ChA6 -.-&gt; GA1
+    ChA7 -.-&gt; GA1
+    ChA8 -.-&gt; GA1
+    ChA1 -.-&gt; GA2([Group 2]) -.-&gt; MasterA
+    ChA2 -.-&gt; GA2
+    ChA3 -.-&gt; GA2
+    ChA4 -.-&gt; GA2
+    ChA5 -.-&gt; GA2
+    ChA6 -.-&gt; GA2
+    ChA7 -.-&gt; GA2
+    ChA8 -.-&gt; GA2
+    ChA1 -.-&gt; GA3([Group 3]) -.-&gt; MasterA
+    ChA2 -.-&gt; GA3
+    ChA3 -.-&gt; GA3
+    ChA4 -.-&gt; GA3
+    ChA5 -.-&gt; GA3
+    ChA6 -.-&gt; GA3
+    ChA7 -.-&gt; GA3
+    ChA8 -.-&gt; GA3
+    ChA1 -.-&gt; GA4([Group 4]) -.-&gt; MasterA
+    ChA2 -.-&gt; GA4
+    ChA3 -.-&gt; GA4
+    ChA4 -.-&gt; GA4
+    ChA5 -.-&gt; GA4
+    ChA6 -.-&gt; GA4
+    ChA7 -.-&gt; GA4
+    ChA8 -.-&gt; GA4
+
+    ChA1 -.-&gt; RA1([Return 1]) -.-&gt; MasterA
+    ChA2 -.-&gt; RA1
+    ChA3 -.-&gt; RA1
+    ChA4 -.-&gt; RA1
+    ChA5 -.-&gt; RA1
+    ChA6 -.-&gt; RA1
+    ChA7 -.-&gt; RA1
+    ChA8 -.-&gt; RA1
+    ChA1 -.-&gt; RA2([Return 2]) -.-&gt; MasterA
+    ChA2 -.-&gt; RA2
+    ChA3 -.-&gt; RA2
+    ChA4 -.-&gt; RA2
+    ChA5 -.-&gt; RA2
+    ChA6 -.-&gt; RA2
+    ChA7 -.-&gt; RA2
+    ChA8 -.-&gt; RA2
+    ChA1 -.-&gt; RA3([Return 3]) -.-&gt; MasterA
+    ChA2 -.-&gt; RA3
+    ChA3 -.-&gt; RA3
+    ChA4 -.-&gt; RA3
+    ChA5 -.-&gt; RA3
+    ChA6 -.-&gt; RA3
+    ChA7 -.-&gt; RA3
+    ChA8 -.-&gt; RA3
+    ChA1 -.-&gt; RA4([Return 4]) -.-&gt; MasterA
+    ChA2 -.-&gt; RA4
+    ChA3 -.-&gt; RA4
+    ChA4 -.-&gt; RA4
+    ChA5 -.-&gt; RA4
+    ChA6 -.-&gt; RA4
+    ChA7 -.-&gt; RA4
+    ChA8 -.-&gt; RA4
+
+    GA1 -.-&gt; RA1
+    GA1 -.-&gt; RA2
+    GA1 -.-&gt; RA3
+    GA1 -.-&gt; RA4
+    GA2 -.-&gt; RA1
+    GA2 -.-&gt; RA2
+    GA2 -.-&gt; RA3
+    GA2 -.-&gt; RA4
+    GA3 -.-&gt; RA1
+    GA3 -.-&gt; RA2
+    GA3 -.-&gt; RA3
+    GA3 -.-&gt; RA4
+    GA4 -.-&gt; RA1
+    GA4 -.-&gt; RA2
+    GA4 -.-&gt; RA3
+    GA4 -.-&gt; RA4
+  end
+
+  subgraph LayerB[Layer B]
+    InI[Input I] --&gt; ChB1[Channel 01] --&gt; MasterB[Master B]
+    InJ[Input J] --&gt; ChB2[Channel 02] --&gt; MasterB
+    InK[Input K] --&gt; ChB3[Channel 03] --&gt; MasterB
+    InL[Input L] --&gt; ChB4[Channel 04] --&gt; MasterB
+    InM[Input M] --&gt; ChB5[Channel 05] --&gt; MasterB
+    InN[Input N] --&gt; ChB6[Channel 06] --&gt; MasterB
+    InO[Input O] --&gt; ChB7[Channel 07] --&gt; MasterB
+    InP[Input P] --&gt; ChB8[Channel 08] --&gt; MasterB
+
+    ChB1 -.-&gt; GB1([Group 1]) -.-&gt; MasterB
+    ChB2 -.-&gt; GB1
+    ChB3 -.-&gt; GB1
+    ChB4 -.-&gt; GB1
+    ChB5 -.-&gt; GB1
+    ChB6 -.-&gt; GB1
+    ChB7 -.-&gt; GB1
+    ChB8 -.-&gt; GB1
+    ChB1 -.-&gt; GB2([Group 2]) -.-&gt; MasterB
+    ChB2 -.-&gt; GB2
+    ChB3 -.-&gt; GB2
+    ChB4 -.-&gt; GB2
+    ChB5 -.-&gt; GB2
+    ChB6 -.-&gt; GB2
+    ChB7 -.-&gt; GB2
+    ChB8 -.-&gt; GB2
+    ChB1 -.-&gt; GB3([Group 3]) -.-&gt; MasterB
+    ChB2 -.-&gt; GB3
+    ChB3 -.-&gt; GB3
+    ChB4 -.-&gt; GB3
+    ChB5 -.-&gt; GB3
+    ChB6 -.-&gt; GB3
+    ChB7 -.-&gt; GB3
+    ChB8 -.-&gt; GB3
+    ChB1 -.-&gt; GB4([Group 4]) -.-&gt; MasterB
+    ChB2 -.-&gt; GB4
+    ChB3 -.-&gt; GB4
+    ChB4 -.-&gt; GB4
+    ChB5 -.-&gt; GB4
+    ChB6 -.-&gt; GB4
+    ChB7 -.-&gt; GB4
+    ChB8 -.-&gt; GB4
+
+    ChB1 -.-&gt; RB1([Return 1]) -.-&gt; MasterB
+    ChB2 -.-&gt; RB1
+    ChB3 -.-&gt; RB1
+    ChB4 -.-&gt; RB1
+    ChB5 -.-&gt; RB1
+    ChB6 -.-&gt; RB1
+    ChB7 -.-&gt; RB1
+    ChB8 -.-&gt; RB1
+    ChB1 -.-&gt; RB2([Return 2]) -.-&gt; MasterB
+    ChB2 -.-&gt; RB2
+    ChB3 -.-&gt; RB2
+    ChB4 -.-&gt; RB2
+    ChB5 -.-&gt; RB2
+    ChB6 -.-&gt; RB2
+    ChB7 -.-&gt; RB2
+    ChB8 -.-&gt; RB2
+    ChB1 -.-&gt; RB3([Return 3]) -.-&gt; MasterB
+    ChB2 -.-&gt; RB3
+    ChB3 -.-&gt; RB3
+    ChB4 -.-&gt; RB3
+    ChB5 -.-&gt; RB3
+    ChB6 -.-&gt; RB3
+    ChB7 -.-&gt; RB3
+    ChB8 -.-&gt; RB3
+    ChB1 -.-&gt; RB4([Return 4]) -.-&gt; MasterB
+    ChB2 -.-&gt; RB4
+    ChB3 -.-&gt; RB4
+    ChB4 -.-&gt; RB4
+    ChB5 -.-&gt; RB4
+    ChB6 -.-&gt; RB4
+    ChB7 -.-&gt; RB4
+    ChB8 -.-&gt; RB4
+
+    GB1 -.-&gt; RB1
+    GB1 -.-&gt; RB2
+    GB1 -.-&gt; RB3
+    GB1 -.-&gt; RB4
+    GB2 -.-&gt; RB1
+    GB2 -.-&gt; RB2
+    GB2 -.-&gt; RB3
+    GB2 -.-&gt; RB4
+    GB3 -.-&gt; RB1
+    GB3 -.-&gt; RB2
+    GB3 -.-&gt; RB3
+    GB3 -.-&gt; RB4
+    GB4 -.-&gt; RB1
+    GB4 -.-&gt; RB2
+    GB4 -.-&gt; RB3
+    GB4 -.-&gt; RB4
+  end
+
+  MasterA --&gt; GM((Global Master))
+  MasterB --&gt; GM
+
+  MasterA -.-&gt; Cue((Global Cue))
+  MasterB -.-&gt; Cue
+</code></pre>
+<ul>
+<li>Solid arrows show the default direct path to the master channel.</li>
+<li>Dashed arrows show optional routing through a group channel.</li>
+</ul>
+
+</article>
+
+  </main>
+
+  <footer>
+    <p>Sonic Eddy &mdash; <a href="https://git.sr.ht/~frank6/sonic-eddy">Source</a></p>
+  </footer>
+  <script>
+    document.querySelectorAll('blockquote > p:first-child').forEach(p => {
+      const m = p.textContent.match(/^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*/i);
+      if (!m) return;
+      const kind = m[1].toLowerCase();
+      const bq = p.parentElement;
+      bq.classList.add('markdown-alert', `markdown-alert-${kind}`);
+      const title = document.createElement('p');
+      title.className = 'markdown-alert-title';
+      title.textContent = m[1].charAt(0) + m[1].slice(1).toLowerCase();
+      p.textContent = p.textContent.slice(m[0].length);
+      bq.insertBefore(title, p);
+      if (!p.textContent.trim()) p.remove();
+    });
+  </script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+    document.querySelectorAll('pre > code[data-lang="mermaid"]').forEach(el => {
+      const div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = el.textContent;
+      el.parentElement.replaceWith(div);
+    });
+    mermaid.run();
+  </script>
+</body>
+</html>
