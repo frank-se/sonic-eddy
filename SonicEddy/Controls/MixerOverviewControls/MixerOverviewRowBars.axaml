@@ -1,0 +1,66 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:SonicEddy.ViewModels.MixerOverviewViewModels"
+             xmlns:mixerControls="clr-namespace:SonicEddy.Controls.MixerControls"
+             xmlns:controls="clr-namespace:SonicEddy.Controls"
+             mc:Ignorable="d" d:DesignWidth="252" d:DesignHeight="40"
+             x:Class="SonicEddy.Controls.MixerOverviewControls.MixerOverviewRowBars"
+             x:DataType="vm:MixerOverviewRowViewModel">
+
+    <StackPanel Orientation="Vertical" Spacing="2" Opacity="{Binding DimOpacity}">
+
+        <!-- Volume, pan, sends, trim, looper mix -->
+        <StackPanel Orientation="Horizontal" Spacing="2" Height="18"
+                    VerticalAlignment="Center">
+            <mixerControls:ChannelMonitorValue Width="50" Background="Gray"
+                Value="{Binding PanAndVolume.Volume}" Maximum="1" />
+            <controls:PanSlider Width="36" Background="DimGray"
+                IsHitTestVisible="False"
+                Value="{Binding PanAndVolume.Pan}" />
+            <mixerControls:ChannelMonitorValue Width="24" Background="Gray"
+                Value="{Binding Send1Trim}" Maximum="1"
+                Opacity="{Binding SendsOpacity}" />
+            <mixerControls:ChannelMonitorValue Width="24" Background="Gray"
+                Value="{Binding Send2Trim}" Maximum="1"
+                Opacity="{Binding SendsOpacity}" />
+            <mixerControls:ChannelMonitorValue Width="24" Background="Gray"
+                Value="{Binding Send3Trim}" Maximum="1"
+                Opacity="{Binding SendsOpacity}" />
+            <mixerControls:ChannelMonitorValue Width="24" Background="Gray"
+                Value="{Binding Send4Trim}" Maximum="1"
+                Opacity="{Binding SendsOpacity}" />
+            <controls:PanSlider Width="32" Background="DimGray"
+                IsHitTestVisible="False"
+                Value="{Binding Trim}"
+                Opacity="{Binding TrimOpacity}" />
+            <mixerControls:ChannelMonitorValue Width="24" Background="Gray"
+                Value="{Binding Looper.Mix}" Maximum="1"
+                Opacity="{Binding LooperOpacity}" />
+        </StackPanel>
+
+        <!-- Signal level: left/right stacked, each a full-width horizontal meter -->
+        <StackPanel Orientation="Vertical" Spacing="1">
+            <StackPanel Orientation="Horizontal" Spacing="2">
+                <TextBlock Text="L" Width="12" FontSize="9" Foreground="Gray"
+                           VerticalAlignment="Center" />
+                <mixerControls:ChannelMonitorValue Width="238" Height="8"
+                    Background="Gray"
+                    Value="{Binding PanAndVolume.LeftAverage}"
+                    Peak="{Binding PanAndVolume.LeftPeak}"
+                    Maximum="1" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="2">
+                <TextBlock Text="R" Width="12" FontSize="9" Foreground="Gray"
+                           VerticalAlignment="Center" />
+                <mixerControls:ChannelMonitorValue Width="238" Height="8"
+                    Background="Gray"
+                    Value="{Binding PanAndVolume.RightAverage}"
+                    Peak="{Binding PanAndVolume.RightPeak}"
+                    Maximum="1" />
+            </StackPanel>
+        </StackPanel>
+
+    </StackPanel>
+</UserControl>

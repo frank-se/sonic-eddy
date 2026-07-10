@@ -1,0 +1,17 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:SonicEddy.ViewModels.MixerOverviewViewModels"
+             mc:Ignorable="d" d:DesignWidth="90" d:DesignHeight="40"
+             x:Class="SonicEddy.Controls.MixerOverviewControls.MixerOverviewRowSmallSection"
+             x:DataType="vm:MixerOverviewRowViewModel">
+
+    <StackPanel Orientation="Vertical" Spacing="1"
+                Opacity="{Binding DimOpacity}">
+        <TextBlock Text="{Binding Text}" Width="90" Foreground="White"
+                   FontSize="11" TextTrimming="CharacterEllipsis" />
+        <TextBlock Text="{Binding AudioFromName}" Width="90" Foreground="Gray"
+                   FontSize="10" TextTrimming="CharacterEllipsis" />
+    </StackPanel>
+</UserControl>

@@ -39,6 +39,7 @@ using SonicEddy.ViewModels.SynchronizationViewModels;
 using SonicEddy.ViewModels.MonitoringViewModels;
 using SonicEddy.ViewModels.TransportViewModels;
 using SonicEddy.ViewModels.GlobalMasterViewModels;
+using SonicEddy.ViewModels.MixerOverviewViewModels;
 using SonicEddy.ViewModels.RecordingPickUpViewModels;
 using SonicEddy.ViewModels.JackInputPortsViewModels;
 using SonicEddy.ViewModels.VirtualInputsViewModels;
@@ -48,6 +49,7 @@ using SonicEddy.Views.DrumMixerViews;
 using SonicEddy.Views.ExternalEffectsViews;
 using SonicEddy.Views.GlobalMasterViews;
 using SonicEddy.Views.MetadataViews;
+using SonicEddy.Views.MixerOverviewViews;
 using SonicEddy.Views.MidiParameterChangeMonitorView;
 using SonicEddy.Views.MidiRouterViews;
 using SonicEddy.Views.ModuleManagerViews;
@@ -125,6 +127,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     private const int NumberOfChannelsPerLayer = NumberOfChannels / 2;
 
     private Window? _globalMasterWindow;
+    private Window? _mixerOverviewWindow;
     private Window? _drumMixerWindow;
     private Window? _externalEffectsWindow;
     private ExternalEffectsViewModel? _externalEffectsViewModel;
@@ -146,6 +149,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     private Window? _midiRouterWindow;
     private readonly SemaphoreSlim _layerInitializationLock = new(1, 1);
     private GlobalMasterViewModel? _globalMasterViewModel;
+    private MixerOverviewViewModel? _mixerOverviewViewModel;
     private Guid _currentMixerId;
     private string _currentMixerName = string.Empty;
 
@@ -495,6 +499,45 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
             DataContext = viewModel
         };
         _globalMasterWindow.Show();
+    }
+
+    public void ShowMixerOverviewWindow()
+    {
+        _logger.LogTrace("ShowMixerOverviewWindow");
+
+        if (_mixerOverviewWindow is not null)
+        {
+            _mixerOverviewWindow.Activate();
+            return;
+        }
+
+        _ = ShowMixerOverviewWindowAsync();
+    }
+
+    private async Task ShowMixerOverviewWindowAsync()
+    {
+        var globalMaster = await EnsureGlobalMasterViewModelAsync();
+        if (globalMaster is null || LayerAViewModel is null ||
+            LayerBViewModel is null)
+            return;
+
+        _mixerOverviewViewModel = new MixerOverviewViewModel(LayerAViewModel,
+            LayerBViewModel, globalMaster);
+
+        _mixerOverviewWindow = new MixerOverviewWindow
+        {
+            DataContext = _mixerOverviewViewModel
+        };
+        _mixerOverviewWindow.Closed += (_, _) =>
+        {
+            // Only disposes the overview's own row-list wrappers. LayerAViewModel,
+            // LayerBViewModel and globalMaster are shared, app-lifetime instances owned
+            // by this class — never dispose them here.
+            _mixerOverviewViewModel?.Dispose();
+            _mixerOverviewViewModel = null;
+            _mixerOverviewWindow = null;
+        };
+        _mixerOverviewWindow.Show();
     }
 
     public async Task SaveMixer()

@@ -98,10 +98,10 @@ public sealed class JackInputPortService(
             _configuredPorts.RemoveAll(c => c.Id == port.Id);
         }
 
+        await StoreConfigAsync();
         JackInputPorts.Remove(port);
         port.Loopback.Destroy();
         Deleted?.Invoke(port);
-        await StoreConfigAsync();
     }
 
     private async Task<JackInputPort> CreatePortAsync(Guid id, string name,

@@ -56,6 +56,8 @@
             <MenuItem Header="Mixer">
                 <MenuItem Header="Global Master ..."
                           Command="{Binding ShowGlobalMasterWindow}" />
+                <MenuItem Header="Mixer Overview ..."
+                          Command="{Binding ShowMixerOverviewWindow}" />
                 <MenuItem Header="Drum Mixer ..."
                           IsEnabled="{Binding IsDrumMixerEnabled}"
                           Command="{Binding ShowDrumMixerWindow}" />

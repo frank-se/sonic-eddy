@@ -1,0 +1,174 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:SonicEddy.ViewModels.MixerOverviewViewModels"
+        xmlns:mixerControls="clr-namespace:SonicEddy.Controls.MixerControls"
+        xmlns:overviewControls="clr-namespace:SonicEddy.Controls.MixerOverviewControls"
+        xmlns:controls="clr-namespace:SonicEddy.Controls"
+        mc:Ignorable="d" d:DesignWidth="1400" d:DesignHeight="900"
+        Width="1400" Height="900"
+        WindowStartupLocation="CenterOwner"
+        x:CompileBindings="False"
+        x:Class="SonicEddy.Views.MixerOverviewViews.MixerOverviewWindow"
+        x:DataType="vm:MixerOverviewViewModel"
+        Title="Mixer Overview">
+
+    <Window.Resources>
+        <!-- Header strips matching MixerOverviewRowBars/RowSmallSection's widths/spacing
+             exactly, so labels line up with the controls underneath either side. -->
+        <ControlTemplate x:Key="BarsHeader">
+            <StackPanel Orientation="Vertical" Spacing="2">
+                <StackPanel Orientation="Horizontal" Spacing="2">
+                    <TextBlock Width="50" Text="Vol" />
+                    <TextBlock Width="36" Text="Pan" />
+                    <TextBlock Width="24" Text="S1" />
+                    <TextBlock Width="24" Text="S2" />
+                    <TextBlock Width="24" Text="S3" />
+                    <TextBlock Width="24" Text="S4" />
+                    <TextBlock Width="32" Text="Trim" />
+                    <TextBlock Width="24" Text="Mix" />
+                </StackPanel>
+                <TextBlock Text="Level (L/R)" HorizontalAlignment="Center" />
+            </StackPanel>
+        </ControlTemplate>
+        <ControlTemplate x:Key="SmallHeader">
+            <StackPanel Orientation="Vertical" Spacing="1">
+                <TextBlock Width="90" Text="Channel" />
+                <TextBlock Width="90" Text="Source" />
+            </StackPanel>
+        </ControlTemplate>
+    </Window.Resources>
+
+    <Window.Styles>
+        <Style Selector="ContentControl.header TextBlock">
+            <Setter Property="Foreground" Value="Gray" />
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="TextAlignment" Value="Center" />
+        </Style>
+    </Window.Styles>
+
+    <Grid ColumnDefinitions="*,Auto,*" Margin="8">
+
+        <!-- Layer A: channel name/source on the outer edge, bars adjacent to the center -->
+        <DockPanel Grid.Column="0">
+            <StackPanel DockPanel.Dock="Top" Orientation="Vertical"
+                        HorizontalAlignment="Right">
+                <TextBlock Text="LAYER A" FontWeight="Bold" Foreground="White"
+                           Margin="0,0,0,4" />
+                <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,0,0,2">
+                    <Border Width="6" />
+                    <ContentControl Classes="header" Template="{StaticResource SmallHeader}" />
+                    <ContentControl Classes="header" Template="{StaticResource BarsHeader}" />
+                </StackPanel>
+            </StackPanel>
+            <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                          VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding LayerA.Rows}"
+                              HorizontalAlignment="Right">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,3">
+                                <Border Width="6" Background="{Binding AccentColor}"
+                                        Opacity="{Binding DimOpacity}" />
+                                <overviewControls:MixerOverviewRowSmallSection />
+                                <overviewControls:MixerOverviewRowBars />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </DockPanel>
+
+        <!-- Center: fixed, never scrolls. Master A/B side by side like a DJ mixer, crossfader
+             spanning both underneath, Cue underneath that. -->
+        <Grid Grid.Column="1" Margin="12,0" VerticalAlignment="Top"
+              RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="110,110">
+
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="MASTER A" FontWeight="Bold"
+                       Foreground="White" HorizontalAlignment="Center" Margin="0,0,0,4" />
+            <TextBlock Grid.Row="0" Grid.Column="1" Text="MASTER B" FontWeight="Bold"
+                       Foreground="White" HorizontalAlignment="Center" Margin="0,0,0,4" />
+
+            <mixerControls:PanAndVolumeSectionWithMonitor
+                Grid.Row="1" Grid.Column="0"
+                IsHitTestVisible="False" Height="260"
+                Volume="{Binding GlobalMaster.LayerA.PanAndVolume.Volume}"
+                Pan="{Binding GlobalMaster.LayerA.PanAndVolume.Pan}"
+                LeftAverage="{Binding GlobalMaster.LayerA.PanAndVolume.LeftAverage}"
+                RightAverage="{Binding GlobalMaster.LayerA.PanAndVolume.RightAverage}"
+                LeftPeak="{Binding GlobalMaster.LayerA.PanAndVolume.LeftPeak}"
+                RightPeak="{Binding GlobalMaster.LayerA.PanAndVolume.RightPeak}" />
+
+            <mixerControls:PanAndVolumeSectionWithMonitor
+                Grid.Row="1" Grid.Column="1"
+                IsHitTestVisible="False" Height="260"
+                Volume="{Binding GlobalMaster.LayerB.PanAndVolume.Volume}"
+                Pan="{Binding GlobalMaster.LayerB.PanAndVolume.Pan}"
+                LeftAverage="{Binding GlobalMaster.LayerB.PanAndVolume.LeftAverage}"
+                RightAverage="{Binding GlobalMaster.LayerB.PanAndVolume.RightAverage}"
+                LeftPeak="{Binding GlobalMaster.LayerB.PanAndVolume.LeftPeak}"
+                RightPeak="{Binding GlobalMaster.LayerB.PanAndVolume.RightPeak}" />
+
+            <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,10,0,4">
+                <TextBlock Text="X-FADE" FontWeight="Bold" Foreground="White"
+                           HorizontalAlignment="Center" Margin="0,0,0,4" />
+                <controls:PanSlider Height="40" HorizontalAlignment="Stretch"
+                                     IsHitTestVisible="False" Background="DimGray"
+                                     Maximum="1" Value="{Binding GlobalMaster.Xfade}" />
+            </StackPanel>
+
+            <StackPanel Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2"
+                        IsVisible="{Binding GlobalMaster.HasCue}" Margin="0,4">
+                <TextBlock Text="CUE" FontWeight="Bold" Foreground="White"
+                           HorizontalAlignment="Center" Margin="0,0,0,4" />
+                <mixerControls:PanAndVolumeSectionWithMonitor
+                    HorizontalAlignment="Center" Width="110" Height="180"
+                    IsHitTestVisible="False"
+                    Volume="{Binding GlobalMaster.CueChannel.PanAndVolume.Volume}"
+                    Pan="{Binding GlobalMaster.CueChannel.PanAndVolume.Pan}"
+                    LeftAverage="{Binding GlobalMaster.CueChannel.PanAndVolume.LeftAverage}"
+                    RightAverage="{Binding GlobalMaster.CueChannel.PanAndVolume.RightAverage}"
+                    LeftPeak="{Binding GlobalMaster.CueChannel.PanAndVolume.LeftPeak}"
+                    RightPeak="{Binding GlobalMaster.CueChannel.PanAndVolume.RightPeak}" />
+                <controls:PanSlider Height="40" HorizontalAlignment="Stretch"
+                                     Margin="0,8,0,0"
+                                     IsHitTestVisible="False" Background="DimGray"
+                                     Maximum="1" Value="{Binding GlobalMaster.CueXfade}" />
+            </StackPanel>
+
+        </Grid>
+
+        <!-- Layer B: mirror of Layer A's page position only — bars stay adjacent to the
+             center (same order/direction as Layer A's bars), name/source on the outer edge. -->
+        <DockPanel Grid.Column="2">
+            <StackPanel DockPanel.Dock="Top" Orientation="Vertical"
+                        HorizontalAlignment="Left">
+                <TextBlock Text="LAYER B" FontWeight="Bold" Foreground="White"
+                           Margin="0,0,0,4" />
+                <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,0,0,2">
+                    <ContentControl Classes="header" Template="{StaticResource BarsHeader}" />
+                    <ContentControl Classes="header" Template="{StaticResource SmallHeader}" />
+                    <Border Width="6" />
+                </StackPanel>
+            </StackPanel>
+            <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                          VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding LayerB.Rows}"
+                              HorizontalAlignment="Left">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,3">
+                                <overviewControls:MixerOverviewRowBars />
+                                <overviewControls:MixerOverviewRowSmallSection />
+                                <Border Width="6" Background="{Binding AccentColor}"
+                                        Opacity="{Binding DimOpacity}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </DockPanel>
+
+    </Grid>
+</Window>
