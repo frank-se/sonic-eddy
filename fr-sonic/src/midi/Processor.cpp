@@ -76,14 +76,20 @@ std::optional<size_t> midi::Processor::create_midi_mix_port(
   const auto midi_mix = std::make_shared<controllers::MidiMix>(
       *_registry, _loop, sender,
       [this, layer_select_callback](const size_t layer_id) {
-        for (const auto &c : _controllers)
-          c->set_layer_from_processor(layer_id);
+        {
+          std::lock_guard lock(_controllers_mutex);
+          for (const auto &c : _controllers)
+            c->set_layer_from_processor(layer_id);
+        }
         layer_select_callback(layer_id);
       },
       [this, channel_select_callback](const size_t channel_id) {
-        for (const auto &c : _controllers)
-          c->set_selected_channel_from_processor(
-              controllers::ChannelType::CHANNEL, channel_id);
+        {
+          std::lock_guard lock(_controllers_mutex);
+          for (const auto &c : _controllers)
+            c->set_selected_channel_from_processor(
+                controllers::ChannelType::CHANNEL, channel_id);
+        }
         channel_select_callback(controllers::ChannelType::CHANNEL, channel_id);
       },
       [dial_section_mode_select_callback](const size_t channel_id,
@@ -134,14 +140,20 @@ std::optional<size_t> midi::Processor::create_mm_1_port(
   const auto cmd_mm_1 = std::make_shared<controllers::CmdMm1>(
       *_registry, _loop, sender,
       [this, layer_select_callback](const size_t layer_id) {
-        for (const auto &c : _controllers)
-          c->set_layer_from_processor(layer_id);
+        {
+          std::lock_guard lock(_controllers_mutex);
+          for (const auto &c : _controllers)
+            c->set_layer_from_processor(layer_id);
+        }
         layer_select_callback(layer_id);
       },
       [this, channel_select_callback](const size_t channel_id) {
-        for (const auto &c : _controllers)
-          c->set_selected_channel_from_processor(
-              controllers::ChannelType::GROUP_CHANNEL, channel_id);
+        {
+          std::lock_guard lock(_controllers_mutex);
+          for (const auto &c : _controllers)
+            c->set_selected_channel_from_processor(
+                controllers::ChannelType::GROUP_CHANNEL, channel_id);
+        }
         channel_select_callback(controllers::ChannelType::GROUP_CHANNEL, channel_id);
       },
       [dial_section_mode_select_callback](const size_t channel_id,
@@ -239,8 +251,11 @@ std::optional<size_t> midi::Processor::create_launchpad_mini_port(
   const auto launchpad = std::make_shared<controllers::LaunchpadMini>(
       mi_sender, da_sender,
       [this, layer_select_callback](const size_t layer_id) {
-        for (const auto &c : _controllers)
-          c->set_layer_from_processor(layer_id);
+        {
+          std::lock_guard lock(_controllers_mutex);
+          for (const auto &c : _controllers)
+            c->set_layer_from_processor(layer_id);
+        }
         layer_select_callback(layer_id);
       },
       loop_pressed_callback, fader_changed_callback);
@@ -257,9 +272,14 @@ std::optional<size_t> midi::Processor::create_launchpad_mini_port(
 /* ── state forwarding ────────────────────────────────────────────────────── */
 
 bool midi::Processor::process_queues() {
-  auto controllers_lock = std::lock_guard(_controllers_mutex);
+  std::vector<ReceiverBinding> bindings_snapshot;
+  {
+    std::lock_guard controllers_lock(_controllers_mutex);
+    bindings_snapshot = _receiver_bindings;
+  }
+
   auto message_processed = false;
-  for (const auto &binding : _receiver_bindings) {
+  for (const auto &binding : bindings_snapshot) {
     if (const auto message = binding.receiver->pop()) {
       binding.controller->process(*message);
       message_processed = true;
