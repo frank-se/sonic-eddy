@@ -6,6 +6,6 @@ public interface IReturnChannel  :IChannel
 {
     bool HasFilter { get; }
 
-    void OnAddFilter(IOutputChannel channel);
-    void OnDeleteFilter(IOutputChannel channel);
+    void OnAddFilter(object channel);
+    void OnDeleteFilter(object channel);
 }

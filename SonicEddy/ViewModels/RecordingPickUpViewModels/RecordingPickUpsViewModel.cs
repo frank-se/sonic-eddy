@@ -51,9 +51,9 @@ public class RecordingPickUpsViewModel : ViewModelBase, IDisposable
         viewModel.Dispose();
     }
 
-    public async Task DeletePickUp(RecordingPickUpViewModel viewModel)
+    public async Task DeletePickUp(object viewModel)
     {
-        await _service.DeletePickUp(viewModel.PickUp);
+        await _service.DeletePickUp(((RecordingPickUpViewModel)viewModel).PickUp);
     }
 
     private void OnPickUpAdded(RecordingPickUp pickUp) =>

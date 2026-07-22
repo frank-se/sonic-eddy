@@ -67,9 +67,9 @@ public class JackInputPortsViewModel : ViewModelBase, IDisposable
             portNames);
     }
 
-    public async Task DeleteJackInputPort(JackInputPortViewModel viewModel)
+    public async Task DeleteJackInputPort(object viewModel)
     {
-        await _jackInputPortService.DeleteJackInputPort(viewModel.Port);
+        await _jackInputPortService.DeleteJackInputPort(((JackInputPortViewModel)viewModel).Port);
     }
 
     public void Dispose()

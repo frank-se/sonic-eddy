@@ -118,9 +118,9 @@ public class FilterGraphBuilderViewModel : ViewModelBase
     public ReactiveCommand<ParameterItemViewModel, Unit> MoveParameterUpCommand { get; }
     public ReactiveCommand<ParameterItemViewModel, Unit> MoveParameterDownCommand { get; }
 
-    public void AddPlugin(AvailableLv2Plugin plugin)
+    public void AddPlugin(object plugin)
     {
-        var nodeVm = new Lv2PluginNodeViewModel(plugin.Description);
+        var nodeVm = new Lv2PluginNodeViewModel(((AvailableLv2Plugin)plugin).Description);
         Nodes.Add(nodeVm);
 
         var group = new ParameterPluginViewModel(nodeVm.Id, nodeVm.Name);
@@ -135,9 +135,10 @@ public class FilterGraphBuilderViewModel : ViewModelBase
         ParameterPlugins.Add(group);
     }
 
-    public void AddBuiltinNode(AvailableBuiltinNode available)
+    public void AddBuiltinNode(object available)
     {
-        Nodes.Add(new BuiltinNodeViewModel(available.NodeType, (int)available.ChannelCount));
+        var builtinNode = (AvailableBuiltinNode)available;
+        Nodes.Add(new BuiltinNodeViewModel(builtinNode.NodeType, (int)builtinNode.ChannelCount));
     }
 
     private async Task BuildPluginClasses(

@@ -76,7 +76,7 @@ public class CustomControlTesterViewModel : ViewModelBase,
         IsSelected = !IsSelected;
     }
 
-    public void DeleteButtonAction(string param)
+    public void DeleteButtonAction(object param)
     {
         Console.WriteLine($"Delete {param}");
     }
@@ -87,13 +87,13 @@ public class CustomControlTesterViewModel : ViewModelBase,
         set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
-    public void FilterSectionDeleteAction(string param)
+    public void FilterSectionDeleteAction(object param)
     {
         Console.WriteLine($"Command parameter {param}");
         HasFilter = !HasFilter;
     }
 
-    public void FilterSectionAddAction(string param)
+    public void FilterSectionAddAction(object param)
     {
         Console.WriteLine($"Command parameter {param}");
         HasFilter = !HasFilter;

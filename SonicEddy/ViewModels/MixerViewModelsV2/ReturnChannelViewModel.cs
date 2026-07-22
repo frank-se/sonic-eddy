@@ -204,7 +204,7 @@ public class ReturnChannelViewModel : ReactiveObject, IReturnChannel,
     public void OnSelectChannel() =>
         SelectChannelCommand.Execute(this);
 
-    public async void OnAddFilter(IOutputChannel channel)
+    public async void OnAddFilter(object channel)
     {
         var viewModel = new AddFilterChainViewModel(_appDataService,
             _externalEffects);
@@ -230,7 +230,7 @@ public class ReturnChannelViewModel : ReactiveObject, IReturnChannel,
         }
     }
 
-    public async void OnDeleteFilter(IOutputChannel channel)
+    public async void OnDeleteFilter(object channel)
     {
         await _mixerService.RemoveFilterFromReturnChannel(_layerId, _index);
         FilterChain = null;

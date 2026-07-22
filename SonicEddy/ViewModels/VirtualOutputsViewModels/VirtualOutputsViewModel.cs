@@ -54,9 +54,9 @@ public sealed class VirtualOutputsViewModel : ViewModelBase, IDisposable
         }
     }
 
-    public async Task DeleteVirtualOutput(VirtualOutputViewModel viewModel)
+    public async Task DeleteVirtualOutput(object viewModel)
     {
-        await _virtualOutputService.DeleteVirtualOutput(viewModel.VirtualOutput);
+        await _virtualOutputService.DeleteVirtualOutput(((VirtualOutputViewModel)viewModel).VirtualOutput);
     }
 
     private void OnVirtualOutputAdded(VirtualOutput output) =>

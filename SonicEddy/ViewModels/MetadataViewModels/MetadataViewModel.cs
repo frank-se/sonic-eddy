@@ -42,9 +42,10 @@ public class MetadataViewModel : ViewModelBase
 
     private string _selectedMetadataName = "default";
 
-    public void ChangeSelectedMetadata(string name)
+    public void ChangeSelectedMetadata(object name)
     {
-        if (name == _selectedMetadataName) return;
+        var metadataName = (string)name;
+        if (metadataName == _selectedMetadataName) return;
 
         var previous = _metadataRegistry.GetByName(_selectedMetadataName);
         if (previous is not null)
@@ -54,7 +55,7 @@ public class MetadataViewModel : ViewModelBase
             previous.Deleted -= HandleMetadataEntryDeletedEvent;
         }
 
-        _selectedMetadataName = name;
+        _selectedMetadataName = metadataName;
         MetadataEntries.Clear();
         var metadata = _metadataRegistry.GetByName(_selectedMetadataName);
 
@@ -133,8 +134,9 @@ public class MetadataViewModel : ViewModelBase
         }
     }
 
-    public async Task UpdateMetadataEntry(MetadataEntry metadataEntry)
+    public async Task UpdateMetadataEntry(object entry)
     {
+        var metadataEntry = (MetadataEntry)entry;
         var dialogViewModel = new AddOrUpdateMetadataItemDialogViewModel()
         {
             IsAddMode = false,
@@ -162,8 +164,9 @@ public class MetadataViewModel : ViewModelBase
         }
     }
 
-    public void DeleteMetadataEntry(MetadataEntry metadataEntry)
+    public void DeleteMetadataEntry(object entry)
     {
+        var metadataEntry = (MetadataEntry)entry;
         var metadata = _metadataRegistry.GetByName(metadataEntry.MetadataName);
         metadata?.DeleteMetadataEntry(metadataEntry.Subject, metadataEntry.Key);
     }

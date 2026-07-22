@@ -84,7 +84,9 @@ internal static class Program
     private static AppBuilder BuildAvaloniaApp()
     {
         return AppBuilder.Configure<App>()
-            .UsePlatformDetect()
+            .UseWayland()
+            .UseSkia()
+            .UseHarfBuzz()
             .WithInterFont()
             .LogToTrace()
             .UseReactiveUI(_ => { });

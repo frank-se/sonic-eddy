@@ -47,15 +47,15 @@ public class FilterGraphManagerViewModel : ViewModelBase
         });
     }
 
-    public void DeleteFilterGraph(Guid id)
+    public void DeleteFilterGraph(object id)
     {
-        _appDataService.DeleteFilterGraph(id);
+        _appDataService.DeleteFilterGraph((Guid)id);
         _ = Task.Run(LoadFilterGraphs);
     }
 
-    public async Task EditFilterGraph(Guid id)
+    public async Task EditFilterGraph(object id)
     {
-        var filterGraph = await _appDataService.GetFilterGraph(id);
+        var filterGraph = await _appDataService.GetFilterGraph((Guid)id);
         var pluginDescriptions = FrSonicLv2.PluginDescriptions();
         var appDataService = Locator.Current.GetService<IAppDataService>();
 

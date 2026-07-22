@@ -79,9 +79,9 @@ public class ModuleManagerViewModel : ViewModelBase, IDisposable
         };
     }
 
-    public void SetSelectedModule(PipewireModule module)
+    public void SetSelectedModule(object module)
     {
-        SelectedModule = module;
+        SelectedModule = (PipewireModule)module;
     }
 
     private void LoadModules()
