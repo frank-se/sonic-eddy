@@ -26,6 +26,7 @@ using SonicEddy.Services.JackInputPorts;
 using SonicEddy.Services.VirtualOutputs;
 using SonicEddy.Services.TraktorZ1;
 using SonicEddy.Services.Wireplumber;
+using SonicEddy.Tools;
 using SonicEddy.ViewModels;
 using SonicEddy.Views;
 using Splat;
@@ -46,14 +47,30 @@ public class App : Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime
             desktop)
         {
-            desktop.MainWindow = new MainWindow
+            var mainWindowViewModel =
+                Locator.Current.GetService<MainWindowViewModel>();
+            var startupWindows =
+                StartupWindowOptions.Parse(desktop.Args ?? Array.Empty<string>());
+
+            if (startupWindows.MainMixer)
             {
-                DataContext = Locator.Current.GetService<MainWindowViewModel>()
-            };
+                desktop.MainWindow = new MainWindow
+                {
+                    DataContext = mainWindowViewModel
+                };
+            }
+
             desktop.Exit += (_, _) =>
             {
-                (desktop.MainWindow.DataContext as IDisposable)?.Dispose();
+                (mainWindowViewModel as IDisposable)?.Dispose();
             };
+
+            if (startupWindows.DrumMixer)
+                mainWindowViewModel?.ShowDrumMixerWindow();
+            if (startupWindows.Overview)
+                mainWindowViewModel?.ShowMixerOverviewWindow();
+            if (startupWindows.GlobalMaster)
+                mainWindowViewModel?.ShowGlobalMasterWindow();
         }
 
         base.OnFrameworkInitializationCompleted();
