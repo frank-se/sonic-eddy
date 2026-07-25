@@ -1,5 +1,6 @@
 using System;
 using Avalonia.Controls;
+using SonicEddy.Tools;
 
 namespace SonicEddy.Views.MidiRouterViews;
 
@@ -8,6 +9,7 @@ public partial class MidiRouterWindow : Window
     public MidiRouterWindow()
     {
         InitializeComponent();
+        WaylandAppId.Apply(this, "sonic-eddy-utils");
         Closed += OnClosed;
     }
 

@@ -8,6 +8,7 @@ using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 using ReactiveUI;
 using SonicEddy.ViewModels.MetadataViewModels;
+using SonicEddy.Tools;
 
 namespace SonicEddy.Views.MetadataViews;
 
@@ -18,6 +19,7 @@ public partial class AddOrUpdateMetadataItemDialogView : Window
     public AddOrUpdateMetadataItemDialogView()
     {
         InitializeComponent();
+        WaylandAppId.Apply(this, "sonic-eddy-utils");
 
         this.WhenAnyValue(x => x.DataContext)!
             .OfType<AddOrUpdateMetadataItemDialogViewModel>()

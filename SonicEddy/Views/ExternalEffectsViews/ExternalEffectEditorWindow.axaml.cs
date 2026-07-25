@@ -6,6 +6,7 @@ using System.Reactive.Linq;
 using Avalonia.Controls;
 using ReactiveUI;
 using SonicEddy.ViewModels.ExternalEffectsViewModels;
+using SonicEddy.Tools;
 
 namespace SonicEddy.Views.ExternalEffectsViews;
 
@@ -16,6 +17,7 @@ public partial class ExternalEffectEditorWindow : Window
     public ExternalEffectEditorWindow()
     {
         InitializeComponent();
+        WaylandAppId.Apply(this, "sonic-eddy-utils");
         this.WhenAnyValue(window => window.DataContext)!
             .OfType<ExternalEffectEditorViewModel>().Take(1)
             .Subscribe(viewModel => viewModel.Close.RegisterHandler(context =>

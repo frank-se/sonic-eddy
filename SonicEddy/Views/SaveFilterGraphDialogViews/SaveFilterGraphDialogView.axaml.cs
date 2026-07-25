@@ -7,6 +7,7 @@ using Avalonia.Controls;
 using ReactiveUI;
 using SonicEddy.ViewModels.CreateModuleDialogViewModels;
 using SonicEddy.ViewModels.SaveFilterGraphDialogViewModels;
+using SonicEddy.Tools;
 
 namespace SonicEddy.Views.SaveFilterGraphDialogViews;
 
@@ -17,6 +18,7 @@ public partial class SaveFilterGraphDialogView : Window, IDisposable
     public SaveFilterGraphDialogView()
     {
         InitializeComponent();
+        WaylandAppId.Apply(this, "sonic-eddy-utils");
 
         this.WhenAnyValue(x => x.DataContext)!
             .OfType<SaveFilterGraphDialogViewModel>()

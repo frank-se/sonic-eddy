@@ -6,6 +6,7 @@ using System.Reactive.Disposables.Fluent;
 using Avalonia.Controls;
 using ReactiveUI;
 using SonicEddy.ViewModels.ProAudioStreamsViewModels;
+using SonicEddy.Tools;
 
 namespace SonicEddy.Views.ProAudioStreamsViews;
 
@@ -16,6 +17,7 @@ public partial class AddProAudioStreamDialogView : Window, IDisposable
     public AddProAudioStreamDialogView()
     {
         InitializeComponent();
+        WaylandAppId.Apply(this, "sonic-eddy-utils");
 
         this.WhenAnyValue(x => x.DataContext)!
             .OfType<AddProAudioStreamDialogViewModel>()

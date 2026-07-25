@@ -17,6 +17,21 @@ internal static class WaylandAppId
 {
     private const BindingFlags InstanceNonPublic = BindingFlags.Instance | BindingFlags.NonPublic;
 
+    /// <summary>
+    /// Subscribes to <paramref name="window"/>'s Opened event and sets its Wayland
+    /// app_id once the native surface exists. Call once from the window's constructor.
+    /// </summary>
+    public static void Apply(Window window, string appId)
+    {
+        window.Opened += (_, _) =>
+        {
+            var logger = Splat.Locator.Current
+                .GetService<ILoggerFactory>()
+                ?.CreateLogger("SonicEddy.Tools.WaylandAppId");
+            TrySet(window, appId, logger);
+        };
+    }
+
     public static void TrySet(TopLevel topLevel, string appId, ILogger? logger = null)
     {
         try

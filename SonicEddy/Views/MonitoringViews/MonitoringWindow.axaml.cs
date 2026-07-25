@@ -1,5 +1,6 @@
 using System;
 using Avalonia.Controls;
+using SonicEddy.Tools;
 
 namespace SonicEddy.Views.MonitoringViews;
 
@@ -8,6 +9,7 @@ public partial class MonitoringWindow : Window
     public MonitoringWindow()
     {
         InitializeComponent();
+        WaylandAppId.Apply(this, "sonic-eddy-utils");
         Closed += OnClosed;
     }
 

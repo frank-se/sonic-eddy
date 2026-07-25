@@ -6,6 +6,7 @@ using System.Reactive.Linq;
 using Avalonia.Controls;
 using ReactiveUI;
 using SonicEddy.ViewModels.SavePresetDialogViewModels;
+using SonicEddy.Tools;
 
 namespace SonicEddy.Views.SavePresetDialogViews;
 
@@ -16,6 +17,7 @@ public partial class SavePresetDialogView : Window, IDisposable
     public SavePresetDialogView()
     {
         InitializeComponent();
+        WaylandAppId.Apply(this, "sonic-eddy-utils");
 
         this.WhenAnyValue(x => x.DataContext)!
             .OfType<SavePresetDialogViewModel>()

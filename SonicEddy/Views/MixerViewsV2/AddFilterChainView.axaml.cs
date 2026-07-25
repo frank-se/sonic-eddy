@@ -6,6 +6,7 @@ using System.Reactive.Linq;
 using Avalonia.Controls;
 using ReactiveUI;
 using SonicEddy.ViewModels.MixerViewModelsV2;
+using SonicEddy.Tools;
 
 namespace SonicEddy.Views.MixerViewsV2;
 
@@ -16,6 +17,7 @@ public partial class AddFilterChainView : Window, IDisposable
     public AddFilterChainView()
     {
         InitializeComponent();
+        WaylandAppId.Apply(this, "sonic-eddy-utils");
 
         this.WhenAnyValue(x => x.DataContext)!
             .OfType<AddFilterChainViewModel>()

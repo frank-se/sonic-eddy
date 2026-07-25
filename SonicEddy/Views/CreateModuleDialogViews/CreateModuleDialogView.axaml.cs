@@ -6,6 +6,7 @@ using System.Reactive.Linq;
 using Avalonia.Controls;
 using ReactiveUI;
 using SonicEddy.ViewModels.CreateModuleDialogViewModels;
+using SonicEddy.Tools;
 
 namespace SonicEddy.Views.CreateModuleDialogViews;
 
@@ -16,6 +17,7 @@ public partial class CreateModuleDialogView : Window, IDisposable
     public CreateModuleDialogView()
     {
         InitializeComponent();
+        WaylandAppId.Apply(this, "sonic-eddy-utils");
 
         this.WhenAnyValue(x => x.DataContext)!
             .OfType<CreateModuleDialogViewModel>()

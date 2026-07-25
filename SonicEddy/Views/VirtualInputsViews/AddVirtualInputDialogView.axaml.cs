@@ -6,6 +6,7 @@ using System.Reactive.Linq;
 using Avalonia.Controls;
 using ReactiveUI;
 using SonicEddy.ViewModels.VirtualInputsViewModels;
+using SonicEddy.Tools;
 
 namespace SonicEddy.Views.VirtualInputsViews;
 
@@ -16,6 +17,7 @@ public partial class AddVirtualInputDialogView : Window, IDisposable
     public AddVirtualInputDialogView()
     {
         InitializeComponent();
+        WaylandAppId.Apply(this, "sonic-eddy-utils");
 
         this.WhenAnyValue(x => x.DataContext)!
             .OfType<AddVirtualInputDialogViewModel>()
