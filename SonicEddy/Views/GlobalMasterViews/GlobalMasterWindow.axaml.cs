@@ -8,6 +8,6 @@ public partial class GlobalMasterWindow : Window
     public GlobalMasterWindow()
     {
         InitializeComponent();
-        WaylandAppId.Apply(this, "sonic-eddy-utils");
+        WaylandAppId.Apply(this, "sonic-eddy-global-master");
     }
 }
