@@ -96,7 +96,9 @@ public class RoutingComboBox : Grid
                 var text = item is null ? "None" : item.Name;
                 return new TextBlock()
                 {
-                    Text = text
+                    Text = text,
+                    TextTrimming = TextTrimming.CharacterEllipsis,
+                    HorizontalAlignment = HorizontalAlignment.Stretch
                 };
             });
 
