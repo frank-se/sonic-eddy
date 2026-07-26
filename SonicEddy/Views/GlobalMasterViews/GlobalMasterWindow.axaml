@@ -5,7 +5,7 @@
         xmlns:mixerControls="clr-namespace:SonicEddy.Controls.MixerControls"
         xmlns:controls="clr-namespace:SonicEddy.Controls"
         mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="800"
-        Width="760" Height="900"
+        SizeToContent="Width" Height="900"
         WindowStartupLocation="CenterOwner"
         x:CompileBindings="False"
         x:Class="SonicEddy.Views.GlobalMasterViews.GlobalMasterWindow"
@@ -103,6 +103,8 @@
                 BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
             <StackPanel Spacing="8">
                 <mixerControls:RoutingComboBox
+                    Width="356"
+                    HorizontalAlignment="Left"
                     Text="Audio To"
                     RoutingTargets="{Binding AudioToRoutingTargets}"
                     SelectedRoutingTarget="{Binding SelectedAudioToRoutingTarget, Mode=TwoWay}" />
