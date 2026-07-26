@@ -7,7 +7,7 @@
         xmlns:overviewControls="clr-namespace:SonicEddy.Controls.MixerOverviewControls"
         xmlns:controls="clr-namespace:SonicEddy.Controls"
         mc:Ignorable="d" d:DesignWidth="1400" d:DesignHeight="900"
-        Width="1400" Height="900"
+        SizeToContent="Width" Height="900"
         WindowStartupLocation="CenterOwner"
         x:CompileBindings="False"
         x:Class="SonicEddy.Views.MixerOverviewViews.MixerOverviewWindow"
