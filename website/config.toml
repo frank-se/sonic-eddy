@@ -1,4 +1,4 @@
-base_url = "https://www.sonic-eddy.com"
+base_url = "https://sonic-eddy.org"
 title = "Sonic Eddy"
 description = "A performance, and hardware-focused audio mixer for Linux"
 compile_sass = false

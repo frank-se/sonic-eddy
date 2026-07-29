@@ -1,4 +1,4 @@
 User-agent: *
 Disallow:
 Allow: /
-Sitemap: https://www.sonic-eddy.com/sitemap.xml
+Sitemap: https://sonic-eddy.org/sitemap.xml
