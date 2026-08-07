@@ -148,11 +148,16 @@ public class PreferencesViewModel : ViewModelBase
         set => this.RaiseAndSetIfChanged(ref field, value);
     } = 1;
 
+    /// <summary>
+    /// Manual override for the Traktor Z1 hidraw device. Leave empty to
+    /// auto-detect the device by USB vendor/product ID (see
+    /// <see cref="SonicEddy.Services.TraktorZ1.TraktorZ1DeviceLocator"/>).
+    /// </summary>
     public string TraktorZ1HidrawPath
     {
         get;
         set => this.RaiseAndSetIfChanged(ref field, value);
-    } = "/dev/hidraw3";
+    } = "";
 
     public bool DrumMixerEnabled
     {
@@ -218,7 +223,7 @@ public class PreferencesViewModel : ViewModelBase
         SelectedDefaultMonitorOutput = Nodes.FirstOrDefault(n =>
             n.Name == preferences.DefaultMonitorOutputName);
         MonitoringChannelEnabled = preferences.MonitoringChannelEnabled;
-        TraktorZ1HidrawPath = preferences.TraktorZ1HidrawPath ?? "/dev/hidraw3";
+        TraktorZ1HidrawPath = preferences.TraktorZ1HidrawPath ?? "";
         SelectedDefaultCueOutput = Nodes.FirstOrDefault(n =>
             n.Name == preferences.DefaultCueOutputName);
         DrumMixerEnabled = preferences.DrumMixerEnabled;

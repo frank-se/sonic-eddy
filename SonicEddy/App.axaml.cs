@@ -214,16 +214,11 @@ public class App : Application
         var traktorZ1Service = new TraktorZ1Service(traktorZ1SetupService,
             loggerFactory.CreateLogger<TraktorZ1Service>());
 
-        var traktorZ1CurrentPath = "";
-        preferencesService.Changed += () =>
-        {
-            var newPath = preferencesService.Preferences?.TraktorZ1HidrawPath ?? "";
-            if (newPath == traktorZ1CurrentPath) return;
-            traktorZ1Service.Stop();
-            traktorZ1CurrentPath = newPath;
-            if (!string.IsNullOrEmpty(newPath))
-                traktorZ1Service.Start(newPath);
-        };
+        var traktorZ1ConnectionManager = new TraktorZ1ConnectionManager(
+            traktorZ1Service, preferencesService,
+            loggerFactory.CreateLogger<TraktorZ1ConnectionManager>());
+        Locator.CurrentMutable.Register<TraktorZ1ConnectionManager>(() =>
+            traktorZ1ConnectionManager);
 
         var mixerViewModelService =
             new MixerViewModelService(appDataService, mixerServiceV2,

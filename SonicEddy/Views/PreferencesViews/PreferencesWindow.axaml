@@ -93,11 +93,12 @@
             <Label Grid.Row="7"
                    Grid.Column="0"
                    Target="TraktorZ1HidrawPathTextBox"
-                   Content="Traktor Z1 HID Device" />
+                   Content="Traktor Z1 HID Device (optional override)" />
 
             <TextBox Grid.Row="7"
                      Grid.Column="1"
                      x:Name="TraktorZ1HidrawPathTextBox"
+                     PlaceholderText="auto-detected, e.g. /dev/hidraw3"
                      Text="{Binding TraktorZ1HidrawPath}" />
 
             <StackPanel Grid.Row="8"
