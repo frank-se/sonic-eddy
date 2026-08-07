@@ -324,6 +324,7 @@ void midi::Processor::set_channel_node(
 
 void midi::Processor::set_master_channel_node(const size_t layer_id,
                                               const uint64_t object_id) {
+  std::lock_guard lock(_controllers_mutex);
   for (const auto &c : _controllers)
     c->set_master_channel_node(layer_id, object_id);
 }

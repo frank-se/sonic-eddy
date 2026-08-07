@@ -93,7 +93,7 @@ private:
   std::array<registry::Node *, 2> _master_channel_playback_nodes = {nullptr,
                                                                     nullptr};
 
-  std::mutex _channels_mutex{};
+  mutable std::mutex _channels_mutex{};
   /*
    * We always have 16 channels, each assigned to a layer. The first 8 are
    * assigned to layer 0, and the second 8 are assigned to layer 1.

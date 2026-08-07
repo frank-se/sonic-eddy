@@ -239,6 +239,7 @@ void controllers::FaderfoxPc4::set_channel_filter_node(ChannelType channel_type,
     return;
   }
 
+  std::lock_guard lock(_channels_mutex);
   _channels[ff_channel_id].filter_node = *node;
 }
 
@@ -292,6 +293,7 @@ void controllers::FaderfoxPc4::add_filter_parameter(
     return;
   }
 
+  std::lock_guard lock(_channels_mutex);
   auto &plugin = _channels[channel_id].plugins[plugin_id];
 
   for (size_t page = 0; page < number_of_parameter_pages; page++) {

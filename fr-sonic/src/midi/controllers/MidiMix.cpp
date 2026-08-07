@@ -417,7 +417,11 @@ bool controllers::MidiMix::handle_master_volume_control_change(
   logging::log<logging::LogLevel::Trace>(
       "MidiMix::handle_master_volume_control_change");
 
-  auto master_channel = _master_channel_playback_nodes[_selected_layer_id];
+  registry::Node *master_channel;
+  {
+    std::lock_guard lock(_channels_mutex);
+    master_channel = _master_channel_playback_nodes[_selected_layer_id];
+  }
 
   if (master_channel == nullptr) {
     logging::log<logging::LogLevel::Debug>(
@@ -796,5 +800,6 @@ void controllers::MidiMix::set_master_channel_node(const size_t layer_id,
     return;
   }
 
+  std::lock_guard lock(_channels_mutex);
   _master_channel_playback_nodes[layer_id] = *node;
 }
