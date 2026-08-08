@@ -49,8 +49,9 @@ public class App : Application
         {
             var mainWindowViewModel =
                 Locator.Current.GetService<MainWindowViewModel>();
-            var startupWindows =
-                StartupWindowOptions.Parse(desktop.Args ?? Array.Empty<string>());
+            var startupArgs = desktop.Args ?? Array.Empty<string>();
+            var startupWindows = StartupWindowOptions.Parse(startupArgs);
+            var mixerName = StartupWindowOptions.ParseMixerName(startupArgs);
 
             if (startupWindows.MainMixer)
             {
@@ -71,6 +72,8 @@ public class App : Application
                 mainWindowViewModel?.ShowMixerOverviewWindow();
             if (startupWindows.GlobalMaster)
                 mainWindowViewModel?.ShowGlobalMasterWindow();
+            if (!string.IsNullOrWhiteSpace(mixerName))
+                _ = mainWindowViewModel?.LoadOrCreateMixerByNameAsync(mixerName);
         }
 
         base.OnFrameworkInitializationCompleted();

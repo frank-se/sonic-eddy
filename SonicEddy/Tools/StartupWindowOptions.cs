@@ -23,6 +23,20 @@ internal static class StartupWindowOptions
         return (mainMixer, drumMixer, overview, globalMaster);
     }
 
+    /// <summary>
+    /// Returns the value passed after `--mixer-name`, or null if the flag was not given.
+    /// When set, the app loads the saved mixer config with that name once the mixer is
+    /// ready at startup, creating a new one if none exists yet.
+    /// </summary>
+    public static string? ParseMixerName(string[] args)
+    {
+        var index = Array.IndexOf(args, "--mixer-name");
+        if (index < 0 || index + 1 >= args.Length)
+            return null;
+
+        return args[index + 1];
+    }
+
     private static bool Contains(string[] args, string flag) =>
         Array.IndexOf(args, flag) >= 0;
 }

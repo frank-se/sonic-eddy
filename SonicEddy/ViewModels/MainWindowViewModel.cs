@@ -609,6 +609,37 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         await appDataService.CreateMixer(configuration);
     }
 
+    public async Task LoadOrCreateMixerByNameAsync(string mixerName)
+    {
+        var globalMaster = await EnsureGlobalMasterViewModelAsync();
+        if (globalMaster is null || LayerAViewModel is null ||
+            LayerBViewModel is null)
+            return;
+
+        var appDataService = Locator.Current.GetService<IAppDataService>();
+        var configurationService =
+            Locator.Current.GetService<MixerConfigurationService>();
+        if (appDataService is null || configurationService is null) return;
+
+        var mixers = await appDataService.GetAllMixers();
+        var existing = mixers.FirstOrDefault(m => m.Name == mixerName);
+
+        if (existing is not null)
+        {
+            await configurationService.ApplyAsync(existing, LayerAViewModel,
+                LayerBViewModel, globalMaster);
+            _currentMixerId = existing.Id;
+            _currentMixerName = existing.Name;
+        }
+        else
+        {
+            var id = Guid.NewGuid();
+            await StoreMixerAsync(id, mixerName);
+            _currentMixerId = id;
+            _currentMixerName = mixerName;
+        }
+    }
+
     private async Task<GlobalMasterViewModel?>
         EnsureGlobalMasterViewModelAsync()
     {
