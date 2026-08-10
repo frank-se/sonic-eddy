@@ -181,8 +181,13 @@ public sealed class MidiSyncLinkService : IMidiSyncLinkService
             return false;
 
         var node = FrSonic.NodeRegistry.GetByObjectId(port.Node.Id);
-        return node is { Media.Class: "Midi/Bridge" } &&
-               node.Name != MidiSyncNodeName;
+        if (node is null || node.Name == MidiSyncNodeName)
+            return false;
+
+        if (port.FormatDsp?.Contains("midi", StringComparison.OrdinalIgnoreCase) == true)
+            return true;
+
+        return node.Media.Class == "Midi/Bridge";
     }
 
     private static string DisplayName(Port port) =>
