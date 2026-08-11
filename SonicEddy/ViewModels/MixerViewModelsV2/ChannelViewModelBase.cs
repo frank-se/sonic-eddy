@@ -212,21 +212,34 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
             !chain.CaptureNode.PropertyInfos.IsCompleted)
             return;
 
-        Parameters = FilterGraph.PluginParameters?.Select(plugin =>
-        {
-            var node =
-                FilterGraph.Nodes.First(n => n.Id == plugin.NodeId);
+        var propertyInfos =
+            chain.CaptureNode.PropertyInfos.Result?.PropertyInfos ?? [];
 
-            var parameters =
-                plugin.ParameterDescriptions.Select((p, i) =>
-                        new ParameterViewModel(
-                            p.Min, p.Max, p.DisplayName, i < 4, p.Name,
-                            chain.CaptureNode))
+        Parameters = FilterGraph.FlatParameters?
+            .GroupBy(fp => fp.NodeId)
+            .Select(group =>
+            {
+                var node = FilterGraph.Nodes
+                    .FirstOrDefault(n => n.Id == group.Key);
+                if (node is null) return null;
+
+                var parameters = group.Select((fp, i) =>
+                    {
+                        var fullyQualifiedName = $"{node.Name}:{fp.Symbol}";
+                        var info = propertyInfos.FirstOrDefault(p =>
+                            p.Name == fullyQualifiedName);
+                        var (min, max) = FilterChainParameterRange.Get(info);
+                        return new ParameterViewModel(min, max,
+                            fp.DisplayName, i < 4, fullyQualifiedName,
+                            chain.CaptureNode);
+                    })
                     .OfType<IParameter>()
                     .ToList();
 
-            return new ParameterCollection(node.Name, parameters);
-        }).ToList() ?? [];
+                return new ParameterCollection(node.Name, parameters);
+            })
+            .OfType<ParameterCollection>()
+            .ToList() ?? [];
 
         _midiSetupService.SetChannelFilterNode(_channelType,
             _midiControllerChannelId,

@@ -258,17 +258,33 @@ public class GlobalMasterViewModel : ReactiveObject, IDisposable
             !filter.FilterChain.CaptureNode.PropertyInfos.IsCompleted)
             return;
 
-        var collections = filter.FilterGraph.PluginParameters?.Select(plugin =>
-        {
-            var graphNode = filter.FilterGraph.Nodes.First(node =>
-                node.Id == plugin.NodeId);
-            var parameters = plugin.ParameterDescriptions.Select((parameter,
-                    index) => new ParameterViewModel(parameter.Min,
-                    parameter.Max, parameter.DisplayName, index < 4,
-                    parameter.Name, filter.FilterChain.CaptureNode))
-                .OfType<UiParameter>().ToList();
-            return new ParameterCollection(graphNode.Name, parameters);
-        }).Take(3).ToArray() ?? [];
+        var propertyInfos =
+            filter.FilterChain.CaptureNode.PropertyInfos.Result?.PropertyInfos
+            ?? [];
+
+        var collections = filter.FilterGraph.FlatParameters?
+            .GroupBy(fp => fp.NodeId)
+            .Select(group =>
+            {
+                var graphNode = filter.FilterGraph.Nodes
+                    .FirstOrDefault(node => node.Id == group.Key);
+                if (graphNode is null) return null;
+
+                var parameters = group.Select((fp, index) =>
+                    {
+                        var fullyQualifiedName = $"{graphNode.Name}:{fp.Symbol}";
+                        var info = propertyInfos.FirstOrDefault(p =>
+                            p.Name == fullyQualifiedName);
+                        var (min, max) = FilterChainParameterRange.Get(info);
+                        return new ParameterViewModel(min, max,
+                            fp.DisplayName, index < 4, fullyQualifiedName,
+                            filter.FilterChain.CaptureNode);
+                    })
+                    .OfType<UiParameter>().ToList();
+                return new ParameterCollection(graphNode.Name, parameters);
+            })
+            .OfType<ParameterCollection>()
+            .Take(3).ToArray() ?? [];
 
         if (collections.ElementAtOrDefault(0) is { } first)
         {

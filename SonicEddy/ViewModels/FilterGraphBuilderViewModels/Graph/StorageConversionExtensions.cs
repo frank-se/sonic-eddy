@@ -76,7 +76,7 @@ public static class StorageConversionExtensions
                 new FilterGraphFlatParameter(p.NodeId, p.Symbol, p.DisplayName, (float)p.Default)))
             .ToList();
 
-        return new(viewModel.Id, viewModel.Name, nodes, edges, null, flatParameters);
+        return new(viewModel.Id, viewModel.Name, nodes, edges, flatParameters);
     }
 
     private static Guid IdInputPortByIndex(FilterGraphNodeBase node, int index) =>
