@@ -47,6 +47,10 @@ public interface IMixerService
         InsertProcessorRequest? request);
     void SetGlobalMasterOutputTarget(ulong objectSerial);
 
+    Task<FilterChain?> AddFilterToMicChannel(FilterGraph filterGraph);
+    Task RemoveFilterFromMicChannel();
+    Task<InsertProcessor?> AddExternalEffectToMicChannel(Guid effectId);
+
     event Action<List<InputChannel>>? InputsChanged;
     event Action<List<OutputChannel>>? OutputsChanged;
 

@@ -27,7 +27,8 @@ public sealed class MixerConfigurationService : IDisposable
     }
 
     public Mixer Capture(Guid id, string name, MixerLayerViewModel layerA,
-        MixerLayerViewModel layerB, GlobalMasterViewModel globalMaster) => new()
+        MixerLayerViewModel layerB, GlobalMasterViewModel globalMaster,
+        MicChannelViewModel? mic = null) => new()
     {
         Id = id,
         Name = name,
@@ -58,17 +59,27 @@ public sealed class MixerConfigurationService : IDisposable
         },
         GlobalMasterInsert = globalMaster.CaptureInsertProcessor(),
         GlobalMasterAudioToNodeName =
-            GetRoutingNodeName(globalMaster.SelectedAudioToRoutingTarget)
+            GetRoutingNodeName(globalMaster.SelectedAudioToRoutingTarget),
+        Mic = mic is null ? new() : CaptureMicChannel(mic)
     };
 
+    private static ChannelConfig CaptureMicChannel(MicChannelViewModel mic)
+    {
+        var config = CaptureChannel(mic);
+        config.AudioFromNodeName =
+            GetRoutingNodeName(mic.SelectedAudioFromRoutingTarget);
+        return config;
+    }
+
     public Mixer CreateDefault(MixerLayerViewModel layerA,
-        MixerLayerViewModel layerB, GlobalMasterViewModel globalMaster)
+        MixerLayerViewModel layerB, GlobalMasterViewModel globalMaster,
+        MicChannelViewModel? mic = null)
     {
         var configuration = Capture(Guid.Empty, "Default Mixer", layerA,
-            layerB, globalMaster);
+            layerB, globalMaster, mic);
 
-        configuration.MainCrossFader = new();
-        configuration.CueCrossFader = new();
+        configuration.MainCrossFader = new() { Shape = 1 };
+        configuration.CueCrossFader = new() { Shape = 1 };
         configuration.Cue.Pan = 0.0;
         configuration.Cue.Volume = 1.0;
 
@@ -88,6 +99,9 @@ public sealed class MixerConfigurationService : IDisposable
             }
         }
 
+        if (mic is not null)
+            ResetChannel(configuration.Mic);
+
         return configuration;
     }
 
@@ -102,7 +116,7 @@ public sealed class MixerConfigurationService : IDisposable
 
     public async Task ApplyAsync(Mixer configuration,
         MixerLayerViewModel layerA, MixerLayerViewModel layerB,
-        GlobalMasterViewModel globalMaster)
+        GlobalMasterViewModel globalMaster, MicChannelViewModel? mic = null)
     {
         if (_globalMaster is not null)
             _globalMaster.PropertyChanged -= OnGlobalMasterPropertyChanged;
@@ -123,6 +137,12 @@ public sealed class MixerConfigurationService : IDisposable
         {
             var layer = layerConfig.LayerId == 0 ? layerA : layerB;
             await ApplyLayerAsync(layerConfig, layer);
+        }
+
+        if (mic is not null)
+        {
+            await ApplyChannelAsync(configuration.Mic, mic);
+            ApplyAudioFrom(configuration.Mic.AudioFromNodeName, mic);
         }
 
         globalMaster.Xfade = configuration.MainCrossFader.Position;
@@ -352,6 +372,16 @@ public sealed class MixerConfigurationService : IDisposable
             GetRoutingNodeName(candidate) == nodeName);
         if (target is not null)
             channel.SelectedAudioFromRoutingTarget = target;
+    }
+
+    private static void ApplyAudioFrom(string? nodeName,
+        MicChannelViewModel mic)
+    {
+        if (nodeName is null) return;
+        var target = mic.AudioFromRoutingTargets.FirstOrDefault(candidate =>
+            GetRoutingNodeName(candidate) == nodeName);
+        if (target is not null)
+            mic.SelectedAudioFromRoutingTarget = target;
     }
 
     private void ApplyAudioTo(string? nodeName,

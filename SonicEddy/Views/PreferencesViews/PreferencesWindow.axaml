@@ -10,7 +10,7 @@
         Title="Preferences">
 
     <StackPanel>
-        <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,*"
+        <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,*"
               ColumnDefinitions="Auto,*"
               RowSpacing="6"
               Margin="12">
@@ -106,6 +106,17 @@
                         Grid.ColumnSpan="2">
                 <CheckBox Content="Enable Drum Mixer"
                           IsChecked="{Binding DrumMixerEnabled}" />
+                <TextBlock Text="Requires an application restart."
+                           FontSize="11"
+                           Opacity="0.7"
+                           Margin="24,0,0,0" />
+            </StackPanel>
+
+            <StackPanel Grid.Row="9"
+                        Grid.Column="0"
+                        Grid.ColumnSpan="2">
+                <CheckBox Content="Enable Microphone Channel"
+                          IsChecked="{Binding MicChannelEnabled}" />
                 <TextBlock Text="Requires an application restart."
                            FontSize="11"
                            Opacity="0.7"

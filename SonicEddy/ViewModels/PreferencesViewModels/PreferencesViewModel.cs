@@ -101,6 +101,14 @@ public class PreferencesViewModel : ViewModelBase
             })
             .DisposeWith(_disposable);
 
+        this.WhenAnyValue(x => x.MicChannelEnabled)
+            .Subscribe(_ =>
+            {
+                _changed = true;
+                UpdateButtonStates();
+            })
+            .DisposeWith(_disposable);
+
         _ = FillFromPreferences();
     }
 
@@ -165,6 +173,12 @@ public class PreferencesViewModel : ViewModelBase
         set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
+    public bool MicChannelEnabled
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
     public bool IsSaveEnabled
     {
         get;
@@ -184,7 +198,8 @@ public class PreferencesViewModel : ViewModelBase
             MonitoringChannelEnabled = MonitoringChannelEnabled,
             TraktorZ1HidrawPath = TraktorZ1HidrawPath,
             DefaultCueOutputName = SelectedDefaultCueOutput?.Name,
-            DrumMixerEnabled = DrumMixerEnabled
+            DrumMixerEnabled = DrumMixerEnabled,
+            MicChannelEnabled = MicChannelEnabled
         };
         await _preferenceService.UpdateAndSave(preferences);
     }
@@ -227,6 +242,7 @@ public class PreferencesViewModel : ViewModelBase
         SelectedDefaultCueOutput = Nodes.FirstOrDefault(n =>
             n.Name == preferences.DefaultCueOutputName);
         DrumMixerEnabled = preferences.DrumMixerEnabled;
+        MicChannelEnabled = preferences.MicChannelEnabled;
     }
 
     private void UpdateButtonStates()

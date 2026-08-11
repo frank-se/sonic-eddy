@@ -346,6 +346,168 @@ public class MixerEditor(IWireplumberService wireplumberService,
         };
     }
 
+    public async Task<MicChannel> AddFilterToMicChannel(MicChannel channel,
+        Node globalMasterCaptureNode, FilterGraph filterGraph)
+    {
+        var filterChainConfig = new FilterChainModuleConfig()
+        {
+            CaptureProps = new()
+            {
+                Name = "mixer-fc-mic-capture",
+                Description = "Capture Node for Mixer Filter Mic Channel",
+                Linger = true,
+                AutoConnect = true,
+                DontFallback = true,
+                Passive = false,
+                TargetObject = channel.InputLoopback.PlaybackNode.ObjectSerial
+                    .ToString(),
+                MediaClass = "Stream/Input/Audio",
+                AudioPosition = ["FL", "FR"]
+            },
+            PlaybackProps = new()
+            {
+                Name = "mixer-fc-mic-playback",
+                Description = "Playback Node for Mixer Filter Mic Channel",
+                Linger = true,
+                AutoConnect = false,
+                DontFallback = true,
+                Passive = false,
+                MediaClass = "Stream/Output/Audio",
+                AudioPosition = ["FL", "FR"]
+            },
+            FilterGraph = filterGraph.ToFilterGraphConfig()
+        };
+
+        var filterChain =
+            await Fr.Sonic.FrSonic.ModuleFactory
+                .CreateFilterChainAsync("mixer-fc-mic", filterChainConfig);
+
+        channel.InputLoopback.PlaybackNode.OverrideTargetObject(
+            filterChain.CaptureNode.ObjectSerial.ToString());
+
+        UnlinkMicOutputFromGlobalMaster(channel.InputLoopback.PlaybackNode,
+            globalMasterCaptureNode);
+        await LinkMicOutputToGlobalMaster(filterChain.PlaybackNode,
+            globalMasterCaptureNode);
+
+        var oldProcessor = channel.InsertProcessor;
+        var newChannel = channel with
+        {
+            InsertProcessor =
+                new FilterChainInsertProcessor(filterChain, filterGraph)
+        };
+
+        oldProcessor?.Destroy();
+        return newChannel;
+    }
+
+    public async Task<MicChannel> AddExternalEffectToMicChannel(
+        MicChannel channel, Node globalMasterCaptureNode, Guid effectId)
+    {
+        var processor = await externalEffectService.CreateInsertAsync(effectId,
+            channel.InputLoopback.PlaybackNode,
+            globalMasterCaptureNode,
+            "Mic");
+        channel.InputLoopback.PlaybackNode.OverrideTargetObject(
+            processor.InputNode.ObjectSerial.ToString());
+
+        UnlinkMicOutputFromGlobalMaster(channel.InputLoopback.PlaybackNode,
+            globalMasterCaptureNode);
+        UnlinkMicOutputFromGlobalMaster(processor.OutputNode,
+            globalMasterCaptureNode);
+        await LinkMicOutputToGlobalMaster(processor.OutputNode,
+            globalMasterCaptureNode);
+
+        var oldProcessor = channel.InsertProcessor;
+        var replacement = channel with { InsertProcessor = processor };
+        oldProcessor?.Destroy();
+        return replacement;
+    }
+
+    public async Task<MicChannel> RemoveFilterFromMicChannel(
+        MicChannel channel, Node globalMasterCaptureNode)
+    {
+        if (channel.InsertProcessor is null) return channel;
+
+        var oldOutput = channel.InsertProcessor.OutputNode;
+        channel.InputLoopback.PlaybackNode.OverrideTargetObject(
+            oldOutput.ObjectSerial.ToString());
+
+        UnlinkMicOutputFromGlobalMaster(oldOutput, globalMasterCaptureNode);
+        await LinkMicOutputToGlobalMaster(channel.InputLoopback.PlaybackNode,
+            globalMasterCaptureNode);
+
+        channel.InsertProcessor.Destroy();
+        return channel with { InsertProcessor = null };
+    }
+
+    private static async Task LinkMicOutputToGlobalMaster(Node source,
+        Node globalMasterCaptureNode)
+    {
+        var outputPorts = await WaitForPortsAsync(source, "out", 1);
+        var inputPorts = Fr.Sonic.FrSonic.PortRegistry.Objects
+            .Where(p => p.Node.Id == globalMasterCaptureNode.ObjectId &&
+                        p.Direction == "in")
+            .OrderBy(p => p.PortId)
+            .ToList();
+
+        if (outputPorts.Count == 0) return;
+
+        for (var i = 0; i < inputPorts.Count; i++)
+            Fr.Sonic.FrSonic.LinkFactory.CreateLink(
+                outputPorts[i % outputPorts.Count], inputPorts[i]);
+    }
+
+    private static Task<List<Port>> WaitForPortsAsync(Node node,
+        string direction, int expectedCount)
+    {
+        List<Port> Snapshot() => Fr.Sonic.FrSonic.PortRegistry.Objects
+            .Where(p => p.Node.Id == node.ObjectId && p.Direction == direction)
+            .OrderBy(p => p.PortId)
+            .ToList();
+
+        var existing = Snapshot();
+        if (existing.Count >= expectedCount)
+            return Task.FromResult(existing);
+
+        var tcs = new TaskCompletionSource<List<Port>>();
+
+        void OnAdded(Port _)
+        {
+            var current = Snapshot();
+            if (current.Count >= expectedCount)
+                tcs.TrySetResult(current);
+        }
+
+        Fr.Sonic.FrSonic.PortRegistry.Added += OnAdded;
+
+        return WaitWithTimeout();
+
+        async Task<List<Port>> WaitWithTimeout()
+        {
+            try
+            {
+                var completed =
+                    await Task.WhenAny(tcs.Task, Task.Delay(2000));
+                return completed == tcs.Task ? await tcs.Task : Snapshot();
+            }
+            finally
+            {
+                Fr.Sonic.FrSonic.PortRegistry.Added -= OnAdded;
+            }
+        }
+    }
+
+    private static void UnlinkMicOutputFromGlobalMaster(Node source,
+        Node globalMasterCaptureNode)
+    {
+        foreach (var link in Fr.Sonic.FrSonic.LinkRegistry.Objects
+                     .Where(l => l.OutputNodeId == source.ObjectId &&
+                                 l.InputNodeId == globalMasterCaptureNode.ObjectId)
+                     .ToList())
+            Fr.Sonic.FrSonic.LinkFactory.DeleteLink(link);
+    }
+
     public async Task<MixerLayer> AddFilterToReturnChannel(
         MixerLayer mixerLayer, int index, FilterGraph filterGraph)
     {
@@ -583,6 +745,27 @@ public class MixerEditor(IWireplumberService wireplumberService,
                     Links = []
                 }
             });
+    }
+
+    public async Task<MicChannel> CreateMicChannel(
+        Node globalMasterCaptureNode)
+    {
+        var inputLoopback = await wireplumberService.CreateLoopbackModule(
+            "mic-input-loopback", new()
+            {
+                CaptureProps = CaptureBaseProps(true,
+                    "mic-input-loopback-capture", "Mic Input Capture"),
+                PlaybackProps = PlaybackBaseProps(false,
+                    "mic-input-loopback-playback", "Mic Input Playback")
+            });
+
+        inputLoopback.CaptureNode.SetVolumes([1.0, 1.0]);
+        inputLoopback.PlaybackNode.SetVolumes([1.0, 1.0]);
+
+        await LinkMicOutputToGlobalMaster(inputLoopback.PlaybackNode,
+            globalMasterCaptureNode);
+
+        return new(inputLoopback, null);
     }
 
     public async Task<MixerLayer> Create(string? defaultMasterName,

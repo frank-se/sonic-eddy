@@ -61,6 +61,9 @@
                 <MenuItem Header="Drum Mixer ..."
                           IsEnabled="{Binding IsDrumMixerEnabled}"
                           Command="{Binding ShowDrumMixerWindow}" />
+                <MenuItem Header="Microphone Channel ..."
+                          IsEnabled="{Binding IsMicChannelEnabled}"
+                          Command="{Binding ShowMicChannelWindow}" />
             </MenuItem>
 
             <MenuItem Header="Audio">

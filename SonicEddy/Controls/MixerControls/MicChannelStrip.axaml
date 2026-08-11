@@ -1,0 +1,68 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:mixerControls="clr-namespace:SonicEddy.Controls.MixerControls"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="SonicEddy.Controls.MixerControls.MicChannelStrip">
+
+    <Panel Background="DarkGreen">
+        <Grid ColumnDefinitions="120"
+              RowDefinitions="Auto,Auto,Auto,100,100,100,*"
+              Margin="2">
+
+            <mixerControls:ChannelHeader Grid.Row="0"
+                                         Text="{Binding $parent[mixerControls:MicChannelStrip].Text}"
+                                         DeleteCommand="{Binding $parent[mixerControls:MicChannelStrip].DeleteCommand}"
+                                         DeleteCommandParameter="{Binding $parent[mixerControls:MicChannelStrip].DeleteCommandParameter}"
+                                         IsSelected="{Binding $parent[mixerControls:MicChannelStrip].IsSelected}"
+                                         SelectCommand="{Binding $parent[mixerControls:MicChannelStrip].SelectCommand}"
+                                         SelectCommandParameter="{Binding $parent[mixerControls:MicChannelStrip].SelectCommandParameter}" />
+
+            <mixerControls:RoutingComboBox Grid.Row="1"
+                                           Text="Audio From"
+                                           SelectedRoutingTarget="{Binding $parent[mixerControls:MicChannelStrip].SelectedAudioFromRoutingTarget}"
+                                           RoutingTargets="{Binding $parent[mixerControls:MicChannelStrip].AudioFromRoutingTargets}" />
+
+            <mixerControls:FilterSectionHeader Grid.Row="2"
+                                               HasFilter="{Binding $parent[mixerControls:MicChannelStrip].HasFilter}"
+                                               IsMidiControlled="{Binding $parent[mixerControls:MicChannelStrip].IsFilterMidiControlled}"
+                                               AddCommand="{Binding $parent[mixerControls:MicChannelStrip].AddFilterCommand}"
+                                               AddCommandParameter="{Binding $parent[mixerControls:MicChannelStrip].AddFilterCommandParameter}"
+                                               DeleteCommand="{Binding $parent[mixerControls:MicChannelStrip].DeleteFilterCommand}"
+                                               DeleteCommandParameter="{Binding $parent[mixerControls:MicChannelStrip].DeleteFilterCommandParameter}"
+                                               Presets="{Binding $parent[mixerControls:MicChannelStrip].Presets}"
+                                               SavePresetCommand="{Binding $parent[mixerControls:MicChannelStrip].SavePresetCommand}"
+                                               LoadPresetCommand="{Binding $parent[mixerControls:MicChannelStrip].LoadPresetCommand}" />
+
+            <mixerControls:ParameterSection Grid.Row="3"
+                                            Margin="4"
+                                            IsMidiControlled="{Binding $parent[mixerControls:MicChannelStrip].FirstPluginParametersMidiControlled}"
+                                            Parameters="{Binding $parent[mixerControls:MicChannelStrip].FirstPluginParameters}"
+                                            Text="{Binding $parent[mixerControls:MicChannelStrip].FirstPluginText}" />
+
+            <mixerControls:ParameterSection Grid.Row="4"
+                                            Margin="4"
+                                            IsMidiControlled="{Binding $parent[mixerControls:MicChannelStrip].SecondPluginParametersMidiControlled}"
+                                            Parameters="{Binding $parent[mixerControls:MicChannelStrip].SecondPluginParameters}"
+                                            Text="{Binding $parent[mixerControls:MicChannelStrip].SecondPluginText}" />
+
+            <mixerControls:ParameterSection Grid.Row="5"
+                                            Margin="4"
+                                            IsMidiControlled="{Binding $parent[mixerControls:MicChannelStrip].ThirdPluginParametersMidiControlled}"
+                                            Parameters="{Binding $parent[mixerControls:MicChannelStrip].ThirdPluginParameters}"
+                                            Text="{Binding $parent[mixerControls:MicChannelStrip].ThirdPluginText}" />
+
+            <mixerControls:PanAndVolumeSectionWithMonitor Grid.Row="6"
+                                                          Margin="0,12,0,0"
+                                                          LeftAverage="{Binding $parent[mixerControls:MicChannelStrip].LeftAverage}"
+                                                          RightAverage="{Binding $parent[mixerControls:MicChannelStrip].RightAverage}"
+                                                          LeftPeak="{Binding $parent[mixerControls:MicChannelStrip].LeftPeak}"
+                                                          RightPeak="{Binding $parent[mixerControls:MicChannelStrip].RightPeak}"
+                                                          Volume="{Binding $parent[mixerControls:MicChannelStrip].Volume}"
+                                                          Pan="{Binding $parent[mixerControls:MicChannelStrip].Pan}" />
+
+        </Grid>
+    </Panel>
+
+</UserControl>

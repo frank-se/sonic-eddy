@@ -30,4 +30,8 @@ public interface IMixerViewModelService
         ObservableCollection<IRoutingTarget> audioFromRoutingTargets,
         ObservableCollection<IRoutingTarget> audioToRoutingTargets,
         MasterChannelViewModel masterChannel);
+
+    MicChannelViewModel ConvertMicChannel(
+        MicChannel channel,
+        ICommand selectChannelCommand);
 }

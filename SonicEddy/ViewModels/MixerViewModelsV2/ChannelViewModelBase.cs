@@ -361,6 +361,8 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
     {
         if (this is MasterChannelViewModel)
             await _mixerService.RemoveFilterFromMasterChannel(_layerId);
+        else if (this is MicChannelViewModel)
+            await _mixerService.RemoveFilterFromMicChannel();
         else if (_channelType == ChannelType.GroupChannel)
             await _mixerService.RemoveFilterFromGroupChannel(_layerId,
                 ChannelId);
@@ -382,6 +384,8 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
 
             if (this is MasterChannelViewModel)
                 await _mixerService.RemoveFilterFromMasterChannel(_layerId);
+            else if (this is MicChannelViewModel)
+                await _mixerService.RemoveFilterFromMicChannel();
             else if (_channelType == ChannelType.GroupChannel)
                 await _mixerService.RemoveFilterFromGroupChannel(
                     _layerId, ChannelId);
@@ -401,6 +405,9 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
             if (this is MasterChannelViewModel)
                 processor = await _mixerService.AddExternalEffectToMasterChannel(
                     _layerId, config.ProcessorId);
+            else if (this is MicChannelViewModel)
+                processor = await _mixerService.AddExternalEffectToMicChannel(
+                    config.ProcessorId);
             else if (_channelType == ChannelType.GroupChannel)
                 processor = await _mixerService.AddExternalEffectToGroupChannel(
                     _layerId, ChannelId, config.ProcessorId);
@@ -422,6 +429,8 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
             if (this is MasterChannelViewModel)
                 FilterChain = await _mixerService.AddFilterToMasterChannel(
                     _layerId, graph);
+            else if (this is MicChannelViewModel)
+                FilterChain = await _mixerService.AddFilterToMicChannel(graph);
             else if (_channelType == ChannelType.GroupChannel)
                 FilterChain = await _mixerService.AddFilterToGroupChannel(
                     _layerId, ChannelId, graph);

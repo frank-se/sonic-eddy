@@ -253,6 +253,24 @@ public class MixerViewModelService(
             channel.FilterGraph, monitoringService, appDataService,
             mixerService, layerId, index);
 
+    public MicChannelViewModel ConvertMicChannel(MicChannel channel,
+        ICommand selectChannelCommand)
+    {
+        ObservableCollection<IRoutingTarget> audioFromRoutingTargets = [];
+        var inputs = mixerService.CurrentMixer?.Layers.FirstOrDefault()
+            ?.Inputs ?? [];
+        audioFromRoutingTargets.AddRange(inputs.Select(i =>
+        {
+            var inputChannel = ConvertInputChannel(i, selectChannelCommand);
+            return new RoutingTargetViewModel(inputChannel.Name,
+                inputChannel) as IRoutingTarget;
+        }));
+
+        return new("Mic", selectChannelCommand, channel,
+            audioFromRoutingTargets, appDataService, mixerService,
+            monitoringService, controllerSetupService);
+    }
+
     public OutputChannelViewModel
         ConvertOutputChannel(OutputChannel channel,
             ICommand selectChannelCommand) =>

@@ -105,6 +105,18 @@ public class MixerService : IMixerService, IDisposable
                 _myNodeIds.Add(xfade.CaptureNode.ObjectSerial);
                 _myNodeIds.Add(xfade.PlaybackNode.ObjectSerial);
 
+                MicChannel? micChannel = null;
+                if (prefs.MicChannelEnabled)
+                {
+                    micChannel =
+                        await _editor.CreateMicChannel(xfade.CaptureNode);
+
+                    _myNodeIds.Add(
+                        micChannel.InputLoopback.CaptureNodeObjectSerial);
+                    _myNodeIds.Add(
+                        micChannel.InputLoopback.PlaybackNodeObjectSerial);
+                }
+
                 var firstLayer = await _editor.Create(masterOutputName, 0,
                     numberOfChannels, numberOfGroupChannels,
                     numberOfReturnChannels, globalMasterCaptureSerial);
@@ -152,7 +164,7 @@ public class MixerService : IMixerService, IDisposable
                 _myNodeIds.Add(cueFc.PlaybackNode.ObjectSerial);
 
                 CurrentMixer = new([firstLayer, secondLayer],
-                    monitoringLoopback, globalMaster, cue);
+                    monitoringLoopback, globalMaster, cue, micChannel);
             }
             finally
             {
@@ -644,6 +656,139 @@ public class MixerService : IMixerService, IDisposable
         {
             GlobalMaster = globalMaster with { OutputTargetObject = node }
         };
+    }
+
+    public async Task<FilterChain?> AddFilterToMicChannel(
+        FilterGraph filterGraph)
+    {
+        _logger.LogTrace("AddFilterToMicChannel");
+
+        await _externalChange.WaitAsync();
+        try
+        {
+            lock (_isModifyingLock)
+            {
+                _isModifyingMixer = true;
+            }
+
+            if (CurrentMixer?.Mic is not { } mic ||
+                CurrentMixer.GlobalMaster is not { } globalMaster)
+                return null;
+
+            await _internalChange.WaitAsync();
+            try
+            {
+                var updated =
+                    await _editor.AddFilterToMicChannel(mic,
+                        globalMaster.CrossFader.CaptureNode, filterGraph);
+                CurrentMixer = CurrentMixer with { Mic = updated };
+
+                List<ulong?> ids =
+                [
+                    updated.FilterChain?.CaptureNode.ObjectSerial,
+                    updated.FilterChain?.PlaybackNode.ObjectSerial,
+                ];
+
+                _myNodeIds.AddRange(ids.OfType<ulong>());
+            }
+            finally
+            {
+                _internalChange.Release();
+            }
+
+            lock (_isModifyingLock)
+            {
+                _isModifyingMixer = false;
+            }
+
+            await FinishPendingAddNodeEvents();
+        }
+        finally
+        {
+            _externalChange.Release();
+        }
+
+        return CurrentMixer?.Mic?.FilterChain;
+    }
+
+    public async Task RemoveFilterFromMicChannel()
+    {
+        await _externalChange.WaitAsync();
+        try
+        {
+            lock (_isModifyingLock)
+            {
+                _isModifyingMixer = true;
+            }
+
+            if (CurrentMixer?.Mic is { } mic &&
+                CurrentMixer.GlobalMaster is { } globalMaster)
+            {
+                await _internalChange.WaitAsync();
+                try
+                {
+                    CurrentMixer = CurrentMixer with
+                    {
+                        Mic = await _editor.RemoveFilterFromMicChannel(mic,
+                            globalMaster.CrossFader.CaptureNode)
+                    };
+                }
+                finally
+                {
+                    _internalChange.Release();
+                }
+            }
+
+            lock (_isModifyingLock)
+            {
+                _isModifyingMixer = false;
+            }
+        }
+        finally
+        {
+            _externalChange.Release();
+        }
+    }
+
+    public async Task<InsertProcessor?> AddExternalEffectToMicChannel(
+        Guid effectId)
+    {
+        await _externalChange.WaitAsync();
+        try
+        {
+            lock (_isModifyingLock)
+            {
+                _isModifyingMixer = true;
+            }
+
+            if (CurrentMixer?.Mic is { } mic &&
+                CurrentMixer.GlobalMaster is { } globalMaster)
+            {
+                await _internalChange.WaitAsync();
+                try
+                {
+                    var updated = await _editor.AddExternalEffectToMicChannel(
+                        mic, globalMaster.CrossFader.CaptureNode, effectId);
+                    CurrentMixer = CurrentMixer with { Mic = updated };
+                    RegisterProcessorNodes(updated.InsertProcessor);
+                }
+                finally
+                {
+                    _internalChange.Release();
+                }
+            }
+
+            lock (_isModifyingLock)
+            {
+                _isModifyingMixer = false;
+            }
+        }
+        finally
+        {
+            _externalChange.Release();
+        }
+
+        return CurrentMixer?.Mic?.InsertProcessor;
     }
 
     private async Task ModifyLayer(int layerId,
