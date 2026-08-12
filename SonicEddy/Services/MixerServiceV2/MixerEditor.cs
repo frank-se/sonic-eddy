@@ -445,7 +445,7 @@ public class MixerEditor(IWireplumberService wireplumberService,
     private static async Task LinkNodeToGlobalMaster(Node source,
         Node globalMasterCaptureNode)
     {
-        var outputPorts = await WaitForPortsAsync(source, "out", 1);
+        var outputPorts = await WaitForPortsAsync(source, "out", 2);
         var inputPorts = Fr.Sonic.FrSonic.PortRegistry.Objects
             .Where(p => p.Node.Id == globalMasterCaptureNode.ObjectId &&
                         p.Direction == "in")

@@ -106,7 +106,8 @@ public class ReturnChannelViewModel : ReactiveObject, IReturnChannel,
             })
             .DisposeWith(_disposable!);
 
-        PanAndVolume = new PanAndVolumeViewModel(outbackLoopback.PlaybackNode);
+        PanAndVolume = new PanAndVolumeViewModelV2(outbackLoopback.PlaybackNode,
+            monitoringService);
 
         FilterChain = filterChain;
     }
@@ -293,7 +294,7 @@ public class ReturnChannelViewModel : ReactiveObject, IReturnChannel,
 
     public void Dispose()
     {
-        if (PanAndVolume is PanAndVolumeViewModel panAndVolume)
+        if (PanAndVolume is IDisposable panAndVolume)
             panAndVolume.Dispose();
 
         _disposable?.Dispose();
