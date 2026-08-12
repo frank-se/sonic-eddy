@@ -16,6 +16,8 @@ public sealed class Mixer
     [ProtoMember(8)] public string? GlobalMasterAudioToNodeName { get; set; }
     [ProtoMember(9)] public ChannelConfig Mic { get; set; } = new();
     [ProtoMember(10)] public ChannelConfig Mic2 { get; set; } = new();
+    [ProtoMember(11)] public ReturnChannelConfig GlobalReturn1 { get; set; } = new();
+    [ProtoMember(12)] public ReturnChannelConfig GlobalReturn2 { get; set; } = new();
 }
 
 [ProtoContract]

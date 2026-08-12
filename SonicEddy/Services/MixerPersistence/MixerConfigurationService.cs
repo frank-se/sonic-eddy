@@ -28,8 +28,9 @@ public sealed class MixerConfigurationService : IDisposable
 
     public Mixer Capture(Guid id, string name, MixerLayerViewModel layerA,
         MixerLayerViewModel layerB, GlobalMasterViewModel globalMaster,
-        MicChannelViewModel? mic = null,
-        MicChannelViewModel? mic2 = null) => new()
+        MicChannelViewModel? mic = null, MicChannelViewModel? mic2 = null,
+        ReturnChannelViewModel? globalReturn1 = null,
+        ReturnChannelViewModel? globalReturn2 = null) => new()
     {
         Id = id,
         Name = name,
@@ -62,7 +63,13 @@ public sealed class MixerConfigurationService : IDisposable
         GlobalMasterAudioToNodeName =
             GetRoutingNodeName(globalMaster.SelectedAudioToRoutingTarget),
         Mic = mic is null ? new() : CaptureMicChannel(mic),
-        Mic2 = mic2 is null ? new() : CaptureMicChannel(mic2)
+        Mic2 = mic2 is null ? new() : CaptureMicChannel(mic2),
+        GlobalReturn1 = globalReturn1 is null
+            ? new()
+            : CaptureReturnChannel(globalReturn1, 0),
+        GlobalReturn2 = globalReturn2 is null
+            ? new()
+            : CaptureReturnChannel(globalReturn2, 1)
     };
 
     private static ChannelConfig CaptureMicChannel(MicChannelViewModel mic)
@@ -73,12 +80,23 @@ public sealed class MixerConfigurationService : IDisposable
         return config;
     }
 
+    private static ReturnChannelConfig CaptureReturnChannel(
+        ReturnChannelViewModel channel, int index) => new()
+    {
+        Index = index,
+        InsertProcessor = channel.CaptureFilterConfiguration(),
+        Pan = channel.PanAndVolume.Pan,
+        Volume = channel.PanAndVolume.Volume
+    };
+
     public Mixer CreateDefault(MixerLayerViewModel layerA,
         MixerLayerViewModel layerB, GlobalMasterViewModel globalMaster,
-        MicChannelViewModel? mic = null, MicChannelViewModel? mic2 = null)
+        MicChannelViewModel? mic = null, MicChannelViewModel? mic2 = null,
+        ReturnChannelViewModel? globalReturn1 = null,
+        ReturnChannelViewModel? globalReturn2 = null)
     {
         var configuration = Capture(Guid.Empty, "Default Mixer", layerA,
-            layerB, globalMaster, mic, mic2);
+            layerB, globalMaster, mic, mic2, globalReturn1, globalReturn2);
 
         configuration.MainCrossFader = new() { Shape = 1 };
         configuration.CueCrossFader = new() { Shape = 1 };
@@ -107,6 +125,18 @@ public sealed class MixerConfigurationService : IDisposable
         if (mic2 is not null)
             ResetChannel(configuration.Mic2);
 
+        if (globalReturn1 is not null)
+        {
+            configuration.GlobalReturn1.Pan = 0.0;
+            configuration.GlobalReturn1.Volume = 1.0;
+        }
+
+        if (globalReturn2 is not null)
+        {
+            configuration.GlobalReturn2.Pan = 0.0;
+            configuration.GlobalReturn2.Volume = 1.0;
+        }
+
         return configuration;
     }
 
@@ -122,7 +152,9 @@ public sealed class MixerConfigurationService : IDisposable
     public async Task ApplyAsync(Mixer configuration,
         MixerLayerViewModel layerA, MixerLayerViewModel layerB,
         GlobalMasterViewModel globalMaster, MicChannelViewModel? mic = null,
-        MicChannelViewModel? mic2 = null)
+        MicChannelViewModel? mic2 = null,
+        ReturnChannelViewModel? globalReturn1 = null,
+        ReturnChannelViewModel? globalReturn2 = null)
     {
         if (_globalMaster is not null)
             _globalMaster.PropertyChanged -= OnGlobalMasterPropertyChanged;
@@ -157,6 +189,14 @@ public sealed class MixerConfigurationService : IDisposable
             ApplyAudioFrom(configuration.Mic2.AudioFromNodeName, mic2);
         }
 
+        if (globalReturn1 is not null)
+            await ApplyReturnChannelAsync(configuration.GlobalReturn1,
+                globalReturn1, 1);
+
+        if (globalReturn2 is not null)
+            await ApplyReturnChannelAsync(configuration.GlobalReturn2,
+                globalReturn2, 2);
+
         globalMaster.Xfade = configuration.MainCrossFader.Position;
         globalMaster.ShapeIndex = configuration.MainCrossFader.Shape;
         globalMaster.ModeIndex = configuration.MainCrossFader.Mode;
@@ -187,13 +227,7 @@ public sealed class MixerConfigurationService : IDisposable
         Master = layer.MasterChannels?.OfType<MasterChannelViewModel>()
             .Select(CaptureChannel).FirstOrDefault() ?? new(),
         Returns = layer.ReturnChannels?.OfType<ReturnChannelViewModel>()
-            .Select((channel, index) => new ReturnChannelConfig
-            {
-                Index = index,
-                InsertProcessor = channel.CaptureFilterConfiguration(),
-                Pan = channel.PanAndVolume.Pan,
-                Volume = channel.PanAndVolume.Volume
-            }).ToList() ?? []
+            .Select(CaptureReturnChannel).ToList() ?? []
     };
 
     private static ChannelConfig CaptureNormalChannel(
@@ -284,11 +318,19 @@ public sealed class MixerConfigurationService : IDisposable
                     .ElementAtOrDefault(returnConfig.Index) is not { } channel)
                 continue;
 
-            await channel.ApplyFilterConfigurationAsync((int)config.LayerId,
-                returnConfig.Index, returnConfig.InsertProcessor);
-            channel.PanAndVolume.Pan = returnConfig.Pan;
-            channel.PanAndVolume.Volume = returnConfig.Volume;
+            await ApplyReturnChannelAsync(returnConfig, channel,
+                returnConfig.Index, (int)config.LayerId);
         }
+    }
+
+    private static async Task ApplyReturnChannelAsync(
+        ReturnChannelConfig config, ReturnChannelViewModel channel,
+        int index, int layerId = 0)
+    {
+        await channel.ApplyFilterConfigurationAsync(layerId, index,
+            config.InsertProcessor);
+        channel.PanAndVolume.Pan = config.Pan;
+        channel.PanAndVolume.Volume = config.Volume;
     }
 
     private static async Task ApplyChannelAsync(ChannelConfig config,

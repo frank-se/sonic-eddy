@@ -161,16 +161,20 @@ public abstract class ChannelWithSendsViewModelBase : ChannelViewModelBase
     {
         base.Dispose(true);
 
-        SendLoopbacks[0].PlaybackNode.PropertiesChanged -=
-            OnSend1PropertiesChanged;
+        if (SendLoopbacks.Count > 0)
+            SendLoopbacks[0].PlaybackNode.PropertiesChanged -=
+                OnSend1PropertiesChanged;
 
-        SendLoopbacks[1].PlaybackNode.PropertiesChanged -=
-            OnSend1PropertiesChanged;
+        if (SendLoopbacks.Count > 1)
+            SendLoopbacks[1].PlaybackNode.PropertiesChanged -=
+                OnSend2PropertiesChanged;
 
-        SendLoopbacks[2].PlaybackNode.PropertiesChanged -=
-            OnSend1PropertiesChanged;
+        if (SendLoopbacks.Count > 2)
+            SendLoopbacks[2].PlaybackNode.PropertiesChanged -=
+                OnSend3PropertiesChanged;
 
-        SendLoopbacks[3].PlaybackNode.PropertiesChanged -=
-            OnSend1PropertiesChanged;
+        if (SendLoopbacks.Count > 3)
+            SendLoopbacks[3].PlaybackNode.PropertiesChanged -=
+                OnSend4PropertiesChanged;
     }
 }

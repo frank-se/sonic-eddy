@@ -247,11 +247,17 @@ public class MixerViewModelService(
         ReturnChannel channel,
         ICommand selectChannelCommand,
         int layerId,
-        int index) =>
+        int index,
+        bool isGlobal = false) =>
         new(channel.Name, selectChannelCommand,
             channel.InputLoopback, channel.OutputLoopback, channel.FilterChain,
             channel.FilterGraph, monitoringService, appDataService,
-            mixerService, layerId, index);
+            mixerService, layerId, index, isGlobal);
+
+    public ReturnChannelViewModel ConvertGlobalReturnChannel(
+        ReturnChannel channel, int index, ICommand selectChannelCommand) =>
+        ConvertReturnChannel(channel, selectChannelCommand, 0, index,
+            isGlobal: true);
 
     public MicChannelViewModel ConvertMicChannel(MicChannel channel,
         int index, ICommand selectChannelCommand)

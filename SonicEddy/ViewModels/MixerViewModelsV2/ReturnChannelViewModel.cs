@@ -37,7 +37,8 @@ public class ReturnChannelViewModel : ReactiveObject, IReturnChannel,
         LoopbackModule inputLoopback, LoopbackModule outbackLoopback,
         FilterChain? filterChain, FilterGraph? filterGraph,
         IMonitoringService monitoringService, IAppDataService appDataService,
-        IMixerService mixerService, int layerId, int index)
+        IMixerService mixerService, int layerId, int index,
+        bool isGlobal = false)
     {
         Text = text;
         SelectChannelCommand = selectChannelCommand;
@@ -47,6 +48,7 @@ public class ReturnChannelViewModel : ReactiveObject, IReturnChannel,
         _mixerService = mixerService;
         _layerId = layerId;
         _index = index;
+        _isGlobal = isGlobal;
         _externalEffects =
             Locator.Current.GetService<IExternalEffectService>()!;
         FilterGraph = filterGraph;
@@ -54,7 +56,7 @@ public class ReturnChannelViewModel : ReactiveObject, IReturnChannel,
         this.WhenAnyValue(x => x.FilterChain)
             .Subscribe(chain =>
             {
-                if (chain is null)
+                if (chain is null || FilterGraph is null)
                 {
                     HasFilter = false;
                     Parameters = [];
@@ -69,7 +71,36 @@ public class ReturnChannelViewModel : ReactiveObject, IReturnChannel,
                     !chain.CaptureNode.PropertyInfos.IsCompleted)
                     return;
 
-                Parameters = [];
+                var propertyInfos =
+                    chain.CaptureNode.PropertyInfos.Result?.PropertyInfos ?? [];
+
+                Parameters = FilterGraph.FlatParameters?
+                    .GroupBy(fp => fp.NodeId)
+                    .Select(group =>
+                    {
+                        var node = FilterGraph.Nodes
+                            .FirstOrDefault(n => n.Id == group.Key);
+                        if (node is null) return null;
+
+                        var parameters = group.Select((fp, i) =>
+                            {
+                                var fullyQualifiedName =
+                                    $"{node.Name}:{fp.Symbol}";
+                                var info = propertyInfos.FirstOrDefault(p =>
+                                    p.Name == fullyQualifiedName);
+                                var (min, max) =
+                                    FilterChainParameterRange.Get(info);
+                                return new ParameterViewModel(min, max,
+                                    fp.DisplayName, i < 4, fullyQualifiedName,
+                                    chain.CaptureNode);
+                            })
+                            .OfType<Controls.MixerControls.IParameter>()
+                            .ToList();
+
+                        return new ParameterCollection(node.Name, parameters);
+                    })
+                    .OfType<ParameterCollection>()
+                    .ToList() ?? [];
 
                 HasFilter = true;
             })
@@ -97,6 +128,7 @@ public class ReturnChannelViewModel : ReactiveObject, IReturnChannel,
     private readonly IExternalEffectService _externalEffects;
     private readonly int _layerId;
     private readonly int _index;
+    private readonly bool _isGlobal;
     public Guid? ExternalEffectId { get; private set; }
 
     public async Task ApplyFilterConfigurationAsync(int layerId, int index,
@@ -106,7 +138,11 @@ public class ReturnChannelViewModel : ReactiveObject, IReturnChannel,
         {
             if (FilterChain is null && ExternalEffectId is null) return;
 
-            await _mixerService.RemoveFilterFromReturnChannel(layerId, index);
+            if (_isGlobal)
+                await _mixerService.RemoveFilterFromGlobalReturnChannel(index);
+            else
+                await _mixerService.RemoveFilterFromReturnChannel(layerId,
+                    index);
             FilterChain = null;
             FilterGraph = null;
             ExternalEffectId = null;
@@ -115,8 +151,11 @@ public class ReturnChannelViewModel : ReactiveObject, IReturnChannel,
 
         if (config.Type == InsertProcessorType.ExternalEffect)
         {
-            var processor = await _mixerService.AddExternalEffectToReturnChannel(
-                layerId, index, config.ProcessorId);
+            var processor = _isGlobal
+                ? await _mixerService.AddExternalEffectToGlobalReturnChannel(
+                    index, config.ProcessorId)
+                : await _mixerService.AddExternalEffectToReturnChannel(
+                    layerId, index, config.ProcessorId);
             FilterChain = null;
             FilterGraph = null;
             ExternalEffectId = processor?.ExternalEffectId;
@@ -127,9 +166,12 @@ public class ReturnChannelViewModel : ReactiveObject, IReturnChannel,
         var graph = await _appDataService.GetFilterGraph(config.ProcessorId);
         if (FilterGraph?.Id != graph.Id || FilterChain is null)
         {
-            FilterChain = await _mixerService.AddFilterToReturnChannel(
-                layerId, index, graph);
             FilterGraph = graph;
+            FilterChain = _isGlobal
+                ? await _mixerService.AddFilterToGlobalReturnChannel(index,
+                    graph)
+                : await _mixerService.AddFilterToReturnChannel(layerId, index,
+                    graph);
         }
 
         var node = FilterChain?.CaptureNode;
@@ -215,16 +257,22 @@ public class ReturnChannelViewModel : ReactiveObject, IReturnChannel,
         if (viewModel.SelectedFilterGraph is { } graph)
         {
             ExternalEffectId = null;
-            FilterChain = await _mixerService.AddFilterToReturnChannel(
-                _layerId, _index, graph);
             FilterGraph = graph;
+            FilterChain = _isGlobal
+                ? await _mixerService.AddFilterToGlobalReturnChannel(_index,
+                    graph)
+                : await _mixerService.AddFilterToReturnChannel(_layerId,
+                    _index, graph);
         }
         else if (viewModel.SelectedExternalEffect is { } effect)
         {
             FilterChain = null;
             FilterGraph = null;
-            var processor = await _mixerService.AddExternalEffectToReturnChannel(
-                _layerId, _index, effect.Config.Id);
+            var processor = _isGlobal
+                ? await _mixerService.AddExternalEffectToGlobalReturnChannel(
+                    _index, effect.Config.Id)
+                : await _mixerService.AddExternalEffectToReturnChannel(
+                    _layerId, _index, effect.Config.Id);
             ExternalEffectId = processor?.ExternalEffectId;
             HasFilter = ExternalEffectId is not null;
         }
@@ -232,7 +280,11 @@ public class ReturnChannelViewModel : ReactiveObject, IReturnChannel,
 
     public async void OnDeleteFilter(object channel)
     {
-        await _mixerService.RemoveFilterFromReturnChannel(_layerId, _index);
+        if (_isGlobal)
+            await _mixerService.RemoveFilterFromGlobalReturnChannel(_index);
+        else
+            await _mixerService.RemoveFilterFromReturnChannel(_layerId,
+                _index);
         FilterChain = null;
         FilterGraph = null;
         ExternalEffectId = null;

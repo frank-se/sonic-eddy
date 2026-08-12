@@ -35,4 +35,9 @@ public interface IMixerViewModelService
         MicChannel channel,
         int index,
         ICommand selectChannelCommand);
+
+    ReturnChannelViewModel ConvertGlobalReturnChannel(
+        ReturnChannel channel,
+        int index,
+        ICommand selectChannelCommand);
 }

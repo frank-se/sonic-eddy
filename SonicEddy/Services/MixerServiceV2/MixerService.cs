@@ -126,9 +126,32 @@ public class MixerService : IMixerService, IDisposable
                         micChannel2.InputLoopback.PlaybackNodeObjectSerial);
                 }
 
+                var globalReturn1 =
+                    await _editor.CreateGlobalReturnChannel(xfade.CaptureNode, 1);
+                var globalReturn2 =
+                    await _editor.CreateGlobalReturnChannel(xfade.CaptureNode, 2);
+
+                _myNodeIds.Add(
+                    globalReturn1.InputLoopback.CaptureNodeObjectSerial);
+                _myNodeIds.Add(
+                    globalReturn1.InputLoopback.PlaybackNodeObjectSerial);
+                _myNodeIds.Add(
+                    globalReturn1.OutputLoopback.CaptureNodeObjectSerial);
+                _myNodeIds.Add(
+                    globalReturn1.OutputLoopback.PlaybackNodeObjectSerial);
+                _myNodeIds.Add(
+                    globalReturn2.InputLoopback.CaptureNodeObjectSerial);
+                _myNodeIds.Add(
+                    globalReturn2.InputLoopback.PlaybackNodeObjectSerial);
+                _myNodeIds.Add(
+                    globalReturn2.OutputLoopback.CaptureNodeObjectSerial);
+                _myNodeIds.Add(
+                    globalReturn2.OutputLoopback.PlaybackNodeObjectSerial);
+
                 var firstLayer = await _editor.Create(masterOutputName, 0,
                     numberOfChannels, numberOfGroupChannels,
-                    numberOfReturnChannels, globalMasterCaptureSerial);
+                    numberOfReturnChannels, globalMasterCaptureSerial,
+                    globalReturn1, globalReturn2);
 
                 var layerOneIds =
                     CollectMixerLayerNodeIds(firstLayer).ToArray();
@@ -153,7 +176,7 @@ public class MixerService : IMixerService, IDisposable
                 var secondLayer = await _editor.Create(masterOutputName, 1,
                     numberOfChannels, numberOfGroupChannels,
                     numberOfReturnChannels, globalMasterCaptureSerial,
-                    layerOneIds);
+                    globalReturn1, globalReturn2, layerOneIds);
 
                 _myNodeIds.AddRange(CollectMixerLayerNodeIds(secondLayer));
 
@@ -174,7 +197,7 @@ public class MixerService : IMixerService, IDisposable
 
                 CurrentMixer = new([firstLayer, secondLayer],
                     monitoringLoopback, globalMaster, cue, micChannel,
-                    micChannel2);
+                    micChannel2, globalReturn1, globalReturn2);
             }
             finally
             {
@@ -800,6 +823,140 @@ public class MixerService : IMixerService, IDisposable
 
         return GetMicChannel(micIndex)?.InsertProcessor;
     }
+
+    public async Task<FilterChain?> AddFilterToGlobalReturnChannel(int index,
+        FilterGraph filterGraph)
+    {
+        await _externalChange.WaitAsync();
+        try
+        {
+            lock (_isModifyingLock)
+            {
+                _isModifyingMixer = true;
+            }
+
+            if (GetGlobalReturnChannel(index) is not { } channel)
+                return null;
+
+            await _internalChange.WaitAsync();
+            try
+            {
+                var updated = await _editor.AddFilterToGlobalReturnChannel(
+                    channel, filterGraph, index);
+                CurrentMixer = SetGlobalReturnChannel(index, updated);
+
+                List<ulong?> ids =
+                [
+                    updated.FilterChain?.CaptureNode.ObjectSerial,
+                    updated.FilterChain?.PlaybackNode.ObjectSerial,
+                ];
+
+                _myNodeIds.AddRange(ids.OfType<ulong>());
+            }
+            finally
+            {
+                _internalChange.Release();
+            }
+
+            lock (_isModifyingLock)
+            {
+                _isModifyingMixer = false;
+            }
+
+            await FinishPendingAddNodeEvents();
+        }
+        finally
+        {
+            _externalChange.Release();
+        }
+
+        return GetGlobalReturnChannel(index)?.FilterChain;
+    }
+
+    public async Task RemoveFilterFromGlobalReturnChannel(int index)
+    {
+        await _externalChange.WaitAsync();
+        try
+        {
+            lock (_isModifyingLock)
+            {
+                _isModifyingMixer = true;
+            }
+
+            if (GetGlobalReturnChannel(index) is { } channel)
+            {
+                await _internalChange.WaitAsync();
+                try
+                {
+                    var updated =
+                        _editor.RemoveFilterFromGlobalReturnChannel(channel);
+                    CurrentMixer = SetGlobalReturnChannel(index, updated);
+                }
+                finally
+                {
+                    _internalChange.Release();
+                }
+            }
+
+            lock (_isModifyingLock)
+            {
+                _isModifyingMixer = false;
+            }
+        }
+        finally
+        {
+            _externalChange.Release();
+        }
+    }
+
+    public async Task<InsertProcessor?> AddExternalEffectToGlobalReturnChannel(
+        int index, Guid effectId)
+    {
+        await _externalChange.WaitAsync();
+        try
+        {
+            lock (_isModifyingLock)
+            {
+                _isModifyingMixer = true;
+            }
+
+            if (GetGlobalReturnChannel(index) is { } channel)
+            {
+                await _internalChange.WaitAsync();
+                try
+                {
+                    var updated =
+                        await _editor.AddExternalEffectToGlobalReturnChannel(
+                            channel, effectId, index);
+                    CurrentMixer = SetGlobalReturnChannel(index, updated);
+                    RegisterProcessorNodes(updated.InsertProcessor);
+                }
+                finally
+                {
+                    _internalChange.Release();
+                }
+            }
+
+            lock (_isModifyingLock)
+            {
+                _isModifyingMixer = false;
+            }
+        }
+        finally
+        {
+            _externalChange.Release();
+        }
+
+        return GetGlobalReturnChannel(index)?.InsertProcessor;
+    }
+
+    private ReturnChannel? GetGlobalReturnChannel(int index) =>
+        index == 1 ? CurrentMixer?.GlobalReturn1 : CurrentMixer?.GlobalReturn2;
+
+    private Mixer? SetGlobalReturnChannel(int index, ReturnChannel updated) =>
+        index == 1
+            ? CurrentMixer! with { GlobalReturn1 = updated }
+            : CurrentMixer! with { GlobalReturn2 = updated };
 
     private MicChannel? GetMicChannel(int micIndex) =>
         micIndex == 1 ? CurrentMixer?.Mic : CurrentMixer?.Mic2;

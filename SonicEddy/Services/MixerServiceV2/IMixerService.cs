@@ -53,6 +53,12 @@ public interface IMixerService
     Task<InsertProcessor?> AddExternalEffectToMicChannel(int micIndex,
         Guid effectId);
 
+    Task<FilterChain?> AddFilterToGlobalReturnChannel(int index,
+        FilterGraph filterGraph);
+    Task RemoveFilterFromGlobalReturnChannel(int index);
+    Task<InsertProcessor?> AddExternalEffectToGlobalReturnChannel(int index,
+        Guid effectId);
+
     event Action<List<InputChannel>>? InputsChanged;
     event Action<List<OutputChannel>>? OutputsChanged;
 

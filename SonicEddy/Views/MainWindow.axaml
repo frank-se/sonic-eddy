@@ -64,6 +64,8 @@
                 <MenuItem Header="Microphone Channel ..."
                           IsEnabled="{Binding IsMicChannelEnabled}"
                           Command="{Binding ShowMicChannelWindow}" />
+                <MenuItem Header="Global Return Channels ..."
+                          Command="{Binding ShowGlobalReturnChannelsWindow}" />
             </MenuItem>
 
             <MenuItem Header="Audio">

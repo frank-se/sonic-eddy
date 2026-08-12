@@ -2,4 +2,4 @@ using Fr.Sonic.Modules.Models;
 
 namespace SonicEddy.Services.MixerServiceV2;
 
-public record Mixer(MixerLayer[] Layers, LoopbackModule? MonitoringLoopback = null, GlobalMasterChannel? GlobalMaster = null, CueChannel? Cue = null, MicChannel? Mic = null, MicChannel? Mic2 = null);
+public record Mixer(MixerLayer[] Layers, LoopbackModule? MonitoringLoopback = null, GlobalMasterChannel? GlobalMaster = null, CueChannel? Cue = null, MicChannel? Mic = null, MicChannel? Mic2 = null, ReturnChannel? GlobalReturn1 = null, ReturnChannel? GlobalReturn2 = null);

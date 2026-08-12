@@ -1,0 +1,62 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:mixerControls="clr-namespace:SonicEddy.Controls.MixerControls"
+        xmlns:mixerViewModelsV2="clr-namespace:SonicEddy.ViewModels.MixerViewModelsV2"
+        mc:Ignorable="d" d:DesignWidth="220" d:DesignHeight="450"
+        SizeToContent="Width" Height="450"
+        WindowStartupLocation="CenterOwner"
+        x:CompileBindings="False"
+        x:Class="SonicEddy.Views.GlobalReturnChannelViews.GlobalReturnChannelsWindow"
+        x:DataType="mixerViewModelsV2:GlobalReturnChannelsViewModel"
+        Title="Global Return Channels">
+
+    <StackPanel Orientation="Horizontal">
+        <mixerControls:ReturnChannelStrip
+            DataContext="{Binding Return1}"
+            Text="{Binding Text}"
+            IsSelected="{Binding IsSelected}"
+            SelectCommand="{Binding OnSelectChannel}"
+            HasFilter="{Binding HasFilter}"
+            AddFilterCommand="{Binding OnAddFilter}"
+            AddFilterCommandParameter="{Binding}"
+            DeleteFilterCommand="{Binding OnDeleteFilter}"
+            DeleteFilterCommandParameter="{Binding}"
+            Volume="{Binding PanAndVolume.Volume}"
+            Pan="{Binding PanAndVolume.Pan}"
+            LeftAverage="{Binding PanAndVolume.LeftAverage}"
+            RightAverage="{Binding PanAndVolume.RightAverage}"
+            LeftPeak="{Binding PanAndVolume.LeftPeak}"
+            RightPeak="{Binding PanAndVolume.RightPeak}" />
+
+        <mixerControls:ReturnChannelStrip
+            DataContext="{Binding Return2}"
+            Text="{Binding Text}"
+            IsSelected="{Binding IsSelected}"
+            SelectCommand="{Binding OnSelectChannel}"
+            HasFilter="{Binding HasFilter}"
+            AddFilterCommand="{Binding OnAddFilter}"
+            AddFilterCommandParameter="{Binding}"
+            DeleteFilterCommand="{Binding OnDeleteFilter}"
+            DeleteFilterCommandParameter="{Binding}"
+            Volume="{Binding PanAndVolume.Volume}"
+            Pan="{Binding PanAndVolume.Pan}"
+            LeftAverage="{Binding PanAndVolume.LeftAverage}"
+            RightAverage="{Binding PanAndVolume.RightAverage}"
+            LeftPeak="{Binding PanAndVolume.LeftPeak}"
+            RightPeak="{Binding PanAndVolume.RightPeak}" />
+
+        <!-- Parameter grid: shows the selected global return channel's filter
+             parameters, paged the same way as the main mixer's channel
+             details section -->
+        <mixerControls:ParametersEditor
+            IsVisible="{Binding SelectedChannel.HasFilter}"
+            Width="420"
+            Margin="8,4,4,4"
+            NumberOfColumns="4"
+            NumberOfRows="6"
+            ParameterCollections="{Binding SelectedChannelParameters}" />
+    </StackPanel>
+
+</Window>

@@ -385,9 +385,9 @@ public class MixerEditor(IWireplumberService wireplumberService,
         channel.InputLoopback.PlaybackNode.OverrideTargetObject(
             filterChain.CaptureNode.ObjectSerial.ToString());
 
-        UnlinkMicOutputFromGlobalMaster(channel.InputLoopback.PlaybackNode,
+        UnlinkNodeFromGlobalMaster(channel.InputLoopback.PlaybackNode,
             globalMasterCaptureNode);
-        await LinkMicOutputToGlobalMaster(filterChain.PlaybackNode,
+        await LinkNodeToGlobalMaster(filterChain.PlaybackNode,
             globalMasterCaptureNode);
 
         var oldProcessor = channel.InsertProcessor;
@@ -412,11 +412,11 @@ public class MixerEditor(IWireplumberService wireplumberService,
         channel.InputLoopback.PlaybackNode.OverrideTargetObject(
             processor.InputNode.ObjectSerial.ToString());
 
-        UnlinkMicOutputFromGlobalMaster(channel.InputLoopback.PlaybackNode,
+        UnlinkNodeFromGlobalMaster(channel.InputLoopback.PlaybackNode,
             globalMasterCaptureNode);
-        UnlinkMicOutputFromGlobalMaster(processor.OutputNode,
+        UnlinkNodeFromGlobalMaster(processor.OutputNode,
             globalMasterCaptureNode);
-        await LinkMicOutputToGlobalMaster(processor.OutputNode,
+        await LinkNodeToGlobalMaster(processor.OutputNode,
             globalMasterCaptureNode);
 
         var oldProcessor = channel.InsertProcessor;
@@ -434,15 +434,15 @@ public class MixerEditor(IWireplumberService wireplumberService,
         channel.InputLoopback.PlaybackNode.OverrideTargetObject(
             oldOutput.ObjectSerial.ToString());
 
-        UnlinkMicOutputFromGlobalMaster(oldOutput, globalMasterCaptureNode);
-        await LinkMicOutputToGlobalMaster(channel.InputLoopback.PlaybackNode,
+        UnlinkNodeFromGlobalMaster(oldOutput, globalMasterCaptureNode);
+        await LinkNodeToGlobalMaster(channel.InputLoopback.PlaybackNode,
             globalMasterCaptureNode);
 
         channel.InsertProcessor.Destroy();
         return channel with { InsertProcessor = null };
     }
 
-    private static async Task LinkMicOutputToGlobalMaster(Node source,
+    private static async Task LinkNodeToGlobalMaster(Node source,
         Node globalMasterCaptureNode)
     {
         var outputPorts = await WaitForPortsAsync(source, "out", 1);
@@ -499,7 +499,7 @@ public class MixerEditor(IWireplumberService wireplumberService,
         }
     }
 
-    private static void UnlinkMicOutputFromGlobalMaster(Node source,
+    private static void UnlinkNodeFromGlobalMaster(Node source,
         Node globalMasterCaptureNode)
     {
         foreach (var link in Fr.Sonic.FrSonic.LinkRegistry.Objects
@@ -598,6 +598,75 @@ public class MixerEditor(IWireplumberService wireplumberService,
         returns[index] =
             channel with { InsertProcessor = null };
         return mixerLayer with { SendReturns = returns };
+    }
+
+    public async Task<ReturnChannel> AddFilterToGlobalReturnChannel(
+        ReturnChannel channel, FilterGraph filterGraph, int index)
+    {
+        var filterChain = await Fr.Sonic.FrSonic.ModuleFactory
+            .CreateFilterChainAsync($"mixer-fc-global-return-{index}", new()
+            {
+                CaptureProps = new()
+                {
+                    Name = $"mixer-fc-global-return-{index}-capture",
+                    Linger = true,
+                    AutoConnect = true,
+                    DontFallback = true,
+                    TargetObject = channel.InputLoopback.PlaybackNode
+                        .ObjectSerial.ToString(),
+                    MediaClass = "Stream/Input/Audio",
+                    AudioPosition = ["FL", "FR"]
+                },
+                PlaybackProps = new()
+                {
+                    Name = $"mixer-fc-global-return-{index}-playback",
+                    Linger = true,
+                    AutoConnect = true,
+                    DontFallback = true,
+                    TargetObject = channel.OutputLoopback.CaptureNode
+                        .ObjectSerial.ToString(),
+                    MediaClass = "Stream/Output/Audio",
+                    AudioPosition = ["FL", "FR"]
+                },
+                FilterGraph = filterGraph.ToFilterGraphConfig()
+            });
+
+        channel.OutputLoopback.CaptureNode.OverrideTargetObject(
+            filterChain.PlaybackNode.ObjectSerial.ToString());
+        var oldProcessor = channel.InsertProcessor;
+        var replacement = channel with
+        {
+            InsertProcessor =
+                new FilterChainInsertProcessor(filterChain, filterGraph)
+        };
+        oldProcessor?.Destroy();
+        return replacement;
+    }
+
+    public async Task<ReturnChannel> AddExternalEffectToGlobalReturnChannel(
+        ReturnChannel channel, Guid effectId, int index)
+    {
+        var processor = await externalEffectService.CreateInsertAsync(effectId,
+            channel.InputLoopback.PlaybackNode,
+            channel.OutputLoopback.CaptureNode,
+            $"Global Return {index}");
+        channel.OutputLoopback.CaptureNode.OverrideTargetObject(
+            processor.OutputNode.ObjectSerial.ToString());
+        var oldProcessor = channel.InsertProcessor;
+        var replacement = channel with { InsertProcessor = processor };
+        oldProcessor?.Destroy();
+        return replacement;
+    }
+
+    public ReturnChannel RemoveFilterFromGlobalReturnChannel(
+        ReturnChannel channel)
+    {
+        if (channel.InsertProcessor is null) return channel;
+
+        channel.OutputLoopback.CaptureNode.OverrideTargetObject(
+            channel.InputLoopback.PlaybackNode.ObjectSerial.ToString());
+        channel.InsertProcessor.Destroy();
+        return channel with { InsertProcessor = null };
     }
 
     public async Task<FilterChain> CreateGlobalMasterFilterChain(
@@ -763,7 +832,7 @@ public class MixerEditor(IWireplumberService wireplumberService,
         inputLoopback.CaptureNode.SetVolumes([1.0, 1.0]);
         inputLoopback.PlaybackNode.SetVolumes([1.0, 1.0]);
 
-        await LinkMicOutputToGlobalMaster(inputLoopback.PlaybackNode,
+        await LinkNodeToGlobalMaster(inputLoopback.PlaybackNode,
             globalMasterCaptureNode);
 
         return new(inputLoopback, null);
@@ -775,6 +844,8 @@ public class MixerEditor(IWireplumberService wireplumberService,
         int numberOfGroupChannels,
         int numberOfReturnChannels,
         string globalMasterCaptureSerial,
+        ReturnChannel globalReturn1,
+        ReturnChannel globalReturn2,
         ulong[]? ignoreSerials = null)
     {
         ignoreSerials ??= [];
@@ -796,10 +867,12 @@ public class MixerEditor(IWireplumberService wireplumberService,
             numberOfReturnChannels);
 
         var groupChannels = await CreateGroupChannels(layerId, masterChannel,
-            returns, numberOfGroupChannels, numberOfReturnChannels);
+            returns, numberOfGroupChannels, numberOfReturnChannels,
+            globalReturn1, globalReturn2);
 
         var channels = await CreateChannels(layerId, masterChannel, returns,
-            numberOfChannels, numberOfReturnChannels);
+            numberOfChannels, numberOfReturnChannels,
+            globalReturn1, globalReturn2);
 
         return new(
             layerId,
@@ -906,19 +979,31 @@ public class MixerEditor(IWireplumberService wireplumberService,
             defaultOutput.CaptureNode);
     }
 
+    private static Node GetSendTargetCaptureNode(int sendIndex,
+        ReturnChannel globalReturn1, ReturnChannel globalReturn2,
+        List<ReturnChannel> returnChannels) => sendIndex switch
+    {
+        1 => globalReturn1.InputLoopback.CaptureNode,
+        2 => globalReturn2.InputLoopback.CaptureNode,
+        _ => returnChannels[sendIndex - 3].InputLoopback.CaptureNode
+    };
+
     private async Task<List<GroupChannel>> CreateGroupChannels(ulong layerId,
         MasterChannel masterChannel, List<ReturnChannel> returnChannels,
-        int numberOfGroupChannels, int numberOfReturnChannels) =>
+        int numberOfGroupChannels, int numberOfReturnChannels,
+        ReturnChannel globalReturn1, ReturnChannel globalReturn2) =>
         (await Task.WhenAll(Enumerable.Range(1, numberOfGroupChannels)
             .Select(i =>
                 CreateGroupChannel(i, layerId, masterChannel, returnChannels,
-                    numberOfGroupChannels, numberOfReturnChannels))))
+                    numberOfGroupChannels, numberOfReturnChannels,
+                    globalReturn1, globalReturn2))))
         .ToList();
 
     private async Task<GroupChannel> CreateGroupChannel(int index,
         ulong layerId,
         MasterChannel masterChannel, List<ReturnChannel> returnChannels,
-        int numberOfGroupChannels, int numberOfReturnChannels)
+        int numberOfGroupChannels, int numberOfReturnChannels,
+        ReturnChannel globalReturn1, ReturnChannel globalReturn2)
     {
         var channelId =
             (ulong)((index - 1) + numberOfGroupChannels * (int)layerId);
@@ -945,7 +1030,7 @@ public class MixerEditor(IWireplumberService wireplumberService,
             postFxLooper.CaptureNode.ObjectSerial.ToString());
 
         var sendLoopbacks = (await Task.WhenAll(Enumerable
-            .Range(1, numberOfReturnChannels)
+            .Range(1, 2 + numberOfReturnChannels)
             .Select(i =>
                 wireplumberService.CreateLoopbackModule(
                     $"send-loopback-group-{index}-send-{i}", new()
@@ -955,8 +1040,9 @@ public class MixerEditor(IWireplumberService wireplumberService,
                                 .ToString(),
                             $"group-{index}-send-{i}-loopback-capture-{layerId}"),
                         PlaybackProps = PlaybackBasePropsWithTargetObject(true,
-                            returnChannels[i - 1].InputLoopback
-                                .CaptureNode.ObjectSerial.ToString(),
+                            GetSendTargetCaptureNode(i, globalReturn1,
+                                globalReturn2, returnChannels).ObjectSerial
+                                .ToString(),
                             $"group-{index}-send-{i}-loopback-playback-{layerId}"),
                     })))).ToList();
 
@@ -1040,9 +1126,42 @@ public class MixerEditor(IWireplumberService wireplumberService,
             outputLoopback);
     }
 
+    public async Task<ReturnChannel> CreateGlobalReturnChannel(
+        Node globalMasterCaptureNode, int index)
+    {
+        var inputLoopback = await wireplumberService.CreateLoopbackModule(
+            $"global-return-input-loopback-{index}", new()
+            {
+                CaptureProps = CaptureBaseProps(false,
+                    $"global-return-{index}-input-loopback-capture"),
+                PlaybackProps = PlaybackBaseProps(false,
+                    $"global-return-{index}-input-loopback-playback"),
+            });
+
+        var outputLoopback = await wireplumberService.CreateLoopbackModule(
+            $"global-return-output-loopback-{index}", new()
+            {
+                CaptureProps = CaptureBasePropsWithTargetObject(true,
+                    inputLoopback.PlaybackNode.ObjectSerial.ToString(),
+                    $"global-return-{index}-output-loopback-capture"),
+                PlaybackProps = PlaybackBaseProps(false,
+                    $"global-return-{index}-output-loopback-playback")
+            });
+
+        await LinkNodeToGlobalMaster(outputLoopback.PlaybackNode,
+            globalMasterCaptureNode);
+
+        return new(
+            $"Global Return {index}",
+            inputLoopback,
+            null,
+            outputLoopback);
+    }
+
     private async Task<List<ChannelStrip>> CreateChannels(ulong layerId,
         MasterChannel master, List<ReturnChannel> returnChannels,
-        int numberOfChannels, int numberOfReturnChannels)
+        int numberOfChannels, int numberOfReturnChannels,
+        ReturnChannel globalReturn1, ReturnChannel globalReturn2)
     {
         var channels = new List<ChannelStrip>();
         foreach (var channelId in Enumerable.Range(1, numberOfChannels))
@@ -1051,7 +1170,8 @@ public class MixerEditor(IWireplumberService wireplumberService,
                 layerId,
                 $"Channel {channelId}",
                 (ulong)channelId,
-                returnChannels, master, numberOfChannels, numberOfReturnChannels);
+                returnChannels, master, numberOfChannels, numberOfReturnChannels,
+                globalReturn1, globalReturn2);
             channels.Add(strip);
         }
 
@@ -1060,7 +1180,8 @@ public class MixerEditor(IWireplumberService wireplumberService,
 
     private async Task<ChannelStrip> CreateChannelStrip(ulong layerId,
         string name, ulong channelId, List<ReturnChannel> returnChannels,
-        MasterChannel master, int numberOfChannels, int numberOfReturnChannels)
+        MasterChannel master, int numberOfChannels, int numberOfReturnChannels,
+        ReturnChannel globalReturn1, ReturnChannel globalReturn2)
     {
         var preFxLooper = await CreateLooper(
             layerId,
@@ -1082,7 +1203,7 @@ public class MixerEditor(IWireplumberService wireplumberService,
             postFxLooper.CaptureNode.ObjectSerial.ToString());
 
         var sendLoopbacks = await Task.WhenAll(Enumerable
-            .Range(1, numberOfReturnChannels)
+            .Range(1, 2 + numberOfReturnChannels)
             .Select(i =>
                 wireplumberService.CreateLoopbackModule(
                     $"send-loopback-{channelId}-send-{i}", new()
@@ -1092,8 +1213,9 @@ public class MixerEditor(IWireplumberService wireplumberService,
                                 .ToString(),
                             $"channel-{channelId}-send-{i}-loopback-capture-{layerId}"),
                         PlaybackProps = PlaybackBasePropsWithTargetObject(true,
-                            returnChannels[i - 1].InputLoopback
-                                .CaptureNode.ObjectSerial.ToString(),
+                            GetSendTargetCaptureNode(i, globalReturn1,
+                                globalReturn2, returnChannels).ObjectSerial
+                                .ToString(),
                             $"channel-{channelId}-send-{i}-loopback-playback-{layerId}"),
                     })));
 
