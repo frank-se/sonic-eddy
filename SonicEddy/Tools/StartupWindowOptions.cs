@@ -9,18 +9,19 @@ namespace SonicEddy.Tools;
 /// </summary>
 internal static class StartupWindowOptions
 {
-    public static (bool MainMixer, bool DrumMixer, bool Overview, bool GlobalMaster) Parse(
+    public static (bool MainMixer, bool DrumMixer, bool Overview, bool GlobalMaster, bool MicChannel) Parse(
         string[] args)
     {
         var mainMixer = Contains(args, "--main-mixer");
         var drumMixer = Contains(args, "--drum-mixer");
         var overview = Contains(args, "--overview");
         var globalMaster = Contains(args, "--global-master");
+        var micChannel = Contains(args, "--mic-channel");
 
-        if (!mainMixer && !drumMixer && !overview && !globalMaster)
+        if (!mainMixer && !drumMixer && !overview && !globalMaster && !micChannel)
             mainMixer = true;
 
-        return (mainMixer, drumMixer, overview, globalMaster);
+        return (mainMixer, drumMixer, overview, globalMaster, micChannel);
     }
 
     /// <summary>

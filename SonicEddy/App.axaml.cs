@@ -72,6 +72,8 @@ public class App : Application
                 mainWindowViewModel?.ShowMixerOverviewWindow();
             if (startupWindows.GlobalMaster)
                 mainWindowViewModel?.ShowGlobalMasterWindow();
+            if (startupWindows.MicChannel)
+                mainWindowViewModel?.ShowMicChannelWindow();
             if (!string.IsNullOrWhiteSpace(mixerName))
                 _ = mainWindowViewModel?.LoadOrCreateMixerByNameAsync(mixerName);
         }
