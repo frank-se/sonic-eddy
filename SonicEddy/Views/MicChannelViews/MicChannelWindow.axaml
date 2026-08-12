@@ -12,33 +12,45 @@
         x:DataType="mixerViewModelsV2:MicChannelViewModel"
         Title="Microphone Channel">
 
-    <mixerControls:MicChannelStrip
-        Text="Mic"
-        IsSelected="{Binding IsSelected}"
-        SelectCommand="{Binding SelectChannelCommand}"
-        AudioFromRoutingTargets="{Binding AudioFromRoutingTargets}"
-        SelectedAudioFromRoutingTarget="{Binding SelectedAudioFromRoutingTarget}"
-        HasFilter="{Binding HasFilter}"
-        AddFilterCommand="{Binding AddFilterAction}"
-        DeleteFilterCommand="{Binding DeleteFilterAction}"
-        Presets="{Binding AvailablePresets}"
-        SavePresetCommand="{Binding SavePresetCommand}"
-        LoadPresetCommand="{Binding LoadPresetCommand}"
-        FirstPluginParameters="{Binding FirstPluginParameters}"
-        FirstPluginText="{Binding FirstPluginText}"
-        SecondPluginParameters="{Binding SecondPluginParameters}"
-        SecondPluginText="{Binding SecondPluginText}"
-        ThirdPluginParameters="{Binding ThirdPluginParameters}"
-        ThirdPluginText="{Binding ThirdPluginText}"
-        Volume="{Binding PanAndVolume.Volume}"
-        Pan="{Binding PanAndVolume.Pan}"
-        LeftAverage="{Binding PanAndVolume.LeftAverage}"
-        RightAverage="{Binding PanAndVolume.RightAverage}"
-        LeftPeak="{Binding PanAndVolume.LeftPeak}"
-        RightPeak="{Binding PanAndVolume.RightPeak}"
-        IsFilterMidiControlled="{Binding IsFilterMidiControlled}"
-        FirstPluginParametersMidiControlled="{Binding FirstPluginSelectedForMidi}"
-        SecondPluginParametersMidiControlled="{Binding SecondPluginSelectedForMidi}"
-        ThirdPluginParametersMidiControlled="{Binding ThirdPluginSelectedForMidi}" />
+    <StackPanel Orientation="Horizontal">
+        <mixerControls:MicChannelStrip
+            Text="Mic"
+            IsSelected="{Binding IsSelected}"
+            SelectCommand="{Binding SelectChannelCommand}"
+            AudioFromRoutingTargets="{Binding AudioFromRoutingTargets}"
+            SelectedAudioFromRoutingTarget="{Binding SelectedAudioFromRoutingTarget}"
+            HasFilter="{Binding HasFilter}"
+            AddFilterCommand="{Binding AddFilterAction}"
+            DeleteFilterCommand="{Binding DeleteFilterAction}"
+            Presets="{Binding AvailablePresets}"
+            SavePresetCommand="{Binding SavePresetCommand}"
+            LoadPresetCommand="{Binding LoadPresetCommand}"
+            FirstPluginParameters="{Binding FirstPluginParameters}"
+            FirstPluginText="{Binding FirstPluginText}"
+            SecondPluginParameters="{Binding SecondPluginParameters}"
+            SecondPluginText="{Binding SecondPluginText}"
+            ThirdPluginParameters="{Binding ThirdPluginParameters}"
+            ThirdPluginText="{Binding ThirdPluginText}"
+            Volume="{Binding PanAndVolume.Volume}"
+            Pan="{Binding PanAndVolume.Pan}"
+            LeftAverage="{Binding PanAndVolume.LeftAverage}"
+            RightAverage="{Binding PanAndVolume.RightAverage}"
+            LeftPeak="{Binding PanAndVolume.LeftPeak}"
+            RightPeak="{Binding PanAndVolume.RightPeak}"
+            IsFilterMidiControlled="{Binding IsFilterMidiControlled}"
+            FirstPluginParametersMidiControlled="{Binding FirstPluginSelectedForMidi}"
+            SecondPluginParametersMidiControlled="{Binding SecondPluginSelectedForMidi}"
+            ThirdPluginParametersMidiControlled="{Binding ThirdPluginSelectedForMidi}" />
+
+        <!-- Parameter grid: always shows the filter chain's parameters, when one exists,
+             paged the same way as the main mixer's channel details section -->
+        <mixerControls:ParametersEditor
+            IsVisible="{Binding HasFilter}"
+            Width="420"
+            Margin="8,4,4,4"
+            NumberOfColumns="4"
+            NumberOfRows="6"
+            ParameterCollections="{Binding Parameters}" />
+    </StackPanel>
 
 </Window>
