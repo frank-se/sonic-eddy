@@ -13,7 +13,7 @@
         </Style>
     </UserControl.Styles>
 
-    <TabControl>
+    <TabControl SelectedIndex="1">
         <TabItem Header="Outputs">
             <ItemsControl ItemsSource="{Binding $parent[mixerControls:SpecialChannelsSection].OutputChannels}">
 
