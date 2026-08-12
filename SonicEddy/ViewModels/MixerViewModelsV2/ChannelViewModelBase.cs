@@ -124,15 +124,18 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
 
                 _midiSetupService.ClearFilterParameters(channelType, ChannelId);
 
-                foreach (var (parameterCollection, i) in parameters
-                             .Select((x, i) => (x, i)))
+                if (this is not MicChannelViewModel)
                 {
-                    foreach (var parameter in parameterCollection.Parameters)
+                    foreach (var (parameterCollection, i) in parameters
+                                 .Select((x, i) => (x, i)))
                     {
-                        _midiSetupService.AddFilterParameter(channelType,
-                            _midiControllerChannelId, (ulong)i,
-                            parameter.FullyQualifiedName,
-                            parameter.Minimum, parameter.Maximum);
+                        foreach (var parameter in parameterCollection.Parameters)
+                        {
+                            _midiSetupService.AddFilterParameter(channelType,
+                                _midiControllerChannelId, (ulong)i,
+                                parameter.FullyQualifiedName,
+                                parameter.Minimum, parameter.Maximum);
+                        }
                     }
                 }
             })
@@ -241,9 +244,10 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
             .OfType<ParameterCollection>()
             .ToList() ?? [];
 
-        _midiSetupService.SetChannelFilterNode(_channelType,
-            _midiControllerChannelId,
-            chain.CaptureNode.ObjectId);
+        if (this is not MicChannelViewModel)
+            _midiSetupService.SetChannelFilterNode(_channelType,
+                _midiControllerChannelId,
+                chain.CaptureNode.ObjectId);
 
         HasFilter = true;
         _ = LoadPresetsForCurrentFilter();
