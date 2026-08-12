@@ -23,10 +23,9 @@ namespace SonicEddy.ViewModels.MixerViewModelsV2;
 
 public class MicChannelViewModel : ChannelViewModelBase, IMicChannel
 {
-    public const int MicLayerId = 2;
-
     public MicChannelViewModel(
         string text,
+        int micChannelIndex,
         ICommand selectChannelCommand,
         MicChannel micChannel,
         ObservableCollection<IRoutingTarget> audioFromRoutingTargets,
@@ -39,9 +38,10 @@ public class MicChannelViewModel : ChannelViewModelBase, IMicChannel
             micChannel.FilterChain, micChannel.FilterGraph,
             [], null,
             appDataService, mixerService, monitoringService,
-            true, MicLayerId, midiControllerSetupService,
+            true, 0, midiControllerSetupService,
             ChannelType.Channel)
     {
+        MicChannelIndex = micChannelIndex;
         MicChannel = micChannel;
         AudioFromRoutingTargets = audioFromRoutingTargets;
         IsFilterMidiControlled = true;
@@ -90,6 +90,8 @@ public class MicChannelViewModel : ChannelViewModelBase, IMicChannel
         _applyingExternalMuteChange = false;
     }
 
+    public int MicChannelIndex { get; }
+
     public MicChannel MicChannel { get; }
 
     public ObservableCollection<IRoutingTarget>
@@ -125,7 +127,8 @@ public class MicChannelViewModel : ChannelViewModelBase, IMicChannel
         {
             ExternalEffectId = null;
             FilterGraph = graph;
-            FilterChain = await _mixerService.AddFilterToMicChannel(graph);
+            FilterChain = await _mixerService.AddFilterToMicChannel(
+                MicChannelIndex, graph);
         }
         else if (dialogViewModel.SelectedExternalEffect is { } effect)
         {
@@ -133,7 +136,7 @@ public class MicChannelViewModel : ChannelViewModelBase, IMicChannel
             FilterGraph = null;
             var processor =
                 await _mixerService.AddExternalEffectToMicChannel(
-                    effect.Config.Id);
+                    MicChannelIndex, effect.Config.Id);
             ExternalEffectId = processor?.ExternalEffectId;
             HasFilter = ExternalEffectId is not null;
             Parameters = null;

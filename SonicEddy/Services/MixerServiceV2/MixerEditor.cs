@@ -347,13 +347,13 @@ public class MixerEditor(IWireplumberService wireplumberService,
     }
 
     public async Task<MicChannel> AddFilterToMicChannel(MicChannel channel,
-        Node globalMasterCaptureNode, FilterGraph filterGraph)
+        Node globalMasterCaptureNode, FilterGraph filterGraph, int index)
     {
         var filterChainConfig = new FilterChainModuleConfig()
         {
             CaptureProps = new()
             {
-                Name = "mixer-fc-mic-capture",
+                Name = $"mixer-fc-mic-{index}-capture",
                 Description = "Capture Node for Mixer Filter Mic Channel",
                 Linger = true,
                 AutoConnect = true,
@@ -366,7 +366,7 @@ public class MixerEditor(IWireplumberService wireplumberService,
             },
             PlaybackProps = new()
             {
-                Name = "mixer-fc-mic-playback",
+                Name = $"mixer-fc-mic-{index}-playback",
                 Description = "Playback Node for Mixer Filter Mic Channel",
                 Linger = true,
                 AutoConnect = false,
@@ -380,7 +380,7 @@ public class MixerEditor(IWireplumberService wireplumberService,
 
         var filterChain =
             await Fr.Sonic.FrSonic.ModuleFactory
-                .CreateFilterChainAsync("mixer-fc-mic", filterChainConfig);
+                .CreateFilterChainAsync($"mixer-fc-mic-{index}", filterChainConfig);
 
         channel.InputLoopback.PlaybackNode.OverrideTargetObject(
             filterChain.CaptureNode.ObjectSerial.ToString());
@@ -402,12 +402,13 @@ public class MixerEditor(IWireplumberService wireplumberService,
     }
 
     public async Task<MicChannel> AddExternalEffectToMicChannel(
-        MicChannel channel, Node globalMasterCaptureNode, Guid effectId)
+        MicChannel channel, Node globalMasterCaptureNode, Guid effectId,
+        int index)
     {
         var processor = await externalEffectService.CreateInsertAsync(effectId,
             channel.InputLoopback.PlaybackNode,
             globalMasterCaptureNode,
-            "Mic");
+            $"Mic {index}");
         channel.InputLoopback.PlaybackNode.OverrideTargetObject(
             processor.InputNode.ObjectSerial.ToString());
 
@@ -748,15 +749,15 @@ public class MixerEditor(IWireplumberService wireplumberService,
     }
 
     public async Task<MicChannel> CreateMicChannel(
-        Node globalMasterCaptureNode)
+        Node globalMasterCaptureNode, int index)
     {
         var inputLoopback = await wireplumberService.CreateLoopbackModule(
-            "mic-input-loopback", new()
+            $"mic-input-loopback-{index}", new()
             {
                 CaptureProps = CaptureBaseProps(true,
-                    "mic-input-loopback-capture", "Mic Input Capture"),
+                    $"mic-input-loopback-{index}-capture", $"Mic {index} Input Capture"),
                 PlaybackProps = PlaybackBaseProps(false,
-                    "mic-input-loopback-playback", "Mic Input Playback")
+                    $"mic-input-loopback-{index}-playback", $"Mic {index} Input Playback")
             });
 
         inputLoopback.CaptureNode.SetVolumes([1.0, 1.0]);

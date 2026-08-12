@@ -106,15 +106,24 @@ public class MixerService : IMixerService, IDisposable
                 _myNodeIds.Add(xfade.PlaybackNode.ObjectSerial);
 
                 MicChannel? micChannel = null;
+                MicChannel? micChannel2 = null;
                 if (prefs.MicChannelEnabled)
                 {
                     micChannel =
-                        await _editor.CreateMicChannel(xfade.CaptureNode);
+                        await _editor.CreateMicChannel(xfade.CaptureNode, 1);
 
                     _myNodeIds.Add(
                         micChannel.InputLoopback.CaptureNodeObjectSerial);
                     _myNodeIds.Add(
                         micChannel.InputLoopback.PlaybackNodeObjectSerial);
+
+                    micChannel2 =
+                        await _editor.CreateMicChannel(xfade.CaptureNode, 2);
+
+                    _myNodeIds.Add(
+                        micChannel2.InputLoopback.CaptureNodeObjectSerial);
+                    _myNodeIds.Add(
+                        micChannel2.InputLoopback.PlaybackNodeObjectSerial);
                 }
 
                 var firstLayer = await _editor.Create(masterOutputName, 0,
@@ -164,7 +173,8 @@ public class MixerService : IMixerService, IDisposable
                 _myNodeIds.Add(cueFc.PlaybackNode.ObjectSerial);
 
                 CurrentMixer = new([firstLayer, secondLayer],
-                    monitoringLoopback, globalMaster, cue, micChannel);
+                    monitoringLoopback, globalMaster, cue, micChannel,
+                    micChannel2);
             }
             finally
             {
@@ -658,7 +668,7 @@ public class MixerService : IMixerService, IDisposable
         };
     }
 
-    public async Task<FilterChain?> AddFilterToMicChannel(
+    public async Task<FilterChain?> AddFilterToMicChannel(int micIndex,
         FilterGraph filterGraph)
     {
         _logger.LogTrace("AddFilterToMicChannel");
@@ -671,8 +681,8 @@ public class MixerService : IMixerService, IDisposable
                 _isModifyingMixer = true;
             }
 
-            if (CurrentMixer?.Mic is not { } mic ||
-                CurrentMixer.GlobalMaster is not { } globalMaster)
+            if (GetMicChannel(micIndex) is not { } mic ||
+                CurrentMixer?.GlobalMaster is not { } globalMaster)
                 return null;
 
             await _internalChange.WaitAsync();
@@ -680,8 +690,9 @@ public class MixerService : IMixerService, IDisposable
             {
                 var updated =
                     await _editor.AddFilterToMicChannel(mic,
-                        globalMaster.CrossFader.CaptureNode, filterGraph);
-                CurrentMixer = CurrentMixer with { Mic = updated };
+                        globalMaster.CrossFader.CaptureNode, filterGraph,
+                        micIndex);
+                CurrentMixer = SetMicChannel(micIndex, updated);
 
                 List<ulong?> ids =
                 [
@@ -708,10 +719,10 @@ public class MixerService : IMixerService, IDisposable
             _externalChange.Release();
         }
 
-        return CurrentMixer?.Mic?.FilterChain;
+        return GetMicChannel(micIndex)?.FilterChain;
     }
 
-    public async Task RemoveFilterFromMicChannel()
+    public async Task RemoveFilterFromMicChannel(int micIndex)
     {
         await _externalChange.WaitAsync();
         try
@@ -721,17 +732,15 @@ public class MixerService : IMixerService, IDisposable
                 _isModifyingMixer = true;
             }
 
-            if (CurrentMixer?.Mic is { } mic &&
-                CurrentMixer.GlobalMaster is { } globalMaster)
+            if (GetMicChannel(micIndex) is { } mic &&
+                CurrentMixer?.GlobalMaster is { } globalMaster)
             {
                 await _internalChange.WaitAsync();
                 try
                 {
-                    CurrentMixer = CurrentMixer with
-                    {
-                        Mic = await _editor.RemoveFilterFromMicChannel(mic,
-                            globalMaster.CrossFader.CaptureNode)
-                    };
+                    var updated = await _editor.RemoveFilterFromMicChannel(
+                        mic, globalMaster.CrossFader.CaptureNode);
+                    CurrentMixer = SetMicChannel(micIndex, updated);
                 }
                 finally
                 {
@@ -751,7 +760,7 @@ public class MixerService : IMixerService, IDisposable
     }
 
     public async Task<InsertProcessor?> AddExternalEffectToMicChannel(
-        Guid effectId)
+        int micIndex, Guid effectId)
     {
         await _externalChange.WaitAsync();
         try
@@ -761,15 +770,16 @@ public class MixerService : IMixerService, IDisposable
                 _isModifyingMixer = true;
             }
 
-            if (CurrentMixer?.Mic is { } mic &&
-                CurrentMixer.GlobalMaster is { } globalMaster)
+            if (GetMicChannel(micIndex) is { } mic &&
+                CurrentMixer?.GlobalMaster is { } globalMaster)
             {
                 await _internalChange.WaitAsync();
                 try
                 {
                     var updated = await _editor.AddExternalEffectToMicChannel(
-                        mic, globalMaster.CrossFader.CaptureNode, effectId);
-                    CurrentMixer = CurrentMixer with { Mic = updated };
+                        mic, globalMaster.CrossFader.CaptureNode, effectId,
+                        micIndex);
+                    CurrentMixer = SetMicChannel(micIndex, updated);
                     RegisterProcessorNodes(updated.InsertProcessor);
                 }
                 finally
@@ -788,8 +798,16 @@ public class MixerService : IMixerService, IDisposable
             _externalChange.Release();
         }
 
-        return CurrentMixer?.Mic?.InsertProcessor;
+        return GetMicChannel(micIndex)?.InsertProcessor;
     }
+
+    private MicChannel? GetMicChannel(int micIndex) =>
+        micIndex == 1 ? CurrentMixer?.Mic : CurrentMixer?.Mic2;
+
+    private Mixer? SetMicChannel(int micIndex, MicChannel updated) =>
+        micIndex == 1
+            ? CurrentMixer! with { Mic = updated }
+            : CurrentMixer! with { Mic2 = updated };
 
     private async Task ModifyLayer(int layerId,
         Func<MixerLayer, Task<MixerLayer>> update)

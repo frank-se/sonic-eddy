@@ -4,19 +4,20 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:mixerControls="clr-namespace:SonicEddy.Controls.MixerControls"
         xmlns:mixerViewModelsV2="clr-namespace:SonicEddy.ViewModels.MixerViewModelsV2"
-        mc:Ignorable="d" d:DesignWidth="140" d:DesignHeight="800"
+        mc:Ignorable="d" d:DesignWidth="280" d:DesignHeight="800"
         SizeToContent="Width" Height="750"
         WindowStartupLocation="CenterOwner"
         x:CompileBindings="False"
         x:Class="SonicEddy.Views.MicChannelViews.MicChannelWindow"
-        x:DataType="mixerViewModelsV2:MicChannelViewModel"
-        Title="Microphone Channel">
+        x:DataType="mixerViewModelsV2:MicChannelsViewModel"
+        Title="Microphone Channels">
 
     <StackPanel Orientation="Horizontal">
         <mixerControls:MicChannelStrip
-            Text="Mic"
+            DataContext="{Binding Mic1}"
+            Text="Mic 1"
             IsSelected="{Binding IsSelected}"
-            SelectCommand="{Binding SelectChannelCommand}"
+            SelectCommand="{Binding OnSelectChannel}"
             AudioFromRoutingTargets="{Binding AudioFromRoutingTargets}"
             SelectedAudioFromRoutingTarget="{Binding SelectedAudioFromRoutingTarget}"
             HasFilter="{Binding HasFilter}"
@@ -43,15 +44,46 @@
             SecondPluginParametersMidiControlled="{Binding SecondPluginSelectedForMidi}"
             ThirdPluginParametersMidiControlled="{Binding ThirdPluginSelectedForMidi}" />
 
-        <!-- Parameter grid: always shows the filter chain's parameters, when one exists,
+        <mixerControls:MicChannelStrip
+            DataContext="{Binding Mic2}"
+            Text="Mic 2"
+            IsSelected="{Binding IsSelected}"
+            SelectCommand="{Binding OnSelectChannel}"
+            AudioFromRoutingTargets="{Binding AudioFromRoutingTargets}"
+            SelectedAudioFromRoutingTarget="{Binding SelectedAudioFromRoutingTarget}"
+            HasFilter="{Binding HasFilter}"
+            AddFilterCommand="{Binding AddFilterAction}"
+            DeleteFilterCommand="{Binding DeleteFilterAction}"
+            Presets="{Binding AvailablePresets}"
+            SavePresetCommand="{Binding SavePresetCommand}"
+            LoadPresetCommand="{Binding LoadPresetCommand}"
+            FirstPluginParameters="{Binding FirstPluginParameters}"
+            FirstPluginText="{Binding FirstPluginText}"
+            SecondPluginParameters="{Binding SecondPluginParameters}"
+            SecondPluginText="{Binding SecondPluginText}"
+            ThirdPluginParameters="{Binding ThirdPluginParameters}"
+            ThirdPluginText="{Binding ThirdPluginText}"
+            Volume="{Binding PanAndVolume.Volume}"
+            Pan="{Binding PanAndVolume.Pan}"
+            IsMuted="{Binding IsMuted}"
+            LeftAverage="{Binding PanAndVolume.LeftAverage}"
+            RightAverage="{Binding PanAndVolume.RightAverage}"
+            LeftPeak="{Binding PanAndVolume.LeftPeak}"
+            RightPeak="{Binding PanAndVolume.RightPeak}"
+            IsFilterMidiControlled="{Binding IsFilterMidiControlled}"
+            FirstPluginParametersMidiControlled="{Binding FirstPluginSelectedForMidi}"
+            SecondPluginParametersMidiControlled="{Binding SecondPluginSelectedForMidi}"
+            ThirdPluginParametersMidiControlled="{Binding ThirdPluginSelectedForMidi}" />
+
+        <!-- Parameter grid: shows the selected mic channel's filter parameters,
              paged the same way as the main mixer's channel details section -->
         <mixerControls:ParametersEditor
-            IsVisible="{Binding HasFilter}"
+            IsVisible="{Binding SelectedChannel.HasFilter}"
             Width="420"
             Margin="8,4,4,4"
             NumberOfColumns="4"
             NumberOfRows="6"
-            ParameterCollections="{Binding Parameters}" />
+            ParameterCollections="{Binding SelectedChannelParameters}" />
     </StackPanel>
 
 </Window>

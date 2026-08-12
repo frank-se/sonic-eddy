@@ -254,7 +254,7 @@ public class MixerViewModelService(
             mixerService, layerId, index);
 
     public MicChannelViewModel ConvertMicChannel(MicChannel channel,
-        ICommand selectChannelCommand)
+        int index, ICommand selectChannelCommand)
     {
         ObservableCollection<IRoutingTarget> audioFromRoutingTargets = [];
         var inputs = mixerService.CurrentMixer?.Layers.FirstOrDefault()
@@ -266,7 +266,7 @@ public class MixerViewModelService(
                 inputChannel) as IRoutingTarget;
         }));
 
-        return new("Mic", selectChannelCommand, channel,
+        return new($"Mic {index}", index, selectChannelCommand, channel,
             audioFromRoutingTargets, appDataService, mixerService,
             monitoringService, controllerSetupService);
     }

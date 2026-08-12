@@ -151,7 +151,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     private Window? _midiRouterWindow;
     private readonly SemaphoreSlim _layerInitializationLock = new(1, 1);
     private GlobalMasterViewModel? _globalMasterViewModel;
-    private MicChannelViewModel? _micChannelViewModel;
+    private MicChannelsViewModel? _micChannelsViewModel;
     private MixerOverviewViewModel? _mixerOverviewViewModel;
     private Guid _currentMixerId;
     private string _currentMixerName = string.Empty;
@@ -525,7 +525,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
 
     private async Task ShowMicChannelWindowAsync()
     {
-        var viewModel = await EnsureMicChannelViewModelAsync();
+        var viewModel = await EnsureMicChannelsViewModelAsync();
         if (viewModel is null) return;
         _micChannelWindow = new MicChannelWindow
         {
@@ -619,10 +619,11 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
             LayerBViewModel is null)
             return;
 
-        var mic = await EnsureMicChannelViewModelAsync();
+        var mic = await EnsureMicChannelsViewModelAsync();
 
         await configurationService.ApplyAsync(viewModel.SelectedMixer,
-            LayerAViewModel, LayerBViewModel, globalMaster, mic);
+            LayerAViewModel, LayerBViewModel, globalMaster, mic?.Mic1,
+            mic?.Mic2);
         _currentMixerId = viewModel.SelectedMixer.Id;
         _currentMixerName = viewModel.SelectedMixer.Name;
     }
@@ -634,7 +635,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
             LayerBViewModel is null)
             return;
 
-        var mic = await EnsureMicChannelViewModelAsync();
+        var mic = await EnsureMicChannelsViewModelAsync();
 
         var appDataService = Locator.Current.GetService<IAppDataService>();
         var configurationService =
@@ -642,7 +643,8 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         if (appDataService is null || configurationService is null) return;
 
         var configuration = configurationService.Capture(id, name,
-            LayerAViewModel, LayerBViewModel, globalMaster, mic);
+            LayerAViewModel, LayerBViewModel, globalMaster, mic?.Mic1,
+            mic?.Mic2);
         await appDataService.CreateMixer(configuration);
     }
 
@@ -653,7 +655,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
             LayerBViewModel is null)
             return;
 
-        var mic = await EnsureMicChannelViewModelAsync();
+        var mic = await EnsureMicChannelsViewModelAsync();
 
         var appDataService = Locator.Current.GetService<IAppDataService>();
         var configurationService =
@@ -666,7 +668,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         if (existing is not null)
         {
             await configurationService.ApplyAsync(existing, LayerAViewModel,
-                LayerBViewModel, globalMaster, mic);
+                LayerBViewModel, globalMaster, mic?.Mic1, mic?.Mic2);
             _currentMixerId = existing.Id;
             _currentMixerName = existing.Name;
         }
@@ -701,22 +703,26 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         return _globalMasterViewModel;
     }
 
-    private async Task<MicChannelViewModel?> EnsureMicChannelViewModelAsync()
+    private async Task<MicChannelsViewModel?> EnsureMicChannelsViewModelAsync()
     {
-        if (_micChannelViewModel is not null)
-            return _micChannelViewModel;
+        if (_micChannelsViewModel is not null)
+            return _micChannelsViewModel;
 
         await EnsureLayerViewModelsAsync();
         var mixerService = Locator.Current.GetService<IMixerService>();
         var viewModelService =
             Locator.Current.GetService<IMixerViewModelService>();
         if (mixerService?.CurrentMixer?.Mic is not { } mic ||
+            mixerService.CurrentMixer?.Mic2 is not { } mic2 ||
             viewModelService is null)
             return null;
 
-        _micChannelViewModel = viewModelService.ConvertMicChannel(mic,
+        var mic1ViewModel = viewModelService.ConvertMicChannel(mic, 1,
             ReactiveCommand.Create(() => { }));
-        return _micChannelViewModel;
+        var mic2ViewModel = viewModelService.ConvertMicChannel(mic2, 2,
+            ReactiveCommand.Create(() => { }));
+        _micChannelsViewModel = new(mic1ViewModel, mic2ViewModel);
+        return _micChannelsViewModel;
     }
 
     private async Task EnsureLayerViewModelsAsync()
@@ -738,9 +744,14 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
                 await viewModelService.ConvertCurrentMixerToViewModel(1);
 
             IsMicChannelEnabled = mixerService.CurrentMixer?.Mic is not null;
-            if (IsMicChannelEnabled && mixerService.CurrentMixer?.Mic is { } mic)
-                _micChannelViewModel ??= viewModelService.ConvertMicChannel(
-                    mic, ReactiveCommand.Create(() => { }));
+            if (IsMicChannelEnabled &&
+                mixerService.CurrentMixer?.Mic is { } mic &&
+                mixerService.CurrentMixer?.Mic2 is { } mic2)
+                _micChannelsViewModel ??= new(
+                    viewModelService.ConvertMicChannel(mic, 1,
+                        ReactiveCommand.Create(() => { })),
+                    viewModelService.ConvertMicChannel(mic2, 2,
+                        ReactiveCommand.Create(() => { })));
 
             if (LayerAViewModel is not null && LayerBViewModel is not null)
             {
@@ -764,11 +775,13 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
                         var defaultConfiguration =
                             configurationService.CreateDefault(LayerAViewModel,
                                 LayerBViewModel, _globalMasterViewModel,
-                                _micChannelViewModel);
+                                _micChannelsViewModel?.Mic1,
+                                _micChannelsViewModel?.Mic2);
                         await configurationService.ApplyAsync(
                             defaultConfiguration, LayerAViewModel,
                             LayerBViewModel, _globalMasterViewModel,
-                            _micChannelViewModel);
+                            _micChannelsViewModel?.Mic1,
+                            _micChannelsViewModel?.Mic2);
                     }
                 }
 
@@ -1109,7 +1122,8 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
             _drumMixerService.Changed -= OnDrumMixerChanged;
         _globalMasterViewModel?.Dispose();
         _micChannelWindow?.Close();
-        _micChannelViewModel?.Dispose();
+        _micChannelsViewModel?.Mic1.Dispose();
+        _micChannelsViewModel?.Mic2.Dispose();
         Locator.Current.GetService<MixerConfigurationService>()?.Dispose();
         _layerInitializationLock.Dispose();
         _midiControllerService.LayerChanged -= OnLayerSelected;

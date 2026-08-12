@@ -33,5 +33,6 @@ public interface IMixerViewModelService
 
     MicChannelViewModel ConvertMicChannel(
         MicChannel channel,
+        int index,
         ICommand selectChannelCommand);
 }
