@@ -290,6 +290,17 @@ public partial class MicChannelStrip : UserControl
         set => SetValue(PanProperty, value);
     }
 
+    public static readonly StyledProperty<bool> IsMutedProperty =
+        AvaloniaProperty.Register<MicChannelStrip, bool>(
+            nameof(IsMuted),
+            defaultBindingMode: BindingMode.TwoWay);
+
+    public bool IsMuted
+    {
+        get => GetValue(IsMutedProperty);
+        set => SetValue(IsMutedProperty, value);
+    }
+
     public static readonly StyledProperty<float> LeftAverageProperty =
         AvaloniaProperty.Register<MicChannelStrip, float>(
             nameof(LeftAverage));

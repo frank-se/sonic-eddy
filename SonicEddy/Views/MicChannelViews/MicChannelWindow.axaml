@@ -33,6 +33,7 @@
             ThirdPluginText="{Binding ThirdPluginText}"
             Volume="{Binding PanAndVolume.Volume}"
             Pan="{Binding PanAndVolume.Pan}"
+            IsMuted="{Binding IsMuted}"
             LeftAverage="{Binding PanAndVolume.LeftAverage}"
             RightAverage="{Binding PanAndVolume.RightAverage}"
             LeftPeak="{Binding PanAndVolume.LeftPeak}"

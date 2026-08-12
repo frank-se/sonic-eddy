@@ -1,9 +1,11 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Reactive.Disposables;
 using System.Reactive.Disposables.Fluent;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Fr.Sonic.PInvoke;
+using Fr.Sonic.Model.Props;
 using Fr.Sonic.Modules.Models;
 using ReactiveUI;
 using SonicEddy.Contracts.FilterGraph;
@@ -53,6 +55,39 @@ public class MicChannelViewModel : ChannelViewModelBase, IMicChannel
                     channel.PlaybackNodeObjectSerial.ToString());
             })
             .DisposeWith(Disposables);
+
+        var playbackNode = MicChannel.InputLoopback.PlaybackNode;
+
+        // ReSharper disable once MergeIntoPattern
+        // DO NOT CHANGE TO PATTERN
+        // OTHERWISE ACCESS TO RESULT MIGHT BE BLOCKING!
+        if (playbackNode.Properties.IsCompleted &&
+            playbackNode.Properties.Result is not null)
+            IsMuted = playbackNode.Properties.Result.Mute;
+
+        playbackNode.PropertiesChanged += OnPlaybackNodePropertiesChanged;
+        Disposable
+            .Create(() => playbackNode.PropertiesChanged -=
+                OnPlaybackNodePropertiesChanged)
+            .DisposeWith(Disposables);
+
+        this.WhenAnyValue(x => x.IsMuted)
+            .Subscribe(muted =>
+            {
+                if (_applyingExternalMuteChange) return;
+                playbackNode.SetMute(muted);
+            })
+            .DisposeWith(Disposables);
+    }
+
+    private bool _applyingExternalMuteChange;
+
+    private void OnPlaybackNodePropertiesChanged(Properties? properties)
+    {
+        if (properties is null) return;
+        _applyingExternalMuteChange = true;
+        IsMuted = properties.Mute;
+        _applyingExternalMuteChange = false;
     }
 
     public MicChannel MicChannel { get; }
@@ -61,6 +96,12 @@ public class MicChannelViewModel : ChannelViewModelBase, IMicChannel
         AudioFromRoutingTargets { get; }
 
     public IRoutingTarget? SelectedAudioFromRoutingTarget
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
+    public bool IsMuted
     {
         get;
         set => this.RaiseAndSetIfChanged(ref field, value);

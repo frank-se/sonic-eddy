@@ -8,7 +8,7 @@
 
     <Panel Background="DarkGreen">
         <Grid ColumnDefinitions="120"
-              RowDefinitions="Auto,Auto,Auto,100,100,100,*"
+              RowDefinitions="Auto,Auto,Auto,100,100,100,Auto,*"
               Margin="2">
 
             <mixerControls:ChannelHeader Grid.Row="0"
@@ -53,7 +53,15 @@
                                             Parameters="{Binding $parent[mixerControls:MicChannelStrip].ThirdPluginParameters}"
                                             Text="{Binding $parent[mixerControls:MicChannelStrip].ThirdPluginText}" />
 
-            <mixerControls:PanAndVolumeSectionWithMonitor Grid.Row="6"
+            <ToggleButton Grid.Row="6"
+                          Content="Mute"
+                          Margin="2,8,2,0"
+                          HorizontalAlignment="Stretch"
+                          HorizontalContentAlignment="Center"
+                          Background="DimGray"
+                          IsChecked="{Binding $parent[mixerControls:MicChannelStrip].IsMuted}" />
+
+            <mixerControls:PanAndVolumeSectionWithMonitor Grid.Row="7"
                                                           Margin="0,12,0,0"
                                                           LeftAverage="{Binding $parent[mixerControls:MicChannelStrip].LeftAverage}"
                                                           RightAverage="{Binding $parent[mixerControls:MicChannelStrip].RightAverage}"
