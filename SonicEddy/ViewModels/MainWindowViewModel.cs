@@ -152,6 +152,10 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     private Window? _clickSyncWindow;
     private Window? _midiRouterWindow;
     private readonly SemaphoreSlim _layerInitializationLock = new(1, 1);
+    private readonly SemaphoreSlim _globalMasterInitializationLock = new(1, 1);
+    private readonly SemaphoreSlim _micChannelsInitializationLock = new(1, 1);
+    private readonly SemaphoreSlim _globalReturnChannelsInitializationLock =
+        new(1, 1);
     private GlobalMasterViewModel? _globalMasterViewModel;
     private MicChannelsViewModel? _micChannelsViewModel;
     private GlobalReturnChannelsViewModel? _globalReturnChannelsViewModel;
@@ -719,20 +723,31 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         if (_globalMasterViewModel is not null)
             return _globalMasterViewModel;
 
-        await EnsureLayerViewModelsAsync();
-        var mixerService = Locator.Current.GetService<IMixerService>();
-        var globalMaster = mixerService?.CurrentMixer?.GlobalMaster;
-        var layerA = LayerAViewModel?.MasterChannels?
-            .OfType<MasterChannelViewModel>().FirstOrDefault();
-        var layerB = LayerBViewModel?.MasterChannels?
-            .OfType<MasterChannelViewModel>().FirstOrDefault();
-        if (globalMaster is null || layerA is null || layerB is null)
-            return null;
+        await _globalMasterInitializationLock.WaitAsync();
+        try
+        {
+            if (_globalMasterViewModel is not null)
+                return _globalMasterViewModel;
 
-        _globalMasterViewModel = new(globalMaster, layerA, layerB,
-            mixerService?.CurrentMixer?.Cue,
-            LayerAViewModel!.AudioToRoutingTargetsMasterChannel);
-        return _globalMasterViewModel;
+            await EnsureLayerViewModelsAsync();
+            var mixerService = Locator.Current.GetService<IMixerService>();
+            var globalMaster = mixerService?.CurrentMixer?.GlobalMaster;
+            var layerA = LayerAViewModel?.MasterChannels?
+                .OfType<MasterChannelViewModel>().FirstOrDefault();
+            var layerB = LayerBViewModel?.MasterChannels?
+                .OfType<MasterChannelViewModel>().FirstOrDefault();
+            if (globalMaster is null || layerA is null || layerB is null)
+                return null;
+
+            _globalMasterViewModel = new(globalMaster, layerA, layerB,
+                mixerService?.CurrentMixer?.Cue,
+                LayerAViewModel!.AudioToRoutingTargetsMasterChannel);
+            return _globalMasterViewModel;
+        }
+        finally
+        {
+            _globalMasterInitializationLock.Release();
+        }
     }
 
     private async Task<MicChannelsViewModel?> EnsureMicChannelsViewModelAsync()
@@ -740,21 +755,32 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         if (_micChannelsViewModel is not null)
             return _micChannelsViewModel;
 
-        await EnsureLayerViewModelsAsync();
-        var mixerService = Locator.Current.GetService<IMixerService>();
-        var viewModelService =
-            Locator.Current.GetService<IMixerViewModelService>();
-        if (mixerService?.CurrentMixer?.Mic is not { } mic ||
-            mixerService.CurrentMixer?.Mic2 is not { } mic2 ||
-            viewModelService is null)
-            return null;
+        await _micChannelsInitializationLock.WaitAsync();
+        try
+        {
+            if (_micChannelsViewModel is not null)
+                return _micChannelsViewModel;
 
-        var mic1ViewModel = viewModelService.ConvertMicChannel(mic, 1,
-            ReactiveCommand.Create(() => { }));
-        var mic2ViewModel = viewModelService.ConvertMicChannel(mic2, 2,
-            ReactiveCommand.Create(() => { }));
-        _micChannelsViewModel = new(mic1ViewModel, mic2ViewModel);
-        return _micChannelsViewModel;
+            await EnsureLayerViewModelsAsync();
+            var mixerService = Locator.Current.GetService<IMixerService>();
+            var viewModelService =
+                Locator.Current.GetService<IMixerViewModelService>();
+            if (mixerService?.CurrentMixer?.Mic is not { } mic ||
+                mixerService.CurrentMixer?.Mic2 is not { } mic2 ||
+                viewModelService is null)
+                return null;
+
+            var mic1ViewModel = viewModelService.ConvertMicChannel(mic, 1,
+                ReactiveCommand.Create(() => { }));
+            var mic2ViewModel = viewModelService.ConvertMicChannel(mic2, 2,
+                ReactiveCommand.Create(() => { }));
+            _micChannelsViewModel = new(mic1ViewModel, mic2ViewModel);
+            return _micChannelsViewModel;
+        }
+        finally
+        {
+            _micChannelsInitializationLock.Release();
+        }
     }
 
     private async Task<GlobalReturnChannelsViewModel?>
@@ -763,21 +789,33 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         if (_globalReturnChannelsViewModel is not null)
             return _globalReturnChannelsViewModel;
 
-        await EnsureLayerViewModelsAsync();
-        var mixerService = Locator.Current.GetService<IMixerService>();
-        var viewModelService =
-            Locator.Current.GetService<IMixerViewModelService>();
-        if (mixerService?.CurrentMixer?.GlobalReturn1 is not { } return1 ||
-            mixerService.CurrentMixer?.GlobalReturn2 is not { } return2 ||
-            viewModelService is null)
-            return null;
+        await _globalReturnChannelsInitializationLock.WaitAsync();
+        try
+        {
+            if (_globalReturnChannelsViewModel is not null)
+                return _globalReturnChannelsViewModel;
 
-        var return1ViewModel = viewModelService.ConvertGlobalReturnChannel(
-            return1, 1, ReactiveCommand.Create(() => { }));
-        var return2ViewModel = viewModelService.ConvertGlobalReturnChannel(
-            return2, 2, ReactiveCommand.Create(() => { }));
-        _globalReturnChannelsViewModel = new(return1ViewModel, return2ViewModel);
-        return _globalReturnChannelsViewModel;
+            await EnsureLayerViewModelsAsync();
+            var mixerService = Locator.Current.GetService<IMixerService>();
+            var viewModelService =
+                Locator.Current.GetService<IMixerViewModelService>();
+            if (mixerService?.CurrentMixer?.GlobalReturn1 is not { } return1 ||
+                mixerService.CurrentMixer?.GlobalReturn2 is not { } return2 ||
+                viewModelService is null)
+                return null;
+
+            var return1ViewModel = viewModelService.ConvertGlobalReturnChannel(
+                return1, 1, ReactiveCommand.Create(() => { }));
+            var return2ViewModel = viewModelService.ConvertGlobalReturnChannel(
+                return2, 2, ReactiveCommand.Create(() => { }));
+            _globalReturnChannelsViewModel =
+                new(return1ViewModel, return2ViewModel);
+            return _globalReturnChannelsViewModel;
+        }
+        finally
+        {
+            _globalReturnChannelsInitializationLock.Release();
+        }
     }
 
     private async Task EnsureLayerViewModelsAsync()
