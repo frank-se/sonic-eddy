@@ -61,14 +61,13 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
         _midiSetupService = midiControllerSetupService;
         _channelType = channelType;
 
+        // channelId is already a global (cross-layer) id assigned in
+        // MixerEditor, so no additional layer offset is applied here.
         // Mic channels are never MIDI-controller-mapped, so they don't
         // participate in this slot reservation.
         _midiControllerChannelId = this is MicChannelViewModel
             ? 0
-            : channelId + (ulong)_layerId *
-                (channelType == ChannelType.Channel
-                    ? (ulong)mixerService.NumberOfChannelsPerLayer
-                    : (ulong)mixerService.NumberOfGroupChannelsPerLayer);
+            : channelId;
 
         FilterGraph = filterGraph;
         FilterChain = filterChain;
