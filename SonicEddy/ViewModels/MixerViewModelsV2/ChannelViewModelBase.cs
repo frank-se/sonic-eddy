@@ -9,8 +9,10 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using DynamicData;
 using Fr.Sonic.PInvoke;
+using Fr.Sonic.Model.PropInfo;
 using Fr.Sonic.Modules.Models;
 using ReactiveUI;
+using Serilog;
 using SonicEddy.Contracts.FilterGraph;
 using SonicEddy.Contracts.Mixers;
 using SonicEddy.Controls.MixerControls;
@@ -203,6 +205,10 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
 
     private void OnFilterChainUpdate(FilterChain? chain)
     {
+        Log.Debug(
+            "OnFilterChainUpdate channel={ChannelId} chainNull={ChainNull} filterGraphNull={FilterGraphNull}",
+            ChannelId, chain is null, FilterGraph is null);
+
         if (chain is null || FilterGraph is null)
         {
             HasFilter = false;
@@ -210,16 +216,37 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
             return;
         }
 
-        // ReSharper disable once MergeIntoPattern
-        // DO NOT CHANGE TO PATTERN
-        // OTHERWISE ACCESS TO RESULT MIGHT BE BLOCKING!
-        if (!chain.CaptureNode.Params.IsCompleted ||
-            chain.CaptureNode.Params.Result is null ||
-            !chain.CaptureNode.PropertyInfos.IsCompleted)
+        // Params/PropertyInfos are backed by TaskCompletionSources that
+        // complete on the PipeWire event-processing thread without
+        // RunContinuationsAsynchronously, so awaiting them directly here
+        // deadlocks. Awaiting inside a Task.Run runs the await on a fresh
+        // pool thread instead, then the result is marshalled back for the
+        // actual state update.
+        _ = Task.Run(async () =>
+        {
+            var paramsResult = await chain.CaptureNode.Params;
+            var propertyInfosResult = await chain.CaptureNode.PropertyInfos;
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                ApplyFilterChainState(chain, paramsResult, propertyInfosResult));
+        });
+    }
+
+    private void ApplyFilterChainState(FilterChain chain,
+        Dictionary<string, Fr.Sonic.Model.Params.IParameter>? paramsResult,
+        PropertyInfoCollection? propertyInfosResult)
+    {
+        if (!ReferenceEquals(FilterChain, chain) || FilterGraph is null)
             return;
 
-        var propertyInfos =
-            chain.CaptureNode.PropertyInfos.Result?.PropertyInfos ?? [];
+        if (paramsResult is null)
+        {
+            Log.Debug(
+                "ApplyFilterChainState channel={ChannelId} paramsResult is null, giving up",
+                ChannelId);
+            return;
+        }
+
+        var propertyInfos = propertyInfosResult?.PropertyInfos ?? [];
 
         Parameters = FilterGraph.FlatParameters?
             .GroupBy(fp => fp.NodeId)
@@ -253,6 +280,9 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
                 chain.CaptureNode.ObjectId);
 
         HasFilter = true;
+        Log.Debug(
+            "ApplyFilterChainState channel={ChannelId} success parameterGroups={ParameterGroups}",
+            ChannelId, Parameters?.Count ?? 0);
         _ = LoadPresetsForCurrentFilter();
     }
 
@@ -444,6 +474,9 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
         }
 
         var graph = await _appDataService.GetFilterGraph(config.ProcessorId);
+        Log.Debug(
+            "ApplyFilterConfigurationAsync channel={ChannelId} type={ChannelType} processorId={ProcessorId} graphId={GraphId}",
+            ChannelId, _channelType, config.ProcessorId, graph.Id);
         if (FilterGraph?.Id != graph.Id || FilterChain is null)
         {
             FilterGraph = graph;
@@ -460,6 +493,11 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
                 FilterChain = (await _mixerService.AddFilterToChannelStrip(
                     _layerId, ChannelId, graph)).FilterChain;
         }
+
+        Log.Debug(
+            "ApplyFilterConfigurationAsync channel={ChannelId} filterChainNull={FilterChainNull} captureSerial={CaptureSerial}",
+            ChannelId, FilterChain is null,
+            FilterChain?.CaptureNode.ObjectSerial);
 
         var node = FilterChain?.CaptureNode;
         if (node is null) return;

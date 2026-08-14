@@ -444,8 +444,13 @@ public class MixerService : IMixerService, IDisposable
             _externalChange.Release();
         }
 
-        return CurrentMixer.Layers[layerId].Channels
+        var result = CurrentMixer.Layers[layerId].Channels
             .First(c => c.ChannelId == channelId);
+        _logger.LogDebug(
+            "AddFilterToChannelStrip result channel={ChannelId} filterChainNull={FilterChainNull} captureSerial={CaptureSerial}",
+            channelId, result.FilterChain is null,
+            result.FilterChain?.CaptureNode.ObjectSerial);
+        return result;
     }
 
     public async Task<FilterChain?> AddFilterToGroupChannel(int layerId,
@@ -504,8 +509,12 @@ public class MixerService : IMixerService, IDisposable
             _externalChange.Release();
         }
 
-        return CurrentMixer.Layers[layerId].GroupChannels
+        var resultFc = CurrentMixer.Layers[layerId].GroupChannels
             .First(c => c.ChannelId == channelId).FilterChain;
+        _logger.LogDebug(
+            "AddFilterToGroupChannel result channel={ChannelId} filterChainNull={FilterChainNull} captureSerial={CaptureSerial}",
+            channelId, resultFc is null, resultFc?.CaptureNode.ObjectSerial);
+        return resultFc;
     }
 
     public async Task<FilterChain?> AddFilterToMasterChannel(int layerId,
@@ -561,7 +570,11 @@ public class MixerService : IMixerService, IDisposable
             _externalChange.Release();
         }
 
-        return CurrentMixer.Layers[layerId].MasterChannel.FilterChain;
+        var masterFc = CurrentMixer.Layers[layerId].MasterChannel.FilterChain;
+        _logger.LogDebug(
+            "AddFilterToMasterChannel result layer={LayerId} filterChainNull={FilterChainNull} captureSerial={CaptureSerial}",
+            layerId, masterFc is null, masterFc?.CaptureNode.ObjectSerial);
+        return masterFc;
     }
 
     public Task RemoveFilterFromChannelStrip(int layerId, ulong channelId) =>
