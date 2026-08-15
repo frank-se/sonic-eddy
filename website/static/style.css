@@ -132,11 +132,11 @@ main {
 
 /* Page / Article */
 .page h1 { font-size: 2rem; margin-bottom: 1.5rem; }
-.page h2 { font-size: 1.4rem; margin: 2rem 0 0.75rem; }
-.page h3 { font-size: 1.1rem; margin: 1.5rem 0 0.5rem; }
-.page p { margin-bottom: 1rem; }
-.page ul, .page ol { margin: 0 0 1rem 1.5rem; }
-.page li { margin-bottom: 0.3rem; }
+.page h2, .intro h2 { font-size: 1.4rem; margin: 2rem 0 0.75rem; }
+.page h3, .intro h3 { font-size: 1.1rem; margin: 1.5rem 0 0.5rem; }
+.page p, .intro p { margin-bottom: 1rem; }
+.page ul, .page ol, .intro ul, .intro ol { margin: 0 0 1rem 1.5rem; }
+.page li, .intro li { margin-bottom: 0.3rem; }
 
 .page pre {
   background: var(--bg-card);
@@ -214,6 +214,56 @@ main {
 .markdown-alert-important .markdown-alert-title { color: #a371f7; }
 .markdown-alert-warning   .markdown-alert-title { color: #d29922; }
 .markdown-alert-caution   .markdown-alert-title { color: #f85149; }
+
+/* Mailing list */
+.embeddable-buttondown-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.embeddable-buttondown-form label {
+  flex-basis: 100%;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.embeddable-buttondown-form input[type="email"] {
+  flex: 1 1 240px;
+  padding: 0.55rem 0.85rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 0.95rem;
+}
+.embeddable-buttondown-form input[type="email"]:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.embeddable-buttondown-form input[type="submit"] {
+  padding: 0.6rem 1.4rem;
+  border-radius: 6px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.embeddable-buttondown-form input[type="submit"]:hover { background: var(--accent-hover); }
+
+.embeddable-buttondown-form p {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
 
 /* Footer */
 footer {

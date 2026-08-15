@@ -19,3 +19,22 @@ interfaces provided by synthesizers like the Roland SE-02, is also on board.
 
 Sonic Eddy is developed as open source project in the
 [**Repository**](https://git.sr.ht/~frank6/sonic-eddy) on source hut.
+
+## Stay in Touch
+
+### Mailing list
+
+<form
+  action="https://buttondown.com/api/emails/embed-subscribe/sonic-eddy"
+  method="post"
+  class="embeddable-buttondown-form"
+>
+  <label for="bd-email">Enter your email</label>
+  <input type="email" name="email" id="bd-email" />
+  <input type="submit" value="Subscribe" />
+  <p>
+    <a href="https://buttondown.com/refer/sonic-eddy" target="_blank">
+      Powered by Buttondown.
+    </a>
+  </p>
+</form>

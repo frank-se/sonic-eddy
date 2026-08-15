@@ -13,7 +13,7 @@
       <a href="/" class="site-title">Sonic Eddy</a>
       <ul>
         {% for item in config.extra.nav %}
-        <li><a href="{{ item.url }}"{% if current_path and current_path is starting_with(item.url) %} class="active"{% endif %}>{{ item.name }}</a></li>
+        <li><a href="{{ item.url }}"{% if current_path and current_path is starting_with(pat=item.url) %} class="active"{% endif %}>{{ item.name }}</a></li>
         {% endfor %}
       </ul>
     </nav>

@@ -81,6 +81,7 @@ stream is processed by a volume and pan section, and then forwarded either
 directly to the layer master, or to one of the group channels of the layer. The
 target is selected in the Audio To section.
 
+{% raw %}
 ```mermaid
 graph LR
 Input --> LPre{{Looper Pre}} --> FC([Filter Chain]) --> LPost{{Looper Post}} --> CV((Volume)) --> A{Audio To} --> Master[Layer Master]
@@ -90,6 +91,7 @@ LPost --> S2((Send 2)) --> R2[Return 2] --> Master
 LPost --> S3((Send 3)) --> R3[Return 3] --> Master
 LPost --> S4((Send 4)) --> R4[Return 4] --> Master
 ```
+{% endraw %}
 
 The group and return channels can also contain a filter chain or external
 effects, providing ample opportunities to shape the audio signal.
