@@ -82,6 +82,7 @@ title = "Sonic Eddy"
 <div class="hero-actions">
   <a href="/installation" class="button">Get Started</a>
   <a href="/features" class="button button-secondary">Features</a>
+  <a href="/docs" class="button button-secondary">Documentation</a>
 </div>
 <img src="/logo.webp" alt="Sonic Eddy" class="hero-logo-inline" />
 
@@ -121,3 +122,7 @@ Sonic Eddy is developed as open source project in the
     </a>
   </p>
 </form>
+
+### Matrix channel
+
+Join the discussion in our [**Matrix room**](https://matrix.to/#/#general:matrix.sonic-eddy.org).
