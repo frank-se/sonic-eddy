@@ -7,4 +7,5 @@ riderModule.iml
 .idea/
 _site/
 api/
-
+public/
+DIAG/

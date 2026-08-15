@@ -2,6 +2,89 @@
 title = "Sonic Eddy"
 +++
 
+<section class="flow">
+  <div class="flow-meta">Dual&#8209;layer digital performance mixer &middot; 16 stereo channels / 8 groups / 1 main</div>
+  <div class="flow-stats">
+    <div class="flow-stat"><span class="flow-stat-num">16</span><span class="flow-stat-label">Channels</span></div>
+    <div class="flow-stat"><span class="flow-stat-num">2</span><span class="flow-stat-label">Mirrored Layers</span></div>
+    <div class="flow-stat"><span class="flow-stat-num">8</span><span class="flow-stat-label">Group Buses</span></div>
+    <div class="flow-stat"><span class="flow-stat-num">6</span><span class="flow-stat-label">FX Returns</span></div>
+  </div>
+  <div class="flow-layers">
+    <div class="flow-layer flow-layer-a">
+      <div class="flow-layer-head">
+        <span class="flow-layer-title">Layer A</span>
+        <span class="flow-badge">Fully Independent</span>
+      </div>
+      <div class="flow-sub">8 Channels</div>
+      <div class="flow-grid flow-grid-8">
+        <div class="flow-cell">01</div><div class="flow-cell">02</div><div class="flow-cell">03</div><div class="flow-cell">04</div>
+        <div class="flow-cell">05</div><div class="flow-cell">06</div><div class="flow-cell">07</div><div class="flow-cell">08</div>
+      </div>
+      <div class="flow-connector"></div>
+      <div class="flow-sub">4 Group Buses &middot; Assign Any Channel</div>
+      <div class="flow-grid flow-grid-4">
+        <div class="flow-pill">G1</div><div class="flow-pill">G2</div><div class="flow-pill">G3</div><div class="flow-pill">G4</div>
+      </div>
+      <div class="flow-connector"></div>
+      <div class="flow-sub">Layer FX &middot; 2 Sends, 2 Returns</div>
+      <div class="flow-grid flow-grid-2">
+        <div class="flow-fx"><div class="flow-fx-title">Send 1 &rarr; Ret 1</div><div class="flow-fx-desc">Filter chains, or external effects</div></div>
+        <div class="flow-fx"><div class="flow-fx-title">Send 2 &rarr; Ret 2</div><div class="flow-fx-desc">Filter chains, or external effects</div></div>
+      </div>
+      <div class="flow-connector"></div>
+      <div class="flow-master">Layer Master</div>
+    </div>
+    <div class="flow-layer flow-layer-b">
+      <div class="flow-layer-head">
+        <span class="flow-layer-title">Layer B</span>
+        <span class="flow-badge">Identical, Mirrored</span>
+      </div>
+      <div class="flow-sub">8 Channels</div>
+      <div class="flow-grid flow-grid-8">
+        <div class="flow-cell">01</div><div class="flow-cell">02</div><div class="flow-cell">03</div><div class="flow-cell">04</div>
+        <div class="flow-cell">05</div><div class="flow-cell">06</div><div class="flow-cell">07</div><div class="flow-cell">08</div>
+      </div>
+      <div class="flow-connector"></div>
+      <div class="flow-sub">4 Group Buses &middot; Assign Any Channel</div>
+      <div class="flow-grid flow-grid-4">
+        <div class="flow-pill">G1</div><div class="flow-pill">G2</div><div class="flow-pill">G3</div><div class="flow-pill">G4</div>
+      </div>
+      <div class="flow-connector"></div>
+      <div class="flow-sub">Layer FX &middot; 2 Sends, 2 Returns</div>
+      <div class="flow-grid flow-grid-2">
+        <div class="flow-fx"><div class="flow-fx-title">Send 1 &rarr; Ret 1</div><div class="flow-fx-desc">Filter chains, or external effects</div></div>
+        <div class="flow-fx"><div class="flow-fx-title">Send 2 &rarr; Ret 2</div><div class="flow-fx-desc">Filter chains, or external effects</div></div>
+      </div>
+      <div class="flow-connector"></div>
+      <div class="flow-master">Layer Master</div>
+    </div>
+  </div>
+  <div class="flow-connector flow-connector-center"></div>
+  <div class="flow-bus">
+    <span class="flow-bus-label">Global Send Bus</span>
+    <span class="flow-bus-desc">any channel or group, either layer</span>
+  </div>
+  <div class="flow-connector flow-connector-center"></div>
+  <div class="flow-returns">
+    <div class="flow-return"><div class="flow-return-title">Global Ret 1</div><div class="flow-return-desc">Filter chains, or external effects, shared by both layers</div></div>
+    <div class="flow-return"><div class="flow-return-title">Global Ret 2</div><div class="flow-return-desc">Filter chains, or external effects, shared by both layers</div></div>
+  </div>
+  <div class="flow-connector flow-connector-center"></div>
+  <div class="flow-globalmaster">
+    <div class="flow-globalmaster-title">Global Master</div>
+    <div class="flow-globalmaster-desc">both layer masters + both global returns</div>
+  </div>
+  <div class="flow-connector flow-connector-center"></div>
+  <div class="flow-mainout">Main Out</div>
+</section>
+<hr class="flow-divider" />
+<div class="hero-actions">
+  <a href="/installation" class="button">Get Started</a>
+  <a href="/features" class="button button-secondary">Features</a>
+</div>
+<img src="/logo.webp" alt="Sonic Eddy" class="hero-logo-inline" />
+
 Sonic Eddy is a performance, and hardware-focused audio mixer for Linux, built
 on top of PipeWire and WirePlumber.
 
