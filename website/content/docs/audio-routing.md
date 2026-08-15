@@ -3,10 +3,384 @@ title = "Audio Routing"
 weight = 1
 +++
 
+## Signal Flow
+
+<div class="wf-wrap" id="wf-wrap">
+<button type="button" class="wf-expand-btn" id="wf-expand-btn">&#10530; Expand</button>
+<div class="wf-panel">
+<div class="wf-head">
+<div>
+<div class="wf-head-title">Sonic Eddy &mdash; Signal Flow</div>
+<div class="wf-head-desc">Two identical, mirrored layers. Each layer carries 8 channels, 4 group buses, 2 layer sends/returns and a layer master. Both layers share Global Ret 1, Global Ret 2 and the Global Master.</div>
+</div>
+<div class="wf-head-rev">REV A<br />8 CH &times; 2 LAYERS</div>
+</div>
+<div class="wf-canvas">
+<svg width="1720" height="1250" viewBox="0 0 1720 1250" style="position:absolute;left:0;top:0;overflow:visible;pointer-events:none">
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse">
+      <path d="M0.5,1 L9,5 L0.5,9 z" fill="var(--text)" />
+    </marker>
+  </defs>
+  <line x1="176" y1="100" x2="505" y2="100" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" opacity="0.95" />
+  <line x1="505" y1="100" x2="800" y2="100" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="7 5" opacity="0.8" />
+  <circle cx="250" cy="100" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="320" cy="100" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="390" cy="100" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="455" cy="100" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="505" cy="100" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="580" cy="100" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="640" cy="100" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="690" cy="100" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="745" cy="100" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <line x1="176" y1="148" x2="505" y2="148" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" opacity="0.95" />
+  <line x1="505" y1="148" x2="800" y2="148" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="7 5" opacity="0.8" />
+  <circle cx="250" cy="148" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="320" cy="148" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="390" cy="148" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="455" cy="148" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="505" cy="148" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="580" cy="148" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="640" cy="148" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="690" cy="148" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="745" cy="148" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <line x1="176" y1="196" x2="505" y2="196" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" opacity="0.95" />
+  <line x1="505" y1="196" x2="800" y2="196" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="7 5" opacity="0.8" />
+  <circle cx="250" cy="196" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="320" cy="196" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="390" cy="196" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="455" cy="196" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="505" cy="196" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="580" cy="196" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="640" cy="196" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="690" cy="196" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="745" cy="196" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <line x1="176" y1="244" x2="505" y2="244" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" opacity="0.95" />
+  <line x1="505" y1="244" x2="800" y2="244" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="7 5" opacity="0.8" />
+  <circle cx="250" cy="244" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="320" cy="244" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="390" cy="244" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="455" cy="244" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="505" cy="244" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="580" cy="244" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="640" cy="244" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="690" cy="244" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="745" cy="244" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <line x1="176" y1="292" x2="505" y2="292" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" opacity="0.95" />
+  <line x1="505" y1="292" x2="800" y2="292" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="7 5" opacity="0.8" />
+  <circle cx="250" cy="292" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="320" cy="292" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="390" cy="292" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="455" cy="292" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="505" cy="292" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="580" cy="292" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="640" cy="292" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="690" cy="292" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="745" cy="292" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <line x1="176" y1="340" x2="505" y2="340" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" opacity="0.95" />
+  <line x1="505" y1="340" x2="800" y2="340" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="7 5" opacity="0.8" />
+  <circle cx="250" cy="340" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="320" cy="340" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="390" cy="340" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="455" cy="340" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="505" cy="340" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="580" cy="340" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="640" cy="340" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="690" cy="340" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="745" cy="340" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <line x1="176" y1="388" x2="505" y2="388" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" opacity="0.95" />
+  <line x1="505" y1="388" x2="800" y2="388" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="7 5" opacity="0.8" />
+  <circle cx="250" cy="388" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="320" cy="388" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="390" cy="388" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="455" cy="388" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="505" cy="388" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="580" cy="388" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="640" cy="388" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="690" cy="388" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="745" cy="388" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <line x1="176" y1="436" x2="505" y2="436" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" opacity="0.95" />
+  <line x1="505" y1="436" x2="800" y2="436" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="7 5" opacity="0.8" />
+  <circle cx="250" cy="436" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="320" cy="436" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="390" cy="436" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="455" cy="436" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="505" cy="436" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="580" cy="436" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="640" cy="436" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="690" cy="436" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="745" cy="436" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <line x1="250" y1="80" x2="250" y2="500" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" opacity="0.95" />
+  <line x1="290" y1="520" x2="800" y2="520" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="7 5" opacity="0.8" />
+  <circle cx="580" cy="520" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="640" cy="520" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="690" cy="520" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="745" cy="520" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <line x1="250" y1="540" x2="250" y2="870" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" opacity="0.95" />
+  <circle cx="250" cy="870" r="3.6" fill="var(--accent)" />
+  <line x1="320" y1="80" x2="320" y2="560" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" opacity="0.95" />
+  <line x1="360" y1="580" x2="800" y2="580" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="7 5" opacity="0.8" />
+  <circle cx="580" cy="580" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="640" cy="580" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="690" cy="580" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="745" cy="580" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <line x1="320" y1="600" x2="320" y2="870" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" opacity="0.95" />
+  <circle cx="320" cy="870" r="3.6" fill="var(--accent)" />
+  <line x1="390" y1="80" x2="390" y2="620" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" opacity="0.95" />
+  <line x1="430" y1="640" x2="800" y2="640" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="7 5" opacity="0.8" />
+  <circle cx="580" cy="640" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="640" cy="640" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="690" cy="640" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="745" cy="640" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <line x1="390" y1="660" x2="390" y2="870" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" opacity="0.95" />
+  <circle cx="390" cy="870" r="3.6" fill="var(--accent)" />
+  <line x1="455" y1="80" x2="455" y2="680" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" opacity="0.95" />
+  <line x1="495" y1="700" x2="800" y2="700" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="7 5" opacity="0.8" />
+  <circle cx="580" cy="700" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="640" cy="700" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="690" cy="700" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <circle cx="745" cy="700" r="4.2" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.4" />
+  <line x1="455" y1="720" x2="455" y2="870" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" opacity="0.95" />
+  <circle cx="455" cy="870" r="3.6" fill="var(--accent)" />
+  <line x1="250" y1="870" x2="505" y2="870" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" opacity="0.95" />
+  <circle cx="505" cy="870" r="3.6" fill="var(--accent)" />
+  <line x1="505" y1="80" x2="505" y2="900" stroke="var(--accent)" stroke-width="2.72" stroke-linecap="round" opacity="0.95" />
+  <line x1="580" y1="80" x2="580" y2="750" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="7 5" opacity="0.8" />
+  <line x1="640" y1="80" x2="640" y2="810" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="7 5" opacity="0.8" />
+  <line x1="690" y1="80" x2="690" y2="945" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="7 5" opacity="0.8" />
+  <line x1="745" y1="80" x2="745" y2="855" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="7 5" opacity="0.8" />
+  <polyline points="580,790 580,890 505,890" fill="none" stroke="var(--accent)" stroke-width="2.08" stroke-linejoin="round" opacity="0.95" />
+  <polyline points="640,850 640,890 505,890" fill="none" stroke="var(--accent)" stroke-width="2.08" stroke-linejoin="round" opacity="0.95" />
+  <circle cx="505" cy="890" r="3.6" fill="var(--accent)" />
+  <polyline points="450,955 450,1130 700,1130" fill="none" stroke="var(--accent)" stroke-width="2.08" stroke-linejoin="round" opacity="0.95" marker-end="url(#ar)" />
+  <line x1="1544" y1="100" x2="1215" y2="100" stroke="var(--accent-b)" stroke-width="1.6" stroke-linecap="round" opacity="0.95" />
+  <line x1="1215" y1="100" x2="920" y2="100" stroke="var(--accent-b)" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="7 5" opacity="0.8" />
+  <circle cx="1470" cy="100" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1400" cy="100" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1330" cy="100" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1265" cy="100" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1215" cy="100" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1140" cy="100" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1080" cy="100" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1030" cy="100" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="975" cy="100" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <line x1="1544" y1="148" x2="1215" y2="148" stroke="var(--accent-b)" stroke-width="1.6" stroke-linecap="round" opacity="0.95" />
+  <line x1="1215" y1="148" x2="920" y2="148" stroke="var(--accent-b)" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="7 5" opacity="0.8" />
+  <circle cx="1470" cy="148" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1400" cy="148" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1330" cy="148" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1265" cy="148" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1215" cy="148" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1140" cy="148" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1080" cy="148" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1030" cy="148" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="975" cy="148" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <line x1="1544" y1="196" x2="1215" y2="196" stroke="var(--accent-b)" stroke-width="1.6" stroke-linecap="round" opacity="0.95" />
+  <line x1="1215" y1="196" x2="920" y2="196" stroke="var(--accent-b)" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="7 5" opacity="0.8" />
+  <circle cx="1470" cy="196" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1400" cy="196" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1330" cy="196" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1265" cy="196" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1215" cy="196" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1140" cy="196" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1080" cy="196" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1030" cy="196" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="975" cy="196" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <line x1="1544" y1="244" x2="1215" y2="244" stroke="var(--accent-b)" stroke-width="1.6" stroke-linecap="round" opacity="0.95" />
+  <line x1="1215" y1="244" x2="920" y2="244" stroke="var(--accent-b)" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="7 5" opacity="0.8" />
+  <circle cx="1470" cy="244" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1400" cy="244" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1330" cy="244" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1265" cy="244" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1215" cy="244" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1140" cy="244" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1080" cy="244" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1030" cy="244" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="975" cy="244" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <line x1="1544" y1="292" x2="1215" y2="292" stroke="var(--accent-b)" stroke-width="1.6" stroke-linecap="round" opacity="0.95" />
+  <line x1="1215" y1="292" x2="920" y2="292" stroke="var(--accent-b)" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="7 5" opacity="0.8" />
+  <circle cx="1470" cy="292" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1400" cy="292" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1330" cy="292" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1265" cy="292" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1215" cy="292" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1140" cy="292" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1080" cy="292" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1030" cy="292" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="975" cy="292" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <line x1="1544" y1="340" x2="1215" y2="340" stroke="var(--accent-b)" stroke-width="1.6" stroke-linecap="round" opacity="0.95" />
+  <line x1="1215" y1="340" x2="920" y2="340" stroke="var(--accent-b)" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="7 5" opacity="0.8" />
+  <circle cx="1470" cy="340" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1400" cy="340" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1330" cy="340" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1265" cy="340" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1215" cy="340" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1140" cy="340" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1080" cy="340" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1030" cy="340" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="975" cy="340" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <line x1="1544" y1="388" x2="1215" y2="388" stroke="var(--accent-b)" stroke-width="1.6" stroke-linecap="round" opacity="0.95" />
+  <line x1="1215" y1="388" x2="920" y2="388" stroke="var(--accent-b)" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="7 5" opacity="0.8" />
+  <circle cx="1470" cy="388" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1400" cy="388" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1330" cy="388" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1265" cy="388" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1215" cy="388" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1140" cy="388" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1080" cy="388" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1030" cy="388" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="975" cy="388" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <line x1="1544" y1="436" x2="1215" y2="436" stroke="var(--accent-b)" stroke-width="1.6" stroke-linecap="round" opacity="0.95" />
+  <line x1="1215" y1="436" x2="920" y2="436" stroke="var(--accent-b)" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="7 5" opacity="0.8" />
+  <circle cx="1470" cy="436" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1400" cy="436" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1330" cy="436" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1265" cy="436" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1215" cy="436" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1140" cy="436" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1080" cy="436" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1030" cy="436" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="975" cy="436" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <line x1="1470" y1="80" x2="1470" y2="500" stroke="var(--accent-b)" stroke-width="1.6" stroke-linecap="round" opacity="0.95" />
+  <line x1="1430" y1="520" x2="920" y2="520" stroke="var(--accent-b)" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="7 5" opacity="0.8" />
+  <circle cx="1140" cy="520" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1080" cy="520" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1030" cy="520" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="975" cy="520" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <line x1="1470" y1="540" x2="1470" y2="870" stroke="var(--accent-b)" stroke-width="1.6" stroke-linecap="round" opacity="0.95" />
+  <circle cx="1470" cy="870" r="3.6" fill="var(--accent-b)" />
+  <line x1="1400" y1="80" x2="1400" y2="560" stroke="var(--accent-b)" stroke-width="1.6" stroke-linecap="round" opacity="0.95" />
+  <line x1="1360" y1="580" x2="920" y2="580" stroke="var(--accent-b)" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="7 5" opacity="0.8" />
+  <circle cx="1140" cy="580" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1080" cy="580" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1030" cy="580" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="975" cy="580" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <line x1="1400" y1="600" x2="1400" y2="870" stroke="var(--accent-b)" stroke-width="1.6" stroke-linecap="round" opacity="0.95" />
+  <circle cx="1400" cy="870" r="3.6" fill="var(--accent-b)" />
+  <line x1="1330" y1="80" x2="1330" y2="620" stroke="var(--accent-b)" stroke-width="1.6" stroke-linecap="round" opacity="0.95" />
+  <line x1="1290" y1="640" x2="920" y2="640" stroke="var(--accent-b)" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="7 5" opacity="0.8" />
+  <circle cx="1140" cy="640" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1080" cy="640" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1030" cy="640" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="975" cy="640" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <line x1="1330" y1="660" x2="1330" y2="870" stroke="var(--accent-b)" stroke-width="1.6" stroke-linecap="round" opacity="0.95" />
+  <circle cx="1330" cy="870" r="3.6" fill="var(--accent-b)" />
+  <line x1="1265" y1="80" x2="1265" y2="680" stroke="var(--accent-b)" stroke-width="1.6" stroke-linecap="round" opacity="0.95" />
+  <line x1="1225" y1="700" x2="920" y2="700" stroke="var(--accent-b)" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="7 5" opacity="0.8" />
+  <circle cx="1140" cy="700" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1080" cy="700" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="1030" cy="700" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <circle cx="975" cy="700" r="4.2" fill="var(--bg-card)" stroke="var(--accent-b)" stroke-width="1.4" />
+  <line x1="1265" y1="720" x2="1265" y2="870" stroke="var(--accent-b)" stroke-width="1.6" stroke-linecap="round" opacity="0.95" />
+  <circle cx="1265" cy="870" r="3.6" fill="var(--accent-b)" />
+  <line x1="1470" y1="870" x2="1215" y2="870" stroke="var(--accent-b)" stroke-width="1.6" stroke-linecap="round" opacity="0.95" />
+  <circle cx="1215" cy="870" r="3.6" fill="var(--accent-b)" />
+  <line x1="1215" y1="80" x2="1215" y2="900" stroke="var(--accent-b)" stroke-width="2.72" stroke-linecap="round" opacity="0.95" />
+  <line x1="1140" y1="80" x2="1140" y2="750" stroke="var(--accent-b)" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="7 5" opacity="0.8" />
+  <line x1="1080" y1="80" x2="1080" y2="810" stroke="var(--accent-b)" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="7 5" opacity="0.8" />
+  <line x1="1030" y1="80" x2="1030" y2="945" stroke="var(--accent-b)" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="7 5" opacity="0.8" />
+  <line x1="975" y1="80" x2="975" y2="855" stroke="var(--accent-b)" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="7 5" opacity="0.8" />
+  <polyline points="1140,790 1140,890 1215,890" fill="none" stroke="var(--accent-b)" stroke-width="2.08" stroke-linejoin="round" opacity="0.95" />
+  <polyline points="1080,850 1080,890 1215,890" fill="none" stroke="var(--accent-b)" stroke-width="2.08" stroke-linejoin="round" opacity="0.95" />
+  <circle cx="1215" cy="890" r="3.6" fill="var(--accent-b)" />
+  <polyline points="1270,955 1270,1130 1020,1130" fill="none" stroke="var(--accent-b)" stroke-width="2.08" stroke-linejoin="round" opacity="0.95" marker-end="url(#ar)" />
+  <polyline points="1000,910 1000,925 1120,925 1120,1050 940,1050 940,1090" fill="none" stroke="var(--text)" stroke-width="2.72" stroke-linejoin="round" marker-end="url(#ar)" />
+  <polyline points="860,1000 860,1090" fill="none" stroke="var(--text)" stroke-width="2.72" stroke-linejoin="round" marker-end="url(#ar)" />
+  <polyline points="860,1170 860,1210" fill="none" stroke="var(--text)" stroke-width="2.72" stroke-linejoin="round" marker-end="url(#ar)" />
+  <text x="884" y="1204" fill="var(--text)" font-size="12" font-family="var(--font-mono)" letter-spacing="0.12em">MAIN OUT</text>
+</svg>
+<div class="wf-layerlabel wf-a">LAYER A</div>
+<div class="wf-layerlabel wf-b">LAYER B</div>
+<div class="wf-collabel wf-a" style="left:218px;top:44px">G1</div>
+<div class="wf-collabel wf-a" style="left:288px;top:58px">G2</div>
+<div class="wf-collabel wf-a" style="left:358px;top:44px">G3</div>
+<div class="wf-collabel wf-a" style="left:423px;top:58px">G4</div>
+<div class="wf-collabel wf-a wf-strong" style="left:473px;top:44px">MST</div>
+<div class="wf-collabel wf-a" style="left:548px;top:58px">S&#9656;R1</div>
+<div class="wf-collabel wf-a" style="left:608px;top:44px">S&#9656;R2</div>
+<div class="wf-collabel wf-a" style="left:658px;top:58px">S&#9656;GR2</div>
+<div class="wf-collabel wf-a" style="left:713px;top:44px">S&#9656;GR1</div>
+<div class="wf-collabel wf-b" style="left:1438px;top:44px">G1</div>
+<div class="wf-collabel wf-b" style="left:1368px;top:58px">G2</div>
+<div class="wf-collabel wf-b" style="left:1298px;top:44px">G3</div>
+<div class="wf-collabel wf-b" style="left:1233px;top:58px">G4</div>
+<div class="wf-collabel wf-b wf-strong" style="left:1183px;top:44px">MST</div>
+<div class="wf-collabel wf-b" style="left:1108px;top:58px">S&#9656;R1</div>
+<div class="wf-collabel wf-b" style="left:1048px;top:44px">S&#9656;R2</div>
+<div class="wf-collabel wf-b" style="left:998px;top:58px">S&#9656;GR2</div>
+<div class="wf-collabel wf-b" style="left:943px;top:44px">S&#9656;GR1</div>
+<div class="wf-box wf-a" style="left:24px;top:83px;width:152px;height:34px;font-size:13.5px">CH 01</div>
+<div class="wf-box wf-a" style="left:24px;top:131px;width:152px;height:34px;font-size:13.5px">CH 02</div>
+<div class="wf-box wf-a" style="left:24px;top:179px;width:152px;height:34px;font-size:13.5px">CH 03</div>
+<div class="wf-box wf-a" style="left:24px;top:227px;width:152px;height:34px;font-size:13.5px">CH 04</div>
+<div class="wf-box wf-a" style="left:24px;top:275px;width:152px;height:34px;font-size:13.5px">CH 05</div>
+<div class="wf-box wf-a" style="left:24px;top:323px;width:152px;height:34px;font-size:13.5px">CH 06</div>
+<div class="wf-box wf-a" style="left:24px;top:371px;width:152px;height:34px;font-size:13.5px">CH 07</div>
+<div class="wf-box wf-a" style="left:24px;top:419px;width:152px;height:34px;font-size:13.5px">CH 08</div>
+<div class="wf-box wf-a wf-strong" style="left:210px;top:500px;width:80px;height:40px;font-size:14px">G1</div>
+<div class="wf-box wf-a wf-strong" style="left:280px;top:560px;width:80px;height:40px;font-size:14px">G2</div>
+<div class="wf-box wf-a wf-strong" style="left:350px;top:620px;width:80px;height:40px;font-size:14px">G3</div>
+<div class="wf-box wf-a wf-strong" style="left:415px;top:680px;width:80px;height:40px;font-size:14px">G4</div>
+<div class="wf-box wf-a" style="left:545px;top:750px;width:70px;height:40px;font-size:12.5px">RET 1</div>
+<div class="wf-box wf-a" style="left:605px;top:810px;width:70px;height:40px;font-size:12.5px">RET 2</div>
+<div class="wf-box wf-master wf-a wf-strong" style="left:380px;top:900px;width:140px;height:55px;font-size:16px">LAYER MASTER</div>
+<div class="wf-box wf-b" style="left:1544px;top:83px;width:152px;height:34px;font-size:13.5px">CH 01</div>
+<div class="wf-box wf-b" style="left:1544px;top:131px;width:152px;height:34px;font-size:13.5px">CH 02</div>
+<div class="wf-box wf-b" style="left:1544px;top:179px;width:152px;height:34px;font-size:13.5px">CH 03</div>
+<div class="wf-box wf-b" style="left:1544px;top:227px;width:152px;height:34px;font-size:13.5px">CH 04</div>
+<div class="wf-box wf-b" style="left:1544px;top:275px;width:152px;height:34px;font-size:13.5px">CH 05</div>
+<div class="wf-box wf-b" style="left:1544px;top:323px;width:152px;height:34px;font-size:13.5px">CH 06</div>
+<div class="wf-box wf-b" style="left:1544px;top:371px;width:152px;height:34px;font-size:13.5px">CH 07</div>
+<div class="wf-box wf-b" style="left:1544px;top:419px;width:152px;height:34px;font-size:13.5px">CH 08</div>
+<div class="wf-box wf-b wf-strong" style="left:1430px;top:500px;width:80px;height:40px;font-size:14px">G1</div>
+<div class="wf-box wf-b wf-strong" style="left:1360px;top:560px;width:80px;height:40px;font-size:14px">G2</div>
+<div class="wf-box wf-b wf-strong" style="left:1290px;top:620px;width:80px;height:40px;font-size:14px">G3</div>
+<div class="wf-box wf-b wf-strong" style="left:1225px;top:680px;width:80px;height:40px;font-size:14px">G4</div>
+<div class="wf-box wf-b" style="left:1105px;top:750px;width:70px;height:40px;font-size:12.5px">RET 1</div>
+<div class="wf-box wf-b" style="left:1045px;top:810px;width:70px;height:40px;font-size:12.5px">RET 2</div>
+<div class="wf-box wf-master wf-b wf-strong" style="left:1200px;top:900px;width:140px;height:55px;font-size:16px">LAYER MASTER</div>
+<div class="wf-box wf-g wf-strong" style="left:700px;top:855px;width:320px;height:55px;font-size:15px">GLOBAL RET 1</div>
+<div class="wf-box wf-g wf-strong" style="left:640px;top:945px;width:440px;height:55px;font-size:15px">GLOBAL RET 2</div>
+<div class="wf-box wf-gmaster wf-strong" style="left:700px;top:1090px;width:320px;height:80px;font-size:22px">GLOBAL MASTER</div>
+<div class="wf-legend" style="left:24px;top:1005px;width:360px">
+<div class="wf-legend-title">LEGEND</div>
+<div class="wf-legend-item"><span class="wf-legend-swatch wf-legend-line"></span>signal path</div>
+<div class="wf-legend-item"><span class="wf-legend-swatch wf-legend-dashed"></span>send bus</div>
+<div class="wf-legend-item"><span class="wf-legend-dot-wrap"><span class="wf-legend-xp"></span></span>crosspoint &mdash; assignable per channel</div>
+<div class="wf-legend-item"><span class="wf-legend-dot-wrap"><span class="wf-legend-junction"></span></span>hard-wired junction</div>
+<div class="wf-legend-note">Column keys: G1&ndash;G4 group assign &middot; MST layer master &middot; S&#9656;R1/R2 layer sends &middot; S&#9656;GR1/GR2 global sends.</div>
+</div>
+</div>
+</div>
+</div>
+<script>
+(function(){
+  var wrap = document.getElementById('wf-wrap');
+  var btn = document.getElementById('wf-expand-btn');
+  function toggle(){
+    var expanded = wrap.classList.toggle('wf-expanded');
+    btn.innerHTML = expanded ? '&#10005; Close' : '&#10530; Expand';
+    document.body.style.overflow = expanded ? 'hidden' : '';
+    wrap.scrollLeft = 0;
+    wrap.scrollTop = 0;
+  }
+  btn.addEventListener('click', function(e){
+    e.stopPropagation();
+    toggle();
+  });
+  wrap.addEventListener('click', function(){
+    if (!wrap.classList.contains('wf-expanded')) toggle();
+  });
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape' && wrap.classList.contains('wf-expanded')) toggle();
+  });
+})();
+</script>
+
 Sonic Eddy provides five channel types in order to provide the user with
 flexible ways to organize the signal flow. The normal audio channels take any
 pipewire node as input, and route its signal either to a group, or a master
-channel, and to any combination of the 4 return channels.
+channel, and to any combination of the return channels.
 
 Group and master channels allow processing of the sum of multiple channel
 signals.
@@ -14,13 +388,13 @@ signals.
 Sonic Eddy provides two layers, layer A and layer B. Each layer provides 8
 channels, 4 group channels, and a master channel. The master channels come
 together in the global master, where the contribution of each layer is selected
-by a cross-fader. This setup provides easy setup of two different signal path
-that can easily be used during a live session.
+by a cross-fader. This setup enabled the simultaneous setup of two different
+signal path mixed together in the global master.
 
-Another live performance focused tool every channel, except the return channels
-provide, is a looper, which can record either the pre-, or post-filter signal of
-each channel, and allows replacing the live signal with a perfectly tempo
-aligned recording.
+Every channel, except the return channels, provide another tool directed at live
+performances, a looper, constantly recording and ready to loop the last bar, 0r
+4, or 8. A powerful tool to switch presets on a synthesizer, currently still
+playing the bass line.
 
 ## Channels
 
@@ -82,6 +456,7 @@ directly to the layer master, or to one of the group channels of the layer. The
 target is selected in the Audio To section.
 
 {% raw %}
+
 ```mermaid
 graph LR
 Input --> LPre{{Looper Pre}} --> FC([Filter Chain]) --> LPost{{Looper Post}} --> CV((Volume)) --> A{Audio To} --> Master[Layer Master]
@@ -91,6 +466,7 @@ LPost --> S2((Send 2)) --> R2[Return 2] --> Master
 LPost --> S3((Send 3)) --> R3[Return 3] --> Master
 LPost --> S4((Send 4)) --> R4[Return 4] --> Master
 ```
+
 {% endraw %}
 
 The group and return channels can also contain a filter chain or external
@@ -127,207 +503,3 @@ The global master channel can be accessed with the main menu at
 `Mixer -> Global Master`.
 
 ![Global Master Channel User Interface Overview](/global_master_ui_overview.jpg)
-
-## Signal Flow
-
-The, mostly, complete signal flow is shown in the diagram below.
-
-```mermaid
-graph LR
-  subgraph LayerA[Layer A]
-    InA[Input A] --> ChA1[Channel 01] --> MasterA[Master A]
-    InB[Input B] --> ChA2[Channel 02] --> MasterA
-    InC[Input C] --> ChA3[Channel 03] --> MasterA
-    InD[Input D] --> ChA4[Channel 04] --> MasterA
-    InE[Input E] --> ChA5[Channel 05] --> MasterA
-    InF[Input F] --> ChA6[Channel 06] --> MasterA
-    InG[Input G] --> ChA7[Channel 07] --> MasterA
-    InH[Input H] --> ChA8[Channel 08] --> MasterA
-
-    ChA1 -.-> GA1([Group 1]) -.-> MasterA
-    ChA2 -.-> GA1
-    ChA3 -.-> GA1
-    ChA4 -.-> GA1
-    ChA5 -.-> GA1
-    ChA6 -.-> GA1
-    ChA7 -.-> GA1
-    ChA8 -.-> GA1
-    ChA1 -.-> GA2([Group 2]) -.-> MasterA
-    ChA2 -.-> GA2
-    ChA3 -.-> GA2
-    ChA4 -.-> GA2
-    ChA5 -.-> GA2
-    ChA6 -.-> GA2
-    ChA7 -.-> GA2
-    ChA8 -.-> GA2
-    ChA1 -.-> GA3([Group 3]) -.-> MasterA
-    ChA2 -.-> GA3
-    ChA3 -.-> GA3
-    ChA4 -.-> GA3
-    ChA5 -.-> GA3
-    ChA6 -.-> GA3
-    ChA7 -.-> GA3
-    ChA8 -.-> GA3
-    ChA1 -.-> GA4([Group 4]) -.-> MasterA
-    ChA2 -.-> GA4
-    ChA3 -.-> GA4
-    ChA4 -.-> GA4
-    ChA5 -.-> GA4
-    ChA6 -.-> GA4
-    ChA7 -.-> GA4
-    ChA8 -.-> GA4
-
-    ChA1 -.-> RA1([Return 1]) -.-> MasterA
-    ChA2 -.-> RA1
-    ChA3 -.-> RA1
-    ChA4 -.-> RA1
-    ChA5 -.-> RA1
-    ChA6 -.-> RA1
-    ChA7 -.-> RA1
-    ChA8 -.-> RA1
-    ChA1 -.-> RA2([Return 2]) -.-> MasterA
-    ChA2 -.-> RA2
-    ChA3 -.-> RA2
-    ChA4 -.-> RA2
-    ChA5 -.-> RA2
-    ChA6 -.-> RA2
-    ChA7 -.-> RA2
-    ChA8 -.-> RA2
-    ChA1 -.-> RA3([Return 3]) -.-> MasterA
-    ChA2 -.-> RA3
-    ChA3 -.-> RA3
-    ChA4 -.-> RA3
-    ChA5 -.-> RA3
-    ChA6 -.-> RA3
-    ChA7 -.-> RA3
-    ChA8 -.-> RA3
-    ChA1 -.-> RA4([Return 4]) -.-> MasterA
-    ChA2 -.-> RA4
-    ChA3 -.-> RA4
-    ChA4 -.-> RA4
-    ChA5 -.-> RA4
-    ChA6 -.-> RA4
-    ChA7 -.-> RA4
-    ChA8 -.-> RA4
-
-    GA1 -.-> RA1
-    GA1 -.-> RA2
-    GA1 -.-> RA3
-    GA1 -.-> RA4
-    GA2 -.-> RA1
-    GA2 -.-> RA2
-    GA2 -.-> RA3
-    GA2 -.-> RA4
-    GA3 -.-> RA1
-    GA3 -.-> RA2
-    GA3 -.-> RA3
-    GA3 -.-> RA4
-    GA4 -.-> RA1
-    GA4 -.-> RA2
-    GA4 -.-> RA3
-    GA4 -.-> RA4
-  end
-
-  subgraph LayerB[Layer B]
-    InI[Input I] --> ChB1[Channel 01] --> MasterB[Master B]
-    InJ[Input J] --> ChB2[Channel 02] --> MasterB
-    InK[Input K] --> ChB3[Channel 03] --> MasterB
-    InL[Input L] --> ChB4[Channel 04] --> MasterB
-    InM[Input M] --> ChB5[Channel 05] --> MasterB
-    InN[Input N] --> ChB6[Channel 06] --> MasterB
-    InO[Input O] --> ChB7[Channel 07] --> MasterB
-    InP[Input P] --> ChB8[Channel 08] --> MasterB
-
-    ChB1 -.-> GB1([Group 1]) -.-> MasterB
-    ChB2 -.-> GB1
-    ChB3 -.-> GB1
-    ChB4 -.-> GB1
-    ChB5 -.-> GB1
-    ChB6 -.-> GB1
-    ChB7 -.-> GB1
-    ChB8 -.-> GB1
-    ChB1 -.-> GB2([Group 2]) -.-> MasterB
-    ChB2 -.-> GB2
-    ChB3 -.-> GB2
-    ChB4 -.-> GB2
-    ChB5 -.-> GB2
-    ChB6 -.-> GB2
-    ChB7 -.-> GB2
-    ChB8 -.-> GB2
-    ChB1 -.-> GB3([Group 3]) -.-> MasterB
-    ChB2 -.-> GB3
-    ChB3 -.-> GB3
-    ChB4 -.-> GB3
-    ChB5 -.-> GB3
-    ChB6 -.-> GB3
-    ChB7 -.-> GB3
-    ChB8 -.-> GB3
-    ChB1 -.-> GB4([Group 4]) -.-> MasterB
-    ChB2 -.-> GB4
-    ChB3 -.-> GB4
-    ChB4 -.-> GB4
-    ChB5 -.-> GB4
-    ChB6 -.-> GB4
-    ChB7 -.-> GB4
-    ChB8 -.-> GB4
-
-    ChB1 -.-> RB1([Return 1]) -.-> MasterB
-    ChB2 -.-> RB1
-    ChB3 -.-> RB1
-    ChB4 -.-> RB1
-    ChB5 -.-> RB1
-    ChB6 -.-> RB1
-    ChB7 -.-> RB1
-    ChB8 -.-> RB1
-    ChB1 -.-> RB2([Return 2]) -.-> MasterB
-    ChB2 -.-> RB2
-    ChB3 -.-> RB2
-    ChB4 -.-> RB2
-    ChB5 -.-> RB2
-    ChB6 -.-> RB2
-    ChB7 -.-> RB2
-    ChB8 -.-> RB2
-    ChB1 -.-> RB3([Return 3]) -.-> MasterB
-    ChB2 -.-> RB3
-    ChB3 -.-> RB3
-    ChB4 -.-> RB3
-    ChB5 -.-> RB3
-    ChB6 -.-> RB3
-    ChB7 -.-> RB3
-    ChB8 -.-> RB3
-    ChB1 -.-> RB4([Return 4]) -.-> MasterB
-    ChB2 -.-> RB4
-    ChB3 -.-> RB4
-    ChB4 -.-> RB4
-    ChB5 -.-> RB4
-    ChB6 -.-> RB4
-    ChB7 -.-> RB4
-    ChB8 -.-> RB4
-
-    GB1 -.-> RB1
-    GB1 -.-> RB2
-    GB1 -.-> RB3
-    GB1 -.-> RB4
-    GB2 -.-> RB1
-    GB2 -.-> RB2
-    GB2 -.-> RB3
-    GB2 -.-> RB4
-    GB3 -.-> RB1
-    GB3 -.-> RB2
-    GB3 -.-> RB3
-    GB3 -.-> RB4
-    GB4 -.-> RB1
-    GB4 -.-> RB2
-    GB4 -.-> RB3
-    GB4 -.-> RB4
-  end
-
-  MasterA --> GM((Global Master))
-  MasterB --> GM
-
-  MasterA -.-> Cue((Global Cue))
-  MasterB -.-> Cue
-```
-
-- Solid arrows show the default direct path to the master channel.
-- Dashed arrows show optional routing through a group channel.

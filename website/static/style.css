@@ -381,6 +381,145 @@ main {
   margin-top: 0.25rem;
 }
 
+/* Signal flow wiring diagram (docs page) */
+.wf-wrap {
+  position: relative;
+  overflow-x: auto;
+  margin: 1.5rem 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-card);
+  cursor: zoom-in;
+}
+
+.wf-panel {
+  width: 1720px;
+  padding: 1.75rem 2rem 2rem;
+  box-sizing: border-box;
+  font-family: var(--font);
+  color: var(--text);
+  zoom: 0.46;
+}
+
+.wf-expand-btn {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  z-index: 2;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.4rem 0.7rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.wf-expand-btn:hover { color: var(--text); border-color: var(--accent); }
+
+.wf-wrap.wf-expanded {
+  position: fixed;
+  inset: 1rem;
+  z-index: 1000;
+  margin: 0;
+  overflow: auto;
+  cursor: default;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+.wf-wrap.wf-expanded .wf-panel { zoom: 1; }
+
+.wf-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 2rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.wf-head-title { font-size: 1.3rem; font-weight: 600; letter-spacing: -0.01em; }
+.wf-head-desc { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.4rem; max-width: 640px; }
+.wf-head-rev {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  color: var(--text-muted);
+  text-align: right;
+  line-height: 1.8;
+  white-space: nowrap;
+}
+
+.wf-canvas { position: relative; width: 1720px; height: 1250px; }
+
+.wf-layerlabel {
+  position: absolute;
+  top: 22px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: 0.16em;
+}
+.wf-layerlabel.wf-a { left: 24px; color: var(--accent); }
+.wf-layerlabel.wf-b { left: 1544px; width: 152px; text-align: right; color: var(--accent-b); }
+
+.wf-collabel {
+  position: absolute;
+  width: 64px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+}
+.wf-collabel.wf-a { color: var(--accent); }
+.wf-collabel.wf-b { color: var(--accent-b); }
+.wf-collabel.wf-strong { font-weight: 600; }
+
+.wf-box {
+  position: absolute;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-card);
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-align: center;
+}
+.wf-box.wf-strong { font-weight: 600; }
+.wf-box.wf-a { border: 1.6px solid var(--accent); color: color-mix(in srgb, var(--accent) 75%, white); }
+.wf-box.wf-b { border: 1.6px solid var(--accent-b); color: color-mix(in srgb, var(--accent-b) 75%, white); }
+.wf-box.wf-g { border: 1.6px solid var(--text); color: var(--text); background: var(--bg); }
+
+.wf-box.wf-master.wf-a { background: var(--accent); border-color: var(--accent); color: #fff; }
+.wf-box.wf-master.wf-b { background: var(--accent-b); border-color: var(--accent-b); color: #fff; }
+.wf-box.wf-gmaster { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+
+.wf-legend {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding: 1.1rem 1.2rem;
+  box-sizing: border-box;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.wf-legend-title { font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.14em; color: var(--text-muted); }
+.wf-legend-item { display: flex; align-items: center; gap: 0.8rem; font-size: 0.8rem; color: var(--text); }
+.wf-legend-swatch { display: block; width: 2rem; height: 0; }
+.wf-legend-line { border-top: 2px solid var(--text-muted); }
+.wf-legend-dashed { border-top: 2px dashed var(--text-muted); }
+.wf-legend-dot-wrap { display: flex; width: 2rem; justify-content: center; }
+.wf-legend-xp { width: 10px; height: 10px; border: 1.6px solid var(--text-muted); border-radius: 50%; background: var(--bg-card); }
+.wf-legend-junction { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); }
+.wf-legend-note { font-size: 0.75rem; color: var(--text-muted); border-top: 1px solid var(--border); padding-top: 0.7rem; }
+
 /* Page / Article */
 .page h1 { font-size: 2rem; margin-bottom: 1.5rem; }
 .page h2, .intro h2 { font-size: 1.4rem; margin: 2rem 0 0.75rem; clear: left; }
