@@ -5,3 +5,4 @@ tar -czf site.tar.gz -C public .
 mv site.tar.gz ..
 cd ..
 hut pages publish -d sonic-eddy.org site.tar.gz
+hut pages publish -d www.sonic-eddy.org site.tar.gz
