@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <deque>
 #include <iostream>
 #include <mutex>
 #include <string>
@@ -14,28 +15,55 @@
 #include <spa/param/buffers.h>
 #include <spa/param/video/format-utils.h>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
+#include "scene.hpp"
+
 namespace {
 
 constexpr uint32_t kBytesPerPixel = 4; // SPA_VIDEO_FORMAT_RGBA
 constexpr size_t kInputCount = 2;
 
+// Cameras don't declare their native resolution in the scene file - PipeWire
+// needs an exact width/height to negotiate a stream (a fixed SPA_RECTANGLE,
+// not a range), so scene mode assumes every camera source has already been
+// standardized on this (see cameras/stream-*.fish) rather than renegotiating
+// per camera.
+constexpr uint32_t kSceneCameraSourceWidth = 1920;
+constexpr uint32_t kSceneCameraSourceHeight = 1080;
+
 // One video source's fixed geometry, precomputed sample map, and the
 // scratch buffer holding its last received frame. Everything here is
 // sized and allocated once, up front, so process() never allocates.
+// Camera-backed slots fill `frame` from a PipeWire stream (`stream` is
+// non-null); image-backed slots (scene mode only) decode `frame` once at
+// startup and leave `stream` null and `has_frame` permanently true.
 struct InputSlot {
   uint32_t src_width = 0;
   uint32_t src_height = 0;
-  double scale = 1.0;
+  double scale_x = 1.0;
+  double scale_y = 1.0;
+
+  bool flip_horizontal = false;
+  bool flip_vertical = false;
+  uint32_t rotate = 0; // 0, 90, 180 or 270
+  bool transposed = false; // true for rotate 90/270 - set by build_sample_maps
 
   uint32_t dst_x = 0;
   uint32_t dst_y = 0;
   uint32_t dst_width = 0;
   uint32_t dst_height = 0;
 
-  std::vector<uint32_t> col_map; // dst x -> src x, size dst_width
-  std::vector<uint32_t> row_map; // dst y -> src y, size dst_height
+  // Non-transposed: col_map (size dst_width) -> source column, row_map
+  // (size dst_height) -> source row. Transposed (90/270 rotation): the
+  // roles swap - col_map (indexed by dst x) holds the source ROW and
+  // row_map (indexed by dst y) holds the source COLUMN, since a 90/270
+  // rotation can't be expressed as two independent per-axis maps.
+  std::vector<uint32_t> col_map;
+  std::vector<uint32_t> row_map;
 
-  std::vector<uint8_t> frame; // last received frame, src_width*src_height*3
+  std::vector<uint8_t> frame; // last received/decoded frame, RGBA
   std::mutex frame_mutex;
   bool has_frame = false;
 
@@ -46,20 +74,55 @@ struct App {
   pw_main_loop *main_loop = nullptr;
   uint32_t canvas_width = 1280;
   uint32_t canvas_height = 720;
-  std::array<InputSlot, kInputCount> inputs;
+  // deque, not vector: InputSlot holds a std::mutex (non-movable), and
+  // vector's growth path requires MoveInsertable to even compile, even
+  // when reserve() means no reallocation ever actually happens at
+  // runtime. deque never relocates existing elements on growth, so
+  // emplace_back works without that requirement, and operator[] stays
+  // O(1) for the index-based access used throughout.
+  std::deque<InputSlot> inputs;
+  std::vector<size_t> paint_order; // indices into inputs, back-to-front
   pw_stream *out_stream = nullptr;
 };
 
 void build_sample_maps(InputSlot &in) {
-  in.col_map.resize(in.dst_width);
-  for (uint32_t x = 0; x < in.dst_width; ++x)
-    in.col_map[x] =
-        std::min<uint32_t>(static_cast<uint32_t>(x / in.scale), in.src_width - 1);
+  in.transposed = in.rotate == 90 || in.rotate == 270;
+  const uint32_t rotated_width = in.transposed ? in.src_height : in.src_width;
+  const uint32_t rotated_height = in.transposed ? in.src_width : in.src_height;
 
+  // dst -> position within the rotated-but-unflipped frame.
+  std::vector<uint32_t> rx(in.dst_width);
+  for (uint32_t x = 0; x < in.dst_width; ++x) {
+    uint32_t v = std::min<uint32_t>(static_cast<uint32_t>(x / in.scale_x),
+                                    rotated_width - 1);
+    rx[x] = in.flip_horizontal ? rotated_width - 1 - v : v;
+  }
+  std::vector<uint32_t> ry(in.dst_height);
+  for (uint32_t y = 0; y < in.dst_height; ++y) {
+    uint32_t v = std::min<uint32_t>(static_cast<uint32_t>(y / in.scale_y),
+                                    rotated_height - 1);
+    ry[y] = in.flip_vertical ? rotated_height - 1 - v : v;
+  }
+
+  in.col_map.resize(in.dst_width);
   in.row_map.resize(in.dst_height);
-  for (uint32_t y = 0; y < in.dst_height; ++y)
-    in.row_map[y] =
-        std::min<uint32_t>(static_cast<uint32_t>(y / in.scale), in.src_height - 1);
+
+  if (!in.transposed) {
+    // rotate 0: source = (rx, ry); rotate 180 = flip both axes.
+    for (uint32_t x = 0; x < in.dst_width; ++x)
+      in.col_map[x] = in.rotate == 180 ? in.src_width - 1 - rx[x] : rx[x];
+    for (uint32_t y = 0; y < in.dst_height; ++y)
+      in.row_map[y] = in.rotate == 180 ? in.src_height - 1 - ry[y] : ry[y];
+  } else {
+    // rotate 90 CW:  src_x = ry,             src_y = src_height-1-rx
+    // rotate 270 CW: src_x = src_width-1-ry, src_y = rx
+    // col_map (indexed by dst x = rx) carries src_y; row_map (indexed by
+    // dst y = ry) carries src_x - composite_input swaps their roles.
+    for (uint32_t x = 0; x < in.dst_width; ++x)
+      in.col_map[x] = in.rotate == 90 ? in.src_height - 1 - rx[x] : rx[x];
+    for (uint32_t y = 0; y < in.dst_height; ++y)
+      in.row_map[y] = in.rotate == 90 ? ry[y] : in.src_width - 1 - ry[y];
+  }
 }
 
 void on_input_process(void *data) {
@@ -98,13 +161,27 @@ void composite_input(InputSlot &in, uint8_t *dst, uint32_t dst_stride) {
 
   const uint32_t src_stride = in.src_width * kBytesPerPixel;
   for (uint32_t y = 0; y < in.dst_height; ++y) {
-    const uint8_t *src_row =
-        in.frame.data() + static_cast<size_t>(in.row_map[y]) * src_stride;
     uint8_t *dst_row = dst + static_cast<size_t>(in.dst_y + y) * dst_stride +
                        static_cast<size_t>(in.dst_x) * kBytesPerPixel;
-    for (uint32_t x = 0; x < in.dst_width; ++x) {
-      const uint8_t *src_px = src_row + static_cast<size_t>(in.col_map[x]) * kBytesPerPixel;
-      std::memcpy(dst_row + static_cast<size_t>(x) * kBytesPerPixel, src_px, kBytesPerPixel);
+    if (!in.transposed) {
+      const uint8_t *src_row =
+          in.frame.data() + static_cast<size_t>(in.row_map[y]) * src_stride;
+      for (uint32_t x = 0; x < in.dst_width; ++x) {
+        const uint8_t *src_px =
+            src_row + static_cast<size_t>(in.col_map[x]) * kBytesPerPixel;
+        std::memcpy(dst_row + static_cast<size_t>(x) * kBytesPerPixel, src_px,
+                    kBytesPerPixel);
+      }
+    } else {
+      const uint32_t src_col = in.row_map[y];
+      for (uint32_t x = 0; x < in.dst_width; ++x) {
+        const uint32_t src_row = in.col_map[x];
+        const uint8_t *src_px = in.frame.data() +
+            static_cast<size_t>(src_row) * src_stride +
+            static_cast<size_t>(src_col) * kBytesPerPixel;
+        std::memcpy(dst_row + static_cast<size_t>(x) * kBytesPerPixel, src_px,
+                    kBytesPerPixel);
+      }
     }
   }
 }
@@ -134,8 +211,8 @@ void on_output_process(void *data) {
   auto *dst = static_cast<uint8_t *>(spa_data.data);
   std::memset(dst, 0, needed);
 
-  for (auto &in : app.inputs)
-    composite_input(in, dst, stride);
+  for (auto idx : app.paint_order)
+    composite_input(app.inputs[idx], dst, stride);
 
   spa_data.chunk->offset = 0;
   spa_data.chunk->size = stride * app.canvas_height;
@@ -191,6 +268,8 @@ const pw_stream_events output_stream_events = {
 };
 
 struct Args {
+  std::string scene_path; // if non-empty, scene mode - all other fields below are ignored
+
   uint32_t canvas_width = 1280;
   uint32_t canvas_height = 720;
   std::array<uint32_t, kInputCount> in_width{960, 960};
@@ -216,7 +295,9 @@ bool parse_args(int argc, char **argv, Args &args) {
 
   for (int i = 1; i < argc; ++i) {
     const std::string arg = argv[i];
-    if (arg == "--canvas-width")
+    if (arg == "--scene")
+      args.scene_path = next(i);
+    else if (arg == "--canvas-width")
       args.canvas_width = parse_u32(next(i));
     else if (arg == "--canvas-height")
       args.canvas_height = parse_u32(next(i));
@@ -245,7 +326,8 @@ bool parse_args(int argc, char **argv, Args &args) {
 }
 
 void print_usage() {
-  std::cerr << "usage: pw-video-compositor "
+  std::cerr << "usage: pw-video-compositor --scene <scene.json>\n"
+               "   or: pw-video-compositor "
                "--canvas-width W --canvas-height H "
                "--in0-width W --in0-height H --in0-scale S [--in0-target NAME] "
                "--in1-width W --in1-height H --in1-scale S [--in1-target NAME]\n";
@@ -304,30 +386,144 @@ int main(int argc, char **argv) {
   }
 
   App app;
-  app.canvas_width = args.canvas_width;
-  app.canvas_height = args.canvas_height;
+  // node_names[idx] / target_objects[idx]: the PipeWire input stream to
+  // open for app.inputs[idx] - empty node name means no stream (an
+  // image-backed slot in scene mode). Populated by whichever build path
+  // below runs, then consumed uniformly after pw_init.
+  std::vector<std::string> node_names;
+  std::vector<std::string> target_objects;
 
   // Build phase: layout, sample maps, and scratch buffers - all up front,
   // before any PipeWire stream exists. Nothing below this block allocates.
-  for (size_t idx = 0; idx < app.inputs.size(); ++idx) {
-    auto &in = app.inputs[idx];
-    in.src_width = args.in_width[idx];
-    in.src_height = args.in_height[idx];
-    in.scale = args.in_scale[idx];
-    if (in.src_width == 0 || in.src_height == 0 || in.scale <= 0.0) {
-      std::cerr << "invalid configuration for input " << idx << '\n';
+  if (!args.scene_path.empty()) {
+    auto loaded = scene::load_scene(args.scene_path);
+    if (!loaded)
       return 1;
+    const auto &scene_cfg = *loaded;
+
+    app.canvas_width = scene_cfg.canvas_width;
+    app.canvas_height = scene_cfg.canvas_height;
+
+    std::array<bool, kInputCount> camera_index_used{};
+    for (const auto &object : scene_cfg.objects) {
+      if (object.type != scene::ObjectType::Camera)
+        continue;
+      if (object.target_camera_index >= kInputCount) {
+        std::cerr << "scene: target_camera_index "
+                   << object.target_camera_index << " is out of range (0.."
+                   << (kInputCount - 1) << ")\n";
+        return 1;
+      }
+      if (camera_index_used[object.target_camera_index]) {
+        std::cerr << "scene: target_camera_index "
+                   << object.target_camera_index
+                   << " is used by more than one object\n";
+        return 1;
+      }
+      camera_index_used[object.target_camera_index] = true;
     }
 
-    in.dst_x = idx == 0 ? 0 : app.canvas_width / 2;
-    in.dst_y = 0;
-    in.dst_width = std::min<uint32_t>(
-        static_cast<uint32_t>(in.src_width * in.scale), app.canvas_width / 2);
-    in.dst_height = std::min<uint32_t>(
-        static_cast<uint32_t>(in.src_height * in.scale), app.canvas_height);
-    build_sample_maps(in);
+    node_names.reserve(scene_cfg.objects.size());
+    target_objects.reserve(scene_cfg.objects.size());
 
-    in.frame.assign(static_cast<size_t>(in.src_width) * in.src_height * kBytesPerPixel, 0);
+    for (const auto &object : scene_cfg.objects) {
+      app.inputs.emplace_back();
+      auto &in = app.inputs.back();
+
+      in.dst_x = object.x < 0 ? 0 : static_cast<uint32_t>(object.x);
+      in.dst_y = object.y < 0 ? 0 : static_cast<uint32_t>(object.y);
+      in.dst_width = in.dst_x < app.canvas_width
+                         ? std::min(object.width, app.canvas_width - in.dst_x)
+                         : 0;
+      in.dst_height = in.dst_y < app.canvas_height
+                          ? std::min(object.height, app.canvas_height - in.dst_y)
+                          : 0;
+      in.flip_horizontal = object.flip_horizontal;
+      in.flip_vertical = object.flip_vertical;
+      in.rotate = object.rotate;
+
+      if (object.type == scene::ObjectType::Camera) {
+        in.src_width = kSceneCameraSourceWidth;
+        in.src_height = kSceneCameraSourceHeight;
+        in.frame.assign(
+            static_cast<size_t>(in.src_width) * in.src_height * kBytesPerPixel, 0);
+        node_names.push_back("se.video-compositor.in" +
+                             std::to_string(object.target_camera_index));
+        target_objects.emplace_back();
+      } else {
+        int width = 0, height = 0, channels = 0;
+        auto *pixels = stbi_load(object.image_file.c_str(), &width, &height,
+                                 &channels, 4);
+        if (pixels == nullptr) {
+          std::cerr << "scene: failed to load image \"" << object.image_file
+                     << "\": " << stbi_failure_reason() << '\n';
+          return 1;
+        }
+        in.src_width = static_cast<uint32_t>(width);
+        in.src_height = static_cast<uint32_t>(height);
+        in.frame.assign(pixels, pixels + static_cast<size_t>(width) * height *
+                                             kBytesPerPixel);
+        stbi_image_free(pixels);
+        in.has_frame = true;
+        node_names.emplace_back();
+        target_objects.emplace_back();
+      }
+
+      // build_sample_maps maps dst -> src via x/scale, so scale here is
+      // dst-per-src (stretch-to-fit the destination box, independent x/y
+      // factors - scene objects aren't required to preserve source aspect
+      // ratio). Rotation swaps which source axis dst width/height map onto.
+      const bool rotated90 = in.rotate == 90 || in.rotate == 270;
+      const uint32_t rotated_src_width = rotated90 ? in.src_height : in.src_width;
+      const uint32_t rotated_src_height = rotated90 ? in.src_width : in.src_height;
+      in.scale_x = in.dst_width / static_cast<double>(rotated_src_width);
+      in.scale_y = in.dst_height / static_cast<double>(rotated_src_height);
+      build_sample_maps(in);
+    }
+
+    app.paint_order.resize(app.inputs.size());
+    for (size_t i = 0; i < app.paint_order.size(); ++i)
+      app.paint_order[i] = i;
+    std::stable_sort(app.paint_order.begin(), app.paint_order.end(),
+                     [&](size_t a, size_t b) {
+                       return scene_cfg.objects[a].z < scene_cfg.objects[b].z;
+                     });
+  } else {
+    app.canvas_width = args.canvas_width;
+    app.canvas_height = args.canvas_height;
+
+    node_names.reserve(kInputCount);
+    target_objects.reserve(kInputCount);
+
+    for (size_t idx = 0; idx < kInputCount; ++idx) {
+      app.inputs.emplace_back();
+      auto &in = app.inputs.back();
+      in.src_width = args.in_width[idx];
+      in.src_height = args.in_height[idx];
+      in.scale_x = args.in_scale[idx];
+      in.scale_y = args.in_scale[idx];
+      if (in.src_width == 0 || in.src_height == 0 || in.scale_x <= 0.0) {
+        std::cerr << "invalid configuration for input " << idx << '\n';
+        return 1;
+      }
+
+      in.dst_x = idx == 0 ? 0 : app.canvas_width / 2;
+      in.dst_y = 0;
+      in.dst_width = std::min<uint32_t>(
+          static_cast<uint32_t>(in.src_width * in.scale_x), app.canvas_width / 2);
+      in.dst_height = std::min<uint32_t>(
+          static_cast<uint32_t>(in.src_height * in.scale_y), app.canvas_height);
+      build_sample_maps(in);
+
+      in.frame.assign(static_cast<size_t>(in.src_width) * in.src_height * kBytesPerPixel, 0);
+
+      node_names.push_back("se.video-compositor.in" + std::to_string(idx));
+      target_objects.push_back(args.in_target[idx]);
+    }
+
+    app.paint_order.resize(app.inputs.size());
+    for (size_t i = 0; i < app.paint_order.size(); ++i)
+      app.paint_order[i] = i;
   }
 
   pw_init(&argc, &argv);
@@ -338,14 +534,14 @@ int main(int argc, char **argv) {
   }
   auto *loop = pw_main_loop_get_loop(app.main_loop);
 
-  const char *input_names[kInputCount] = {"se.video-compositor.in0",
-                                          "se.video-compositor.in1"};
   for (size_t idx = 0; idx < app.inputs.size(); ++idx) {
+    if (node_names[idx].empty())
+      continue; // image-backed slot, no PipeWire stream needed
     auto &in = app.inputs[idx];
-    in.stream = connect_video_stream(loop, input_names[idx], "Stream/Input/Video",
-                                     PW_DIRECTION_INPUT, &input_stream_events,
-                                     &in, in.src_width, in.src_height,
-                                     args.in_target[idx]);
+    in.stream = connect_video_stream(loop, node_names[idx].c_str(),
+                                     "Stream/Input/Video", PW_DIRECTION_INPUT,
+                                     &input_stream_events, &in, in.src_width,
+                                     in.src_height, target_objects[idx]);
     if (in.stream == nullptr)
       return 1;
   }
@@ -365,7 +561,8 @@ int main(int argc, char **argv) {
   pw_main_loop_run(app.main_loop);
 
   for (auto &in : app.inputs)
-    pw_stream_destroy(in.stream);
+    if (in.stream != nullptr)
+      pw_stream_destroy(in.stream);
   pw_stream_destroy(app.out_stream);
   pw_main_loop_destroy(app.main_loop);
   pw_deinit();

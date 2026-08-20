@@ -1,0 +1,23 @@
+{
+  "name": "Simple Scene",
+  "canvas_width": 1280,
+  "canvas_height": 720,
+  "objects": [
+    {
+      "type": "image",
+      "position": [0, 0, 0],
+      "width": 1280,
+      "height": 720,
+      "image_file": "background.png"
+    },
+    {
+      "type": "camera",
+      "position": [100, 100, 1],
+      "width": 480,
+      "height": 270,
+      "flip_horizontal": true,
+      "rotate": 90,
+      "target_camera_index": 0
+    }
+  ]
+}

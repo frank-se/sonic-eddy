@@ -6,11 +6,13 @@ project(
 
 pipewire_dep = dependency('libpipewire-0.3')
 threads_dep = dependency('threads')
+nlohmann_json_dep = dependency('nlohmann_json')
 
 executable(
     'pw-video-compositor',
-    'src/main.cpp',
-    dependencies : [pipewire_dep, threads_dep],
+    ['src/main.cpp', 'src/scene.cpp'],
+    include_directories : include_directories('third_party'),
+    dependencies : [pipewire_dep, threads_dep, nlohmann_json_dep],
     install : true)
 
 # Throwaway pure-PipeWire test tools (no GStreamer) used to verify the
