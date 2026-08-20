@@ -28,6 +28,7 @@ using SonicEddy.ViewModels.ExternalEffectsViewModels;
 using SonicEddy.ViewModels.MetadataViewModels;
 using SonicEddy.ViewModels.MidiParameterChangeMonitorViewModels;
 using SonicEddy.ViewModels.MidiRouterViewModels;
+using SonicEddy.ViewModels.CameraRouterViewModels;
 using SonicEddy.ViewModels.MixerViewModelsV2;
 using SonicEddy.ViewModels.MixerPersistenceViewModels;
 using SonicEddy.ViewModels.ModuleManagerViewModels;
@@ -54,6 +55,7 @@ using SonicEddy.Views.MetadataViews;
 using SonicEddy.Views.MixerOverviewViews;
 using SonicEddy.Views.MidiParameterChangeMonitorView;
 using SonicEddy.Views.MidiRouterViews;
+using SonicEddy.Views.CameraRouterViews;
 using SonicEddy.Views.ModuleManagerViews;
 using SonicEddy.Views.ObjectBrowserViews;
 using SonicEddy.Views.PreferencesViews;
@@ -151,6 +153,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     private Window? _midiSyncWindow;
     private Window? _clickSyncWindow;
     private Window? _midiRouterWindow;
+    private Window? _cameraRouterWindow;
     private readonly SemaphoreSlim _layerInitializationLock = new(1, 1);
     private readonly SemaphoreSlim _globalMasterInitializationLock = new(1, 1);
     private readonly SemaphoreSlim _micChannelsInitializationLock = new(1, 1);
@@ -993,6 +996,21 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         };
 
         _midiRouterWindow.Show();
+    }
+
+    public void ShowCameraRouterWindow()
+    {
+        _logger.LogTrace("ShowCameraRouterWindow");
+
+        if (_cameraRouterWindow is not null &&
+            _cameraRouterWindow.IsVisible) return;
+
+        _cameraRouterWindow = new CameraRouterWindow()
+        {
+            DataContext = new CameraRouterViewModel()
+        };
+
+        _cameraRouterWindow.Show();
     }
 
     public void ShowVirtualInputsWindow()

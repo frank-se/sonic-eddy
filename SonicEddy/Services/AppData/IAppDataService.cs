@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using SonicEddy.Contracts.CameraRouter;
 using SonicEddy.Contracts.FilterGraph;
 using SonicEddy.Contracts.MidiRouter;
 using SonicEddy.Contracts.MidiSync;
@@ -42,6 +43,10 @@ public interface IAppDataService
     Task StoreMidiRouterConfig(MidiRouterConfig config);
 
     Task<MidiRouterConfig?> LoadMidiRouterConfig();
+
+    Task StoreCameraRouterConfig(CameraRouterConfig config);
+
+    Task<CameraRouterConfig?> LoadCameraRouterConfig();
 
     Task StoreVirtualInputsConfig(VirtualInputsConfig config);
 

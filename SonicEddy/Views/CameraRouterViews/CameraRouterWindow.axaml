@@ -1,0 +1,32 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:cameraRouterViewModels="clr-namespace:SonicEddy.ViewModels.CameraRouterViewModels"
+        mc:Ignorable="d" d:DesignWidth="480" d:DesignHeight="220"
+        Width="480" Height="220"
+        x:Class="SonicEddy.Views.CameraRouterViews.CameraRouterWindow"
+        x:DataType="cameraRouterViewModels:CameraRouterViewModel"
+        Title="Cameras">
+
+    <StackPanel Margin="12" Spacing="8">
+        <ItemsControl ItemsSource="{Binding Slots}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="cameraRouterViewModels:CameraSlotViewModel">
+                    <Grid ColumnDefinitions="120,*,90" Margin="0,4"
+                          VerticalAlignment="Center">
+                        <TextBlock Grid.Column="0" Text="{Binding DisplayName}"
+                                   VerticalAlignment="Center" />
+                        <ComboBox Grid.Column="1"
+                                  ItemsSource="{Binding CandidateSources}"
+                                  SelectedItem="{Binding SelectedSource}"
+                                  HorizontalAlignment="Stretch" />
+                        <TextBlock Grid.Column="2" Text="{Binding StatusText}"
+                                   HorizontalAlignment="Right"
+                                   VerticalAlignment="Center" />
+                    </Grid>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </StackPanel>
+</Window>

@@ -101,6 +101,11 @@
                           Command="{Binding ShowMidiParameterChangeMonitorWindow}" />
             </MenuItem>
 
+            <MenuItem Header="Streaming">
+                <MenuItem Header="Cameras ..."
+                          Command="{Binding ShowCameraRouterWindow}" />
+            </MenuItem>
+
             <MenuItem Header="Tools">
                 <MenuItem Header="Monitoring ..."
                           IsVisible="{Binding IsMonitoringEnabled}"

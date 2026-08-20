@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using ReactiveUI;
 using Serilog;
 using SonicEddy.Services.AppData;
+using SonicEddy.Services.CameraRouter;
 using SonicEddy.Services.Midi;
 using SonicEddy.Services.MidiRouter;
 using SonicEddy.Services.MidiSync;
@@ -212,6 +213,11 @@ public class App : Application
         Locator.CurrentMutable.Register<IMidiRouterService>(() =>
             midiRouterService);
         _ = midiRouterService.InitializeAsync();
+
+        var cameraRouterService = new CameraRouterService(appDataService);
+        Locator.CurrentMutable.Register<ICameraRouterService>(() =>
+            cameraRouterService);
+        _ = cameraRouterService.InitializeAsync();
 
         var midiSyncLinkService = new MidiSyncLinkService(appDataService);
         Locator.CurrentMutable.Register<IMidiSyncLinkService>(() =>
