@@ -120,6 +120,13 @@ struct frsonic_ducker_config {
   const char *playback_target_object; /* may be NULL */
 };
 
+struct frsonic_video_producer_config {
+  const char *name;
+  const char *description;
+  uint32_t width;
+  uint32_t height;
+};
+
 extern "C" {
 
 /* ── lifecycle ───────────────────────────────────────────────────────────── */
@@ -245,6 +252,19 @@ FRSONIC_API const char *frsonic_lv2_plugin_classes_json();
 /* ── silence producers ───────────────────────────────────────────────────── */
 FRSONIC_API void *frsonic_create_silence_producer(uint64_t target_serial);
 FRSONIC_API void frsonic_destroy_silence_producer(void *handle);
+
+/* ── video producers ─────────────────────────────────────────────────────── */
+/* A single fixed-format (RGBA) PipeWire video source node. update_frame is
+   real-time-safe to call from any thread - it copies into a scratch buffer
+   that the PipeWire process() callback reads from, it never touches
+   PipeWire itself. */
+FRSONIC_API bool
+frsonic_create_video_producer(const frsonic_video_producer_config *config,
+                              size_t *out_handle);
+FRSONIC_API bool frsonic_update_video_producer_frame(size_t handle,
+                                                      const uint8_t *rgba,
+                                                      size_t size);
+FRSONIC_API void frsonic_destroy_video_producer(size_t handle);
 
 /* ── Ableton Link ────────────────────────────────────────────────────────── */
 using link_peers_callback_t = void (*)(size_t peers);

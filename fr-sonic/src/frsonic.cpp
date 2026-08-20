@@ -13,6 +13,7 @@
 #include "sync/LinkSyncAdapter.h"
 #include "sync/SyncClient.h"
 #include "sync/SyncMaster.h"
+#include "video/Producer.h"
 #include "wireplumber/modules/module_factory.h"
 #include "wireplumber/params/params_handling.h"
 #include "wireplumber/props/props_handling.h"
@@ -46,6 +47,8 @@ static std::vector<std::shared_ptr<sesync::ClickSyncConverter>>
     g_click_sync_converters;
 static std::vector<size_t> g_free_click_sync_converter_handles;
 static std::vector<silence::SilenceProducer *> g_silence_producers;
+static std::vector<std::shared_ptr<video::Producer>> g_video_producers;
+static std::vector<size_t> g_free_video_producer_handles;
 
 class OwnedPipewireRuntime {
 public:
@@ -254,6 +257,19 @@ static size_t store_looper(std::shared_ptr<looper::Looper> looper) {
   return g_loopers.size() - 1;
 }
 
+static size_t store_video_producer(std::shared_ptr<video::Producer> producer) {
+  if (!g_free_video_producer_handles.empty()) {
+    const auto handle = g_free_video_producer_handles.back();
+    g_free_video_producer_handles.pop_back();
+    if (handle < g_video_producers.size()) {
+      g_video_producers[handle] = std::move(producer);
+      return handle;
+    }
+  }
+  g_video_producers.push_back(std::move(producer));
+  return g_video_producers.size() - 1;
+}
+
 static size_t store_ducker(std::shared_ptr<ducker::Ducker> d) {
   if (!g_free_ducker_handles.empty()) {
     const auto handle = g_free_ducker_handles.back();
@@ -372,6 +388,15 @@ void frsonic_stop() {
       g_silence_producers.clear();
       logging::log<logging::LogLevel::Trace>(
           "frsonic_stop: silence producers done");
+
+      logging::log<logging::LogLevel::Trace>(
+          "frsonic_stop: destroying video producers");
+      for (auto &producer : g_video_producers)
+        if (producer) producer->stop();
+      g_video_producers.clear();
+      g_free_video_producer_handles.clear();
+      logging::log<logging::LogLevel::Trace>(
+          "frsonic_stop: video producers done");
 
       for (auto &converter : g_click_sync_converters)
         if (converter) converter->stop();
@@ -500,6 +525,56 @@ void frsonic_destroy_looper(const size_t looper_handle) {
     g_loopers[looper_handle]->stop();
     g_loopers[looper_handle].reset();
     g_free_looper_handles.push_back(looper_handle);
+  };
+  invoke_owned_pipewire_sync(callback);
+}
+
+bool frsonic_create_video_producer(const frsonic_video_producer_config *config,
+                                   size_t *out_handle) {
+  if (config == nullptr || out_handle == nullptr || !g_owned_pipewire)
+    return false;
+
+  bool result = false;
+  auto callback = [&] {
+    video::ProducerConfig producer_config{
+        .name = optional_c_string(config->name, "se.video-producer"),
+        .description =
+            optional_c_string(config->description, "Sonic Eddy video producer"),
+        .width = config->width,
+        .height = config->height,
+    };
+
+    auto producer = std::make_shared<video::Producer>(
+        g_owned_pipewire->loop(), std::move(producer_config));
+    if (!producer->start())
+      return;
+
+    *out_handle = store_video_producer(std::move(producer));
+    result = true;
+  };
+  invoke_owned_pipewire_sync(callback);
+  return result;
+}
+
+bool frsonic_update_video_producer_frame(const size_t handle,
+                                         const uint8_t *rgba,
+                                         const size_t size) {
+  if (handle >= g_video_producers.size() || !g_video_producers[handle])
+    return false;
+  return g_video_producers[handle]->update_frame(rgba, size);
+}
+
+void frsonic_destroy_video_producer(const size_t handle) {
+  if (!g_owned_pipewire)
+    return;
+
+  auto callback = [handle] {
+    if (handle >= g_video_producers.size() || !g_video_producers[handle])
+      return;
+
+    g_video_producers[handle]->stop();
+    g_video_producers[handle].reset();
+    g_free_video_producer_handles.push_back(handle);
   };
   invoke_owned_pipewire_sync(callback);
 }

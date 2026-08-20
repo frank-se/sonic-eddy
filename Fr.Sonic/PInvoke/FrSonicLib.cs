@@ -150,6 +150,15 @@ internal struct FrSonicClickSyncConfig
     internal float PulseAmplitude;
 }
 
+[StructLayout(LayoutKind.Sequential)]
+internal struct FrSonicVideoProducerConfig
+{
+    internal IntPtr Name;
+    internal IntPtr Description;
+    internal uint Width;
+    internal uint Height;
+}
+
 /* ── P/Invoke declarations ───────────────────────────────────────────────── */
 
 internal static partial class FrSonicLib
@@ -401,6 +410,25 @@ internal static partial class FrSonicLib
         [MarshalAs(UnmanagedType.U1)] bool loaded,
         [MarshalAs(UnmanagedType.U1)] bool playing
     );
+
+    /* video producers */
+    [LibraryImport(LIB, EntryPoint = "frsonic_create_video_producer")]
+    [return: MarshalAs(UnmanagedType.U1)]
+    internal static partial bool CreateVideoProducerC(
+        in FrSonicVideoProducerConfig config,
+        out UIntPtr handle
+    );
+
+    [LibraryImport(LIB, EntryPoint = "frsonic_update_video_producer_frame")]
+    [return: MarshalAs(UnmanagedType.U1)]
+    internal static partial bool UpdateVideoProducerFrameC(
+        UIntPtr handle,
+        ReadOnlySpan<byte> rgba,
+        nuint size
+    );
+
+    [LibraryImport(LIB, EntryPoint = "frsonic_destroy_video_producer")]
+    internal static partial void DestroyVideoProducerC(UIntPtr handle);
 
     /* silence producers */
     [LibraryImport(LIB, EntryPoint = "frsonic_create_silence_producer")]

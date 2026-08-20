@@ -9,7 +9,7 @@ namespace SonicEddy.Tools;
 /// </summary>
 internal static class StartupWindowOptions
 {
-    public static (bool MainMixer, bool DrumMixer, bool Overview, bool GlobalMaster, bool MicChannel, bool GlobalReturnChannels) Parse(
+    public static (bool MainMixer, bool DrumMixer, bool Overview, bool GlobalMaster, bool MicChannel, bool GlobalReturnChannels, bool StreamOverview) Parse(
         string[] args)
     {
         var mainMixer = Contains(args, "--main-mixer");
@@ -18,13 +18,16 @@ internal static class StartupWindowOptions
         var globalMaster = Contains(args, "--global-master");
         var micChannel = Contains(args, "--mic-channel");
         var globalReturnChannels = Contains(args, "--global-return-channels");
+        // Streams the mixer overview into PipeWire as a video source node -
+        // manual trigger for now, no UI toggle yet.
+        var streamOverview = Contains(args, "--stream-overview");
 
         if (!mainMixer && !drumMixer && !overview && !globalMaster &&
             !micChannel && !globalReturnChannels)
             mainMixer = true;
 
         return (mainMixer, drumMixer, overview, globalMaster, micChannel,
-            globalReturnChannels);
+            globalReturnChannels, streamOverview);
     }
 
     /// <summary>

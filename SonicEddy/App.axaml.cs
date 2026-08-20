@@ -6,6 +6,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Fr.Sonic;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using ReactiveUI;
 using Serilog;
 using SonicEddy.Services.AppData;
@@ -25,6 +26,7 @@ using SonicEddy.Services.VirtualInputs;
 using SonicEddy.Services.JackInputPorts;
 using SonicEddy.Services.VirtualOutputs;
 using SonicEddy.Services.TraktorZ1;
+using SonicEddy.Services.VideoStreaming;
 using SonicEddy.Services.Wireplumber;
 using SonicEddy.Tools;
 using SonicEddy.ViewModels;
@@ -78,6 +80,19 @@ public class App : Application
                 mainWindowViewModel?.ShowGlobalReturnChannelsWindow();
             if (!string.IsNullOrWhiteSpace(mixerName))
                 _ = mainWindowViewModel?.LoadOrCreateMixerByNameAsync(mixerName);
+
+            if (startupWindows.StreamOverview && mainWindowViewModel is not null)
+            {
+                var loggerFactory = Locator.Current.GetService<ILoggerFactory>();
+                var mixerOverviewStreamService = new MixerOverviewStreamService(
+                    mainWindowViewModel,
+                    loggerFactory?.CreateLogger<MixerOverviewStreamService>() ??
+                    NullLogger<MixerOverviewStreamService>.Instance);
+                Locator.CurrentMutable.Register<IMixerOverviewStreamService>(
+                    () => mixerOverviewStreamService);
+                mixerOverviewStreamService.Start();
+                desktop.Exit += (_, _) => mixerOverviewStreamService.Dispose();
+            }
         }
 
         base.OnFrameworkInitializationCompleted();

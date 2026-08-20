@@ -605,6 +605,21 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         _mixerOverviewWindow.Show();
     }
 
+    // Same construction as ShowMixerOverviewWindowAsync, minus the window -
+    // for callers (e.g. MixerOverviewStreamService) that want to render the
+    // overview off-screen regardless of whether the user has the real
+    // MixerOverviewWindow open. Caller owns disposal of the returned VM.
+    public async Task<MixerOverviewViewModel?> CreateMixerOverviewViewModelAsync()
+    {
+        var globalMaster = await EnsureGlobalMasterViewModelAsync();
+        if (globalMaster is null || LayerAViewModel is null ||
+            LayerBViewModel is null)
+            return null;
+
+        return new MixerOverviewViewModel(LayerAViewModel, LayerBViewModel,
+            globalMaster);
+    }
+
     public async Task SaveMixer()
     {
         if (_currentMixerId == Guid.Empty)
