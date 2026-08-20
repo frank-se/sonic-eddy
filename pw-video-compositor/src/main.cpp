@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <csignal>
 #include <cstdint>
 #include <cstdlib>
@@ -13,10 +14,15 @@
 #include <pipewire/keys.h>
 #include <pipewire/pipewire.h>
 #include <spa/param/buffers.h>
+#include <spa/param/props.h>
 #include <spa/param/video/format-utils.h>
+#include <spa/pod/builder.h>
+#include <spa/pod/iter.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+
+#include <nlohmann/json.hpp>
 
 #include "scene.hpp"
 
@@ -24,6 +30,7 @@ namespace {
 
 constexpr uint32_t kBytesPerPixel = 4; // SPA_VIDEO_FORMAT_RGBA
 constexpr size_t kInputCount = 2;
+constexpr size_t kMaxScenes = 5;
 
 // Cameras don't declare their native resolution in the scene file - PipeWire
 // needs an exact width/height to negotiate a stream (a fixed SPA_RECTANGLE,
@@ -33,18 +40,31 @@ constexpr size_t kInputCount = 2;
 constexpr uint32_t kSceneCameraSourceWidth = 1920;
 constexpr uint32_t kSceneCameraSourceHeight = 1080;
 
-// One video source's fixed geometry, precomputed sample map, and the
-// scratch buffer holding its last received frame. Everything here is
-// sized and allocated once, up front, so process() never allocates.
-// Camera-backed slots fill `frame` from a PipeWire stream (`stream` is
-// non-null); image-backed slots (scene mode only) decode `frame` once at
-// startup and leave `stream` null and `has_frame` permanently true.
-struct InputSlot {
-  uint32_t src_width = 0;
-  uint32_t src_height = 0;
+// Where a frame actually comes from: either a live PipeWire input stream
+// (camera-backed, `stream` non-null) or a one-shot decode at startup
+// (image-backed, scene mode only, `stream` null, `has_frame` permanently
+// true). Camera sources are shared - every scene's camera-type objects
+// that target the same index point at the *same* FrameSource, so the
+// physical camera is only captured once regardless of how many scenes or
+// objects reference it.
+struct FrameSource {
+  uint32_t width = 0;
+  uint32_t height = 0;
+  std::vector<uint8_t> frame;
+  std::mutex frame_mutex;
+  bool has_frame = false;
+  pw_stream *stream = nullptr;
+};
+
+// One object's compositing geometry within a scene: which FrameSource to
+// sample, the precomputed nearest-neighbor sample maps, and where it lands
+// on the canvas. Everything here is sized and built once, up front, so
+// process() never allocates.
+struct RenderSlot {
+  FrameSource *source = nullptr; // shared (camera) or owned via App::image_sources (image)
+
   double scale_x = 1.0;
   double scale_y = 1.0;
-
   bool flip_horizontal = false;
   bool flip_vertical = false;
   uint32_t rotate = 0; // 0, 90, 180 or 270
@@ -62,121 +82,129 @@ struct InputSlot {
   // rotation can't be expressed as two independent per-axis maps.
   std::vector<uint32_t> col_map;
   std::vector<uint32_t> row_map;
+};
 
-  std::vector<uint8_t> frame; // last received/decoded frame, RGBA
-  std::mutex frame_mutex;
-  bool has_frame = false;
-
-  pw_stream *stream = nullptr;
+struct Scene {
+  std::string name;
+  std::vector<RenderSlot> render_slots;
+  std::vector<size_t> paint_order; // indices into render_slots, back-to-front
 };
 
 struct App {
   pw_main_loop *main_loop = nullptr;
   uint32_t canvas_width = 1280;
   uint32_t canvas_height = 720;
-  // deque, not vector: InputSlot holds a std::mutex (non-movable), and
-  // vector's growth path requires MoveInsertable to even compile, even
-  // when reserve() means no reallocation ever actually happens at
-  // runtime. deque never relocates existing elements on growth, so
-  // emplace_back works without that requirement, and operator[] stays
-  // O(1) for the index-based access used throughout.
-  std::deque<InputSlot> inputs;
-  std::vector<size_t> paint_order; // indices into inputs, back-to-front
+
+  std::array<FrameSource, kInputCount> camera_sources;
+  // deque, not vector: FrameSource holds a std::mutex (non-movable), and
+  // RenderSlot::source keeps a raw pointer into this container that must
+  // stay valid as later scenes' images are added - vector would both fail
+  // to compile (mutex isn't MoveInsertable) and, worse, silently
+  // invalidate those pointers on reallocation. deque never relocates
+  // existing elements on growth, so both problems go away.
+  std::deque<FrameSource> image_sources;
+
+  std::vector<Scene> scenes;
+  std::atomic<int> active_scene_index{0}; // written from param_changed (control thread), read in process() (RT thread)
+  bool props_enabled = false; // true only in scene mode - CLI mode has no scene list to expose
+
   pw_stream *out_stream = nullptr;
+  std::array<uint8_t, 4096> params_buffer{};
 };
 
-void build_sample_maps(InputSlot &in) {
-  in.transposed = in.rotate == 90 || in.rotate == 270;
-  const uint32_t rotated_width = in.transposed ? in.src_height : in.src_width;
-  const uint32_t rotated_height = in.transposed ? in.src_width : in.src_height;
+void build_sample_maps(RenderSlot &slot, uint32_t src_width, uint32_t src_height) {
+  slot.transposed = slot.rotate == 90 || slot.rotate == 270;
+  const uint32_t rotated_width = slot.transposed ? src_height : src_width;
+  const uint32_t rotated_height = slot.transposed ? src_width : src_height;
 
   // dst -> position within the rotated-but-unflipped frame.
-  std::vector<uint32_t> rx(in.dst_width);
-  for (uint32_t x = 0; x < in.dst_width; ++x) {
-    uint32_t v = std::min<uint32_t>(static_cast<uint32_t>(x / in.scale_x),
+  std::vector<uint32_t> rx(slot.dst_width);
+  for (uint32_t x = 0; x < slot.dst_width; ++x) {
+    uint32_t v = std::min<uint32_t>(static_cast<uint32_t>(x / slot.scale_x),
                                     rotated_width - 1);
-    rx[x] = in.flip_horizontal ? rotated_width - 1 - v : v;
+    rx[x] = slot.flip_horizontal ? rotated_width - 1 - v : v;
   }
-  std::vector<uint32_t> ry(in.dst_height);
-  for (uint32_t y = 0; y < in.dst_height; ++y) {
-    uint32_t v = std::min<uint32_t>(static_cast<uint32_t>(y / in.scale_y),
+  std::vector<uint32_t> ry(slot.dst_height);
+  for (uint32_t y = 0; y < slot.dst_height; ++y) {
+    uint32_t v = std::min<uint32_t>(static_cast<uint32_t>(y / slot.scale_y),
                                     rotated_height - 1);
-    ry[y] = in.flip_vertical ? rotated_height - 1 - v : v;
+    ry[y] = slot.flip_vertical ? rotated_height - 1 - v : v;
   }
 
-  in.col_map.resize(in.dst_width);
-  in.row_map.resize(in.dst_height);
+  slot.col_map.resize(slot.dst_width);
+  slot.row_map.resize(slot.dst_height);
 
-  if (!in.transposed) {
+  if (!slot.transposed) {
     // rotate 0: source = (rx, ry); rotate 180 = flip both axes.
-    for (uint32_t x = 0; x < in.dst_width; ++x)
-      in.col_map[x] = in.rotate == 180 ? in.src_width - 1 - rx[x] : rx[x];
-    for (uint32_t y = 0; y < in.dst_height; ++y)
-      in.row_map[y] = in.rotate == 180 ? in.src_height - 1 - ry[y] : ry[y];
+    for (uint32_t x = 0; x < slot.dst_width; ++x)
+      slot.col_map[x] = slot.rotate == 180 ? src_width - 1 - rx[x] : rx[x];
+    for (uint32_t y = 0; y < slot.dst_height; ++y)
+      slot.row_map[y] = slot.rotate == 180 ? src_height - 1 - ry[y] : ry[y];
   } else {
     // rotate 90 CW:  src_x = ry,             src_y = src_height-1-rx
     // rotate 270 CW: src_x = src_width-1-ry, src_y = rx
     // col_map (indexed by dst x = rx) carries src_y; row_map (indexed by
     // dst y = ry) carries src_x - composite_input swaps their roles.
-    for (uint32_t x = 0; x < in.dst_width; ++x)
-      in.col_map[x] = in.rotate == 90 ? in.src_height - 1 - rx[x] : rx[x];
-    for (uint32_t y = 0; y < in.dst_height; ++y)
-      in.row_map[y] = in.rotate == 90 ? ry[y] : in.src_width - 1 - ry[y];
+    for (uint32_t x = 0; x < slot.dst_width; ++x)
+      slot.col_map[x] = slot.rotate == 90 ? src_height - 1 - rx[x] : rx[x];
+    for (uint32_t y = 0; y < slot.dst_height; ++y)
+      slot.row_map[y] = slot.rotate == 90 ? ry[y] : src_width - 1 - ry[y];
   }
 }
 
 void on_input_process(void *data) {
-  auto &in = *static_cast<InputSlot *>(data);
-  auto *pw_buffer = pw_stream_dequeue_buffer(in.stream);
+  auto &source = *static_cast<FrameSource *>(data);
+  auto *pw_buffer = pw_stream_dequeue_buffer(source.stream);
   if (pw_buffer == nullptr)
     return;
 
   auto *buffer = pw_buffer->buffer;
   if (buffer->n_datas == 0 || buffer->datas[0].data == nullptr ||
       buffer->datas[0].chunk == nullptr) {
-    pw_stream_queue_buffer(in.stream, pw_buffer);
+    pw_stream_queue_buffer(source.stream, pw_buffer);
     return;
   }
 
   auto &spa_data = buffer->datas[0];
   const size_t expected =
-      static_cast<size_t>(in.src_width) * in.src_height * kBytesPerPixel;
+      static_cast<size_t>(source.width) * source.height * kBytesPerPixel;
   // chunk->size alone isn't trustworthy - maxsize is the actual mapped
   // buffer size and can be smaller (e.g. transitional negotiation buffers).
   const size_t copy_size = std::min<size_t>(
       {expected, spa_data.chunk->size, static_cast<size_t>(spa_data.maxsize)});
   if (copy_size > 0) {
-    std::lock_guard<std::mutex> lock(in.frame_mutex);
-    std::memcpy(in.frame.data(), spa_data.data, copy_size);
-    in.has_frame = true;
+    std::lock_guard<std::mutex> lock(source.frame_mutex);
+    std::memcpy(source.frame.data(), spa_data.data, copy_size);
+    source.has_frame = true;
   }
 
-  pw_stream_queue_buffer(in.stream, pw_buffer);
+  pw_stream_queue_buffer(source.stream, pw_buffer);
 }
 
-void composite_input(InputSlot &in, uint8_t *dst, uint32_t dst_stride) {
-  std::lock_guard<std::mutex> lock(in.frame_mutex);
-  if (!in.has_frame)
+void composite_input(RenderSlot &slot, uint8_t *dst, uint32_t dst_stride) {
+  auto &source = *slot.source;
+  std::lock_guard<std::mutex> lock(source.frame_mutex);
+  if (!source.has_frame)
     return;
 
-  const uint32_t src_stride = in.src_width * kBytesPerPixel;
-  for (uint32_t y = 0; y < in.dst_height; ++y) {
-    uint8_t *dst_row = dst + static_cast<size_t>(in.dst_y + y) * dst_stride +
-                       static_cast<size_t>(in.dst_x) * kBytesPerPixel;
-    if (!in.transposed) {
+  const uint32_t src_stride = source.width * kBytesPerPixel;
+  for (uint32_t y = 0; y < slot.dst_height; ++y) {
+    uint8_t *dst_row = dst + static_cast<size_t>(slot.dst_y + y) * dst_stride +
+                       static_cast<size_t>(slot.dst_x) * kBytesPerPixel;
+    if (!slot.transposed) {
       const uint8_t *src_row =
-          in.frame.data() + static_cast<size_t>(in.row_map[y]) * src_stride;
-      for (uint32_t x = 0; x < in.dst_width; ++x) {
+          source.frame.data() + static_cast<size_t>(slot.row_map[y]) * src_stride;
+      for (uint32_t x = 0; x < slot.dst_width; ++x) {
         const uint8_t *src_px =
-            src_row + static_cast<size_t>(in.col_map[x]) * kBytesPerPixel;
+            src_row + static_cast<size_t>(slot.col_map[x]) * kBytesPerPixel;
         std::memcpy(dst_row + static_cast<size_t>(x) * kBytesPerPixel, src_px,
                     kBytesPerPixel);
       }
     } else {
-      const uint32_t src_col = in.row_map[y];
-      for (uint32_t x = 0; x < in.dst_width; ++x) {
-        const uint32_t src_row = in.col_map[x];
-        const uint8_t *src_px = in.frame.data() +
+      const uint32_t src_col = slot.row_map[y];
+      for (uint32_t x = 0; x < slot.dst_width; ++x) {
+        const uint32_t src_row = slot.col_map[x];
+        const uint8_t *src_px = source.frame.data() +
             static_cast<size_t>(src_row) * src_stride +
             static_cast<size_t>(src_col) * kBytesPerPixel;
         std::memcpy(dst_row + static_cast<size_t>(x) * kBytesPerPixel, src_px,
@@ -211,8 +239,16 @@ void on_output_process(void *data) {
   auto *dst = static_cast<uint8_t *>(spa_data.data);
   std::memset(dst, 0, needed);
 
-  for (auto idx : app.paint_order)
-    composite_input(app.inputs[idx], dst, stride);
+  // Control thread (param_changed) writes this, we read it here on the RT
+  // graph thread - relaxed is enough since it's an independent scalar
+  // "last write wins" value, not a synchronization point for other memory
+  // (same idiom as fr-sonic's Ducker _param_* atomics).
+  int idx = app.active_scene_index.load(std::memory_order_relaxed);
+  if (idx < 0 || static_cast<size_t>(idx) >= app.scenes.size())
+    idx = 0;
+  auto &scene = app.scenes[idx];
+  for (auto slot_idx : scene.paint_order)
+    composite_input(scene.render_slots[slot_idx], dst, stride);
 
   spa_data.chunk->offset = 0;
   spa_data.chunk->size = stride * app.canvas_height;
@@ -226,6 +262,82 @@ void on_quit_signal(void *data, int) {
   pw_main_loop_quit(app.main_loop);
 }
 
+// Publishes the scene list + current active index as PipeWire Props on the
+// output stream, mirroring fr-sonic's Ducker::publish_params()/Looper
+// publish_params() idiom: a single SPA_PARAM_Props object whose
+// SPA_PROP_params value is a struct of alternating (string key, value)
+// pairs. The scene list is variable-length, so it goes out as a JSON
+// string blob under "scenes" (the same escape hatch the looper uses for
+// its loop list) rather than a native SPA array-of-structs pod.
+void publish_scene_params(App &app) {
+  if (app.out_stream == nullptr)
+    return;
+
+  nlohmann::json names = nlohmann::json::array();
+  for (const auto &scene : app.scenes)
+    names.push_back(scene.name);
+  const std::string scenes_json = names.dump();
+
+  spa_pod_builder builder{};
+  spa_pod_builder_init(&builder, app.params_buffer.data(), app.params_buffer.size());
+
+  spa_pod_frame object_frame{};
+  spa_pod_builder_push_object(&builder, &object_frame, SPA_TYPE_OBJECT_Props,
+                              SPA_PARAM_Props);
+  spa_pod_builder_prop(&builder, SPA_PROP_params, 0);
+
+  spa_pod_frame struct_frame{};
+  spa_pod_builder_push_struct(&builder, &struct_frame);
+
+  spa_pod_builder_string(&builder, "active_scene_index");
+  spa_pod_builder_int(&builder, app.active_scene_index.load(std::memory_order_relaxed));
+  spa_pod_builder_string(&builder, "scenes");
+  spa_pod_builder_string(&builder, scenes_json.c_str());
+
+  spa_pod_builder_pop(&builder, &struct_frame);
+
+  const spa_pod *params[] = {
+      static_cast<spa_pod *>(spa_pod_builder_pop(&builder, &object_frame))};
+  pw_stream_update_params(app.out_stream, params, 1);
+}
+
+// Receives external Props updates (e.g. `pw-cli set-param <id> Props
+// "{ params = [ \"active_scene_index\" 1 ] }"`), mirroring
+// Ducker::handle_audio_params()/handle_param_value(): walk the
+// SPA_PROP_params struct treating even entries as keys and odd entries as
+// values. Only "active_scene_index" is settable; the scene list itself is
+// read-only (only ever published, never accepted from outside).
+void handle_output_props(App &app, const spa_pod *param) {
+  const auto *params_prop = spa_pod_find_prop(param, nullptr, SPA_PROP_params);
+  if (params_prop == nullptr || params_prop->value.type != SPA_TYPE_Struct)
+    return;
+
+  const char *key = nullptr;
+  uint32_t index = 0;
+  spa_pod *child = nullptr;
+  bool changed = false;
+  SPA_POD_FOREACH(static_cast<spa_pod *>(SPA_POD_BODY(&params_prop->value)),
+                  SPA_POD_BODY_SIZE(&params_prop->value), child) {
+    if (index % 2 == 0) {
+      key = nullptr;
+      if (child->type == SPA_TYPE_String)
+        spa_pod_get_string(child, &key);
+    } else if (key != nullptr && std::strcmp(key, "active_scene_index") == 0) {
+      int32_t value = 0;
+      if (spa_pod_get_int(child, &value) == 0 && !app.scenes.empty()) {
+        const int clamped =
+            std::clamp(value, 0, static_cast<int>(app.scenes.size()) - 1);
+        app.active_scene_index.store(clamped, std::memory_order_relaxed);
+        changed = true;
+      }
+    }
+    ++index;
+  }
+
+  if (changed)
+    publish_scene_params(app); // echo confirmed state back
+}
+
 // Once the concrete output format is negotiated, declare the buffer size we
 // actually need and that buffers carry SPA_META_Header. Without ParamBuffers,
 // PipeWire may hand us buffers whose maxsize is too small for a full frame -
@@ -236,7 +348,15 @@ void on_quit_signal(void *data, int) {
 // metadata and drop buffers for that reason instead.
 void on_output_param_changed(void *data, uint32_t id, const spa_pod *param) {
   auto &app = *static_cast<App *>(data);
-  if (param == nullptr || id != SPA_PARAM_Format)
+  if (param == nullptr)
+    return;
+
+  if (id == SPA_PARAM_Props) {
+    if (app.props_enabled)
+      handle_output_props(app, param);
+    return;
+  }
+  if (id != SPA_PARAM_Format)
     return;
 
   const uint32_t stride = app.canvas_width * kBytesPerPixel;
@@ -254,6 +374,9 @@ void on_output_param_changed(void *data, uint32_t id, const spa_pod *param) {
           SPA_PARAM_META_type, SPA_POD_Id(SPA_META_Header), SPA_PARAM_META_size,
           SPA_POD_Int(sizeof(spa_meta_header))))};
   pw_stream_update_params(app.out_stream, params, 2);
+
+  if (app.props_enabled)
+    publish_scene_params(app); // initial publish: scene list + index 0
 }
 
 const pw_stream_events input_stream_events = {
@@ -268,7 +391,7 @@ const pw_stream_events output_stream_events = {
 };
 
 struct Args {
-  std::string scene_path; // if non-empty, scene mode - all other fields below are ignored
+  std::vector<std::string> scene_paths; // if non-empty, scene mode - all other fields below are ignored
 
   uint32_t canvas_width = 1280;
   uint32_t canvas_height = 720;
@@ -295,9 +418,13 @@ bool parse_args(int argc, char **argv, Args &args) {
 
   for (int i = 1; i < argc; ++i) {
     const std::string arg = argv[i];
-    if (arg == "--scene")
-      args.scene_path = next(i);
-    else if (arg == "--canvas-width")
+    if (arg == "--scene") {
+      if (args.scene_paths.size() >= kMaxScenes) {
+        std::cerr << "too many --scene arguments (max " << kMaxScenes << ")\n";
+        return false;
+      }
+      args.scene_paths.push_back(next(i));
+    } else if (arg == "--canvas-width")
       args.canvas_width = parse_u32(next(i));
     else if (arg == "--canvas-height")
       args.canvas_height = parse_u32(next(i));
@@ -326,7 +453,8 @@ bool parse_args(int argc, char **argv, Args &args) {
 }
 
 void print_usage() {
-  std::cerr << "usage: pw-video-compositor --scene <scene.json>\n"
+  std::cerr << "usage: pw-video-compositor --scene <scene.json> [--scene <scene2.json> ...] (up to "
+            << kMaxScenes << ")\n"
                "   or: pw-video-compositor "
                "--canvas-width W --canvas-height H "
                "--in0-width W --in0-height H --in0-scale S [--in0-target NAME] "
@@ -387,107 +515,137 @@ int main(int argc, char **argv) {
 
   App app;
   // node_names[idx] / target_objects[idx]: the PipeWire input stream to
-  // open for app.inputs[idx] - empty node name means no stream (an
-  // image-backed slot in scene mode). Populated by whichever build path
-  // below runs, then consumed uniformly after pw_init.
+  // open for app.camera_sources[idx]. Always kInputCount entries.
   std::vector<std::string> node_names;
   std::vector<std::string> target_objects;
 
   // Build phase: layout, sample maps, and scratch buffers - all up front,
   // before any PipeWire stream exists. Nothing below this block allocates.
-  if (!args.scene_path.empty()) {
-    auto loaded = scene::load_scene(args.scene_path);
-    if (!loaded)
-      return 1;
-    const auto &scene_cfg = *loaded;
+  if (!args.scene_paths.empty()) {
+    app.props_enabled = true;
 
-    app.canvas_width = scene_cfg.canvas_width;
-    app.canvas_height = scene_cfg.canvas_height;
-
-    std::array<bool, kInputCount> camera_index_used{};
-    for (const auto &object : scene_cfg.objects) {
-      if (object.type != scene::ObjectType::Camera)
-        continue;
-      if (object.target_camera_index >= kInputCount) {
-        std::cerr << "scene: target_camera_index "
-                   << object.target_camera_index << " is out of range (0.."
-                   << (kInputCount - 1) << ")\n";
+    std::vector<scene::SceneConfig> scene_configs;
+    scene_configs.reserve(args.scene_paths.size());
+    for (const auto &path : args.scene_paths) {
+      auto loaded = scene::load_scene(path);
+      if (!loaded)
         return 1;
-      }
-      if (camera_index_used[object.target_camera_index]) {
-        std::cerr << "scene: target_camera_index "
-                   << object.target_camera_index
-                   << " is used by more than one object\n";
-        return 1;
-      }
-      camera_index_used[object.target_camera_index] = true;
+      scene_configs.push_back(std::move(*loaded));
     }
 
-    node_names.reserve(scene_cfg.objects.size());
-    target_objects.reserve(scene_cfg.objects.size());
+    app.canvas_width = scene_configs.front().canvas_width;
+    app.canvas_height = scene_configs.front().canvas_height;
+    for (const auto &cfg : scene_configs) {
+      if (cfg.canvas_width != app.canvas_width ||
+          cfg.canvas_height != app.canvas_height) {
+        std::cerr << "scene: all --scene files must share the same "
+                     "canvas_width/canvas_height (the output format is "
+                     "negotiated once at startup)\n";
+        return 1;
+      }
+    }
 
-    for (const auto &object : scene_cfg.objects) {
-      app.inputs.emplace_back();
-      auto &in = app.inputs.back();
-
-      in.dst_x = object.x < 0 ? 0 : static_cast<uint32_t>(object.x);
-      in.dst_y = object.y < 0 ? 0 : static_cast<uint32_t>(object.y);
-      in.dst_width = in.dst_x < app.canvas_width
-                         ? std::min(object.width, app.canvas_width - in.dst_x)
-                         : 0;
-      in.dst_height = in.dst_y < app.canvas_height
-                          ? std::min(object.height, app.canvas_height - in.dst_y)
-                          : 0;
-      in.flip_horizontal = object.flip_horizontal;
-      in.flip_vertical = object.flip_vertical;
-      in.rotate = object.rotate;
-
-      if (object.type == scene::ObjectType::Camera) {
-        in.src_width = kSceneCameraSourceWidth;
-        in.src_height = kSceneCameraSourceHeight;
-        in.frame.assign(
-            static_cast<size_t>(in.src_width) * in.src_height * kBytesPerPixel, 0);
-        node_names.push_back("se.video-compositor.in" +
-                             std::to_string(object.target_camera_index));
-        target_objects.emplace_back();
-      } else {
-        int width = 0, height = 0, channels = 0;
-        auto *pixels = stbi_load(object.image_file.c_str(), &width, &height,
-                                 &channels, 4);
-        if (pixels == nullptr) {
-          std::cerr << "scene: failed to load image \"" << object.image_file
-                     << "\": " << stbi_failure_reason() << '\n';
+    for (const auto &cfg : scene_configs) {
+      for (const auto &object : cfg.objects) {
+        if (object.type != scene::ObjectType::Camera)
+          continue;
+        if (object.target_camera_index >= kInputCount) {
+          std::cerr << "scene: target_camera_index "
+                     << object.target_camera_index << " is out of range (0.."
+                     << (kInputCount - 1) << ")\n";
           return 1;
         }
-        in.src_width = static_cast<uint32_t>(width);
-        in.src_height = static_cast<uint32_t>(height);
-        in.frame.assign(pixels, pixels + static_cast<size_t>(width) * height *
-                                             kBytesPerPixel);
-        stbi_image_free(pixels);
-        in.has_frame = true;
-        node_names.emplace_back();
-        target_objects.emplace_back();
       }
-
-      // build_sample_maps maps dst -> src via x/scale, so scale here is
-      // dst-per-src (stretch-to-fit the destination box, independent x/y
-      // factors - scene objects aren't required to preserve source aspect
-      // ratio). Rotation swaps which source axis dst width/height map onto.
-      const bool rotated90 = in.rotate == 90 || in.rotate == 270;
-      const uint32_t rotated_src_width = rotated90 ? in.src_height : in.src_width;
-      const uint32_t rotated_src_height = rotated90 ? in.src_width : in.src_height;
-      in.scale_x = in.dst_width / static_cast<double>(rotated_src_width);
-      in.scale_y = in.dst_height / static_cast<double>(rotated_src_height);
-      build_sample_maps(in);
     }
 
-    app.paint_order.resize(app.inputs.size());
-    for (size_t i = 0; i < app.paint_order.size(); ++i)
-      app.paint_order[i] = i;
-    std::stable_sort(app.paint_order.begin(), app.paint_order.end(),
-                     [&](size_t a, size_t b) {
-                       return scene_cfg.objects[a].z < scene_cfg.objects[b].z;
-                     });
+    // Camera sources are shared across every scene - always build and
+    // (later) connect all kInputCount of them, regardless of which scenes
+    // actually reference each index.
+    for (size_t idx = 0; idx < kInputCount; ++idx) {
+      auto &src = app.camera_sources[idx];
+      src.width = kSceneCameraSourceWidth;
+      src.height = kSceneCameraSourceHeight;
+      src.frame.assign(
+          static_cast<size_t>(src.width) * src.height * kBytesPerPixel, 0);
+    }
+    node_names.assign(kInputCount, "");
+    target_objects.assign(kInputCount, "");
+    for (size_t idx = 0; idx < kInputCount; ++idx)
+      node_names[idx] = "se.video-compositor.in" + std::to_string(idx);
+
+    app.scenes.reserve(scene_configs.size());
+    for (const auto &cfg : scene_configs) {
+      Scene scene;
+      scene.name = cfg.name;
+      scene.render_slots.reserve(cfg.objects.size());
+
+      for (const auto &object : cfg.objects) {
+        RenderSlot slot;
+
+        slot.dst_x = object.x < 0 ? 0 : static_cast<uint32_t>(object.x);
+        slot.dst_y = object.y < 0 ? 0 : static_cast<uint32_t>(object.y);
+        slot.dst_width = slot.dst_x < app.canvas_width
+                             ? std::min(object.width, app.canvas_width - slot.dst_x)
+                             : 0;
+        slot.dst_height = slot.dst_y < app.canvas_height
+                              ? std::min(object.height, app.canvas_height - slot.dst_y)
+                              : 0;
+        slot.flip_horizontal = object.flip_horizontal;
+        slot.flip_vertical = object.flip_vertical;
+        slot.rotate = object.rotate;
+
+        uint32_t src_width = 0;
+        uint32_t src_height = 0;
+        if (object.type == scene::ObjectType::Camera) {
+          slot.source = &app.camera_sources[object.target_camera_index];
+          src_width = slot.source->width;
+          src_height = slot.source->height;
+        } else {
+          int width = 0, height = 0, channels = 0;
+          auto *pixels = stbi_load(object.image_file.c_str(), &width, &height,
+                                   &channels, 4);
+          if (pixels == nullptr) {
+            std::cerr << "scene: failed to load image \"" << object.image_file
+                       << "\": " << stbi_failure_reason() << '\n';
+            return 1;
+          }
+          app.image_sources.emplace_back();
+          auto &img = app.image_sources.back();
+          img.width = static_cast<uint32_t>(width);
+          img.height = static_cast<uint32_t>(height);
+          img.frame.assign(pixels, pixels + static_cast<size_t>(width) * height *
+                                               kBytesPerPixel);
+          stbi_image_free(pixels);
+          img.has_frame = true;
+          slot.source = &img;
+          src_width = img.width;
+          src_height = img.height;
+        }
+
+        // build_sample_maps maps dst -> src via x/scale, so scale here is
+        // dst-per-src (stretch-to-fit the destination box, independent x/y
+        // factors - scene objects aren't required to preserve source aspect
+        // ratio). Rotation swaps which source axis dst width/height map onto.
+        const bool rotated90 = slot.rotate == 90 || slot.rotate == 270;
+        const uint32_t rotated_src_width = rotated90 ? src_height : src_width;
+        const uint32_t rotated_src_height = rotated90 ? src_width : src_height;
+        slot.scale_x = slot.dst_width / static_cast<double>(rotated_src_width);
+        slot.scale_y = slot.dst_height / static_cast<double>(rotated_src_height);
+        build_sample_maps(slot, src_width, src_height);
+
+        scene.render_slots.push_back(std::move(slot));
+      }
+
+      scene.paint_order.resize(scene.render_slots.size());
+      for (size_t i = 0; i < scene.paint_order.size(); ++i)
+        scene.paint_order[i] = i;
+      std::stable_sort(scene.paint_order.begin(), scene.paint_order.end(),
+                       [&](size_t a, size_t b) {
+                         return cfg.objects[a].z < cfg.objects[b].z;
+                       });
+
+      app.scenes.push_back(std::move(scene));
+    }
   } else {
     app.canvas_width = args.canvas_width;
     app.canvas_height = args.canvas_height;
@@ -495,35 +653,40 @@ int main(int argc, char **argv) {
     node_names.reserve(kInputCount);
     target_objects.reserve(kInputCount);
 
+    Scene scene;
+    scene.render_slots.reserve(kInputCount);
     for (size_t idx = 0; idx < kInputCount; ++idx) {
-      app.inputs.emplace_back();
-      auto &in = app.inputs.back();
-      in.src_width = args.in_width[idx];
-      in.src_height = args.in_height[idx];
-      in.scale_x = args.in_scale[idx];
-      in.scale_y = args.in_scale[idx];
-      if (in.src_width == 0 || in.src_height == 0 || in.scale_x <= 0.0) {
+      auto &src = app.camera_sources[idx];
+      src.width = args.in_width[idx];
+      src.height = args.in_height[idx];
+      if (src.width == 0 || src.height == 0 || args.in_scale[idx] <= 0.0) {
         std::cerr << "invalid configuration for input " << idx << '\n';
         return 1;
       }
+      src.frame.assign(
+          static_cast<size_t>(src.width) * src.height * kBytesPerPixel, 0);
 
-      in.dst_x = idx == 0 ? 0 : app.canvas_width / 2;
-      in.dst_y = 0;
-      in.dst_width = std::min<uint32_t>(
-          static_cast<uint32_t>(in.src_width * in.scale_x), app.canvas_width / 2);
-      in.dst_height = std::min<uint32_t>(
-          static_cast<uint32_t>(in.src_height * in.scale_y), app.canvas_height);
-      build_sample_maps(in);
-
-      in.frame.assign(static_cast<size_t>(in.src_width) * in.src_height * kBytesPerPixel, 0);
+      RenderSlot slot;
+      slot.source = &src;
+      slot.scale_x = args.in_scale[idx];
+      slot.scale_y = args.in_scale[idx];
+      slot.dst_x = idx == 0 ? 0 : app.canvas_width / 2;
+      slot.dst_y = 0;
+      slot.dst_width = std::min<uint32_t>(
+          static_cast<uint32_t>(src.width * slot.scale_x), app.canvas_width / 2);
+      slot.dst_height = std::min<uint32_t>(
+          static_cast<uint32_t>(src.height * slot.scale_y), app.canvas_height);
+      build_sample_maps(slot, src.width, src.height);
+      scene.render_slots.push_back(std::move(slot));
 
       node_names.push_back("se.video-compositor.in" + std::to_string(idx));
       target_objects.push_back(args.in_target[idx]);
     }
+    scene.paint_order.resize(kInputCount);
+    for (size_t i = 0; i < kInputCount; ++i)
+      scene.paint_order[i] = i;
 
-    app.paint_order.resize(app.inputs.size());
-    for (size_t i = 0; i < app.paint_order.size(); ++i)
-      app.paint_order[i] = i;
+    app.scenes.push_back(std::move(scene));
   }
 
   pw_init(&argc, &argv);
@@ -534,15 +697,15 @@ int main(int argc, char **argv) {
   }
   auto *loop = pw_main_loop_get_loop(app.main_loop);
 
-  for (size_t idx = 0; idx < app.inputs.size(); ++idx) {
+  for (size_t idx = 0; idx < kInputCount; ++idx) {
     if (node_names[idx].empty())
-      continue; // image-backed slot, no PipeWire stream needed
-    auto &in = app.inputs[idx];
-    in.stream = connect_video_stream(loop, node_names[idx].c_str(),
-                                     "Stream/Input/Video", PW_DIRECTION_INPUT,
-                                     &input_stream_events, &in, in.src_width,
-                                     in.src_height, target_objects[idx]);
-    if (in.stream == nullptr)
+      continue;
+    auto &src = app.camera_sources[idx];
+    src.stream = connect_video_stream(loop, node_names[idx].c_str(),
+                                      "Stream/Input/Video", PW_DIRECTION_INPUT,
+                                      &input_stream_events, &src, src.width,
+                                      src.height, target_objects[idx]);
+    if (src.stream == nullptr)
       return 1;
   }
 
@@ -556,13 +719,13 @@ int main(int argc, char **argv) {
   pw_loop_add_signal(loop, SIGINT, on_quit_signal, &app);
   pw_loop_add_signal(loop, SIGTERM, on_quit_signal, &app);
   std::cout << "pw-video-compositor running (canvas " << app.canvas_width << "x"
-            << app.canvas_height << ")\n"
+            << app.canvas_height << ", " << app.scenes.size() << " scene(s))\n"
             << std::flush;
   pw_main_loop_run(app.main_loop);
 
-  for (auto &in : app.inputs)
-    if (in.stream != nullptr)
-      pw_stream_destroy(in.stream);
+  for (auto &src : app.camera_sources)
+    if (src.stream != nullptr)
+      pw_stream_destroy(src.stream);
   pw_stream_destroy(app.out_stream);
   pw_main_loop_destroy(app.main_loop);
   pw_deinit();

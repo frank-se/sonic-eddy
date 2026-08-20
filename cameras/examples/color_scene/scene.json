@@ -1,0 +1,14 @@
+{
+  "name": "Color Scene",
+  "canvas_width": 1280,
+  "canvas_height": 720,
+  "objects": [
+    {
+      "type": "image",
+      "position": [512, 232, 0],
+      "width": 256,
+      "height": 256,
+      "image_file": "logo.png"
+    }
+  ]
+}
