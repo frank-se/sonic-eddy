@@ -1,48 +1,41 @@
 using System;
 using System.Windows.Input;
+using Avalonia.Threading;
 using Fr.Sonic.Compositor;
 using ReactiveUI;
 using SonicEddy.Services.StreamingControl;
 
 namespace SonicEddy.ViewModels.StreamingControlViewModels;
 
-// Local, in-memory "current value" state for one object - the compositor
-// never echoes object_params back (see project_scene_file_format memory),
-// so this view model is the sole source of truth for what's currently
-// shown, seeded from the scene file's baseline. Every setter sends only
-// the field that changed, matching the compositor's partial-update design.
-public sealed class ObjectControlPanelViewModel : ViewModelBase
+// Reads/writes through IStreamingControlService's shared ObjectState cache
+// (not private fields) - the compositor never echoes object_params back,
+// so that cache, not this view model, is the source of truth for an
+// object's "current" values. This matters once the gamepad dispatcher can
+// also change the same object: both writers go through the same cache and
+// notify each other via ObjectStateChanged, so this window always shows
+// whatever's actually current, not a stale scene-file baseline.
+public sealed class ObjectControlPanelViewModel : ViewModelBase, IDisposable
 {
     private const int NudgeStep = 10;
 
+    private readonly IStreamingControlService _service;
     private readonly CompositorClient _client;
+    private readonly int _sceneIndex;
     private readonly int _objectIndex;
-    private readonly int _objectWidth;
-    private readonly int _objectHeight;
+    private readonly ObjectState _state;
 
-    private int _x;
-    private int _y;
-    private bool _visible = true;
-    private bool _flipHorizontal;
-    private bool _flipVertical;
-    private float _redGain = 1.0f;
-    private float _greenGain = 1.0f;
-    private float _blueGain = 1.0f;
-
-    public ObjectControlPanelViewModel(CompositorClient client, int objectIndex,
-        SceneFileObject baseline, int canvasWidth, int canvasHeight)
+    public ObjectControlPanelViewModel(IStreamingControlService service, CompositorClient client,
+        int sceneIndex, int objectIndex, SceneFileObject baseline, int canvasWidth, int canvasHeight)
     {
+        _service = service;
         _client = client;
+        _sceneIndex = sceneIndex;
         _objectIndex = objectIndex;
-        _objectWidth = baseline.Width;
-        _objectHeight = baseline.Height;
         MaxX = Math.Max(0, canvasWidth - baseline.Width);
         MaxY = Math.Max(0, canvasHeight - baseline.Height);
 
-        _x = Math.Clamp(baseline.X, 0, MaxX);
-        _y = Math.Clamp(baseline.Y, 0, MaxY);
-        _flipHorizontal = baseline.FlipHorizontal;
-        _flipVertical = baseline.FlipVertical;
+        _state = service.GetOrCreateObjectState(sceneIndex, objectIndex, baseline);
+        _service.ObjectStateChanged += OnObjectStateChanged;
 
         MoveUpCommand = ReactiveCommand.Create(() => Nudge(0, -NudgeStep));
         MoveDownCommand = ReactiveCommand.Create(() => Nudge(0, NudgeStep));
@@ -61,83 +54,91 @@ public sealed class ObjectControlPanelViewModel : ViewModelBase
 
     public int X
     {
-        get => _x;
+        get => _state.X;
         set
         {
             var clamped = Math.Clamp(value, 0, MaxX);
-            this.RaiseAndSetIfChanged(ref _x, clamped);
-            SendUpdate(new { dst_x = clamped });
+            if (clamped == _state.X) return;
+            _service.UpdateObjectState(_sceneIndex, _objectIndex, s => s.X = clamped);
+            _client.SetObjectParams(_objectIndex, new { dst_x = clamped });
         }
     }
 
     public int Y
     {
-        get => _y;
+        get => _state.Y;
         set
         {
             var clamped = Math.Clamp(value, 0, MaxY);
-            this.RaiseAndSetIfChanged(ref _y, clamped);
-            SendUpdate(new { dst_y = clamped });
+            if (clamped == _state.Y) return;
+            _service.UpdateObjectState(_sceneIndex, _objectIndex, s => s.Y = clamped);
+            _client.SetObjectParams(_objectIndex, new { dst_y = clamped });
         }
     }
 
     public bool Visible
     {
-        get => _visible;
+        get => _state.Visible;
         set
         {
-            this.RaiseAndSetIfChanged(ref _visible, value);
-            SendUpdate(new { visible = value });
+            if (value == _state.Visible) return;
+            _service.UpdateObjectState(_sceneIndex, _objectIndex, s => s.Visible = value);
+            _client.SetObjectParams(_objectIndex, new { visible = value });
         }
     }
 
     public bool FlipHorizontal
     {
-        get => _flipHorizontal;
+        get => _state.FlipHorizontal;
         set
         {
-            this.RaiseAndSetIfChanged(ref _flipHorizontal, value);
-            SendUpdate(new { flip_horizontal = value });
+            if (value == _state.FlipHorizontal) return;
+            _service.UpdateObjectState(_sceneIndex, _objectIndex, s => s.FlipHorizontal = value);
+            _client.SetObjectParams(_objectIndex, new { flip_horizontal = value });
         }
     }
 
     public bool FlipVertical
     {
-        get => _flipVertical;
+        get => _state.FlipVertical;
         set
         {
-            this.RaiseAndSetIfChanged(ref _flipVertical, value);
-            SendUpdate(new { flip_vertical = value });
+            if (value == _state.FlipVertical) return;
+            _service.UpdateObjectState(_sceneIndex, _objectIndex, s => s.FlipVertical = value);
+            _client.SetObjectParams(_objectIndex, new { flip_vertical = value });
         }
     }
 
     public float RedGain
     {
-        get => _redGain;
+        get => _state.RedGain;
         set
         {
-            this.RaiseAndSetIfChanged(ref _redGain, value);
-            SendUpdate(new { red_gain = value });
+            if (value.Equals(_state.RedGain)) return;
+            _service.UpdateObjectState(_sceneIndex, _objectIndex, s => s.RedGain = value);
+            _client.SetObjectParams(_objectIndex, new { red_gain = value });
         }
     }
 
     public float GreenGain
     {
-        get => _greenGain;
+        get => _state.GreenGain;
         set
         {
-            this.RaiseAndSetIfChanged(ref _greenGain, value);
-            SendUpdate(new { green_gain = value });
+            if (value.Equals(_state.GreenGain)) return;
+            _service.UpdateObjectState(_sceneIndex, _objectIndex, s => s.GreenGain = value);
+            _client.SetObjectParams(_objectIndex, new { green_gain = value });
         }
     }
 
     public float BlueGain
     {
-        get => _blueGain;
+        get => _state.BlueGain;
         set
         {
-            this.RaiseAndSetIfChanged(ref _blueGain, value);
-            SendUpdate(new { blue_gain = value });
+            if (value.Equals(_state.BlueGain)) return;
+            _service.UpdateObjectState(_sceneIndex, _objectIndex, s => s.BlueGain = value);
+            _client.SetObjectParams(_objectIndex, new { blue_gain = value });
         }
     }
 
@@ -160,5 +161,24 @@ public sealed class ObjectControlPanelViewModel : ViewModelBase
         BlueGain = 1.0f;
     }
 
-    private void SendUpdate(object fields) => _client.SetObjectParams(_objectIndex, fields);
+    private void OnObjectStateChanged(int sceneIndex, int objectIndex)
+    {
+        if (sceneIndex != _sceneIndex || objectIndex != _objectIndex)
+            return;
+
+        // May fire from the gamepad dispatcher's own background thread.
+        Dispatcher.UIThread.Post(() =>
+        {
+            this.RaisePropertyChanged(nameof(X));
+            this.RaisePropertyChanged(nameof(Y));
+            this.RaisePropertyChanged(nameof(Visible));
+            this.RaisePropertyChanged(nameof(FlipHorizontal));
+            this.RaisePropertyChanged(nameof(FlipVertical));
+            this.RaisePropertyChanged(nameof(RedGain));
+            this.RaisePropertyChanged(nameof(GreenGain));
+            this.RaisePropertyChanged(nameof(BlueGain));
+        });
+    }
+
+    public void Dispose() => _service.ObjectStateChanged -= OnObjectStateChanged;
 }

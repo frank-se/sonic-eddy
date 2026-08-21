@@ -14,6 +14,7 @@ public sealed class StreamingControlService : IStreamingControlService, IDisposa
 
     private readonly object _lock = new();
     private readonly ConcurrentDictionary<string, Task<SceneFileConfig?>> _sceneFileCache = new();
+    private readonly ConcurrentDictionary<(int, int), ObjectState> _objectStates = new();
     private CompositorClient? _client;
     private bool _initialized;
 
@@ -52,6 +53,26 @@ public sealed class StreamingControlService : IStreamingControlService, IDisposa
 
     public Task<SceneFileConfig?> LoadSceneFileAsync(string path) =>
         _sceneFileCache.GetOrAdd(path, SceneFile.LoadAsync);
+
+    public event Action<int, int>? ObjectStateChanged;
+
+    public ObjectState GetOrCreateObjectState(int sceneIndex, int objectIndex, SceneFileObject baseline) =>
+        _objectStates.GetOrAdd((sceneIndex, objectIndex), _ => new ObjectState
+        {
+            X = baseline.X,
+            Y = baseline.Y,
+            FlipHorizontal = baseline.FlipHorizontal,
+            FlipVertical = baseline.FlipVertical,
+        });
+
+    public void UpdateObjectState(int sceneIndex, int objectIndex, Action<ObjectState> mutate)
+    {
+        if (!_objectStates.TryGetValue((sceneIndex, objectIndex), out var state))
+            return; // must have been read (GetOrCreateObjectState) before it can be mutated
+
+        mutate(state);
+        ObjectStateChanged?.Invoke(sceneIndex, objectIndex);
+    }
 
     private void OnNodeAdded(Node node)
     {

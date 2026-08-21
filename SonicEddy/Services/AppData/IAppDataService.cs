@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using SonicEddy.Contracts.CameraRouter;
+using SonicEddy.Contracts.Gamepad;
 using SonicEddy.Contracts.FilterGraph;
 using SonicEddy.Contracts.MidiRouter;
 using SonicEddy.Contracts.MidiSync;
@@ -47,6 +48,10 @@ public interface IAppDataService
     Task StoreCameraRouterConfig(CameraRouterConfig config);
 
     Task<CameraRouterConfig?> LoadCameraRouterConfig();
+
+    Task StoreGamepadBindingsConfig(GamepadBindingsConfig config);
+
+    Task<GamepadBindingsConfig?> LoadGamepadBindingsConfig();
 
     Task StoreVirtualInputsConfig(VirtualInputsConfig config);
 

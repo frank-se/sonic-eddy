@@ -12,6 +12,7 @@ using Serilog;
 using SonicEddy.Services.AppData;
 using SonicEddy.Services.CameraRouter;
 using SonicEddy.Services.StreamingControl;
+using SonicEddy.Services.Gamepad;
 using SonicEddy.Services.Midi;
 using SonicEddy.Services.MidiRouter;
 using SonicEddy.Services.MidiSync;
@@ -224,6 +225,11 @@ public class App : Application
         Locator.CurrentMutable.Register<IStreamingControlService>(() =>
             streamingControlService);
         _ = streamingControlService.InitializeAsync();
+
+        var gamepadService = new GamepadService(appDataService, streamingControlService);
+        Locator.CurrentMutable.Register<IGamepadService>(() =>
+            gamepadService);
+        _ = gamepadService.InitializeAsync();
 
         var midiSyncLinkService = new MidiSyncLinkService(appDataService);
         Locator.CurrentMutable.Register<IMidiSyncLinkService>(() =>

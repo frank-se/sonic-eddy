@@ -16,4 +16,17 @@ public interface IStreamingControlService
     event Action? ConnectionChanged;
     Task InitializeAsync();
     Task<SceneFileConfig?> LoadSceneFileAsync(string path);
+
+    // Shared per-object "current value" cache - see ObjectState. `baseline`
+    // seeds a first-time lookup from the scene file; subsequent calls for
+    // the same (sceneIndex, objectIndex) ignore it and return the existing
+    // (possibly already-modified) state.
+    ObjectState GetOrCreateObjectState(int sceneIndex, int objectIndex, SceneFileObject baseline);
+
+    // Applies `mutate` to the object's state and raises ObjectStateChanged -
+    // the only way callers should modify an ObjectState, so every writer
+    // (the window, the gamepad dispatcher) notifies every other observer.
+    void UpdateObjectState(int sceneIndex, int objectIndex, Action<ObjectState> mutate);
+
+    event Action<int, int>? ObjectStateChanged; // (sceneIndex, objectIndex)
 }

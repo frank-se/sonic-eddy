@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using ProtoBuf;
 using SonicEddy.Contracts.CameraRouter;
+using SonicEddy.Contracts.Gamepad;
 using SonicEddy.Contracts.FilterGraph;
 using SonicEddy.Contracts.MidiRouter;
 using SonicEddy.Contracts.MidiSync;
@@ -145,6 +146,26 @@ public class AppDataService(
         var bytes = await File.ReadAllBytesAsync(filePath);
         using var memoryStream = new MemoryStream(bytes);
         return Serializer.Deserialize<CameraRouterConfig>(memoryStream);
+    }
+
+    public async Task StoreGamepadBindingsConfig(GamepadBindingsConfig config)
+    {
+        var filePath =
+            Path.Combine(preferencesFolderPath, "gamepad-bindings.grpc");
+        await using var file = File.Create(filePath);
+        Serializer.Serialize(file, config);
+        await file.FlushAsync();
+    }
+
+    public async Task<GamepadBindingsConfig?> LoadGamepadBindingsConfig()
+    {
+        var filePath =
+            Path.Combine(preferencesFolderPath, "gamepad-bindings.grpc");
+        if (!File.Exists(filePath)) return null;
+
+        var bytes = await File.ReadAllBytesAsync(filePath);
+        using var memoryStream = new MemoryStream(bytes);
+        return Serializer.Deserialize<GamepadBindingsConfig>(memoryStream);
     }
 
     public async Task StoreVirtualInputsConfig(VirtualInputsConfig config)

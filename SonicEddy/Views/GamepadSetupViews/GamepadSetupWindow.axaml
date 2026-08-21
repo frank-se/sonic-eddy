@@ -1,0 +1,35 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:gamepadSetupViewModels="clr-namespace:SonicEddy.ViewModels.GamepadSetupViewModels"
+        mc:Ignorable="d" d:DesignWidth="480" d:DesignHeight="520"
+        Width="480" Height="520"
+        x:Class="SonicEddy.Views.GamepadSetupViews.GamepadSetupWindow"
+        x:DataType="gamepadSetupViewModels:GamepadSetupViewModel"
+        Title="Setup Gamepad">
+
+    <DockPanel Margin="12">
+        <TextBlock DockPanel.Dock="Top" Margin="0,0,0,8"
+                   Text="{Binding IsControllerConnected, StringFormat='Controller connected: {0}'}" />
+
+        <ScrollViewer>
+            <ItemsControl ItemsSource="{Binding Rows}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="gamepadSetupViewModels:GamepadActionRowViewModel">
+                        <Grid ColumnDefinitions="200,*,90" Margin="0,4"
+                              VerticalAlignment="Center">
+                            <TextBlock Grid.Column="0" Text="{Binding DisplayName}"
+                                       VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1" Text="{Binding BindingText}"
+                                       VerticalAlignment="Center" />
+                            <Button Grid.Column="2" Content="Bind..."
+                                    Command="{Binding BindCommand}"
+                                    IsEnabled="{Binding !IsCapturing}" />
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </DockPanel>
+</Window>

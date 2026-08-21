@@ -18,6 +18,7 @@ public sealed class StreamingControlViewModel : ViewModelBase, IDisposable
     private readonly IStreamingControlService _service;
     private CompositorClient? _client;
     private SceneFileConfig? _activeSceneFile;
+    private int _activeSceneIndex = -1;
 
     public StreamingControlViewModel()
     {
@@ -72,6 +73,7 @@ public sealed class StreamingControlViewModel : ViewModelBase, IDisposable
         _client = client;
         IsConnected = client is not null;
         _activeSceneFile = null;
+        SelectedObjectControls?.Dispose();
         SelectedObjectControls = null;
         Scenes = BuildEmptySceneSlots();
         CameraObjects = BuildEmptyObjectSlots(MaxCameraObjects);
@@ -111,6 +113,7 @@ public sealed class StreamingControlViewModel : ViewModelBase, IDisposable
             }
         }
         Scenes = slots;
+        _activeSceneIndex = parameters.ActiveSceneIndex;
 
         if (parameters.ActiveSceneIndex >= 0 &&
             parameters.ActiveSceneIndex < parameters.Scenes.Count)
@@ -129,6 +132,7 @@ public sealed class StreamingControlViewModel : ViewModelBase, IDisposable
     private void RebuildObjectSlots(SceneFileConfig? file)
     {
         _activeSceneFile = file;
+        SelectedObjectControls?.Dispose();
         SelectedObjectControls = null;
 
         var cameras = new ObservableCollection<ObjectSlotViewModel>();
@@ -160,8 +164,9 @@ public sealed class StreamingControlViewModel : ViewModelBase, IDisposable
         if (_client is null || _activeSceneFile is null)
             return;
 
-        SelectedObjectControls = new ObjectControlPanelViewModel(_client, flatIndex, baseline,
-            _activeSceneFile.CanvasWidth, _activeSceneFile.CanvasHeight);
+        SelectedObjectControls?.Dispose();
+        SelectedObjectControls = new ObjectControlPanelViewModel(_service, _client, _activeSceneIndex,
+            flatIndex, baseline, _activeSceneFile.CanvasWidth, _activeSceneFile.CanvasHeight);
     }
 
     private static ObservableCollection<SceneSlotViewModel> BuildEmptySceneSlots()
@@ -185,5 +190,6 @@ public sealed class StreamingControlViewModel : ViewModelBase, IDisposable
         _service.ConnectionChanged -= OnConnectionChanged;
         if (_client is not null)
             _client.ParamsChanged -= OnParamsChanged;
+        SelectedObjectControls?.Dispose();
     }
 }

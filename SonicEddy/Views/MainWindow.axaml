@@ -106,6 +106,8 @@
                           Command="{Binding ShowCameraRouterWindow}" />
                 <MenuItem Header="Streaming Controls ..."
                           Command="{Binding ShowStreamingControlWindow}" />
+                <MenuItem Header="Setup Gamepad ..."
+                          Command="{Binding ShowGamepadSetupWindow}" />
             </MenuItem>
 
             <MenuItem Header="Tools">

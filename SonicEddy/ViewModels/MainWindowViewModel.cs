@@ -30,6 +30,7 @@ using SonicEddy.ViewModels.MidiParameterChangeMonitorViewModels;
 using SonicEddy.ViewModels.MidiRouterViewModels;
 using SonicEddy.ViewModels.CameraRouterViewModels;
 using SonicEddy.ViewModels.StreamingControlViewModels;
+using SonicEddy.ViewModels.GamepadSetupViewModels;
 using SonicEddy.ViewModels.MixerViewModelsV2;
 using SonicEddy.ViewModels.MixerPersistenceViewModels;
 using SonicEddy.ViewModels.ModuleManagerViewModels;
@@ -58,6 +59,7 @@ using SonicEddy.Views.MidiParameterChangeMonitorView;
 using SonicEddy.Views.MidiRouterViews;
 using SonicEddy.Views.CameraRouterViews;
 using SonicEddy.Views.StreamingControlViews;
+using SonicEddy.Views.GamepadSetupViews;
 using SonicEddy.Views.ModuleManagerViews;
 using SonicEddy.Views.ObjectBrowserViews;
 using SonicEddy.Views.PreferencesViews;
@@ -157,6 +159,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     private Window? _midiRouterWindow;
     private Window? _cameraRouterWindow;
     private Window? _streamingControlWindow;
+    private Window? _gamepadSetupWindow;
     private readonly SemaphoreSlim _layerInitializationLock = new(1, 1);
     private readonly SemaphoreSlim _globalMasterInitializationLock = new(1, 1);
     private readonly SemaphoreSlim _micChannelsInitializationLock = new(1, 1);
@@ -1029,6 +1032,21 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         };
 
         _streamingControlWindow.Show();
+    }
+
+    public void ShowGamepadSetupWindow()
+    {
+        _logger.LogTrace("ShowGamepadSetupWindow");
+
+        if (_gamepadSetupWindow is not null &&
+            _gamepadSetupWindow.IsVisible) return;
+
+        _gamepadSetupWindow = new GamepadSetupWindow()
+        {
+            DataContext = new GamepadSetupViewModel()
+        };
+
+        _gamepadSetupWindow.Show();
     }
 
     public void ShowVirtualInputsWindow()
