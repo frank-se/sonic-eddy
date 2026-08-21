@@ -60,6 +60,13 @@ struct FrameSource {
 // sample, the precomputed nearest-neighbor sample maps, and where it lands
 // on the canvas. Everything here is sized and built once, up front, so
 // process() never allocates.
+// Everything below (except `source`, which is fixed at build time) is
+// live-controllable via the "object_params" Props channel - see
+// handle_output_props(). layout_mutex guards all of it uniformly (rather
+// than mixing lock-free atomics for the cheap fields with a mutex for the
+// ones that need col_map/row_map rebuilt) so there's exactly one
+// synchronization story per RenderSlot, matching FrameSource::frame_mutex's
+// existing "lock for the whole composite_input body" precedent.
 struct RenderSlot {
   FrameSource *source = nullptr; // shared (camera) or owned via App::image_sources (image)
 
@@ -67,13 +74,18 @@ struct RenderSlot {
   double scale_y = 1.0;
   bool flip_horizontal = false;
   bool flip_vertical = false;
-  uint32_t rotate = 0; // 0, 90, 180 or 270
+  uint32_t rotate = 0; // 0, 90, 180 or 270 - fixed at build time, no live control yet
   bool transposed = false; // true for rotate 90/270 - set by build_sample_maps
 
   uint32_t dst_x = 0;
   uint32_t dst_y = 0;
   uint32_t dst_width = 0;
   uint32_t dst_height = 0;
+
+  bool visible = true;
+  float red_gain = 1.0f;
+  float green_gain = 1.0f;
+  float blue_gain = 1.0f;
 
   // Non-transposed: col_map (size dst_width) -> source column, row_map
   // (size dst_height) -> source row. Transposed (90/270 rotation): the
@@ -82,11 +94,16 @@ struct RenderSlot {
   // rotation can't be expressed as two independent per-axis maps.
   std::vector<uint32_t> col_map;
   std::vector<uint32_t> row_map;
+
+  std::mutex layout_mutex;
 };
 
 struct Scene {
   std::string name;
-  std::vector<RenderSlot> render_slots;
+  std::string file; // the --scene path this was loaded from (empty in CLI mode)
+  // deque, not vector: RenderSlot holds a std::mutex (non-movable) - same
+  // reasoning as App::image_sources below.
+  std::deque<RenderSlot> render_slots;
   std::vector<size_t> paint_order; // indices into render_slots, back-to-front
 };
 
@@ -104,7 +121,14 @@ struct App {
   // existing elements on growth, so both problems go away.
   std::deque<FrameSource> image_sources;
 
-  std::vector<Scene> scenes;
+  // deque, not vector: Scene holds a deque<RenderSlot>, and RenderSlot's
+  // mutex makes it neither copyable nor move-noexcept - vector's growth
+  // path can fall back to copy-constructing Scene (which would try to
+  // copy-construct each RenderSlot) unless Scene's move is provably
+  // noexcept, which the compiler doesn't reliably infer through two
+  // levels of container nesting. deque never needs to move/copy existing
+  // elements on growth, sidestepping the question entirely.
+  std::deque<Scene> scenes;
   std::atomic<int> active_scene_index{0}; // written from param_changed (control thread), read in process() (RT thread)
   bool props_enabled = false; // true only in scene mode - CLI mode has no scene list to expose
 
@@ -181,11 +205,25 @@ void on_input_process(void *data) {
   pw_stream_queue_buffer(source.stream, pw_buffer);
 }
 
+inline uint8_t apply_gain(uint8_t value, float gain) {
+  return static_cast<uint8_t>(
+      std::clamp(static_cast<float>(value) * gain, 0.0f, 255.0f));
+}
+
 void composite_input(RenderSlot &slot, uint8_t *dst, uint32_t dst_stride) {
+  std::lock_guard<std::mutex> layout_lock(slot.layout_mutex);
+  if (!slot.visible)
+    return;
+
   auto &source = *slot.source;
   std::lock_guard<std::mutex> lock(source.frame_mutex);
   if (!source.has_frame)
     return;
+
+  // Fast path: identity gain (the default) keeps today's plain memcpy -
+  // no performance regression for objects that don't use color control.
+  const bool identity_gain =
+      slot.red_gain == 1.0f && slot.green_gain == 1.0f && slot.blue_gain == 1.0f;
 
   const uint32_t src_stride = source.width * kBytesPerPixel;
   for (uint32_t y = 0; y < slot.dst_height; ++y) {
@@ -197,8 +235,15 @@ void composite_input(RenderSlot &slot, uint8_t *dst, uint32_t dst_stride) {
       for (uint32_t x = 0; x < slot.dst_width; ++x) {
         const uint8_t *src_px =
             src_row + static_cast<size_t>(slot.col_map[x]) * kBytesPerPixel;
-        std::memcpy(dst_row + static_cast<size_t>(x) * kBytesPerPixel, src_px,
-                    kBytesPerPixel);
+        uint8_t *dst_px = dst_row + static_cast<size_t>(x) * kBytesPerPixel;
+        if (identity_gain) {
+          std::memcpy(dst_px, src_px, kBytesPerPixel);
+        } else {
+          dst_px[0] = apply_gain(src_px[0], slot.red_gain);
+          dst_px[1] = apply_gain(src_px[1], slot.green_gain);
+          dst_px[2] = apply_gain(src_px[2], slot.blue_gain);
+          dst_px[3] = src_px[3];
+        }
       }
     } else {
       const uint32_t src_col = slot.row_map[y];
@@ -207,8 +252,15 @@ void composite_input(RenderSlot &slot, uint8_t *dst, uint32_t dst_stride) {
         const uint8_t *src_px = source.frame.data() +
             static_cast<size_t>(src_row) * src_stride +
             static_cast<size_t>(src_col) * kBytesPerPixel;
-        std::memcpy(dst_row + static_cast<size_t>(x) * kBytesPerPixel, src_px,
-                    kBytesPerPixel);
+        uint8_t *dst_px = dst_row + static_cast<size_t>(x) * kBytesPerPixel;
+        if (identity_gain) {
+          std::memcpy(dst_px, src_px, kBytesPerPixel);
+        } else {
+          dst_px[0] = apply_gain(src_px[0], slot.red_gain);
+          dst_px[1] = apply_gain(src_px[1], slot.green_gain);
+          dst_px[2] = apply_gain(src_px[2], slot.blue_gain);
+          dst_px[3] = src_px[3];
+        }
       }
     }
   }
@@ -273,10 +325,10 @@ void publish_scene_params(App &app) {
   if (app.out_stream == nullptr)
     return;
 
-  nlohmann::json names = nlohmann::json::array();
+  nlohmann::json scenes_array = nlohmann::json::array();
   for (const auto &scene : app.scenes)
-    names.push_back(scene.name);
-  const std::string scenes_json = names.dump();
+    scenes_array.push_back({{"name", scene.name}, {"file", scene.file}});
+  const std::string scenes_json = scenes_array.dump();
 
   spa_pod_builder builder{};
   spa_pod_builder_init(&builder, app.params_buffer.data(), app.params_buffer.size());
@@ -301,12 +353,80 @@ void publish_scene_params(App &app) {
   pw_stream_update_params(app.out_stream, params, 1);
 }
 
+// Applies a partial per-object update from the "object_params" JSON blob,
+// e.g. {"object":0,"dst_x":100,"dst_y":50,"visible":false,"red_gain":0.2}.
+// Every field except "object" is optional - only present keys change.
+// Treated as untrusted external input, not a startup config error: an
+// unknown/out-of-range object index is silently ignored, never crashes or
+// spams stderr. Per the "Props is a REST API for the backend" framing,
+// this function only ever accepts final, absolute values (e.g. dst_x/
+// dst_y) - any ABS/REL, "unify" or other derived UX logic is SonicEddy's
+// job, not this one's.
+void apply_object_params(App &app, const std::string &json_text) {
+  nlohmann::json command;
+  try {
+    command = nlohmann::json::parse(json_text);
+  } catch (const nlohmann::json::exception &) {
+    return;
+  }
+  if (!command.is_object() || !command.contains("object") ||
+      !command["object"].is_number_integer())
+    return;
+
+  const int scene_idx = app.active_scene_index.load(std::memory_order_relaxed);
+  if (scene_idx < 0 || static_cast<size_t>(scene_idx) >= app.scenes.size())
+    return;
+  auto &scene = app.scenes[scene_idx];
+
+  const int object_idx = command["object"].get<int>();
+  if (object_idx < 0 || static_cast<size_t>(object_idx) >= scene.render_slots.size())
+    return;
+  auto &slot = scene.render_slots[object_idx];
+
+  std::lock_guard<std::mutex> lock(slot.layout_mutex);
+
+  if (command.contains("dst_x") && command["dst_x"].is_number()) {
+    const uint32_t requested = command["dst_x"].get<uint32_t>();
+    slot.dst_x = app.canvas_width > slot.dst_width
+                     ? std::min(requested, app.canvas_width - slot.dst_width)
+                     : 0;
+  }
+  if (command.contains("dst_y") && command["dst_y"].is_number()) {
+    const uint32_t requested = command["dst_y"].get<uint32_t>();
+    slot.dst_y = app.canvas_height > slot.dst_height
+                     ? std::min(requested, app.canvas_height - slot.dst_height)
+                     : 0;
+  }
+  if (command.contains("visible") && command["visible"].is_boolean())
+    slot.visible = command["visible"].get<bool>();
+  if (command.contains("red_gain") && command["red_gain"].is_number())
+    slot.red_gain = command["red_gain"].get<float>();
+  if (command.contains("green_gain") && command["green_gain"].is_number())
+    slot.green_gain = command["green_gain"].get<float>();
+  if (command.contains("blue_gain") && command["blue_gain"].is_number())
+    slot.blue_gain = command["blue_gain"].get<float>();
+
+  bool rebuild = false;
+  if (command.contains("flip_horizontal") && command["flip_horizontal"].is_boolean()) {
+    slot.flip_horizontal = command["flip_horizontal"].get<bool>();
+    rebuild = true;
+  }
+  if (command.contains("flip_vertical") && command["flip_vertical"].is_boolean()) {
+    slot.flip_vertical = command["flip_vertical"].get<bool>();
+    rebuild = true;
+  }
+  if (rebuild)
+    build_sample_maps(slot, slot.source->width, slot.source->height);
+}
+
 // Receives external Props updates (e.g. `pw-cli set-param <id> Props
 // "{ params = [ \"active_scene_index\" 1 ] }"`), mirroring
 // Ducker::handle_audio_params()/handle_param_value(): walk the
 // SPA_PROP_params struct treating even entries as keys and odd entries as
-// values. Only "active_scene_index" is settable; the scene list itself is
-// read-only (only ever published, never accepted from outside).
+// values. "active_scene_index" (int) switches the live scene;
+// "object_params" (JSON string) is the generic per-object update channel -
+// see apply_object_params(). The scene list itself is read-only (only
+// ever published, never accepted from outside).
 void handle_output_props(App &app, const spa_pod *param) {
   const auto *params_prop = spa_pod_find_prop(param, nullptr, SPA_PROP_params);
   if (params_prop == nullptr || params_prop->value.type != SPA_TYPE_Struct)
@@ -330,6 +450,11 @@ void handle_output_props(App &app, const spa_pod *param) {
         app.active_scene_index.store(clamped, std::memory_order_relaxed);
         changed = true;
       }
+    } else if (key != nullptr && std::strcmp(key, "object_params") == 0) {
+      const char *json_text = nullptr;
+      if (child->type == SPA_TYPE_String &&
+          spa_pod_get_string(child, &json_text) == 0 && json_text != nullptr)
+        apply_object_params(app, json_text);
     }
     ++index;
   }
@@ -573,14 +698,16 @@ int main(int argc, char **argv) {
     for (size_t idx = 0; idx < kInputCount; ++idx)
       node_names[idx] = "se.video-compositor.in" + std::to_string(idx);
 
-    app.scenes.reserve(scene_configs.size());
-    for (const auto &cfg : scene_configs) {
-      Scene scene;
+    for (size_t scene_i = 0; scene_i < scene_configs.size(); ++scene_i) {
+      const auto &cfg = scene_configs[scene_i];
+      app.scenes.emplace_back();
+      auto &scene = app.scenes.back();
       scene.name = cfg.name;
-      scene.render_slots.reserve(cfg.objects.size());
+      scene.file = args.scene_paths[scene_i];
 
       for (const auto &object : cfg.objects) {
-        RenderSlot slot;
+        scene.render_slots.emplace_back();
+        auto &slot = scene.render_slots.back();
 
         slot.dst_x = object.x < 0 ? 0 : static_cast<uint32_t>(object.x);
         slot.dst_y = object.y < 0 ? 0 : static_cast<uint32_t>(object.y);
@@ -632,8 +759,6 @@ int main(int argc, char **argv) {
         slot.scale_x = slot.dst_width / static_cast<double>(rotated_src_width);
         slot.scale_y = slot.dst_height / static_cast<double>(rotated_src_height);
         build_sample_maps(slot, src_width, src_height);
-
-        scene.render_slots.push_back(std::move(slot));
       }
 
       scene.paint_order.resize(scene.render_slots.size());
@@ -643,8 +768,6 @@ int main(int argc, char **argv) {
                        [&](size_t a, size_t b) {
                          return cfg.objects[a].z < cfg.objects[b].z;
                        });
-
-      app.scenes.push_back(std::move(scene));
     }
   } else {
     app.canvas_width = args.canvas_width;
@@ -653,8 +776,8 @@ int main(int argc, char **argv) {
     node_names.reserve(kInputCount);
     target_objects.reserve(kInputCount);
 
-    Scene scene;
-    scene.render_slots.reserve(kInputCount);
+    app.scenes.emplace_back();
+    auto &scene = app.scenes.back();
     for (size_t idx = 0; idx < kInputCount; ++idx) {
       auto &src = app.camera_sources[idx];
       src.width = args.in_width[idx];
@@ -666,7 +789,8 @@ int main(int argc, char **argv) {
       src.frame.assign(
           static_cast<size_t>(src.width) * src.height * kBytesPerPixel, 0);
 
-      RenderSlot slot;
+      scene.render_slots.emplace_back();
+      auto &slot = scene.render_slots.back();
       slot.source = &src;
       slot.scale_x = args.in_scale[idx];
       slot.scale_y = args.in_scale[idx];
@@ -677,7 +801,6 @@ int main(int argc, char **argv) {
       slot.dst_height = std::min<uint32_t>(
           static_cast<uint32_t>(src.height * slot.scale_y), app.canvas_height);
       build_sample_maps(slot, src.width, src.height);
-      scene.render_slots.push_back(std::move(slot));
 
       node_names.push_back("se.video-compositor.in" + std::to_string(idx));
       target_objects.push_back(args.in_target[idx]);
@@ -685,8 +808,6 @@ int main(int argc, char **argv) {
     scene.paint_order.resize(kInputCount);
     for (size_t i = 0; i < kInputCount; ++i)
       scene.paint_order[i] = i;
-
-    app.scenes.push_back(std::move(scene));
   }
 
   pw_init(&argc, &argv);

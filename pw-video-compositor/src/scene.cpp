@@ -1,5 +1,6 @@
 #include "scene.hpp"
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -11,6 +12,10 @@ namespace scene {
 namespace {
 
 using nlohmann::json;
+
+// Soft UI limit, enforced here so a scene never has more images than a
+// SonicEddy object picker can offer slots for.
+constexpr size_t kMaxImagesPerScene = 10;
 
 bool parse_rotate(const json &object, uint32_t &out, const std::string &context) {
   if (!object.contains("rotate")) {
@@ -143,6 +148,15 @@ std::optional<SceneConfig> load_scene(const std::string &path) {
       return std::nullopt;
     }
     config.objects.push_back(std::move(object));
+  }
+
+  const auto image_count = std::count_if(
+      config.objects.begin(), config.objects.end(),
+      [](const SceneObject &object) { return object.type == ObjectType::Image; });
+  if (static_cast<size_t>(image_count) > kMaxImagesPerScene) {
+    std::cerr << "scene: " << image_count << " image objects exceeds the max of "
+               << kMaxImagesPerScene << " per scene\n";
+    return std::nullopt;
   }
 
   return config;
