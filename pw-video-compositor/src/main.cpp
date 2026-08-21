@@ -837,6 +837,13 @@ int main(int argc, char **argv) {
   if (app.out_stream == nullptr)
     return 1;
 
+  // Also publish right away, not just reactively once a consumer links and
+  // negotiates a format (on_output_param_changed's SPA_PARAM_Format branch)
+  // - a control UI needs to read the scene list before any video consumer
+  // exists, not only after one happens to connect first.
+  if (app.props_enabled)
+    publish_scene_params(app);
+
   pw_loop_add_signal(loop, SIGINT, on_quit_signal, &app);
   pw_loop_add_signal(loop, SIGTERM, on_quit_signal, &app);
   std::cout << "pw-video-compositor running (canvas " << app.canvas_width << "x"

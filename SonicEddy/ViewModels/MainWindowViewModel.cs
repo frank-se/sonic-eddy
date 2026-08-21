@@ -29,6 +29,7 @@ using SonicEddy.ViewModels.MetadataViewModels;
 using SonicEddy.ViewModels.MidiParameterChangeMonitorViewModels;
 using SonicEddy.ViewModels.MidiRouterViewModels;
 using SonicEddy.ViewModels.CameraRouterViewModels;
+using SonicEddy.ViewModels.StreamingControlViewModels;
 using SonicEddy.ViewModels.MixerViewModelsV2;
 using SonicEddy.ViewModels.MixerPersistenceViewModels;
 using SonicEddy.ViewModels.ModuleManagerViewModels;
@@ -56,6 +57,7 @@ using SonicEddy.Views.MixerOverviewViews;
 using SonicEddy.Views.MidiParameterChangeMonitorView;
 using SonicEddy.Views.MidiRouterViews;
 using SonicEddy.Views.CameraRouterViews;
+using SonicEddy.Views.StreamingControlViews;
 using SonicEddy.Views.ModuleManagerViews;
 using SonicEddy.Views.ObjectBrowserViews;
 using SonicEddy.Views.PreferencesViews;
@@ -154,6 +156,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     private Window? _clickSyncWindow;
     private Window? _midiRouterWindow;
     private Window? _cameraRouterWindow;
+    private Window? _streamingControlWindow;
     private readonly SemaphoreSlim _layerInitializationLock = new(1, 1);
     private readonly SemaphoreSlim _globalMasterInitializationLock = new(1, 1);
     private readonly SemaphoreSlim _micChannelsInitializationLock = new(1, 1);
@@ -1011,6 +1014,21 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         };
 
         _cameraRouterWindow.Show();
+    }
+
+    public void ShowStreamingControlWindow()
+    {
+        _logger.LogTrace("ShowStreamingControlWindow");
+
+        if (_streamingControlWindow is not null &&
+            _streamingControlWindow.IsVisible) return;
+
+        _streamingControlWindow = new StreamingControlWindow()
+        {
+            DataContext = new StreamingControlViewModel()
+        };
+
+        _streamingControlWindow.Show();
     }
 
     public void ShowVirtualInputsWindow()
