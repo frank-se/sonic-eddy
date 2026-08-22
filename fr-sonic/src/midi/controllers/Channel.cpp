@@ -93,6 +93,7 @@ void controllers::Channel::set_parameter_for_selected_section(
     logging::log<logging::LogLevel::Debug>(
         "Section {}, parameter {} not set",
         _selected_filter_params_section.load(), parameter_id);
+    return;
   }
 
   logging::log<logging::LogLevel::Debug>("Processing parameter {}",
@@ -122,9 +123,8 @@ void controllers::Channel::clear_parameters() {
   logging::log<logging::LogLevel::Debug>("Channel::clear_parameters");
 
   for (auto &plugin : _plugins) {
-    for (size_t parameter_id = 0; parameter_id < _plugins.size();
-         parameter_id++) {
-      plugin[parameter_id] = std::nullopt;
+    for (auto &slot : plugin) {
+      slot = std::nullopt;
     }
   }
 }

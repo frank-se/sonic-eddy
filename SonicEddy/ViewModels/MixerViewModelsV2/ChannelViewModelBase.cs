@@ -127,10 +127,16 @@ public abstract class ChannelViewModelBase : ViewModelBase, IChannel,
                     index++;
                 }
 
-                _midiSetupService.ClearFilterParameters(channelType, ChannelId);
-
                 if (this is not MicChannelViewModel)
                 {
+                    // Mic channels are hardcoded to channelId 0 / ChannelType.Channel
+                    // (see MicChannelViewModel's base(...) call), which collides with
+                    // the real Channel 0's native (channelType, channelId) slot - calling
+                    // ClearFilterParameters here would wipe Channel 0's registered filter
+                    // parameters out from under it. Mic channels never register filter
+                    // parameters at all, so they must never clear them either.
+                    _midiSetupService.ClearFilterParameters(channelType, ChannelId);
+
                     foreach (var (parameterCollection, i) in parameters
                                  .Select((x, i) => (x, i)))
                     {

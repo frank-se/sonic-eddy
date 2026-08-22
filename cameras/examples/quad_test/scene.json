@@ -1,0 +1,35 @@
+{
+  "name": "Quad Test",
+  "canvas_width": 1920,
+  "canvas_height": 1080,
+  "objects": [
+    {
+      "type": "image",
+      "position": [0, 0, 0],
+      "width": 960,
+      "height": 540,
+      "image_file": "splash.png"
+    },
+    {
+      "type": "camera",
+      "position": [960, 0, 1],
+      "width": 960,
+      "height": 540,
+      "target_camera_index": 0
+    },
+    {
+      "type": "camera",
+      "position": [0, 540, 2],
+      "width": 960,
+      "height": 540,
+      "target_camera_index": 1
+    },
+    {
+      "type": "camera",
+      "position": [960, 540, 3],
+      "width": 960,
+      "height": 540,
+      "target_camera_index": 2
+    }
+  ]
+}
