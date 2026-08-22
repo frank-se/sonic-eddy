@@ -82,7 +82,19 @@ public sealed class GamepadService : IGamepadService, IDisposable
     {
         var tcs = new TaskCompletionSource<GamepadBinding>(TaskCreationOptions.RunContinuationsAsynchronously);
         Interlocked.Exchange(ref _captureTcs, tcs);
-        cancellationToken.Register(() => tcs.TrySetCanceled(cancellationToken));
+        // Timeout/cancellation (e.g. GamepadActionRowViewModel's 10s capture
+        // window) must also clear _captureTcs - otherwise it's left pointing
+        // at a dead, already-completed task forever, and
+        // ApplyContinuousAxisActions's "skip while capturing" guard silently
+        // disables all axis dispatch (Move + Color) for the rest of the
+        // process's life. Only clear if it's still *this* capture, so a
+        // newer capture already in flight isn't wiped out by a stale
+        // cancellation registration racing behind it.
+        cancellationToken.Register(() =>
+        {
+            tcs.TrySetCanceled(cancellationToken);
+            Interlocked.CompareExchange(ref _captureTcs, null, tcs);
+        });
         return tcs.Task;
     }
 

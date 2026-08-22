@@ -29,4 +29,13 @@ public interface IStreamingControlService
     void UpdateObjectState(int sceneIndex, int objectIndex, Action<ObjectState> mutate);
 
     event Action<int, int>? ObjectStateChanged; // (sceneIndex, objectIndex)
+
+    // Which object is currently "the one being controlled" - announced by
+    // whichever driver changed it (a row click in the Streaming Controls
+    // window, or the gamepad's Next/Previous Object), so every other driver
+    // and every open window can show the same selection instead of each
+    // tracking its own, invisible-to-others notion of "selected".
+    (int SceneIndex, int FlatIndex)? CurrentSelection { get; }
+    void SelectObject(int sceneIndex, int flatIndex);
+    event Action? SelectionChanged;
 }

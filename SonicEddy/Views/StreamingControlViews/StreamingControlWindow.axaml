@@ -75,7 +75,7 @@
                 <StackPanel Spacing="8" DataContext="{Binding SelectedObjectControls}"
                             x:DataType="streamingControlViewModels:ObjectControlPanelViewModel">
                     <TextBlock Text="Position" FontWeight="Bold" />
-                    <Grid ColumnDefinitions="30,90,20,30,90" RowDefinitions="Auto">
+                    <Grid ColumnDefinitions="30,160,20,30,160" RowDefinitions="Auto">
                         <TextBlock Grid.Column="0" Text="X" VerticalAlignment="Center" />
                         <NumericUpDown Grid.Column="1" Value="{Binding X}"
                                        Minimum="0" Maximum="{Binding MaxX}"

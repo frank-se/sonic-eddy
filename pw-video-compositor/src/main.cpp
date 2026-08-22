@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <deque>
+#include <filesystem>
 #include <iostream>
 #include <mutex>
 #include <string>
@@ -29,16 +30,35 @@
 namespace {
 
 constexpr uint32_t kBytesPerPixel = 4; // SPA_VIDEO_FORMAT_RGBA
-constexpr size_t kInputCount = 2;
+// Fixed camera input slots (scene mode): 0/1 are the physical cameras
+// routed by CameraRouterService, 2 is permanently reserved for
+// se.mixer-overview - always linked by a small dedicated always-on
+// service, never user-picked, never routed through CameraRouterService.
+constexpr size_t kInputCount = 3;
+// Non-scene CLI mode is unrelated to scenes/mixer-overview - kept at a
+// fixed 2 inputs (--in0-*/--in1-*) for quick manual testing, independent
+// of kInputCount.
+constexpr size_t kCliInputCount = 2;
 constexpr size_t kMaxScenes = 5;
 
 // Cameras don't declare their native resolution in the scene file - PipeWire
 // needs an exact width/height to negotiate a stream (a fixed SPA_RECTANGLE,
 // not a range), so scene mode assumes every camera source has already been
 // standardized on this (see cameras/stream-*.fish) rather than renegotiating
-// per camera.
+// per camera. Applies to input indices 0/1 only - index 2 is not a camera,
+// see kMixerOverviewSourceWidth/Height below.
 constexpr uint32_t kSceneCameraSourceWidth = 1920;
 constexpr uint32_t kSceneCameraSourceHeight = 1080;
+
+// Input index 2 is permanently reserved for se.mixer-overview (see
+// MixerOverviewCompositorLinkService on the SonicEddy side) - a different
+// source with its own fixed resolution, matching
+// SonicEddy/Views/MixerOverviewViews/MixerOverviewWindow.axaml's pinned
+// Width/Height (that window's size must stay fixed for exactly this reason
+// - see its own comment on why SizeToContent was removed).
+constexpr uint32_t kMixerOverviewSourceWidth = 1400;
+constexpr uint32_t kMixerOverviewSourceHeight = 900;
+constexpr size_t kMixerOverviewInputIndex = 2;
 
 // Where a frame actually comes from: either a live PipeWire input stream
 // (camera-backed, `stream` non-null) or a one-shot decode at startup
@@ -379,8 +399,13 @@ void apply_object_params(App &app, const std::string &json_text) {
   auto &scene = app.scenes[scene_idx];
 
   const int object_idx = command["object"].get<int>();
-  if (object_idx < 0 || static_cast<size_t>(object_idx) >= scene.render_slots.size())
+  std::cerr << "[debug] apply_object_params: " << json_text << '\n'; // TEMP
+  if (object_idx < 0 || static_cast<size_t>(object_idx) >= scene.render_slots.size()) {
+    std::cerr << "[debug] apply_object_params: object_idx " << object_idx
+               << " out of range (render_slots.size()=" << scene.render_slots.size()
+               << ")\n"; // TEMP
     return;
+  }
   auto &slot = scene.render_slots[object_idx];
 
   std::lock_guard<std::mutex> lock(slot.layout_mutex);
@@ -390,12 +415,18 @@ void apply_object_params(App &app, const std::string &json_text) {
     slot.dst_x = app.canvas_width > slot.dst_width
                      ? std::min(requested, app.canvas_width - slot.dst_width)
                      : 0;
+    std::cerr << "[debug] dst_x requested=" << requested
+               << " applied=" << slot.dst_x << " dst_width=" << slot.dst_width
+               << " canvas_width=" << app.canvas_width << '\n'; // TEMP
   }
   if (command.contains("dst_y") && command["dst_y"].is_number()) {
     const uint32_t requested = command["dst_y"].get<uint32_t>();
     slot.dst_y = app.canvas_height > slot.dst_height
                      ? std::min(requested, app.canvas_height - slot.dst_height)
                      : 0;
+    std::cerr << "[debug] dst_y requested=" << requested
+               << " applied=" << slot.dst_y << " dst_height=" << slot.dst_height
+               << " canvas_height=" << app.canvas_height << '\n'; // TEMP
   }
   if (command.contains("visible") && command["visible"].is_boolean())
     slot.visible = command["visible"].get<bool>();
@@ -520,10 +551,10 @@ struct Args {
 
   uint32_t canvas_width = 1280;
   uint32_t canvas_height = 720;
-  std::array<uint32_t, kInputCount> in_width{960, 960};
-  std::array<uint32_t, kInputCount> in_height{720, 720};
-  std::array<double, kInputCount> in_scale{0.5, 0.5};
-  std::array<std::string, kInputCount> in_target{};
+  std::array<uint32_t, kCliInputCount> in_width{960, 960};
+  std::array<uint32_t, kCliInputCount> in_height{720, 720};
+  std::array<double, kCliInputCount> in_scale{0.5, 0.5};
+  std::array<std::string, kCliInputCount> in_target{};
 };
 
 uint32_t parse_u32(const std::string &value) {
@@ -548,7 +579,13 @@ bool parse_args(int argc, char **argv, Args &args) {
         std::cerr << "too many --scene arguments (max " << kMaxScenes << ")\n";
         return false;
       }
-      args.scene_paths.push_back(next(i));
+      // Made absolute relative to *our* cwd right away - scene.file gets
+      // published verbatim over Props (see publish_scene_params), and
+      // whichever process reads it back (e.g. SonicEddy's Streaming
+      // Controls window) almost certainly has a different cwd than us, so
+      // a relative path would silently fail to resolve there.
+      args.scene_paths.push_back(
+          std::filesystem::absolute(next(i)).string());
     } else if (arg == "--canvas-width")
       args.canvas_width = parse_u32(next(i));
     else if (arg == "--canvas-height")
@@ -688,8 +725,13 @@ int main(int argc, char **argv) {
     // actually reference each index.
     for (size_t idx = 0; idx < kInputCount; ++idx) {
       auto &src = app.camera_sources[idx];
-      src.width = kSceneCameraSourceWidth;
-      src.height = kSceneCameraSourceHeight;
+      if (idx == kMixerOverviewInputIndex) {
+        src.width = kMixerOverviewSourceWidth;
+        src.height = kMixerOverviewSourceHeight;
+      } else {
+        src.width = kSceneCameraSourceWidth;
+        src.height = kSceneCameraSourceHeight;
+      }
       src.frame.assign(
           static_cast<size_t>(src.width) * src.height * kBytesPerPixel, 0);
     }
@@ -773,12 +815,12 @@ int main(int argc, char **argv) {
     app.canvas_width = args.canvas_width;
     app.canvas_height = args.canvas_height;
 
-    node_names.reserve(kInputCount);
-    target_objects.reserve(kInputCount);
+    node_names.reserve(kCliInputCount);
+    target_objects.reserve(kCliInputCount);
 
     app.scenes.emplace_back();
     auto &scene = app.scenes.back();
-    for (size_t idx = 0; idx < kInputCount; ++idx) {
+    for (size_t idx = 0; idx < kCliInputCount; ++idx) {
       auto &src = app.camera_sources[idx];
       src.width = args.in_width[idx];
       src.height = args.in_height[idx];
@@ -805,8 +847,8 @@ int main(int argc, char **argv) {
       node_names.push_back("se.video-compositor.in" + std::to_string(idx));
       target_objects.push_back(args.in_target[idx]);
     }
-    scene.paint_order.resize(kInputCount);
-    for (size_t i = 0; i < kInputCount; ++i)
+    scene.paint_order.resize(kCliInputCount);
+    for (size_t i = 0; i < kCliInputCount; ++i)
       scene.paint_order[i] = i;
   }
 
@@ -818,7 +860,11 @@ int main(int argc, char **argv) {
   }
   auto *loop = pw_main_loop_get_loop(app.main_loop);
 
-  for (size_t idx = 0; idx < kInputCount; ++idx) {
+  // node_names.size() here, not kInputCount: it's kCliInputCount (2) in
+  // non-scene CLI mode but kInputCount (3) in scene mode - camera_sources
+  // itself is always fixed at kInputCount, but only the entries this mode
+  // actually populated node_names for get a stream connected.
+  for (size_t idx = 0; idx < node_names.size(); ++idx) {
     if (node_names[idx].empty())
       continue;
     auto &src = app.camera_sources[idx];

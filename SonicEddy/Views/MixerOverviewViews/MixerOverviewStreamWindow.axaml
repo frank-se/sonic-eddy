@@ -10,7 +10,7 @@
         Width="1400" Height="900"
         WindowStartupLocation="CenterOwner"
         x:CompileBindings="False"
-        x:Class="SonicEddy.Views.MixerOverviewViews.MixerOverviewWindow"
+        x:Class="SonicEddy.Views.MixerOverviewViews.MixerOverviewStreamWindow"
         x:DataType="vm:MixerOverviewViewModel"
         Title="Mixer Overview">
 

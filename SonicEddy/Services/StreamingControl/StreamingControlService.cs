@@ -74,6 +74,15 @@ public sealed class StreamingControlService : IStreamingControlService, IDisposa
         ObjectStateChanged?.Invoke(sceneIndex, objectIndex);
     }
 
+    public (int SceneIndex, int FlatIndex)? CurrentSelection { get; private set; }
+    public event Action? SelectionChanged;
+
+    public void SelectObject(int sceneIndex, int flatIndex)
+    {
+        CurrentSelection = (sceneIndex, flatIndex);
+        SelectionChanged?.Invoke();
+    }
+
     private void OnNodeAdded(Node node)
     {
         if (node.Name != CompositorOutputNodeName) return;

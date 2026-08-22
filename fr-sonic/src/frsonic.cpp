@@ -24,6 +24,7 @@
 #include <iostream>
 #include <iterator>
 #include <memory>
+#include <mutex>
 #include <pipewire/pipewire.h>
 #include <pipewire/thread-loop.h>
 #include <spa/param/audio/raw.h>
@@ -47,6 +48,16 @@ static std::vector<std::shared_ptr<sesync::ClickSyncConverter>>
     g_click_sync_converters;
 static std::vector<size_t> g_free_click_sync_converter_handles;
 static std::vector<silence::SilenceProducer *> g_silence_producers;
+// Guards g_video_producers/g_free_video_producer_handles. Every other
+// g_* handle vector above is only ever touched from the owned PipeWire
+// loop thread (via invoke_owned_pipewire_sync or under
+// pw_thread_loop_lock), so they're already implicitly serialized against
+// each other. g_video_producers is the one exception:
+// frsonic_update_video_producer_frame is called directly from the C#
+// caller's own thread (e.g. an Avalonia UI-thread DispatcherTimer), with
+// no synchronization onto the loop thread at all, so it needs an explicit
+// mutex against concurrent create/destroy/stop.
+static std::mutex g_video_producers_mutex;
 static std::vector<std::shared_ptr<video::Producer>> g_video_producers;
 static std::vector<size_t> g_free_video_producer_handles;
 
@@ -258,6 +269,7 @@ static size_t store_looper(std::shared_ptr<looper::Looper> looper) {
 }
 
 static size_t store_video_producer(std::shared_ptr<video::Producer> producer) {
+  std::lock_guard lock(g_video_producers_mutex);
   if (!g_free_video_producer_handles.empty()) {
     const auto handle = g_free_video_producer_handles.back();
     g_free_video_producer_handles.pop_back();
@@ -391,10 +403,13 @@ void frsonic_stop() {
 
       logging::log<logging::LogLevel::Trace>(
           "frsonic_stop: destroying video producers");
-      for (auto &producer : g_video_producers)
-        if (producer) producer->stop();
-      g_video_producers.clear();
-      g_free_video_producer_handles.clear();
+      {
+        std::lock_guard lock(g_video_producers_mutex);
+        for (auto &producer : g_video_producers)
+          if (producer) producer->stop();
+        g_video_producers.clear();
+        g_free_video_producer_handles.clear();
+      }
       logging::log<logging::LogLevel::Trace>(
           "frsonic_stop: video producers done");
 
@@ -559,9 +574,14 @@ bool frsonic_create_video_producer(const frsonic_video_producer_config *config,
 bool frsonic_update_video_producer_frame(const size_t handle,
                                          const uint8_t *rgba,
                                          const size_t size) {
-  if (handle >= g_video_producers.size() || !g_video_producers[handle])
-    return false;
-  return g_video_producers[handle]->update_frame(rgba, size);
+  std::shared_ptr<video::Producer> producer;
+  {
+    std::lock_guard lock(g_video_producers_mutex);
+    if (handle >= g_video_producers.size() || !g_video_producers[handle])
+      return false;
+    producer = g_video_producers[handle];
+  }
+  return producer->update_frame(rgba, size);
 }
 
 void frsonic_destroy_video_producer(const size_t handle) {
@@ -569,6 +589,7 @@ void frsonic_destroy_video_producer(const size_t handle) {
     return;
 
   auto callback = [handle] {
+    std::lock_guard lock(g_video_producers_mutex);
     if (handle >= g_video_producers.size() || !g_video_producers[handle])
       return;
 

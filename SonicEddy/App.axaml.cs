@@ -231,6 +231,9 @@ public class App : Application
             gamepadService);
         _ = gamepadService.InitializeAsync();
 
+        var mixerOverviewCompositorLinkService = new MixerOverviewCompositorLinkService();
+        _ = mixerOverviewCompositorLinkService.InitializeAsync();
+
         var midiSyncLinkService = new MidiSyncLinkService(appDataService);
         Locator.CurrentMutable.Register<IMidiSyncLinkService>(() =>
             midiSyncLinkService);

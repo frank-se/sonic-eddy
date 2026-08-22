@@ -68,14 +68,26 @@ public sealed class MixerOverviewStreamService(
         }
 
         _overviewViewModel = overviewViewModel;
-        _window = new MixerOverviewWindow
+        // MixerOverviewStreamWindow (not MixerOverviewWindow): separate
+        // app_id-less class so window-manager rules scoped to the real
+        // window's "sonic-eddy-overview" app_id (e.g. forced sizing) don't
+        // also catch this one.
+        //
+        // Position=(-10000,-10000) never actually hid this window - Wayland
+        // doesn't let clients request an absolute screen position at all
+        // (an X11-era trick that silently no-ops here), so it has always
+        // rendered fully visible wherever KWin placed it. Minimizing right
+        // after Show() is the real fix: a genuine Wayland-compatible hidden
+        // state, unlike a request the compositor just ignores. Needs
+        // verifying the minimized window still renders real (non-blank)
+        // frames - if it doesn't, this needs a different approach.
+        _window = new MixerOverviewStreamWindow
         {
             DataContext = overviewViewModel,
             ShowInTaskbar = false,
-            WindowStartupLocation = WindowStartupLocation.Manual,
-            Position = new PixelPoint(-10000, -10000),
         };
         _window.Show();
+        _window.WindowState = WindowState.Minimized;
 
         _timer = new DispatcherTimer(TimeSpan.FromMilliseconds(FrameIntervalMs),
             DispatcherPriority.Background, OnTick);
