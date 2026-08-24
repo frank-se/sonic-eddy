@@ -87,6 +87,7 @@ struct Args {
   uint32_t channels = 2;
   std::string out_path;
   double seconds = 10.0;
+  uint32_t fps = 30; // target *output* video rate - independent of the audio tick rate
 };
 
 struct App {
@@ -103,8 +104,36 @@ struct App {
   std::chrono::steady_clock::time_point epoch{};
   std::atomic<bool> epoch_set{false};
 
+  // CFR grid state. next_frame_index is touched only from the audio
+  // process callback (single PipeWire RT thread), so plain, not atomic.
+  uint64_t next_frame_index = 0;
+
+  // pw_stream_trigger_process() is documented as NOT guaranteed to
+  // complete synchronously ("possible for the graph iteration to not
+  // finish... trigger_process() needs to be called again") - so a
+  // single pending-pts scalar could get clobbered if a second trigger
+  // fires before the first one's process() callback lands. A small
+  // fixed-size FIFO (pushed in trigger order, popped in process-callback
+  // order) is RT-safe (no allocation) and correct either way.
+  static constexpr size_t kPendingPtsCapacity = 16;
+  std::array<GstClockTime, kPendingPtsCapacity> pending_pts{};
+  size_t pending_pts_head = 0; // next slot to pop (video process callback)
+  size_t pending_pts_tail = 0; // next slot to push (audio process callback)
+
   std::thread bus_thread;
 };
+
+void push_pending_pts(App &app, GstClockTime pts) {
+  app.pending_pts[app.pending_pts_tail % App::kPendingPtsCapacity] = pts;
+  ++app.pending_pts_tail;
+}
+
+GstClockTime pop_pending_pts(App &app) {
+  const GstClockTime pts =
+      app.pending_pts[app.pending_pts_head % App::kPendingPtsCapacity];
+  ++app.pending_pts_head;
+  return pts;
+}
 
 GstClockTime pts_since_epoch(App &app) {
   const auto now = std::chrono::steady_clock::now();
@@ -147,8 +176,30 @@ void on_audio_process(void *data) {
 
   pw_stream_queue_buffer(app.audio_stream, pw_buffer);
 
-  if (!app.stopping.load(std::memory_order_relaxed))
+  if (app.stopping.load(std::memory_order_relaxed))
+    return;
+
+  // CFR grid: pull a new video frame for every ideal deadline
+  // (frame_index * frame_duration) that's now in the past - usually one,
+  // but loop in case the target fps ever exceeds the audio tick rate (e.g.
+  // fps=60 against a 1024-sample/48kHz ~47Hz tick), so we catch up by
+  // pulling more than once per tick instead of silently under-producing.
+  // Recomputing the deadline via (index * GST_SECOND) / fps each time -
+  // rather than accumulating a pre-rounded per-frame duration - means no
+  // per-frame rounding error can accumulate into long-term drift.
+  const GstClockTime now = pts_since_epoch(app);
+  while (!app.stopping.load(std::memory_order_relaxed)) {
+    const GstClockTime deadline = static_cast<GstClockTime>(
+        (static_cast<uint64_t>(app.next_frame_index) * GST_SECOND) / app.args.fps);
+    if (now < deadline)
+      break;
+    // Stamp with the ideal grid time, not `now` - actual sampling may
+    // land a few ms after the deadline (bounded by the audio tick
+    // period), but the label stays exactly on-grid either way.
+    push_pending_pts(app, deadline);
     pw_stream_trigger_process(app.video_stream);
+    ++app.next_frame_index;
+  }
 }
 
 void on_video_process(void *data) {
@@ -158,11 +209,14 @@ void on_video_process(void *data) {
     return;
 
   auto *buffer = pw_buffer->buffer;
+  // Pop unconditionally even when the buffer's empty/we're stopping - it
+  // was pushed 1:1 with the trigger_process() call that produced this
+  // process() invocation, so the FIFO must stay in lockstep regardless.
+  const GstClockTime pts = pop_pending_pts(app);
   if (buffer->n_datas > 0 && buffer->datas[0].data != nullptr &&
       buffer->datas[0].chunk != nullptr && buffer->datas[0].chunk->size > 0 &&
       !app.stopping.load(std::memory_order_relaxed)) {
     const auto &spa_data = buffer->datas[0];
-    const GstClockTime pts = pts_since_epoch(app);
 
     auto *gst_buffer = gst_buffer_new_allocate(nullptr, spa_data.chunk->size, nullptr);
     GstMapInfo map;
@@ -264,16 +318,19 @@ bool parse_args(int argc, char **argv, Args &args) {
       args.out_path = next();
     else if (arg == "--seconds")
       args.seconds = std::strtod(next().c_str(), nullptr);
+    else if (arg == "--fps")
+      args.fps = static_cast<uint32_t>(std::strtoul(next().c_str(), nullptr, 10));
     else {
       std::cerr << "unknown argument: " << arg << '\n';
       return false;
     }
   }
   if (args.target_object.empty() || args.out_path.empty() || args.width == 0 ||
-      args.height == 0) {
+      args.height == 0 || args.fps == 0) {
     std::cerr << "usage: av_sync_record --target-object <name-or-serial> "
                  "--out <file.mp4> [--video-target <name>] [--width W] "
-                 "[--height H] [--rate R] [--channels C] [--seconds N]\n";
+                 "[--height H] [--rate R] [--channels C] [--seconds N] "
+                 "[--fps F]\n";
     return false;
   }
   return true;
@@ -296,7 +353,8 @@ int main(int argc, char **argv) {
       "mp4mux name=mux ! filesink name=sink "
       "appsrc name=vsrc is-live=true format=time "
       "caps=\"video/x-raw,format=RGBA,width=" + std::to_string(app.args.width) +
-      ",height=" + std::to_string(app.args.height) + ",framerate=30/1\" "
+      ",height=" + std::to_string(app.args.height) + ",framerate=" +
+      std::to_string(app.args.fps) + "/1\" "
       "! videoconvert ! x264enc tune=zerolatency ! mux. "
       "appsrc name=asrc is-live=true format=time "
       "caps=\"audio/x-raw,format=F32LE,rate=" + std::to_string(app.args.rate) +
