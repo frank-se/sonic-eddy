@@ -7,6 +7,8 @@ project(
 pipewire_dep = dependency('libpipewire-0.3')
 threads_dep = dependency('threads')
 nlohmann_json_dep = dependency('nlohmann_json')
+gst_dep = dependency('gstreamer-1.0')
+gst_app_dep = dependency('gstreamer-app-1.0')
 
 executable(
     'pw-video-compositor',
@@ -27,4 +29,13 @@ executable(
     'dump_consumer',
     'test/dump_consumer.cpp',
     dependencies : [pipewire_dep, threads_dep],
+    install : false)
+
+# Prototype: pulls compositor video in lockstep with a real audio clock and
+# hands both to an in-process GStreamer pipeline via appsrc, recording a
+# synced-A/V MP4. See pw-video-compositor test/av_sync_record.cpp for why.
+executable(
+    'av_sync_record',
+    'test/av_sync_record.cpp',
+    dependencies : [pipewire_dep, threads_dep, gst_dep, gst_app_dep, nlohmann_json_dep],
     install : false)
