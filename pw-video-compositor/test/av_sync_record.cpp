@@ -86,8 +86,9 @@ struct Args {
   uint32_t rate = 48000;
   uint32_t channels = 2;
   std::string out_path;
-  double seconds = 10.0;
+  double seconds = 0.0; // 0 = run until Ctrl+C / SIGTERM, no duration timer scheduled
   uint32_t fps = 30; // target *output* video rate - independent of the audio tick rate
+  bool preview = false; // opens a window - see video_branch construction in main()
 };
 
 struct App {
@@ -320,6 +321,8 @@ bool parse_args(int argc, char **argv, Args &args) {
       args.seconds = std::strtod(next().c_str(), nullptr);
     else if (arg == "--fps")
       args.fps = static_cast<uint32_t>(std::strtoul(next().c_str(), nullptr, 10));
+    else if (arg == "--preview")
+      args.preview = true;
     else {
       std::cerr << "unknown argument: " << arg << '\n';
       return false;
@@ -329,8 +332,9 @@ bool parse_args(int argc, char **argv, Args &args) {
       args.height == 0 || args.fps == 0) {
     std::cerr << "usage: av_sync_record --target-object <name-or-serial> "
                  "--out <file.mp4> [--video-target <name>] [--width W] "
-                 "[--height H] [--rate R] [--channels C] [--seconds N] "
-                 "[--fps F]\n";
+                 "[--height H] [--rate R] [--channels C] "
+                 "[--seconds N (default: run until Ctrl+C)] "
+                 "[--fps F] [--preview]\n";
     return false;
   }
   return true;
@@ -349,13 +353,32 @@ int main(int argc, char **argv) {
   // unquoted commas to separate element properties, which collides with the
   // commas inside a caps string; unquoted, the caps property silently ends
   // up wrong/unset and the encoder never gets a fixed format to negotiate.
+  // --preview taps the video branch with a tee: one leg to the recorder as
+  // before, one leg through a 1-deep leaky queue (drops stale frames, so
+  // the sink always shows whatever's newest - no attempt at jitter-free
+  // pacing) into a plain window, sync=false so it displays frames as they
+  // arrive rather than pacing to the pipeline clock.
+  //
+  // waylandsink, not autovideosink: autovideosink's auto-selected sink
+  // triggers a GStreamer-CRITICAL assertion in gst_value_collect_int_range
+  // on this system, confirmed independent of anything in this tool
+  // (`gst-launch-1.0 videotestsrc ! autovideosink` alone reproduces it -
+  // some sink candidate's display/GL capability probing produces a
+  // degenerate caps range). waylandsink (this is a Wayland session -
+  // XDG_SESSION_TYPE=wayland) was confirmed clean on its own.
+  const std::string video_branch =
+      app.args.preview
+          ? "! tee name=vtee "
+            "vtee. ! queue ! videoconvert ! x264enc tune=zerolatency ! mux. "
+            "vtee. ! queue leaky=downstream max-size-buffers=1 "
+            "! videoconvert ! waylandsink sync=false "
+          : "! videoconvert ! x264enc tune=zerolatency ! mux. ";
   const std::string pipeline_desc =
       "mp4mux name=mux ! filesink name=sink "
       "appsrc name=vsrc is-live=true format=time "
       "caps=\"video/x-raw,format=RGBA,width=" + std::to_string(app.args.width) +
       ",height=" + std::to_string(app.args.height) + ",framerate=" +
-      std::to_string(app.args.fps) + "/1\" "
-      "! videoconvert ! x264enc tune=zerolatency ! mux. "
+      std::to_string(app.args.fps) + "/1\" " + video_branch +
       "appsrc name=asrc is-live=true format=time "
       "caps=\"audio/x-raw,format=F32LE,rate=" + std::to_string(app.args.rate) +
       ",channels=" + std::to_string(app.args.channels) + ",layout=interleaved\" "
@@ -420,11 +443,23 @@ int main(int argc, char **argv) {
   // Video: this 2-node component (compositor out -> here) has no driver of
   // its own, so we have to be one - trigger_process() is called from the
   // audio callback above, in lockstep with the real audio clock.
+  //
+  // Deliberately no PW_KEY_TARGET_OBJECT here (unlike audio above) - it
+  // doesn't just get ignored the way plain "no autoconnect flag" would
+  // suggest. WirePlumber's own policy reads target.object regardless of
+  // PW_STREAM_FLAG_AUTOCONNECT and repeatedly retries linking it on every
+  // internal rescan (confirmed via `journalctl --user`:
+  // "wp-event-dispatcher: ... failed: tried to link on last rescan, not
+  // retrying nil", flooding continuously) - it doesn't resolve our
+  // object.serial the way pw-dump does, fails, and races against our own
+  // manual pw-link below for the same port, which was breaking it
+  // ("failed to link ports: Success"). Since linking is fully manual here
+  // on purpose, target.object metadata is unnecessary and was actively
+  // harmful - leave it unset.
   auto *video_properties = pw_properties_new(
       PW_KEY_MEDIA_TYPE, "Video", PW_KEY_MEDIA_CATEGORY, "Capture",
       PW_KEY_MEDIA_ROLE, "Video", PW_KEY_MEDIA_CLASS, "Stream/Input/Video",
-      PW_KEY_NODE_NAME, kVideoStreamName, PW_KEY_TARGET_OBJECT,
-      app.args.video_target.c_str(), nullptr);
+      PW_KEY_NODE_NAME, kVideoStreamName, nullptr);
   app.video_stream = pw_stream_new_simple(loop, kVideoStreamName,
                                           video_properties, &video_stream_events, &app);
   if (app.video_stream == nullptr)
@@ -461,13 +496,16 @@ int main(int argc, char **argv) {
   const struct timespec link_ts = {0, 300'000'000};
   pw_loop_update_timer(loop, link_timer, const_cast<struct timespec *>(&link_ts),
                        nullptr, false);
-  // one-shot: fire once after --seconds, never again
-  auto *duration_timer = pw_loop_add_timer(loop, on_duration_timer, &app);
-  const struct timespec duration_ts = {
-      static_cast<long>(app.args.seconds),
-      static_cast<long>((app.args.seconds - static_cast<long>(app.args.seconds)) * 1e9)};
-  pw_loop_update_timer(loop, duration_timer, const_cast<struct timespec *>(&duration_ts),
-                       nullptr, false);
+  // --seconds 0 (default) means "no duration timer" - run until Ctrl+C.
+  if (app.args.seconds > 0.0) {
+    // one-shot: fire once after --seconds, never again
+    auto *duration_timer = pw_loop_add_timer(loop, on_duration_timer, &app);
+    const struct timespec duration_ts = {
+        static_cast<long>(app.args.seconds),
+        static_cast<long>((app.args.seconds - static_cast<long>(app.args.seconds)) * 1e9)};
+    pw_loop_update_timer(loop, duration_timer, const_cast<struct timespec *>(&duration_ts),
+                         nullptr, false);
+  }
 
   std::cout << "av_sync_record running, video-target=" << app.args.video_target
             << " audio-target=" << app.args.target_object
