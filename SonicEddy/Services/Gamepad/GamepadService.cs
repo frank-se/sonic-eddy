@@ -55,6 +55,12 @@ public sealed class GamepadService : IGamepadService, IDisposable
     private readonly IAppDataService _appDataService;
     private readonly ConcurrentDictionary<GamepadAction, GamepadBinding> _bindings = new();
     private readonly Dictionary<byte, short> _currentAxisValues = new();
+    // Separate from _currentAxisValues: GameController axis indices (0-5,
+    // SDL_CONTROLLER_AXIS_*) and raw SDL joystick axis indices both start
+    // at 0 and would otherwise collide in one dictionary. Only ever
+    // populated for devices SDL doesn't recognize as a "game controller"
+    // (see TryOpenDevice) - ordinary gamepads never touch this dictionary.
+    private readonly Dictionary<byte, short> _currentJoystickAxisValues = new();
 
     private readonly TargetState _stateA;
     private readonly TargetState _stateB;
@@ -91,7 +97,7 @@ public sealed class GamepadService : IGamepadService, IDisposable
                 if (Enum.TryParse<GamepadAction>(entry.ActionName, out var action))
                     _bindings[action] = new GamepadBinding(
                         entry.IsAxis ? GamepadActionKind.Axis : GamepadActionKind.Button,
-                        entry.SdlValue);
+                        entry.SdlValue, entry.IsJoystick);
             }
         }
 
@@ -140,6 +146,7 @@ public sealed class GamepadService : IGamepadService, IDisposable
                 ActionName = kv.Key.ToString(),
                 IsAxis = kv.Value.Kind == GamepadActionKind.Axis,
                 SdlValue = kv.Value.SdlValue,
+                IsJoystick = kv.Value.IsJoystick,
             }).ToList(),
         };
         await _appDataService.StoreGamepadBindingsConfig(config);
@@ -149,6 +156,15 @@ public sealed class GamepadService : IGamepadService, IDisposable
     {
         if (binding is null)
             return "Unbound";
+
+        // Raw joystick index has no SDL-curated enum name to look up (that's
+        // exactly why it's on this path - see GamepadBinding) - just show
+        // the numeric index, prefixed to distinguish it from a GameController
+        // binding using the same-looking index.
+        if (binding.IsJoystick)
+            return binding.Kind == GamepadActionKind.Button
+                ? $"Joystick Button {binding.SdlValue}"
+                : $"Joystick Axis {binding.SdlValue}";
 
         return binding.Kind == GamepadActionKind.Button
             ? $"Button {StripPrefix(((GameControllerButton)binding.SdlValue).ToString(), "ControllerButton")}"
@@ -295,6 +311,32 @@ public sealed class GamepadService : IGamepadService, IDisposable
         ApplyMoveAxis(GamepadAction.MoveX, isX: true);
         ApplyMoveAxis(GamepadAction.MoveY, isX: false);
         ApplyColorAxis();
+        ApplyTBarAxis();
+    }
+
+    public event Action<double>? TBarAxisChanged;
+
+    private void ApplyTBarAxis()
+    {
+        var raw = ReadAxisRaw(GamepadAction.TBarAxis);
+        if (raw is null) return;
+
+        TBarAxisChanged?.Invoke(raw.Value);
+    }
+
+    // Absolute position, no deadzone - unlike ReadAxisDelta (used by the
+    // relative nudge actions), a throttle/fader has no spring-loaded
+    // center to filter jitter around, and a deadzone there would create a
+    // dead spot at the T-bar's most meaningful position (the 50/50 point).
+    private float? ReadAxisRaw(GamepadAction action)
+    {
+        if (!_bindings.TryGetValue(action, out var binding) || binding.Kind != GamepadActionKind.Axis)
+            return null;
+        var values = binding.IsJoystick ? _currentJoystickAxisValues : _currentAxisValues;
+        if (!values.TryGetValue((byte)binding.SdlValue, out var raw))
+            return null;
+
+        return Math.Clamp(raw / 32768f, -1f, 1f);
     }
 
     private void ApplyMoveAxis(GamepadAction action, bool isX)
@@ -368,7 +410,8 @@ public sealed class GamepadService : IGamepadService, IDisposable
     {
         if (!_bindings.TryGetValue(action, out var binding) || binding.Kind != GamepadActionKind.Axis)
             return null;
-        if (!_currentAxisValues.TryGetValue((byte)binding.SdlValue, out var raw))
+        var values = binding.IsJoystick ? _currentJoystickAxisValues : _currentAxisValues;
+        if (!values.TryGetValue((byte)binding.SdlValue, out var raw))
             return null;
 
         var normalized = raw / 32768f;
@@ -378,19 +421,26 @@ public sealed class GamepadService : IGamepadService, IDisposable
     private unsafe void RunPollLoop(CancellationToken token)
     {
         using var sdl = Sdl.GetApi();
-        sdl.Init(Sdl.InitGamecontroller);
+        sdl.Init(Sdl.InitGamecontroller | Sdl.InitJoystick);
 
         GameController* controller = null;
+        // Instance id -> Joystick* (as IntPtr, since a field/local dictionary
+        // can't hold an unsafe pointer type directly). Only ever holds
+        // devices SDL doesn't recognize as a "game controller" - see
+        // TryOpenDevice. Unlike `controller`, this supports any number of
+        // such devices simultaneously (no reason to cap it at one).
+        var joysticks = new Dictionary<int, IntPtr>();
         try
         {
-            TryOpenFirstController(sdl, ref controller);
+            for (var i = 0; i < sdl.NumJoysticks(); ++i)
+                TryOpenDevice(sdl, i, ref controller, joysticks);
 
             var lastTick = DateTime.UtcNow;
             var ev = default(Event);
             while (!token.IsCancellationRequested)
             {
                 while (sdl.PollEvent(ref ev) != 0)
-                    HandleEvent(sdl, ref ev, ref controller);
+                    HandleEvent(sdl, ref ev, ref controller, joysticks);
 
                 var now = DateTime.UtcNow;
                 if (now - lastTick >= TickInterval)
@@ -406,45 +456,84 @@ public sealed class GamepadService : IGamepadService, IDisposable
         {
             if (controller != null)
                 sdl.GameControllerClose(controller);
+            foreach (var ptr in joysticks.Values)
+                sdl.JoystickClose((Joystick*)ptr);
             sdl.Quit();
         }
     }
 
-    private unsafe void TryOpenFirstController(Sdl sdl, ref GameController* controller)
+    // Opens one newly-seen device by its SDL device index (NOT a stable
+    // instance id - that distinction matters for *DeviceAdded/Removed
+    // events, see HandleEvent). A device recognized as a game controller
+    // becomes `controller` (unchanged single-controller behavior - `if
+    // (controller != null) return` also makes this safe to call twice for
+    // the same device, since SDL fires both *DeviceAdded event kinds for
+    // controller-capable hardware and event ordering isn't guaranteed).
+    // Anything else (e.g. a flight-sim throttle/HOTAS with no entry in
+    // SDL's curated mapping DB) is opened via the lower-level Joystick API
+    // instead, so its raw axes/buttons are still usable - see
+    // GamepadBinding.IsJoystick.
+    private unsafe void TryOpenDevice(Sdl sdl, int deviceIndex, ref GameController* controller,
+        Dictionary<int, IntPtr> joysticks)
     {
-        if (controller != null)
-            return;
-
-        for (var i = 0; i < sdl.NumJoysticks(); ++i)
+        if (sdl.IsGameController(deviceIndex) == SdlBool.True)
         {
-            if (sdl.IsGameController(i) != SdlBool.True)
-                continue;
+            if (controller != null) return;
+            controller = sdl.GameControllerOpen(deviceIndex);
+            if (controller == null) return;
 
-            controller = sdl.GameControllerOpen(i);
-            if (controller == null)
-                continue;
-
-            IsControllerConnected = true;
-            ControllerConnectionChanged?.Invoke();
+            UpdateConnectedState(controller, joysticks);
             return;
         }
+
+        var joystick = sdl.JoystickOpen(deviceIndex);
+        if (joystick == null) return;
+
+        var instanceId = sdl.JoystickInstanceID(joystick);
+        joysticks[instanceId] = (IntPtr)joystick;
+        UpdateConnectedState(controller, joysticks);
     }
 
-    private unsafe void HandleEvent(Sdl sdl, ref Event ev, ref GameController* controller)
+    private unsafe void UpdateConnectedState(GameController* controller, Dictionary<int, IntPtr> joysticks)
+    {
+        var connected = controller != null || joysticks.Count > 0;
+        if (connected == IsControllerConnected) return;
+
+        IsControllerConnected = connected;
+        ControllerConnectionChanged?.Invoke();
+    }
+
+    private unsafe void HandleEvent(Sdl sdl, ref Event ev, ref GameController* controller,
+        Dictionary<int, IntPtr> joysticks)
     {
         switch ((EventType)ev.Type)
         {
+            // *DeviceAdded's `Which` is a device INDEX (position in the
+            // current enumeration), not an instance id - matches
+            // TryOpenDevice's parameter. Both event kinds route through the
+            // same call since a controller-capable device fires both.
             case EventType.Controllerdeviceadded:
-                TryOpenFirstController(sdl, ref controller);
+                TryOpenDevice(sdl, ev.Cdevice.Which, ref controller, joysticks);
+                break;
+            case EventType.Joydeviceadded:
+                TryOpenDevice(sdl, ev.Jdevice.Which, ref controller, joysticks);
                 break;
 
+            // *DeviceRemoved's `Which` IS the stable instance id (unlike
+            // *DeviceAdded above - a well-known SDL asymmetry).
             case EventType.Controllerdeviceremoved:
                 if (controller != null)
                 {
                     sdl.GameControllerClose(controller);
                     controller = null;
-                    IsControllerConnected = false;
-                    ControllerConnectionChanged?.Invoke();
+                    UpdateConnectedState(controller, joysticks);
+                }
+                break;
+            case EventType.Joydeviceremoved:
+                if (joysticks.Remove(ev.Jdevice.Which, out var removed))
+                {
+                    sdl.JoystickClose((Joystick*)removed);
+                    UpdateConnectedState(controller, joysticks);
                 }
                 break;
 
@@ -452,7 +541,7 @@ public sealed class GamepadService : IGamepadService, IDisposable
                 if (ev.Cbutton.State != 1) break;
                 if (TryCompleteCapture(new GamepadBinding(GamepadActionKind.Button, ev.Cbutton.Button)))
                     break;
-                DispatchButton(ev.Cbutton.Button);
+                DispatchButton(ev.Cbutton.Button, isJoystick: false);
                 break;
 
             case EventType.Controlleraxismotion:
@@ -460,6 +549,28 @@ public sealed class GamepadService : IGamepadService, IDisposable
                 var normalized = ev.Caxis.Value / 32768f;
                 if (Math.Abs(normalized) >= CaptureThreshold)
                     TryCompleteCapture(new GamepadBinding(GamepadActionKind.Axis, ev.Caxis.Axis));
+                break;
+
+            // A device opened via GameControllerOpen also generates these
+            // lower-level Joystick events for the same physical hardware -
+            // the `joysticks` dict only ever contains devices opened via
+            // the raw Joystick path (see TryOpenDevice), so this check is
+            // what keeps a real game controller's input from being
+            // processed (and dispatched) twice.
+            case EventType.Joybuttondown:
+                if (!joysticks.ContainsKey(ev.Jbutton.Which)) break;
+                if (ev.Jbutton.State != 1) break;
+                if (TryCompleteCapture(new GamepadBinding(GamepadActionKind.Button, ev.Jbutton.Button, IsJoystick: true)))
+                    break;
+                DispatchButton(ev.Jbutton.Button, isJoystick: true);
+                break;
+
+            case EventType.Joyaxismotion:
+                if (!joysticks.ContainsKey(ev.Jaxis.Which)) break;
+                _currentJoystickAxisValues[ev.Jaxis.Axis] = ev.Jaxis.Value;
+                var jNormalized = ev.Jaxis.Value / 32768f;
+                if (Math.Abs(jNormalized) >= CaptureThreshold)
+                    TryCompleteCapture(new GamepadBinding(GamepadActionKind.Axis, ev.Jaxis.Axis, IsJoystick: true));
                 break;
         }
     }
@@ -474,11 +585,12 @@ public sealed class GamepadService : IGamepadService, IDisposable
         return true;
     }
 
-    private void DispatchButton(byte sdlButton)
+    private void DispatchButton(byte sdlButton, bool isJoystick)
     {
         foreach (var (action, binding) in _bindings)
         {
-            if (binding.Kind == GamepadActionKind.Button && binding.SdlValue == sdlButton)
+            if (binding.Kind == GamepadActionKind.Button && binding.SdlValue == sdlButton &&
+                binding.IsJoystick == isJoystick)
                 ApplyAction(action);
         }
     }

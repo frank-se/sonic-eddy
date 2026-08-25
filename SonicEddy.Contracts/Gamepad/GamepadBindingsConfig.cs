@@ -24,4 +24,12 @@ public sealed class GamepadActionBindingConfig
 
     [ProtoMember(3)]
     public int SdlValue { get; set; }
+
+    // True when SdlValue is a raw SDL joystick axis/button index (a device
+    // SDL doesn't recognize as a "game controller", e.g. a flight-sim
+    // throttle/HOTAS) rather than a GameControllerAxis/GameControllerButton
+    // enum value. New field, defaults false - existing saved configs (all
+    // GameController-sourced) round-trip unchanged.
+    [ProtoMember(4)]
+    public bool IsJoystick { get; set; }
 }

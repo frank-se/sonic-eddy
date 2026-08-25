@@ -27,6 +27,13 @@ public enum GamepadAction
     UnifySaturationEtc,
     NextScene,
     PreviousScene,
+
+    // T-bar M/E switcher: absolute axis position, not a relative nudge like
+    // MoveX/MoveY/ColorSliderAxis - meant for a physical throttle/fader
+    // whose raw position should map 1:1 onto the T-bar, no deadzone (a
+    // centered deadzone would create a dead spot at the T-bar's most
+    // meaningful position, the 50/50 blend point).
+    TBarAxis,
 }
 
 public static class GamepadActions
@@ -39,6 +46,7 @@ public static class GamepadActions
         GamepadAction.MoveX => GamepadActionKind.Axis,
         GamepadAction.MoveY => GamepadActionKind.Axis,
         GamepadAction.ColorSliderAxis => GamepadActionKind.Axis,
+        GamepadAction.TBarAxis => GamepadActionKind.Axis,
         _ => GamepadActionKind.Button,
     };
 }

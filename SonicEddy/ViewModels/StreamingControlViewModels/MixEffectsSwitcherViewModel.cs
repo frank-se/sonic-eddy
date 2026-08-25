@@ -1,4 +1,5 @@
 using System;
+using Avalonia.Threading;
 using ReactiveUI;
 using SonicEddy.Audio;
 using SonicEddy.Services.Gamepad;
@@ -37,7 +38,15 @@ public sealed class MixEffectsSwitcherViewModel : ViewModelBase, IDisposable
         _gamepadService = gamepadService;
         _videoBlenderService = videoBlenderService;
         _mixerService = mixerService;
+
+        _gamepadService.TBarAxisChanged += OnTBarAxisChanged;
     }
+
+    // TBarAxisChanged fires on the SDL poll thread (see GamepadService) -
+    // must marshal to the UI thread before touching a bound property, same
+    // convention as ObjectControlPanelViewModel.OnObjectStateChanged.
+    private void OnTBarAxisChanged(double value) =>
+        Dispatcher.UIThread.Post(() => TBarValue = value);
 
     public StreamingControlViewModel PanelA { get; }
     public StreamingControlViewModel PanelB { get; }
@@ -145,6 +154,7 @@ public sealed class MixEffectsSwitcherViewModel : ViewModelBase, IDisposable
 
     public void Dispose()
     {
+        _gamepadService.TBarAxisChanged -= OnTBarAxisChanged;
         PanelA.Dispose();
         PanelB.Dispose();
     }
