@@ -22,4 +22,10 @@ public interface IGamepadService
     Task SetBindingAsync(GamepadAction action, GamepadBinding binding);
 
     string DescribeBinding(GamepadBinding? binding);
+
+    // Which of the two T-bar M/E switcher compositor panels the gamepad
+    // currently drives - see MixEffectsSwitcherViewModel, which calls this
+    // as the T-bar crosses its midpoint so the gamepad always targets
+    // whichever side is currently "preview" (not live).
+    void SetPreviewSide(bool previewIsB);
 }

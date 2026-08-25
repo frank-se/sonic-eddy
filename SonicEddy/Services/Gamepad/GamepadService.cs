@@ -19,6 +19,16 @@ namespace SonicEddy.Services.Gamepad;
 // input source. Everything SDL-related (init, event pump, the controller
 // handle) lives on one dedicated background thread - SDL expects all of
 // its calls to come from the thread that initialized it.
+//
+// T-bar M/E switcher: this service now drives one of two independent
+// compositor panels (A/B, see CompositorInstanceNames) rather than a single
+// fixed one. Everything that used to be a flat field on the service is
+// duplicated per side in TargetState; _targetsB (flipped via
+// SetPreviewSide, called by MixEffectsSwitcherViewModel as the T-bar
+// crosses its midpoint) selects which one ApplyAction/ApplyContinuousAxisActions
+// actually mutate. Both sides stay attached/warm continuously - flipping is
+// just a pointer swap, not a reconnect, so no scene-load state is lost or
+// raced when the operator moves the T-bar.
 public sealed class GamepadService : IGamepadService, IDisposable
 {
     private const float Deadzone = 0.15f;
@@ -27,26 +37,45 @@ public sealed class GamepadService : IGamepadService, IDisposable
     private const float GainPerTickAtFullDeflection = 0.03f;
     private static readonly TimeSpan TickInterval = TimeSpan.FromMilliseconds(50);
 
+    // Everything that used to be a flat field on GamepadService, one
+    // instance per compositor panel (A/B). Deliberately plain mutable
+    // fields, no extra locking - same benign-cross-thread-race tolerance
+    // the single-target version already had between the poll thread and
+    // ConnectionChanged/ParamsChanged callbacks.
+    private sealed class TargetState(IStreamingControlService service)
+    {
+        public readonly IStreamingControlService Service = service;
+        public CompositorClient? Client;
+        public int ActiveSceneIndex = -1;
+        public SceneFileConfig? ActiveSceneFile;
+        public int SelectedObjectPosition;
+        public int SelectedColorChannel;
+    }
+
     private readonly IAppDataService _appDataService;
-    private readonly IStreamingControlService _streamingControlService;
     private readonly ConcurrentDictionary<GamepadAction, GamepadBinding> _bindings = new();
     private readonly Dictionary<byte, short> _currentAxisValues = new();
+
+    private readonly TargetState _stateA;
+    private readonly TargetState _stateB;
+    private volatile bool _targetsB; // false => gamepad drives A, true => drives B
 
     private System.Threading.Thread? _pollThread;
     private CancellationTokenSource? _shutdownCts;
     private TaskCompletionSource<GamepadBinding>? _captureTcs;
 
-    private CompositorClient? _client;
-    private int _activeSceneIndex = -1;
-    private SceneFileConfig? _activeSceneFile;
-    private int _selectedObjectPosition;
-    private int _selectedColorChannel;
+    private TargetState Current => _targetsB ? _stateB : _stateA;
 
-    public GamepadService(IAppDataService appDataService, IStreamingControlService streamingControlService)
+    public GamepadService(IAppDataService appDataService,
+        IStreamingControlService streamingControlServiceA,
+        IStreamingControlService streamingControlServiceB)
     {
         _appDataService = appDataService;
-        _streamingControlService = streamingControlService;
+        _stateA = new TargetState(streamingControlServiceA);
+        _stateB = new TargetState(streamingControlServiceB);
     }
+
+    public void SetPreviewSide(bool previewIsB) => _targetsB = previewIsB;
 
     public bool IsControllerConnected { get; private set; }
     public event Action? ControllerConnectionChanged;
@@ -66,8 +95,10 @@ public sealed class GamepadService : IGamepadService, IDisposable
             }
         }
 
-        _streamingControlService.ConnectionChanged += OnStreamingConnectionChanged;
-        AttachClient(_streamingControlService.Client);
+        _stateA.Service.ConnectionChanged += OnStreamingConnectionChangedA;
+        _stateB.Service.ConnectionChanged += OnStreamingConnectionChangedB;
+        AttachClient(_stateA, _stateA.Service.Client);
+        AttachClient(_stateB, _stateB.Service.Client);
 
         _shutdownCts = new CancellationTokenSource();
         _pollThread = new System.Threading.Thread(() => RunPollLoop(_shutdownCts.Token))
@@ -127,61 +158,63 @@ public sealed class GamepadService : IGamepadService, IDisposable
     private static string StripPrefix(string value, string prefix) =>
         value.StartsWith(prefix, StringComparison.Ordinal) ? value[prefix.Length..] : value;
 
-    private void OnStreamingConnectionChanged() => AttachClient(_streamingControlService.Client);
+    private void OnStreamingConnectionChangedA() => AttachClient(_stateA, _stateA.Service.Client);
+    private void OnStreamingConnectionChangedB() => AttachClient(_stateB, _stateB.Service.Client);
 
-    private void AttachClient(CompositorClient? client)
+    private void AttachClient(TargetState state, CompositorClient? client)
     {
-        if (_client is not null)
-            _client.ParamsChanged -= OnParamsChanged;
+        if (state.Client is not null)
+            state.Client.ParamsChanged -= state == _stateA ? OnParamsChangedA : OnParamsChangedB;
 
-        _client = client;
-        _activeSceneFile = null;
-        _activeSceneIndex = -1;
-        _selectedObjectPosition = 0;
+        state.Client = client;
+        state.ActiveSceneFile = null;
+        state.ActiveSceneIndex = -1;
+        state.SelectedObjectPosition = 0;
 
         if (client is null)
             return;
 
-        client.ParamsChanged += OnParamsChanged;
-        _ = LoadInitialAsync(client);
+        client.ParamsChanged += state == _stateA ? OnParamsChangedA : OnParamsChangedB;
+        _ = LoadInitialAsync(state, client);
     }
 
-    private async Task LoadInitialAsync(CompositorClient client)
+    private async Task LoadInitialAsync(TargetState state, CompositorClient client)
     {
         var parameters = await client.GetParamsAsync();
         if (parameters is not null)
-            await ApplyParamsAsync(parameters);
+            await ApplyParamsAsync(state, parameters);
     }
 
-    private void OnParamsChanged(CompositorParams parameters) => _ = ApplyParamsAsync(parameters);
+    private void OnParamsChangedA(CompositorParams parameters) => _ = ApplyParamsAsync(_stateA, parameters);
+    private void OnParamsChangedB(CompositorParams parameters) => _ = ApplyParamsAsync(_stateB, parameters);
 
-    private async Task ApplyParamsAsync(CompositorParams parameters)
+    private async Task ApplyParamsAsync(TargetState state, CompositorParams parameters)
     {
-        _activeSceneIndex = parameters.ActiveSceneIndex;
-        if (_activeSceneIndex < 0 || _activeSceneIndex >= parameters.Scenes.Count)
+        state.ActiveSceneIndex = parameters.ActiveSceneIndex;
+        if (state.ActiveSceneIndex < 0 || state.ActiveSceneIndex >= parameters.Scenes.Count)
         {
-            _activeSceneFile = null;
+            state.ActiveSceneFile = null;
             return;
         }
 
-        _activeSceneFile = await _streamingControlService.LoadSceneFileAsync(
-            parameters.Scenes[_activeSceneIndex].File);
-        _selectedObjectPosition = 0;
+        state.ActiveSceneFile = await state.Service.LoadSceneFileAsync(
+            parameters.Scenes[state.ActiveSceneIndex].File);
+        state.SelectedObjectPosition = 0;
     }
 
     // Combined camera-then-image ordering, matching the Streaming Controls
     // window's object picker rows but without their fixed 2/10 display
     // caps - this just walks whatever the scene file actually contains.
-    private IReadOnlyList<(int FlatIndex, SceneFileObject Object)> CombinedObjects()
+    private static IReadOnlyList<(int FlatIndex, SceneFileObject Object)> CombinedObjects(TargetState state)
     {
-        if (_activeSceneFile is null)
+        if (state.ActiveSceneFile is null)
             return [];
 
         var cameras = new List<(int, SceneFileObject)>();
         var images = new List<(int, SceneFileObject)>();
-        for (var i = 0; i < _activeSceneFile.Objects.Count; ++i)
+        for (var i = 0; i < state.ActiveSceneFile.Objects.Count; ++i)
         {
-            var obj = _activeSceneFile.Objects[i];
+            var obj = state.ActiveSceneFile.Objects[i];
             if (obj.IsCamera) cameras.Add((i, obj));
             else if (obj.IsImage) images.Add((i, obj));
         }
@@ -191,22 +224,24 @@ public sealed class GamepadService : IGamepadService, IDisposable
 
     private void CycleObject(int direction)
     {
-        var objects = CombinedObjects();
+        var state = Current;
+        var objects = CombinedObjects(state);
         if (objects.Count == 0) return;
 
-        _selectedObjectPosition = ((_selectedObjectPosition + direction) % objects.Count + objects.Count) % objects.Count;
+        state.SelectedObjectPosition = ((state.SelectedObjectPosition + direction) % objects.Count + objects.Count) % objects.Count;
     }
 
     private void MutateSelected(Action<ObjectState> mutate, Func<ObjectState, object> fieldsForWire)
     {
-        if (_client is null || _activeSceneFile is null) return;
-        var objects = CombinedObjects();
-        if (_selectedObjectPosition >= objects.Count) return;
+        var state = Current;
+        if (state.Client is null || state.ActiveSceneFile is null) return;
+        var objects = CombinedObjects(state);
+        if (state.SelectedObjectPosition >= objects.Count) return;
 
-        var (flatIndex, baseline) = objects[_selectedObjectPosition];
-        var state = _streamingControlService.GetOrCreateObjectState(_activeSceneIndex, flatIndex, baseline);
-        _streamingControlService.UpdateObjectState(_activeSceneIndex, flatIndex, mutate);
-        _client.SetObjectParams(flatIndex, fieldsForWire(state));
+        var (flatIndex, baseline) = objects[state.SelectedObjectPosition];
+        var objectState = state.Service.GetOrCreateObjectState(state.ActiveSceneIndex, flatIndex, baseline);
+        state.Service.UpdateObjectState(state.ActiveSceneIndex, flatIndex, mutate);
+        state.Client.SetObjectParams(flatIndex, fieldsForWire(objectState));
     }
 
     private void ApplyAction(GamepadAction action)
@@ -229,10 +264,10 @@ public sealed class GamepadService : IGamepadService, IDisposable
                 MutateSelected(s => s.FlipHorizontal = !s.FlipHorizontal, s => new { flip_horizontal = s.FlipHorizontal });
                 break;
             case GamepadAction.NextColorSlider:
-                _selectedColorChannel = (_selectedColorChannel + 1) % 3;
+                Current.SelectedColorChannel = (Current.SelectedColorChannel + 1) % 3;
                 break;
             case GamepadAction.PreviousColorSlider:
-                _selectedColorChannel = (_selectedColorChannel + 2) % 3;
+                Current.SelectedColorChannel = (Current.SelectedColorChannel + 2) % 3;
                 break;
             case GamepadAction.UnifyColor:
                 MutateSelected(s =>
@@ -265,62 +300,64 @@ public sealed class GamepadService : IGamepadService, IDisposable
     private void ApplyMoveAxis(GamepadAction action, bool isX)
     {
         var delta = ReadAxisDelta(action);
-        if (delta is null || _client is null || _activeSceneFile is null) return;
+        var target = Current;
+        if (delta is null || target.Client is null || target.ActiveSceneFile is null) return;
 
-        var objects = CombinedObjects();
-        if (_selectedObjectPosition >= objects.Count) return;
-        var (flatIndex, baseline) = objects[_selectedObjectPosition];
-        var state = _streamingControlService.GetOrCreateObjectState(_activeSceneIndex, flatIndex, baseline);
+        var objects = CombinedObjects(target);
+        if (target.SelectedObjectPosition >= objects.Count) return;
+        var (flatIndex, baseline) = objects[target.SelectedObjectPosition];
+        var state = target.Service.GetOrCreateObjectState(target.ActiveSceneIndex, flatIndex, baseline);
 
         var step = (int)Math.Round(delta.Value * NudgePerTickAtFullDeflection);
         if (step == 0) return;
 
         if (isX)
         {
-            var maxX = Math.Max(0, _activeSceneFile.CanvasWidth - baseline.Width);
+            var maxX = Math.Max(0, target.ActiveSceneFile.CanvasWidth - baseline.Width);
             var clamped = Math.Clamp(state.X + step, 0, maxX);
             if (clamped == state.X) return;
-            _streamingControlService.UpdateObjectState(_activeSceneIndex, flatIndex, s => s.X = clamped);
-            _client.SetObjectParams(flatIndex, new { dst_x = clamped });
+            target.Service.UpdateObjectState(target.ActiveSceneIndex, flatIndex, s => s.X = clamped);
+            target.Client.SetObjectParams(flatIndex, new { dst_x = clamped });
         }
         else
         {
-            var maxY = Math.Max(0, _activeSceneFile.CanvasHeight - baseline.Height);
+            var maxY = Math.Max(0, target.ActiveSceneFile.CanvasHeight - baseline.Height);
             var clamped = Math.Clamp(state.Y + step, 0, maxY);
             if (clamped == state.Y) return;
-            _streamingControlService.UpdateObjectState(_activeSceneIndex, flatIndex, s => s.Y = clamped);
-            _client.SetObjectParams(flatIndex, new { dst_y = clamped });
+            target.Service.UpdateObjectState(target.ActiveSceneIndex, flatIndex, s => s.Y = clamped);
+            target.Client.SetObjectParams(flatIndex, new { dst_y = clamped });
         }
     }
 
     private void ApplyColorAxis()
     {
         var delta = ReadAxisDelta(GamepadAction.ColorSliderAxis);
-        if (delta is null || _client is null || _activeSceneFile is null) return;
+        var target = Current;
+        if (delta is null || target.Client is null || target.ActiveSceneFile is null) return;
 
-        var objects = CombinedObjects();
-        if (_selectedObjectPosition >= objects.Count) return;
-        var (flatIndex, baseline) = objects[_selectedObjectPosition];
-        var state = _streamingControlService.GetOrCreateObjectState(_activeSceneIndex, flatIndex, baseline);
+        var objects = CombinedObjects(target);
+        if (target.SelectedObjectPosition >= objects.Count) return;
+        var (flatIndex, baseline) = objects[target.SelectedObjectPosition];
+        var state = target.Service.GetOrCreateObjectState(target.ActiveSceneIndex, flatIndex, baseline);
 
         var step = delta.Value * GainPerTickAtFullDeflection;
 
-        switch (_selectedColorChannel)
+        switch (target.SelectedColorChannel)
         {
             case 0:
                 var red = Math.Clamp(state.RedGain + step, 0f, 2f);
-                _streamingControlService.UpdateObjectState(_activeSceneIndex, flatIndex, s => s.RedGain = red);
-                _client.SetObjectParams(flatIndex, new { red_gain = red });
+                target.Service.UpdateObjectState(target.ActiveSceneIndex, flatIndex, s => s.RedGain = red);
+                target.Client.SetObjectParams(flatIndex, new { red_gain = red });
                 break;
             case 1:
                 var green = Math.Clamp(state.GreenGain + step, 0f, 2f);
-                _streamingControlService.UpdateObjectState(_activeSceneIndex, flatIndex, s => s.GreenGain = green);
-                _client.SetObjectParams(flatIndex, new { green_gain = green });
+                target.Service.UpdateObjectState(target.ActiveSceneIndex, flatIndex, s => s.GreenGain = green);
+                target.Client.SetObjectParams(flatIndex, new { green_gain = green });
                 break;
             default:
                 var blue = Math.Clamp(state.BlueGain + step, 0f, 2f);
-                _streamingControlService.UpdateObjectState(_activeSceneIndex, flatIndex, s => s.BlueGain = blue);
-                _client.SetObjectParams(flatIndex, new { blue_gain = blue });
+                target.Service.UpdateObjectState(target.ActiveSceneIndex, flatIndex, s => s.BlueGain = blue);
+                target.Client.SetObjectParams(flatIndex, new { blue_gain = blue });
                 break;
         }
     }
@@ -448,9 +485,12 @@ public sealed class GamepadService : IGamepadService, IDisposable
 
     public void Dispose()
     {
-        _streamingControlService.ConnectionChanged -= OnStreamingConnectionChanged;
-        if (_client is not null)
-            _client.ParamsChanged -= OnParamsChanged;
+        _stateA.Service.ConnectionChanged -= OnStreamingConnectionChangedA;
+        _stateB.Service.ConnectionChanged -= OnStreamingConnectionChangedB;
+        if (_stateA.Client is not null)
+            _stateA.Client.ParamsChanged -= OnParamsChangedA;
+        if (_stateB.Client is not null)
+            _stateB.Client.ParamsChanged -= OnParamsChangedB;
 
         _shutdownCts?.Cancel();
         _pollThread?.Join(TimeSpan.FromSeconds(1));

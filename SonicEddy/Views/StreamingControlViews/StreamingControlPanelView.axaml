@@ -1,0 +1,133 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:streamingControlViewModels="clr-namespace:SonicEddy.ViewModels.StreamingControlViewModels"
+             mc:Ignorable="d" d:DesignWidth="560" d:DesignHeight="620"
+             x:Class="SonicEddy.Views.StreamingControlViews.StreamingControlPanelView"
+             x:DataType="streamingControlViewModels:StreamingControlViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="Button.active">
+            <Setter Property="Background" Value="#3A6EA5" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+    </UserControl.Styles>
+
+    <ScrollViewer>
+        <StackPanel Margin="12" Spacing="10">
+            <TextBlock Text="Compositor not connected" Foreground="Gray"
+                       IsVisible="{Binding !IsConnected}" />
+
+            <TextBlock Text="Scenes" FontWeight="Bold" />
+            <ItemsControl ItemsSource="{Binding Scenes}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="streamingControlViewModels:SceneSlotViewModel">
+                        <Button Command="{Binding SelectCommand}" IsEnabled="{Binding !IsEmpty}"
+                                Width="100" Margin="0,0,4,4"
+                                Classes.active="{Binding IsActive}"
+                                Content="{Binding Name}" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <TextBlock Text="Camera" FontWeight="Bold" />
+            <ItemsControl ItemsSource="{Binding CameraObjects}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="streamingControlViewModels:ObjectSlotViewModel">
+                        <Button Command="{Binding SelectCommand}" IsEnabled="{Binding !IsEmpty}"
+                                Width="48" Margin="0,0,4,4"
+                                Content="{Binding DisplayIndex}" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <TextBlock Text="Images" FontWeight="Bold" />
+            <ItemsControl ItemsSource="{Binding ImageObjects}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="streamingControlViewModels:ObjectSlotViewModel">
+                        <Button Command="{Binding SelectCommand}" IsEnabled="{Binding !IsEmpty}"
+                                Width="48" Margin="0,0,4,4"
+                                Content="{Binding DisplayIndex}" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <Border BorderThickness="1" BorderBrush="Gray" Padding="10" CornerRadius="4"
+                    IsVisible="{Binding SelectedObjectControls, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <StackPanel Spacing="8" DataContext="{Binding SelectedObjectControls}"
+                            x:DataType="streamingControlViewModels:ObjectControlPanelViewModel">
+                    <TextBlock Text="Position" FontWeight="Bold" />
+                    <Grid ColumnDefinitions="30,160,20,30,160" RowDefinitions="Auto">
+                        <TextBlock Grid.Column="0" Text="X" VerticalAlignment="Center" />
+                        <NumericUpDown Grid.Column="1" Value="{Binding X}"
+                                       Minimum="0" Maximum="{Binding MaxX}"
+                                       FormatString="0" Increment="1" />
+                        <TextBlock Grid.Column="3" Text="Y" VerticalAlignment="Center" />
+                        <NumericUpDown Grid.Column="4" Value="{Binding Y}"
+                                       Minimum="0" Maximum="{Binding MaxY}"
+                                       FormatString="0" Increment="1" />
+                    </Grid>
+                    <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center">
+                        <Button Content="◄" Command="{Binding MoveLeftCommand}" />
+                        <StackPanel Spacing="4">
+                            <Button Content="▲" Command="{Binding MoveUpCommand}"
+                                    HorizontalAlignment="Center" />
+                            <Button Content="▼" Command="{Binding MoveDownCommand}"
+                                    HorizontalAlignment="Center" />
+                        </StackPanel>
+                        <Button Content="►" Command="{Binding MoveRightCommand}" />
+                    </StackPanel>
+
+                    <TextBlock Text="Controls" FontWeight="Bold" />
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <ToggleButton Content="Hide/Show" IsChecked="{Binding Visible}" />
+                        <ToggleButton Content="Flip V" IsChecked="{Binding FlipVertical}" />
+                        <ToggleButton Content="Flip H" IsChecked="{Binding FlipHorizontal}" />
+                        <Button Content="Rotate" IsEnabled="{Binding RotateEnabled}" />
+                        <Button Content="Z+" IsEnabled="{Binding ZOrderEnabled}" />
+                        <Button Content="Z-" IsEnabled="{Binding ZOrderEnabled}" />
+                    </StackPanel>
+
+                    <TextBlock Text="Color" FontWeight="Bold" />
+                    <Grid ColumnDefinitions="24,*,60" RowDefinitions="Auto,Auto,Auto">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="R" VerticalAlignment="Center" />
+                        <Slider Grid.Row="0" Grid.Column="1" Minimum="0" Maximum="2"
+                                Value="{Binding RedGain}" />
+                        <NumericUpDown Grid.Row="0" Grid.Column="2" Value="{Binding RedGain}"
+                                       Minimum="0" Maximum="2" Increment="0.05" FormatString="0.00" />
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="G" VerticalAlignment="Center" />
+                        <Slider Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="2"
+                                Value="{Binding GreenGain}" />
+                        <NumericUpDown Grid.Row="1" Grid.Column="2" Value="{Binding GreenGain}"
+                                       Minimum="0" Maximum="2" Increment="0.05" FormatString="0.00" />
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="B" VerticalAlignment="Center" />
+                        <Slider Grid.Row="2" Grid.Column="1" Minimum="0" Maximum="2"
+                                Value="{Binding BlueGain}" />
+                        <NumericUpDown Grid.Row="2" Grid.Column="2" Value="{Binding BlueGain}"
+                                       Minimum="0" Maximum="2" Increment="0.05" FormatString="0.00" />
+                    </Grid>
+                    <Button Content="Unify" Command="{Binding UnifyCommand}"
+                            HorizontalAlignment="Left" />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

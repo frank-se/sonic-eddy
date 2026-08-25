@@ -7,32 +7,46 @@ using Fr.Sonic;
 using Fr.Sonic.Model.Objects;
 using SonicEddy.Contracts.CameraRouter;
 using SonicEddy.Services.AppData;
+using SonicEddy.Services.StreamingControl;
 
 namespace SonicEddy.Services.CameraRouter;
 
 // WirePlumber does not auto-link video streams the way it does audio/MIDI
 // (confirmed empirically - target.object has no effect on video nodes), so
 // this service does it: watches for named camera-like source nodes and
-// links them into pw-video-compositor's fixed se.video-compositor.in{N}
+// links them into pw-video-compositor's fixed se.video-compositor.<instance>.in{N}
 // input nodes, either immediately (if already present) or as soon as they
 // appear. Mirrors Services/MidiRouter/MidiRouterService.cs closely - same
-// "match by node name, retry on every port-added event" shape.
+// "match by node name, retry on every port-added event" shape. One camera
+// assignment fans out into every compositor instance in
+// CompositorInstanceNames.All (both A and B panels of the T-bar M/E
+// switcher need to see the same live cameras), tracked as one link id per
+// (slot, instance) pair instead of one per slot.
 public sealed class CameraRouterService : ICameraRouterService, IDisposable
 {
     public const int SlotCount = 2;
 
+    private static readonly string[] Instances = CompositorInstanceNames.All;
+
     // Sonic Eddy's own video nodes never show up as pickable camera sources.
-    private static readonly HashSet<string> OwnNodeNames =
-    [
-        "se.video-compositor.in0",
-        "se.video-compositor.in1",
-        "se.video-compositor.out",
-        "se.mixer-overview",
-    ];
+    private static readonly HashSet<string> OwnNodeNames = BuildOwnNodeNames();
+
+    private static HashSet<string> BuildOwnNodeNames()
+    {
+        var names = new HashSet<string> { "se.mixer-overview" };
+        foreach (var instance in Instances)
+        {
+            for (var i = 0; i < SlotCount; ++i)
+                names.Add(CompositorInstanceNames.InputNode(instance, i));
+            names.Add(CompositorInstanceNames.OutputNode(instance));
+        }
+        return names;
+    }
 
     private readonly IAppDataService _appDataService;
     private readonly string?[] _assignments = new string?[SlotCount];
-    private readonly ulong?[] _linkIds = new ulong?[SlotCount];
+    // [slotIndex, instanceIndex] - one link id per (slot, compositor instance).
+    private readonly ulong?[,] _linkIds = new ulong?[SlotCount, Instances.Length];
     private readonly object _lock = new();
     private readonly SemaphoreSlim _storeLock = new(1, 1);
     private bool _initialized;
@@ -54,9 +68,13 @@ public sealed class CameraRouterService : ICameraRouterService, IDisposable
         {
             lock (_lock)
             {
+                // "Connected" means linked into every compositor instance,
+                // not just one - a partial link (e.g. only instance A up so
+                // far) isn't the fully-working state yet.
                 return Enumerable.Range(0, SlotCount)
                     .Select(i => new CameraSlot(i, _assignments[i],
-                        _linkIds[i] is not null))
+                        Enumerable.Range(0, Instances.Length)
+                            .All(inst => _linkIds[i, inst] is not null)))
                     .ToArray();
             }
         }
@@ -136,15 +154,18 @@ public sealed class CameraRouterService : ICameraRouterService, IDisposable
         {
             for (var i = 0; i < SlotCount; ++i)
             {
-                if (_linkIds[i] is not null) continue;
+                for (var inst = 0; inst < Instances.Length; ++inst)
+                {
+                    if (_linkIds[i, inst] is not null) continue;
 
-                var sourcePort = FindOutputPort(_assignments[i]);
-                var targetPort = FindInputPort(CompositorInputName(i));
-                if (sourcePort is null || targetPort is null) continue;
-                if (!LinkConnects(link, sourcePort, targetPort)) continue;
+                    var sourcePort = FindOutputPort(_assignments[i]);
+                    var targetPort = FindInputPort(CompositorInstanceNames.InputNode(Instances[inst], i));
+                    if (sourcePort is null || targetPort is null) continue;
+                    if (!LinkConnects(link, sourcePort, targetPort)) continue;
 
-                _linkIds[i] = link.ObjectId;
-                changed = true;
+                    _linkIds[i, inst] = link.ObjectId;
+                    changed = true;
+                }
             }
         }
 
@@ -158,9 +179,12 @@ public sealed class CameraRouterService : ICameraRouterService, IDisposable
         {
             for (var i = 0; i < SlotCount; ++i)
             {
-                if (_linkIds[i] != link.ObjectId) continue;
-                _linkIds[i] = null;
-                changed = true;
+                for (var inst = 0; inst < Instances.Length; ++inst)
+                {
+                    if (_linkIds[i, inst] != link.ObjectId) continue;
+                    _linkIds[i, inst] = null;
+                    changed = true;
+                }
             }
         }
 
@@ -180,23 +204,33 @@ public sealed class CameraRouterService : ICameraRouterService, IDisposable
     {
         string? sourceNodeName;
         lock (_lock)
-        {
-            if (_linkIds[slotIndex] is not null) return; // already connected
             sourceNodeName = _assignments[slotIndex];
-        }
 
         if (string.IsNullOrEmpty(sourceNodeName)) return;
 
         var sourcePort = FindOutputPort(sourceNodeName);
-        var targetPort = FindInputPort(CompositorInputName(slotIndex));
-        if (sourcePort is null || targetPort is null) return;
+        if (sourcePort is null) return;
+
+        for (var inst = 0; inst < Instances.Length; ++inst)
+            TryConnectSlotInstance(slotIndex, inst, sourcePort);
+    }
+
+    private void TryConnectSlotInstance(int slotIndex, int instanceIndex, Port sourcePort)
+    {
+        lock (_lock)
+        {
+            if (_linkIds[slotIndex, instanceIndex] is not null) return; // already connected
+        }
+
+        var targetPort = FindInputPort(CompositorInstanceNames.InputNode(Instances[instanceIndex], slotIndex));
+        if (targetPort is null) return;
 
         var existingLink = FrSonic.LinkRegistry.Objects.FirstOrDefault(link =>
             LinkConnects(link, sourcePort, targetPort));
         if (existingLink is not null)
         {
             lock (_lock)
-                _linkIds[slotIndex] = existingLink.ObjectId;
+                _linkIds[slotIndex, instanceIndex] = existingLink.ObjectId;
             SlotsChanged?.Invoke();
             return;
         }
@@ -214,18 +248,23 @@ public sealed class CameraRouterService : ICameraRouterService, IDisposable
 
     private void DisconnectSlot(int slotIndex)
     {
-        ulong? linkId;
+        var linkIds = new ulong?[Instances.Length];
         lock (_lock)
         {
-            linkId = _linkIds[slotIndex];
-            _linkIds[slotIndex] = null;
+            for (var inst = 0; inst < Instances.Length; ++inst)
+            {
+                linkIds[inst] = _linkIds[slotIndex, inst];
+                _linkIds[slotIndex, inst] = null;
+            }
         }
 
-        if (linkId is null) return;
-
-        var link = FrSonic.LinkRegistry.GetByObjectId(linkId.Value);
-        if (link is not null)
-            FrSonic.LinkFactory.DeleteLink(link);
+        foreach (var linkId in linkIds)
+        {
+            if (linkId is null) continue;
+            var link = FrSonic.LinkRegistry.GetByObjectId(linkId.Value);
+            if (link is not null)
+                FrSonic.LinkFactory.DeleteLink(link);
+        }
     }
 
     private async Task StoreConfigAsync()
@@ -256,9 +295,6 @@ public sealed class CameraRouterService : ICameraRouterService, IDisposable
             _storeLock.Release();
         }
     }
-
-    private static string CompositorInputName(int slotIndex) =>
-        $"se.video-compositor.in{slotIndex}";
 
     private static Port? FindOutputPort(string? nodeName) =>
         FindPort(nodeName, "out");

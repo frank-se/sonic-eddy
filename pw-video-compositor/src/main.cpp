@@ -549,6 +549,13 @@ const pw_stream_events output_stream_events = {
 struct Args {
   std::vector<std::string> scene_paths; // if non-empty, scene mode - all other fields below are ignored
 
+  // Empty by default, reproducing today's exact node names unchanged (so
+  // existing single-instance scripts/manual pw-link usage keeps working).
+  // Set via --instance-name to run two (or more) compositor processes
+  // side by side without their PipeWire node names colliding - see
+  // node_name() below.
+  std::string instance_name;
+
   uint32_t canvas_width = 1280;
   uint32_t canvas_height = 720;
   std::array<uint32_t, kCliInputCount> in_width{960, 960};
@@ -556,6 +563,15 @@ struct Args {
   std::array<double, kCliInputCount> in_scale{0.5, 0.5};
   std::array<std::string, kCliInputCount> in_target{};
 };
+
+// "se.video-compositor.<suffix>" by default, or
+// "se.video-compositor.<instance_name>.<suffix>" when --instance-name is
+// given - lets two (or more) instances coexist in the same PipeWire graph.
+std::string node_name(const Args &args, const std::string &suffix) {
+  return args.instance_name.empty()
+             ? "se.video-compositor." + suffix
+             : "se.video-compositor." + args.instance_name + "." + suffix;
+}
 
 uint32_t parse_u32(const std::string &value) {
   return static_cast<uint32_t>(std::strtoul(value.c_str(), nullptr, 10));
@@ -586,7 +602,9 @@ bool parse_args(int argc, char **argv, Args &args) {
       // a relative path would silently fail to resolve there.
       args.scene_paths.push_back(
           std::filesystem::absolute(next(i)).string());
-    } else if (arg == "--canvas-width")
+    } else if (arg == "--instance-name")
+      args.instance_name = next(i);
+    else if (arg == "--canvas-width")
       args.canvas_width = parse_u32(next(i));
     else if (arg == "--canvas-height")
       args.canvas_height = parse_u32(next(i));
@@ -615,12 +633,14 @@ bool parse_args(int argc, char **argv, Args &args) {
 }
 
 void print_usage() {
-  std::cerr << "usage: pw-video-compositor --scene <scene.json> [--scene <scene2.json> ...] (up to "
+  std::cerr << "usage: pw-video-compositor [--instance-name NAME] --scene <scene.json> [--scene <scene2.json> ...] (up to "
             << kMaxScenes << ")\n"
-               "   or: pw-video-compositor "
+               "   or: pw-video-compositor [--instance-name NAME] "
                "--canvas-width W --canvas-height H "
                "--in0-width W --in0-height H --in0-scale S [--in0-target NAME] "
-               "--in1-width W --in1-height H --in1-scale S [--in1-target NAME]\n";
+               "--in1-width W --in1-height H --in1-scale S [--in1-target NAME]\n"
+               "--instance-name suffixes all node names (se.video-compositor.<NAME>.*) "
+               "so multiple instances can run side by side.\n";
 }
 
 pw_stream *connect_video_stream(pw_loop *loop, const char *name,
@@ -738,7 +758,7 @@ int main(int argc, char **argv) {
     node_names.assign(kInputCount, "");
     target_objects.assign(kInputCount, "");
     for (size_t idx = 0; idx < kInputCount; ++idx)
-      node_names[idx] = "se.video-compositor.in" + std::to_string(idx);
+      node_names[idx] = node_name(args, "in" + std::to_string(idx));
 
     for (size_t scene_i = 0; scene_i < scene_configs.size(); ++scene_i) {
       const auto &cfg = scene_configs[scene_i];
@@ -844,7 +864,7 @@ int main(int argc, char **argv) {
           static_cast<uint32_t>(src.height * slot.scale_y), app.canvas_height);
       build_sample_maps(slot, src.width, src.height);
 
-      node_names.push_back("se.video-compositor.in" + std::to_string(idx));
+      node_names.push_back(node_name(args, "in" + std::to_string(idx)));
       target_objects.push_back(args.in_target[idx]);
     }
     scene.paint_order.resize(kCliInputCount);
@@ -876,8 +896,9 @@ int main(int argc, char **argv) {
       return 1;
   }
 
+  const std::string out_node_name = node_name(args, "out");
   app.out_stream = connect_video_stream(
-      loop, "se.video-compositor.out", "Stream/Output/Video",
+      loop, out_node_name.c_str(), "Stream/Output/Video",
       PW_DIRECTION_OUTPUT, &output_stream_events, &app, app.canvas_width,
       app.canvas_height);
   if (app.out_stream == nullptr)

@@ -17,6 +17,15 @@ executable(
     dependencies : [pipewire_dep, threads_dep, nlohmann_json_dep],
     install : true)
 
+# Two-input, one-output linear cross-dissolve node - blends two
+# pw-video-compositor instances' outputs based on a "blend_position" Props
+# value, for the T-bar M/E switcher prototype.
+executable(
+    'video-blender',
+    'src/video_blender.cpp',
+    dependencies : [pipewire_dep, threads_dep],
+    install : true)
+
 # Throwaway pure-PipeWire test tools (no GStreamer) used to verify the
 # compositor without depending on an external video producer/consumer setup.
 executable(

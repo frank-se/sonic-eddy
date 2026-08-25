@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Avalonia.Threading;
 using Fr.Sonic.Compositor;
 using ReactiveUI;
-using Splat;
 using SonicEddy.Services.StreamingControl;
 
 namespace SonicEddy.ViewModels.StreamingControlViewModels;
@@ -23,9 +22,9 @@ public sealed class StreamingControlViewModel : ViewModelBase, IDisposable
     private SceneFileConfig? _activeSceneFile;
     private int _activeSceneIndex = -1;
 
-    public StreamingControlViewModel()
+    public StreamingControlViewModel(IStreamingControlService service)
     {
-        _service = Locator.Current.GetService<IStreamingControlService>()!;
+        _service = service;
 
         Scenes = BuildEmptySceneSlots();
         CameraObjects = BuildEmptyObjectSlots(MaxCameraObjects);

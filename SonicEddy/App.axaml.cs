@@ -29,6 +29,7 @@ using SonicEddy.Services.VirtualInputs;
 using SonicEddy.Services.JackInputPorts;
 using SonicEddy.Services.VirtualOutputs;
 using SonicEddy.Services.TraktorZ1;
+using SonicEddy.Services.VideoBlender;
 using SonicEddy.Services.VideoStreaming;
 using SonicEddy.Services.Wireplumber;
 using SonicEddy.Tools;
@@ -221,15 +222,33 @@ public class App : Application
             cameraRouterService);
         _ = cameraRouterService.InitializeAsync();
 
-        var streamingControlService = new StreamingControlService();
+        // Two independent instances, one per T-bar M/E switcher panel (see
+        // CompositorInstanceNames) - registered under Splat contracts A/B
+        // rather than as a single unkeyed IStreamingControlService, since
+        // there are genuinely two of them and their per-object state must
+        // never merge (see MixEffectsSwitcherViewModel).
+        var streamingControlServiceA = new StreamingControlService(
+            CompositorInstanceNames.OutputNode(CompositorInstanceNames.A));
         Locator.CurrentMutable.Register<IStreamingControlService>(() =>
-            streamingControlService);
-        _ = streamingControlService.InitializeAsync();
+            streamingControlServiceA, CompositorInstanceNames.A);
+        _ = streamingControlServiceA.InitializeAsync();
 
-        var gamepadService = new GamepadService(appDataService, streamingControlService);
+        var streamingControlServiceB = new StreamingControlService(
+            CompositorInstanceNames.OutputNode(CompositorInstanceNames.B));
+        Locator.CurrentMutable.Register<IStreamingControlService>(() =>
+            streamingControlServiceB, CompositorInstanceNames.B);
+        _ = streamingControlServiceB.InitializeAsync();
+
+        var gamepadService = new GamepadService(appDataService,
+            streamingControlServiceA, streamingControlServiceB);
         Locator.CurrentMutable.Register<IGamepadService>(() =>
             gamepadService);
         _ = gamepadService.InitializeAsync();
+
+        var videoBlenderService = new VideoBlenderService();
+        Locator.CurrentMutable.Register<IVideoBlenderService>(() =>
+            videoBlenderService);
+        _ = videoBlenderService.InitializeAsync();
 
         var mixerOverviewCompositorLinkService = new MixerOverviewCompositorLinkService();
         _ = mixerOverviewCompositorLinkService.InitializeAsync();

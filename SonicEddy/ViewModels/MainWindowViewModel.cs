@@ -10,10 +10,13 @@ using ReactiveUI;
 using SonicEddy.Services.AppData;
 using SonicEddy.Services.DrumMixer;
 using SonicEddy.Services.ExternalEffects;
+using SonicEddy.Services.Gamepad;
 using SonicEddy.Services.Midi;
 using SonicEddy.Services.MixerServiceV2;
 using SonicEddy.Services.MixerPersistence;
+using SonicEddy.Services.StreamingControl;
 using SonicEddy.Services.TraktorZ1;
+using SonicEddy.Services.VideoBlender;
 using SonicEddy.Tools;
 using SonicEddy.Services.MixerViewModels;
 using SonicEddy.Services.Preferences;
@@ -1026,9 +1029,20 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         if (_streamingControlWindow is not null &&
             _streamingControlWindow.IsVisible) return;
 
+        var streamingControlServiceA =
+            Locator.Current.GetService<IStreamingControlService>(CompositorInstanceNames.A)!;
+        var streamingControlServiceB =
+            Locator.Current.GetService<IStreamingControlService>(CompositorInstanceNames.B)!;
+        var gamepadService = Locator.Current.GetService<IGamepadService>()!;
+        var videoBlenderService = Locator.Current.GetService<IVideoBlenderService>()!;
+        var mixerService = Locator.Current.GetService<IMixerService>()!;
+
         _streamingControlWindow = new StreamingControlWindow()
         {
-            DataContext = new StreamingControlViewModel()
+            DataContext = new MixEffectsSwitcherViewModel(
+                new StreamingControlViewModel(streamingControlServiceA),
+                new StreamingControlViewModel(streamingControlServiceB),
+                gamepadService, videoBlenderService, mixerService)
         };
 
         _streamingControlWindow.Show();

@@ -10,7 +10,7 @@ namespace SonicEddy.Services.StreamingControl;
 
 public sealed class StreamingControlService : IStreamingControlService, IDisposable
 {
-    private const string CompositorOutputNodeName = "se.video-compositor.out";
+    private readonly string _compositorOutputNodeName;
 
     private readonly object _lock = new();
     private readonly ConcurrentDictionary<string, Task<SceneFileConfig?>> _sceneFileCache = new();
@@ -18,8 +18,13 @@ public sealed class StreamingControlService : IStreamingControlService, IDisposa
     private CompositorClient? _client;
     private bool _initialized;
 
-    public StreamingControlService()
+    // outputNodeName: which compositor instance's output node to discover -
+    // see CompositorInstanceNames. Two instances of this service, each with
+    // a different name, are what let the T-bar M/E switcher's two panels
+    // (and the gamepad's two TargetStates) stay fully independent.
+    public StreamingControlService(string outputNodeName)
     {
+        _compositorOutputNodeName = outputNodeName;
         FrSonic.NodeRegistry.Added += OnNodeAdded;
         FrSonic.NodeRegistry.Deleted += OnNodeDeleted;
     }
@@ -44,7 +49,7 @@ public sealed class StreamingControlService : IStreamingControlService, IDisposa
         }
 
         var existing = FrSonic.NodeRegistry.Objects
-            .FirstOrDefault(node => node.Name == CompositorOutputNodeName);
+            .FirstOrDefault(node => node.Name == _compositorOutputNodeName);
         if (existing is not null)
             Connect(existing);
 
@@ -85,13 +90,13 @@ public sealed class StreamingControlService : IStreamingControlService, IDisposa
 
     private void OnNodeAdded(Node node)
     {
-        if (node.Name != CompositorOutputNodeName) return;
+        if (node.Name != _compositorOutputNodeName) return;
         Connect(node);
     }
 
     private void OnNodeDeleted(Node node)
     {
-        if (node.Name != CompositorOutputNodeName) return;
+        if (node.Name != _compositorOutputNodeName) return;
 
         bool changed;
         lock (_lock)
