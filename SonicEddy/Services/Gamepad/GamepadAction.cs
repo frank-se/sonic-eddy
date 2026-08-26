@@ -34,6 +34,11 @@ public enum GamepadAction
     // centered deadzone would create a dead spot at the T-bar's most
     // meaningful position, the 50/50 blend point).
     TBarAxis,
+
+    // T-bar M/E switcher: rotates whichever panel the gamepad currently
+    // targets (see GamepadService.SetPreviewSide) through
+    // None -> Mic1 -> Mic2 -> None - see MixEffectsSwitcherViewModel.CycleMic.
+    CycleMic,
 }
 
 public static class GamepadActions

@@ -35,4 +35,11 @@ public interface IGamepadService
     // PanSlider. Raised from the SDL poll thread - subscribers must marshal
     // to the UI thread themselves (same convention as ObjectStateChanged).
     event Action<double>? TBarAxisChanged;
+
+    // Fires when GamepadAction.CycleMic is pressed, carrying whether the
+    // gamepad currently targets panel B (see SetPreviewSide) at the time of
+    // the press - MixEffectsSwitcherViewModel rotates that panel's Mic1/
+    // Mic2 selection through None -> Mic1 -> Mic2 -> None. Raised from the
+    // SDL poll thread - subscribers must marshal to the UI thread themselves.
+    event Action<bool>? CycleMicRequested;
 }

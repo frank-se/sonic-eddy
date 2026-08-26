@@ -55,6 +55,7 @@ public sealed class MixEffectsSwitcherViewModel : ViewModelBase, IDisposable
         _deckService = deckService;
 
         _gamepadService.TBarAxisChanged += OnTBarAxisChanged;
+        _gamepadService.CycleMicRequested += OnCycleMicRequested;
 
         PanelA.PropertyChanged += OnPanelPropertyChanged;
         PanelB.PropertyChanged += OnPanelPropertyChanged;
@@ -75,6 +76,31 @@ public sealed class MixEffectsSwitcherViewModel : ViewModelBase, IDisposable
     // convention as ObjectControlPanelViewModel.OnObjectStateChanged.
     private void OnTBarAxisChanged(double value) =>
         Dispatcher.UIThread.Post(() => TBarValue = value);
+
+    // Same threading convention as OnTBarAxisChanged - fires on the SDL
+    // poll thread.
+    private void OnCycleMicRequested(bool targetsB) =>
+        Dispatcher.UIThread.Post(() => CycleMic(targetsB));
+
+    // Rotates the gamepad-targeted panel's Mic1/Mic2 selection through
+    // None -> Mic1 -> Mic2 -> None. Setters already enforce mutual
+    // exclusivity within a panel (selecting one clears the other), so only
+    // the None<->Mic2 transition needs an explicit clear here.
+    private void CycleMic(bool targetsB)
+    {
+        if (!targetsB)
+        {
+            if (PanelAMic2Selected) PanelAMic2Selected = false;
+            else if (PanelAMic1Selected) PanelAMic2Selected = true;
+            else PanelAMic1Selected = true;
+        }
+        else
+        {
+            if (PanelBMic2Selected) PanelBMic2Selected = false;
+            else if (PanelBMic1Selected) PanelBMic2Selected = true;
+            else PanelBMic1Selected = true;
+        }
+    }
 
     // Scene-active-state and combined-object-list changes both surface as
     // PanelA/B property reassignments (Scenes/CameraObjects/ImageObjects -
@@ -298,6 +324,7 @@ public sealed class MixEffectsSwitcherViewModel : ViewModelBase, IDisposable
     public void Dispose()
     {
         _gamepadService.TBarAxisChanged -= OnTBarAxisChanged;
+        _gamepadService.CycleMicRequested -= OnCycleMicRequested;
         PanelA.PropertyChanged -= OnPanelPropertyChanged;
         PanelB.PropertyChanged -= OnPanelPropertyChanged;
         PanelA.Service.SelectionChanged -= OnPanelSelectionChanged;

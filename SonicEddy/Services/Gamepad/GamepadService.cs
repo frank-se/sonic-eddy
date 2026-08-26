@@ -83,6 +83,8 @@ public sealed class GamepadService : IGamepadService, IDisposable
 
     public void SetPreviewSide(bool previewIsB) => _targetsB = previewIsB;
 
+    public event Action<bool>? CycleMicRequested;
+
     public bool IsControllerConnected { get; private set; }
     public event Action? ControllerConnectionChanged;
     public IReadOnlyDictionary<GamepadAction, GamepadBinding> Bindings => _bindings;
@@ -305,6 +307,9 @@ public sealed class GamepadService : IGamepadService, IDisposable
                     s.GreenGain = 1.0f;
                     s.BlueGain = 1.0f;
                 }, s => new { red_gain = 1.0f, green_gain = 1.0f, blue_gain = 1.0f });
+                break;
+            case GamepadAction.CycleMic:
+                CycleMicRequested?.Invoke(_targetsB);
                 break;
             case GamepadAction.UnifySaturationEtc:
             case GamepadAction.NextScene:
