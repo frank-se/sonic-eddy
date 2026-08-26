@@ -1,0 +1,10 @@
+{
+  "name": "One",
+  "canvas_width": 1280,
+  "canvas_height": 720,
+  "objects": [
+    { "type": "image", "position": [40, 40, 0], "width": 300, "height": 300, "image_file": "logo.png" },
+    { "type": "image", "position": [490, 40, 1], "width": 300, "height": 300, "image_file": "logo.png" },
+    { "type": "image", "position": [940, 40, 2], "width": 300, "height": 300, "image_file": "logo.png" }
+  ]
+}

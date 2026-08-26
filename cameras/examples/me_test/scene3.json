@@ -1,0 +1,10 @@
+{
+  "name": "Three",
+  "canvas_width": 1280,
+  "canvas_height": 720,
+  "objects": [
+    { "type": "image", "position": [140, 210, 0], "width": 200, "height": 200, "image_file": "logo.png" },
+    { "type": "image", "position": [540, 210, 1], "width": 200, "height": 200, "image_file": "logo.png" },
+    { "type": "image", "position": [940, 210, 2], "width": 200, "height": 200, "image_file": "logo.png" }
+  ]
+}

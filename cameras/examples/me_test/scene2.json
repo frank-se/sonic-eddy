@@ -1,0 +1,10 @@
+{
+  "name": "Two",
+  "canvas_width": 1280,
+  "canvas_height": 720,
+  "objects": [
+    { "type": "image", "position": [40, 380, 0], "width": 250, "height": 250, "image_file": "logo.png" },
+    { "type": "image", "position": [515, 380, 1], "width": 250, "height": 250, "image_file": "logo.png" },
+    { "type": "image", "position": [990, 380, 2], "width": 250, "height": 250, "image_file": "logo.png" }
+  ]
+}

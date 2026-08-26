@@ -216,6 +216,18 @@ public sealed class GamepadService : IGamepadService, IDisposable
         state.ActiveSceneFile = await state.Service.LoadSceneFileAsync(
             parameters.Scenes[state.ActiveSceneIndex].File);
         state.SelectedObjectPosition = 0;
+        BroadcastSelection(state);
+    }
+
+    // Announces the gamepad's own notion of "selected object" through the
+    // shared IStreamingControlService.SelectObject channel, so the Streaming
+    // Controls window and the Soomfon deck both see gamepad-driven selection
+    // changes too - not just the other way around.
+    private static void BroadcastSelection(TargetState state)
+    {
+        var objects = CombinedObjects(state);
+        if (state.SelectedObjectPosition < objects.Count)
+            state.Service.SelectObject(state.ActiveSceneIndex, objects[state.SelectedObjectPosition].FlatIndex);
     }
 
     // Combined camera-then-image ordering, matching the Streaming Controls
@@ -245,6 +257,7 @@ public sealed class GamepadService : IGamepadService, IDisposable
         if (objects.Count == 0) return;
 
         state.SelectedObjectPosition = ((state.SelectedObjectPosition + direction) % objects.Count + objects.Count) % objects.Count;
+        BroadcastSelection(state);
     }
 
     private void MutateSelected(Action<ObjectState> mutate, Func<ObjectState, object> fieldsForWire)

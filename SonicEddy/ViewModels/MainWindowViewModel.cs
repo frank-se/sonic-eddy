@@ -14,6 +14,7 @@ using SonicEddy.Services.Gamepad;
 using SonicEddy.Services.Midi;
 using SonicEddy.Services.MixerServiceV2;
 using SonicEddy.Services.MixerPersistence;
+using SonicEddy.Services.SoomfonDeck;
 using SonicEddy.Services.StreamingControl;
 using SonicEddy.Services.TraktorZ1;
 using SonicEddy.Services.VideoBlender;
@@ -1036,13 +1037,14 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         var gamepadService = Locator.Current.GetService<IGamepadService>()!;
         var videoBlenderService = Locator.Current.GetService<IVideoBlenderService>()!;
         var mixerService = Locator.Current.GetService<IMixerService>()!;
+        var soomfonDeckService = Locator.Current.GetService<ISoomfonDeckService>()!;
 
         _streamingControlWindow = new StreamingControlWindow()
         {
             DataContext = new MixEffectsSwitcherViewModel(
                 new StreamingControlViewModel(streamingControlServiceA),
                 new StreamingControlViewModel(streamingControlServiceB),
-                gamepadService, videoBlenderService, mixerService)
+                gamepadService, videoBlenderService, mixerService, soomfonDeckService)
         };
 
         _streamingControlWindow.Show();

@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using Fr.Sonic.Compositor;
@@ -31,8 +33,21 @@ public sealed class StreamingControlViewModel : ViewModelBase, IDisposable
         ImageObjects = BuildEmptyObjectSlots(MaxImageObjects);
 
         _service.ConnectionChanged += OnConnectionChanged;
+        _service.SelectionChanged += OnSelectionChanged;
         AttachClient(_service.Client);
     }
+
+    // Exposes the shared service (rather than the raw compositor client) so
+    // other drivers of this panel - MixEffectsSwitcherViewModel's Soomfon
+    // deck painting/dispatch, in particular - can read CurrentSelection and
+    // subscribe to SelectionChanged/ConnectionChanged without this class
+    // needing to re-expose every individual piece of state itself.
+    public IStreamingControlService Service => _service;
+
+    // Scene index CurrentSelection must match for it to apply to *this*
+    // scene - a stale selection from a scene that's no longer active
+    // shouldn't visually apply to whatever scene is active now.
+    public int ActiveSceneIndex => _activeSceneIndex;
 
     public bool IsConnected
     {
@@ -161,15 +176,44 @@ public sealed class StreamingControlViewModel : ViewModelBase, IDisposable
         ImageObjects = images;
     }
 
-    private void SelectObject(int flatIndex, SceneFileObject baseline)
+    // Routed through the shared IStreamingControlService.SelectObject channel
+    // (see OnSelectionChanged) rather than building SelectedObjectControls
+    // directly, so a row click here, a gamepad selection, and a Soomfon deck
+    // button press all converge on the same "currently selected object" -
+    // this is exactly what CurrentSelection/SelectionChanged were declared
+    // for (see IStreamingControlService), just not wired up until now.
+    private void SelectObject(int flatIndex, SceneFileObject baseline) =>
+        _service.SelectObject(_activeSceneIndex, flatIndex);
+
+    // Fires whenever *any* driver (this window, the gamepad, the Soomfon
+    // deck) selects an object - marshal to the UI thread since the gamepad/
+    // deck call SelectObject from their own background threads.
+    private void OnSelectionChanged() => Dispatcher.UIThread.Post(ApplyCurrentSelection);
+
+    private void ApplyCurrentSelection()
     {
-        if (_client is null || _activeSceneFile is null)
-            return;
+        var selection = _service.CurrentSelection;
+        var baseline = selection is { } sel && sel.SceneIndex == _activeSceneIndex
+            ? FindBaseline(sel.FlatIndex)
+            : null;
 
         SelectedObjectControls?.Dispose();
-        SelectedObjectControls = new ObjectControlPanelViewModel(_service, _client, _activeSceneIndex,
-            flatIndex, baseline, _activeSceneFile.CanvasWidth, _activeSceneFile.CanvasHeight);
+        SelectedObjectControls = baseline is not null && _client is not null && _activeSceneFile is not null
+            ? new ObjectControlPanelViewModel(_service, _client, _activeSceneIndex,
+                selection!.Value.FlatIndex, baseline, _activeSceneFile.CanvasWidth, _activeSceneFile.CanvasHeight)
+            : null;
     }
+
+    // Camera-then-image order, matching GamepadService's own CombinedObjects
+    // - used by MixEffectsSwitcherViewModel to map the Soomfon deck's object
+    // row (5 keys) onto the first 5 real objects in the active scene.
+    public IReadOnlyList<ObjectSlotViewModel> CombinedObjects() =>
+        [.. CameraObjects.Where(o => !o.IsEmpty), .. ImageObjects.Where(o => !o.IsEmpty)];
+
+    private SceneFileObject? FindBaseline(int flatIndex) =>
+        _activeSceneFile is not null && flatIndex >= 0 && flatIndex < _activeSceneFile.Objects.Count
+            ? _activeSceneFile.Objects[flatIndex]
+            : null;
 
     private static ObservableCollection<SceneSlotViewModel> BuildEmptySceneSlots()
     {
@@ -190,6 +234,7 @@ public sealed class StreamingControlViewModel : ViewModelBase, IDisposable
     public void Dispose()
     {
         _service.ConnectionChanged -= OnConnectionChanged;
+        _service.SelectionChanged -= OnSelectionChanged;
         if (_client is not null)
             _client.ParamsChanged -= OnParamsChanged;
         SelectedObjectControls?.Dispose();

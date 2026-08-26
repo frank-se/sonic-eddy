@@ -25,6 +25,7 @@ using SonicEddy.Services.MixerViewModels;
 using SonicEddy.Services.Monitoring;
 using SonicEddy.Services.Preferences;
 using SonicEddy.Services.RecordingPickUp;
+using SonicEddy.Services.SoomfonDeck;
 using SonicEddy.Services.VirtualInputs;
 using SonicEddy.Services.JackInputPorts;
 using SonicEddy.Services.VirtualOutputs;
@@ -252,6 +253,19 @@ public class App : Application
 
         var mixerOverviewCompositorLinkService = new MixerOverviewCompositorLinkService();
         _ = mixerOverviewCompositorLinkService.InitializeAsync();
+
+        // Always-on, like GamepadService/VideoBlenderService above - the
+        // physical connection and read loop start at app launch regardless
+        // of whether the Streaming Controls window is open; only the row
+        // painting/dispatch logic (MixEffectsSwitcherViewModel) is
+        // window-scoped.
+        var soomfonDeckService = new SoomfonDeckService(
+            loggerFactory.CreateLogger<SoomfonDeckService>());
+        Locator.CurrentMutable.Register<ISoomfonDeckService>(() =>
+            soomfonDeckService);
+        var soomfonDeckConnectionManager = new SoomfonDeckConnectionManager(
+            soomfonDeckService, loggerFactory.CreateLogger<SoomfonDeckConnectionManager>());
+        Locator.CurrentMutable.Register(() => soomfonDeckConnectionManager);
 
         var midiSyncLinkService = new MidiSyncLinkService(appDataService);
         Locator.CurrentMutable.Register<IMidiSyncLinkService>(() =>
