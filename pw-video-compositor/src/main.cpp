@@ -106,6 +106,12 @@ struct RenderSlot {
   float red_gain = 1.0f;
   float green_gain = 1.0f;
   float blue_gain = 1.0f;
+  // Blend factor against whatever's already painted at this pixel this
+  // frame (0 = fully transparent, 1 = fully opaque/opaque fast path) -
+  // distinct from `visible`, which is a hard on/off short-circuit.
+  // Introduced for the downstream-effects node's T-bar-tied keyer objects,
+  // which need a smooth fade rather than a hard cut.
+  float opacity = 1.0f;
 
   // Non-transposed: col_map (size dst_width) -> source column, row_map
   // (size dst_height) -> source row. Transposed (90/270 rotation): the
@@ -230,6 +236,14 @@ inline uint8_t apply_gain(uint8_t value, float gain) {
       std::clamp(static_cast<float>(value) * gain, 0.0f, 255.0f));
 }
 
+// Blends a (already gain-adjusted) source channel against whatever's
+// already at that destination pixel this frame, by `opacity` (0..1).
+inline uint8_t blend_channel(uint8_t src, uint8_t dst, float opacity) {
+  return static_cast<uint8_t>(std::clamp(
+      static_cast<float>(src) * opacity + static_cast<float>(dst) * (1.0f - opacity),
+      0.0f, 255.0f));
+}
+
 void composite_input(RenderSlot &slot, uint8_t *dst, uint32_t dst_stride) {
   std::lock_guard<std::mutex> layout_lock(slot.layout_mutex);
   if (!slot.visible)
@@ -240,10 +254,14 @@ void composite_input(RenderSlot &slot, uint8_t *dst, uint32_t dst_stride) {
   if (!source.has_frame)
     return;
 
-  // Fast path: identity gain (the default) keeps today's plain memcpy -
-  // no performance regression for objects that don't use color control.
+  // Fast path: identity gain and fully opaque (the defaults) keep today's
+  // plain memcpy - no performance regression for objects that don't use
+  // color control or a T-bar-tied fade.
   const bool identity_gain =
       slot.red_gain == 1.0f && slot.green_gain == 1.0f && slot.blue_gain == 1.0f;
+  const bool opaque = slot.opacity >= 1.0f;
+  const bool fast_path = identity_gain && opaque;
+  const float opacity = std::clamp(slot.opacity, 0.0f, 1.0f);
 
   const uint32_t src_stride = source.width * kBytesPerPixel;
   for (uint32_t y = 0; y < slot.dst_height; ++y) {
@@ -256,12 +274,12 @@ void composite_input(RenderSlot &slot, uint8_t *dst, uint32_t dst_stride) {
         const uint8_t *src_px =
             src_row + static_cast<size_t>(slot.col_map[x]) * kBytesPerPixel;
         uint8_t *dst_px = dst_row + static_cast<size_t>(x) * kBytesPerPixel;
-        if (identity_gain) {
+        if (fast_path) {
           std::memcpy(dst_px, src_px, kBytesPerPixel);
         } else {
-          dst_px[0] = apply_gain(src_px[0], slot.red_gain);
-          dst_px[1] = apply_gain(src_px[1], slot.green_gain);
-          dst_px[2] = apply_gain(src_px[2], slot.blue_gain);
+          dst_px[0] = blend_channel(apply_gain(src_px[0], slot.red_gain), dst_px[0], opacity);
+          dst_px[1] = blend_channel(apply_gain(src_px[1], slot.green_gain), dst_px[1], opacity);
+          dst_px[2] = blend_channel(apply_gain(src_px[2], slot.blue_gain), dst_px[2], opacity);
           dst_px[3] = src_px[3];
         }
       }
@@ -273,12 +291,12 @@ void composite_input(RenderSlot &slot, uint8_t *dst, uint32_t dst_stride) {
             static_cast<size_t>(src_row) * src_stride +
             static_cast<size_t>(src_col) * kBytesPerPixel;
         uint8_t *dst_px = dst_row + static_cast<size_t>(x) * kBytesPerPixel;
-        if (identity_gain) {
+        if (fast_path) {
           std::memcpy(dst_px, src_px, kBytesPerPixel);
         } else {
-          dst_px[0] = apply_gain(src_px[0], slot.red_gain);
-          dst_px[1] = apply_gain(src_px[1], slot.green_gain);
-          dst_px[2] = apply_gain(src_px[2], slot.blue_gain);
+          dst_px[0] = blend_channel(apply_gain(src_px[0], slot.red_gain), dst_px[0], opacity);
+          dst_px[1] = blend_channel(apply_gain(src_px[1], slot.green_gain), dst_px[1], opacity);
+          dst_px[2] = blend_channel(apply_gain(src_px[2], slot.blue_gain), dst_px[2], opacity);
           dst_px[3] = src_px[3];
         }
       }
@@ -436,6 +454,8 @@ void apply_object_params(App &app, const std::string &json_text) {
     slot.green_gain = command["green_gain"].get<float>();
   if (command.contains("blue_gain") && command["blue_gain"].is_number())
     slot.blue_gain = command["blue_gain"].get<float>();
+  if (command.contains("opacity") && command["opacity"].is_number())
+    slot.opacity = std::clamp(command["opacity"].get<float>(), 0.0f, 1.0f);
 
   bool rebuild = false;
   if (command.contains("flip_horizontal") && command["flip_horizontal"].is_boolean()) {
@@ -558,8 +578,13 @@ struct Args {
 
   uint32_t canvas_width = 1280;
   uint32_t canvas_height = 720;
-  std::array<uint32_t, kCliInputCount> in_width{960, 960};
-  std::array<uint32_t, kCliInputCount> in_height{720, 720};
+  // 0 = "not explicitly set" - CLI mode falls back to 960x720 at the point
+  // of use, scene mode falls back to kSceneCameraSourceWidth/Height. An
+  // explicit --inN-width/--inN-height overrides either mode's default -
+  // needed for e.g. a downstream-effects instance whose "video in" object
+  // is fed by another compositor's canvas resolution, not a webcam.
+  std::array<uint32_t, kCliInputCount> in_width{0, 0};
+  std::array<uint32_t, kCliInputCount> in_height{0, 0};
   std::array<double, kCliInputCount> in_scale{0.5, 0.5};
   std::array<std::string, kCliInputCount> in_target{};
 };
@@ -633,14 +658,17 @@ bool parse_args(int argc, char **argv, Args &args) {
 }
 
 void print_usage() {
-  std::cerr << "usage: pw-video-compositor [--instance-name NAME] --scene <scene.json> [--scene <scene2.json> ...] (up to "
+  std::cerr << "usage: pw-video-compositor [--instance-name NAME] [--in0-width W --in0-height H] [--in1-width W --in1-height H] --scene <scene.json> [--scene <scene2.json> ...] (up to "
             << kMaxScenes << ")\n"
                "   or: pw-video-compositor [--instance-name NAME] "
                "--canvas-width W --canvas-height H "
                "--in0-width W --in0-height H --in0-scale S [--in0-target NAME] "
                "--in1-width W --in1-height H --in1-scale S [--in1-target NAME]\n"
                "--instance-name suffixes all node names (se.video-compositor.<NAME>.*) "
-               "so multiple instances can run side by side.\n";
+               "so multiple instances can run side by side.\n"
+               "--inN-width/--inN-height override that camera slot's default "
+               "resolution (1920x1080) in scene mode too, e.g. for a "
+               "downstream-effects instance fed by another compositor's canvas size.\n";
 }
 
 pw_stream *connect_video_stream(pw_loop *loop, const char *name,
@@ -748,6 +776,9 @@ int main(int argc, char **argv) {
       if (idx == kMixerOverviewInputIndex) {
         src.width = kMixerOverviewSourceWidth;
         src.height = kMixerOverviewSourceHeight;
+      } else if (args.in_width[idx] != 0 && args.in_height[idx] != 0) {
+        src.width = args.in_width[idx];
+        src.height = args.in_height[idx];
       } else {
         src.width = kSceneCameraSourceWidth;
         src.height = kSceneCameraSourceHeight;
@@ -842,8 +873,11 @@ int main(int argc, char **argv) {
     auto &scene = app.scenes.back();
     for (size_t idx = 0; idx < kCliInputCount; ++idx) {
       auto &src = app.camera_sources[idx];
-      src.width = args.in_width[idx];
-      src.height = args.in_height[idx];
+      // CLI mode's own default (960x720) when not explicitly given - kept
+      // here rather than in Args' initializer so scene mode's separate
+      // default (kSceneCameraSourceWidth/Height) doesn't have to share it.
+      src.width = args.in_width[idx] != 0 ? args.in_width[idx] : 960;
+      src.height = args.in_height[idx] != 0 ? args.in_height[idx] : 720;
       if (src.width == 0 || src.height == 0 || args.in_scale[idx] <= 0.0) {
         std::cerr << "invalid configuration for input " << idx << '\n';
         return 1;

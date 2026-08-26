@@ -240,8 +240,20 @@ public class App : Application
             streamingControlServiceB, CompositorInstanceNames.B);
         _ = streamingControlServiceB.InitializeAsync();
 
-        var gamepadService = new GamepadService(appDataService,
-            streamingControlServiceA, streamingControlServiceB);
+        // Third instance for the downstream effects (DSK) node - not part
+        // of CompositorInstanceNames.All, since its camera-type input is
+        // exclusively fed by the video-blender, never routed through
+        // CameraRouterService/MixerOverviewCompositorLinkService like A/B.
+        var streamingControlServiceDownstream = new StreamingControlService(
+            CompositorInstanceNames.OutputNode(CompositorInstanceNames.Downstream));
+        Locator.CurrentMutable.Register<IStreamingControlService>(() =>
+            streamingControlServiceDownstream, CompositorInstanceNames.Downstream);
+        _ = streamingControlServiceDownstream.InitializeAsync();
+
+        // Gamepad is now permanently dedicated to the downstream node's
+        // objects (see GamepadService's own class comment for why) rather
+        // than switching between the two T-bar panels.
+        var gamepadService = new GamepadService(appDataService, streamingControlServiceDownstream);
         Locator.CurrentMutable.Register<IGamepadService>(() =>
             gamepadService);
         _ = gamepadService.InitializeAsync();

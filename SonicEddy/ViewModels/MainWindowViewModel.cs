@@ -1034,6 +1034,8 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
             Locator.Current.GetService<IStreamingControlService>(CompositorInstanceNames.A)!;
         var streamingControlServiceB =
             Locator.Current.GetService<IStreamingControlService>(CompositorInstanceNames.B)!;
+        var streamingControlServiceDownstream =
+            Locator.Current.GetService<IStreamingControlService>(CompositorInstanceNames.Downstream)!;
         var gamepadService = Locator.Current.GetService<IGamepadService>()!;
         var videoBlenderService = Locator.Current.GetService<IVideoBlenderService>()!;
         var mixerService = Locator.Current.GetService<IMixerService>()!;
@@ -1044,6 +1046,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
             DataContext = new MixEffectsSwitcherViewModel(
                 new StreamingControlViewModel(streamingControlServiceA),
                 new StreamingControlViewModel(streamingControlServiceB),
+                new StreamingControlViewModel(streamingControlServiceDownstream),
                 gamepadService, videoBlenderService, mixerService, soomfonDeckService)
         };
 

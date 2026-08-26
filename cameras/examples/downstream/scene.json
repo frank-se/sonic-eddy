@@ -1,0 +1,13 @@
+{
+  "name": "Downstream",
+  "canvas_width": 1280,
+  "canvas_height": 720,
+  "objects": [
+    { "type": "camera", "position": [0, 0, 0], "width": 1280, "height": 720, "target_camera_index": 0 },
+    { "type": "camera", "position": [860, 380, 1], "width": 400, "height": 300, "target_camera_index": 1 },
+    { "type": "image", "position": [20, 20, 2], "width": 180, "height": 180, "image_file": "logo.png" },
+    { "type": "image", "position": [1080, 20, 3], "width": 180, "height": 180, "image_file": "logo.png" },
+    { "type": "image", "position": [20, 520, 4], "width": 180, "height": 180, "image_file": "logo.png" },
+    { "type": "image", "position": [1080, 520, 5], "width": 180, "height": 180, "image_file": "logo.png" }
+  ]
+}

@@ -5,8 +5,8 @@
         xmlns:streamingControlViewModels="clr-namespace:SonicEddy.ViewModels.StreamingControlViewModels"
         xmlns:streamingControlViews="clr-namespace:SonicEddy.Views.StreamingControlViews"
         xmlns:controls="clr-namespace:SonicEddy.Controls"
-        mc:Ignorable="d" d:DesignWidth="1180" d:DesignHeight="680"
-        Width="1180" Height="680"
+        mc:Ignorable="d" d:DesignWidth="1650" d:DesignHeight="760"
+        Width="1650" Height="760"
         x:Class="SonicEddy.Views.StreamingControlViews.StreamingControlWindow"
         x:DataType="streamingControlViewModels:MixEffectsSwitcherViewModel"
         Title="Streaming Controls">
@@ -29,11 +29,39 @@
             </StackPanel>
         </Grid>
 
-        <Grid ColumnDefinitions="*,*">
+        <Border DockPanel.Dock="Bottom" Margin="0,10,0,0" BorderThickness="1" BorderBrush="Gray"
+                CornerRadius="4" Padding="10">
+            <StackPanel Spacing="6">
+                <TextBlock Text="Downstream key ties" FontWeight="Bold" />
+                <ItemsControl ItemsSource="{Binding DownstreamTies}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="streamingControlViewModels:DownstreamTieViewModel">
+                            <Border BorderThickness="1" BorderBrush="Gray" CornerRadius="4"
+                                    Padding="8,4" Margin="0,0,8,0">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <TextBlock Text="{Binding Label}" VerticalAlignment="Center" Width="60" />
+                                    <ToggleButton Content="A" IsChecked="{Binding TieA}" />
+                                    <ToggleButton Content="B" IsChecked="{Binding TieB}" />
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
+
+        <Grid ColumnDefinitions="*,*,*">
             <streamingControlViews:StreamingControlPanelView Grid.Column="0"
                 DataContext="{Binding PanelA}" Margin="0,0,6,0" />
             <streamingControlViews:StreamingControlPanelView Grid.Column="1"
-                DataContext="{Binding PanelB}" Margin="6,0,0,0" />
+                DataContext="{Binding PanelB}" Margin="6,0,6,0" />
+            <streamingControlViews:StreamingControlPanelView Grid.Column="2"
+                DataContext="{Binding DownstreamPanel}" Margin="6,0,0,0" />
         </Grid>
     </DockPanel>
 </Window>

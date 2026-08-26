@@ -49,6 +49,13 @@ public sealed class StreamingControlViewModel : ViewModelBase, IDisposable
     // shouldn't visually apply to whatever scene is active now.
     public int ActiveSceneIndex => _activeSceneIndex;
 
+    // Exposes the raw client too, alongside Service above - needed for
+    // drivers that must send a compositor command this panel's own
+    // ViewModel surface doesn't cover (e.g. MixEffectsSwitcherViewModel
+    // pushing "opacity" object_params for the downstream node's T-bar-tied
+    // keyer objects, which has no corresponding UI control here).
+    public CompositorClient? Client => _client;
+
     public bool IsConnected
     {
         get;
