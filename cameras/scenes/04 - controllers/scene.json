@@ -1,0 +1,11 @@
+{
+  "name": "Controllers",
+  "canvas_width": 1920,
+  "canvas_height": 1080,
+  "objects": [
+    { "type": "camera", "position": [80, 80, 0], "width": 1280, "height": 920, "target_camera_index": 1 },
+    { "type": "camera", "position": [916, 706, 1], "width": 420, "height": 270, "target_camera_index": 2 },
+    { "type": "camera", "position": [1377, 80, 2], "width": 534, "height": 300, "target_camera_index": 0 },
+    { "type": "image", "position": [0, 0, 100], "width": 1920, "height": 1080, "image_file": "overlay.png" }
+  ]
+}

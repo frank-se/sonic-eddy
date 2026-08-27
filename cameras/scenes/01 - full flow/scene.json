@@ -1,0 +1,9 @@
+{
+  "name": "Full Flow",
+  "canvas_width": 1920,
+  "canvas_height": 1080,
+  "objects": [
+    { "type": "camera", "position": [1377, 80, 0], "width": 534, "height": 300, "target_camera_index": 0 },
+    { "type": "image", "position": [0, 0, 100], "width": 1920, "height": 1080, "image_file": "overlay-scene-1.png" }
+  ]
+}

@@ -74,6 +74,14 @@ struct FrameSource {
   std::mutex frame_mutex;
   bool has_frame = false;
   pw_stream *stream = nullptr;
+  // True if any decoded pixel's alpha byte is < 255 - scanned once at image
+  // load time (see stbi_load call site) so composite_input can skip the
+  // per-pixel alpha check for the common case. Always false for camera
+  // sources: GStreamer's videoconvert->RGBA (cameras/stream-*.fish) and the
+  // mixer-overview producer (always-opaque UI, see
+  // project_mixer_overview_video_stream memory) both guarantee alpha=255
+  // everywhere, so there's nothing to scan per-frame.
+  bool has_alpha = false;
 };
 
 // One object's compositing geometry within a scene: which FrameSource to
@@ -254,13 +262,14 @@ void composite_input(RenderSlot &slot, uint8_t *dst, uint32_t dst_stride) {
   if (!source.has_frame)
     return;
 
-  // Fast path: identity gain and fully opaque (the defaults) keep today's
-  // plain memcpy - no performance regression for objects that don't use
-  // color control or a T-bar-tied fade.
+  // Fast path: identity gain, fully opaque (the defaults), and a source with
+  // no per-pixel transparency keep today's plain memcpy - no performance
+  // regression for objects that don't use color control, a T-bar-tied fade,
+  // or an alpha-cutout image (frame/keyer PNGs).
   const bool identity_gain =
       slot.red_gain == 1.0f && slot.green_gain == 1.0f && slot.blue_gain == 1.0f;
   const bool opaque = slot.opacity >= 1.0f;
-  const bool fast_path = identity_gain && opaque;
+  const bool fast_path = identity_gain && opaque && !source.has_alpha;
   const float opacity = std::clamp(slot.opacity, 0.0f, 1.0f);
 
   const uint32_t src_stride = source.width * kBytesPerPixel;
@@ -277,10 +286,12 @@ void composite_input(RenderSlot &slot, uint8_t *dst, uint32_t dst_stride) {
         if (fast_path) {
           std::memcpy(dst_px, src_px, kBytesPerPixel);
         } else {
-          dst_px[0] = blend_channel(apply_gain(src_px[0], slot.red_gain), dst_px[0], opacity);
-          dst_px[1] = blend_channel(apply_gain(src_px[1], slot.green_gain), dst_px[1], opacity);
-          dst_px[2] = blend_channel(apply_gain(src_px[2], slot.blue_gain), dst_px[2], opacity);
-          dst_px[3] = src_px[3];
+          const float weight =
+              source.has_alpha ? opacity * (static_cast<float>(src_px[3]) / 255.0f) : opacity;
+          dst_px[0] = blend_channel(apply_gain(src_px[0], slot.red_gain), dst_px[0], weight);
+          dst_px[1] = blend_channel(apply_gain(src_px[1], slot.green_gain), dst_px[1], weight);
+          dst_px[2] = blend_channel(apply_gain(src_px[2], slot.blue_gain), dst_px[2], weight);
+          dst_px[3] = blend_channel(255, dst_px[3], weight);
         }
       }
     } else {
@@ -294,10 +305,12 @@ void composite_input(RenderSlot &slot, uint8_t *dst, uint32_t dst_stride) {
         if (fast_path) {
           std::memcpy(dst_px, src_px, kBytesPerPixel);
         } else {
-          dst_px[0] = blend_channel(apply_gain(src_px[0], slot.red_gain), dst_px[0], opacity);
-          dst_px[1] = blend_channel(apply_gain(src_px[1], slot.green_gain), dst_px[1], opacity);
-          dst_px[2] = blend_channel(apply_gain(src_px[2], slot.blue_gain), dst_px[2], opacity);
-          dst_px[3] = src_px[3];
+          const float weight =
+              source.has_alpha ? opacity * (static_cast<float>(src_px[3]) / 255.0f) : opacity;
+          dst_px[0] = blend_channel(apply_gain(src_px[0], slot.red_gain), dst_px[0], weight);
+          dst_px[1] = blend_channel(apply_gain(src_px[1], slot.green_gain), dst_px[1], weight);
+          dst_px[2] = blend_channel(apply_gain(src_px[2], slot.blue_gain), dst_px[2], weight);
+          dst_px[3] = blend_channel(255, dst_px[3], weight);
         }
       }
     }
@@ -837,6 +850,12 @@ int main(int argc, char **argv) {
                                                kBytesPerPixel);
           stbi_image_free(pixels);
           img.has_frame = true;
+          for (size_t px = 3; px < img.frame.size(); px += kBytesPerPixel) {
+            if (img.frame[px] != 255) {
+              img.has_alpha = true;
+              break;
+            }
+          }
           slot.source = &img;
           src_width = img.width;
           src_height = img.height;

@@ -1,0 +1,8 @@
+{
+  "name": "PipeWire",
+  "canvas_width": 1920,
+  "canvas_height": 1080,
+  "objects": [
+    { "type": "image", "position": [0, 0, 0], "width": 1920, "height": 1080, "image_file": "pipewire.png" }
+  ]
+}
