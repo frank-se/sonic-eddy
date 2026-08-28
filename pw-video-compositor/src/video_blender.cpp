@@ -13,11 +13,22 @@
 //   width/height (set via --width/--height, matching both upstream
 //   compositors' canvas size) - a mismatched frame is simply blended
 //   byte-for-byte against whatever's in the other slot, which will look
-//   wrong but won't crash.
+//   wrong but won't crash. (This constraint is about the blend itself -
+//   see the separate --preview monitor window below, which does its own
+//   independent downscaling and isn't subject to it.)
 // - Inputs are never autoconnected (PW_KEY_TARGET_OBJECT is never set) -
 //   video autoconnect is unreliable on this system (confirmed repeatedly
 //   elsewhere in this project), so linking source compositors' outputs into
 //   se.video-blender.in0/in1 stays a manual `pw-link` step.
+//
+// Optional --preview: opens a local GStreamer/waylandsink window showing two
+// downscaled (1/4 linear size) panes stacked vertically - top is "program"
+// (the actual blended output, identical to what's published on
+// se.video-blender.out), bottom is "preview" (the *minority*-weight raw
+// input, unblended: t<0.5 shows input B at full strength, t>=0.5 shows
+// input A). Minority rather than majority so the preview pane never
+// converges with program at the t=0/t=1 extremes - it always shows "the
+// side you'd land back on fully if you reversed the fader from here".
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -36,6 +47,9 @@
 #include <spa/param/video/format-utils.h>
 #include <spa/pod/builder.h>
 #include <spa/pod/iter.h>
+
+#include <gst/app/gstappsrc.h>
+#include <gst/gst.h>
 
 namespace {
 
@@ -62,6 +76,13 @@ struct App {
   // "last write wins" value, same idiom as pw-video-compositor's
   // App::active_scene_index (main.cpp).
   std::atomic<float> blend_position{0.0f};
+
+  // --preview: local monitor window (program+preview stacked, downscaled).
+  bool preview_enabled = false;
+  GstElement *preview_pipeline = nullptr;
+  GstElement *preview_appsrc = nullptr;
+  uint32_t preview_pane_width = 0;
+  uint32_t preview_pane_height = 0;
 };
 
 void on_input_process(void *data) {
@@ -89,6 +110,53 @@ void on_input_process(void *data) {
   }
 
   pw_stream_queue_buffer(source.stream, pw_buffer);
+}
+
+// Simple nearest-neighbor box downscale, RGBA, no flip/rotate/gain - this
+// file is deliberately self-contained (see file header), so this doesn't
+// reuse pw-video-compositor's composite_input/sample-map machinery, which is
+// built for a heavier job (per-object flip/rotate/gain/opacity).
+void downscale_nearest(const uint8_t *src, uint32_t src_w, uint32_t src_h,
+                       uint8_t *dst, uint32_t dst_w, uint32_t dst_h,
+                       uint32_t dst_stride) {
+  for (uint32_t y = 0; y < dst_h; ++y) {
+    const uint32_t sy = y * src_h / dst_h;
+    uint8_t *dst_row = dst + static_cast<size_t>(y) * dst_stride;
+    const uint8_t *src_row =
+        src + static_cast<size_t>(sy) * src_w * kBytesPerPixel;
+    for (uint32_t x = 0; x < dst_w; ++x) {
+      const uint32_t sx = x * src_w / dst_w;
+      std::memcpy(dst_row + x * kBytesPerPixel, src_row + sx * kBytesPerPixel,
+                 kBytesPerPixel);
+    }
+  }
+}
+
+// Builds one stacked frame (program on top, preview on bottom, each
+// downscaled to preview_pane_width x preview_pane_height) and pushes it into
+// the preview appsrc. preview_src may be null (source hasn't produced a
+// frame yet) - matches on_output_process's own missing-source-is-black
+// behavior.
+void push_preview_frame(App &app, const uint8_t *program,
+                        const uint8_t *preview_src) {
+  const uint32_t pane_w = app.preview_pane_width;
+  const uint32_t pane_h = app.preview_pane_height;
+  const uint32_t stride = pane_w * kBytesPerPixel;
+  const size_t pane_size = static_cast<size_t>(stride) * pane_h;
+
+  auto *gst_buffer = gst_buffer_new_allocate(nullptr, pane_size * 2, nullptr);
+  GstMapInfo map;
+  gst_buffer_map(gst_buffer, &map, GST_MAP_WRITE);
+  downscale_nearest(program, app.width, app.height, map.data, pane_w, pane_h,
+                    stride);
+  if (preview_src != nullptr)
+    downscale_nearest(preview_src, app.width, app.height,
+                      map.data + pane_size, pane_w, pane_h, stride);
+  else
+    std::memset(map.data + pane_size, 0, pane_size);
+  gst_buffer_unmap(gst_buffer, &map);
+
+  gst_app_src_push_buffer(GST_APP_SRC(app.preview_appsrc), gst_buffer);
 }
 
 void on_output_process(void *data) {
@@ -134,6 +202,13 @@ void on_output_process(void *data) {
     const float bv = b != nullptr ? static_cast<float>(b[i]) : 0.0f;
     dst[i] = static_cast<uint8_t>(
         std::clamp(av * (1.0f - t) + bv * t, 0.0f, 255.0f));
+  }
+
+  if (app.preview_enabled) {
+    // Minority-weight side, so preview never converges with program at the
+    // t=0/t=1 extremes - see file header for the rationale.
+    const uint8_t *preview_src = (t < 0.5f) ? b : a;
+    push_preview_frame(app, dst, preview_src);
   }
 
   spa_data.chunk->offset = 0;
@@ -271,18 +346,58 @@ int main(int argc, char **argv) {
       app.width = static_cast<uint32_t>(std::strtoul(next().c_str(), nullptr, 10));
     else if (arg == "--height")
       app.height = static_cast<uint32_t>(std::strtoul(next().c_str(), nullptr, 10));
+    else if (arg == "--preview")
+      app.preview_enabled = true;
     else {
       std::cerr << "unknown argument: " << arg << '\n';
       return 1;
     }
   }
   if (app.width == 0 || app.height == 0) {
-    std::cerr << "usage: video-blender --width W --height H\n";
+    std::cerr << "usage: video-blender --width W --height H [--preview]\n";
     return 1;
   }
 
   for (auto &source : app.sources)
     source.frame.assign(static_cast<size_t>(app.width) * app.height * kBytesPerPixel, 0);
+
+  if (app.preview_enabled) {
+    app.preview_pane_width = std::max<uint32_t>(1, app.width / 4);
+    app.preview_pane_height = std::max<uint32_t>(1, app.height / 4);
+
+    gst_init(&argc, &argv);
+
+    // Program (top) + preview (bottom) stacked into one taller frame, pushed
+    // by push_preview_frame() every time on_output_process() runs.
+    // do-timestamp=true (rather than av_sync_record's manual epoch/CFR-grid
+    // PTS bookkeeping) is enough here - there's no muxer to satisfy, this is
+    // a pure live monitor. framerate=30/1 is a nominal caps value only;
+    // actual display cadence follows however often on_output_process() fires
+    // since sync=false. waylandsink, not autovideosink: autovideosink's
+    // auto-selected sink triggers a GStreamer-CRITICAL assertion on this
+    // system (see test/av_sync_record.cpp for the full story); waylandsink
+    // is confirmed clean on its own.
+    const std::string pipeline_desc =
+        "appsrc name=vsrc is-live=true do-timestamp=true format=time "
+        "caps=\"video/x-raw,format=RGBA,width=" +
+        std::to_string(app.preview_pane_width) + ",height=" +
+        std::to_string(app.preview_pane_height * 2) +
+        ",framerate=30/1\" ! videoconvert ! waylandsink sync=false";
+
+    GError *parse_error = nullptr;
+    app.preview_pipeline = gst_parse_launch(pipeline_desc.c_str(), &parse_error);
+    if (app.preview_pipeline == nullptr) {
+      std::cerr << "preview: gst_parse_launch failed: "
+                << (parse_error != nullptr ? parse_error->message : "?") << '\n';
+      return 1;
+    }
+    app.preview_appsrc = gst_bin_get_by_name(GST_BIN(app.preview_pipeline), "vsrc");
+    if (gst_element_set_state(app.preview_pipeline, GST_STATE_PLAYING) ==
+        GST_STATE_CHANGE_FAILURE) {
+      std::cerr << "preview: failed to start gstreamer pipeline\n";
+      return 1;
+    }
+  }
 
   pw_init(&argc, &argv);
   app.main_loop = pw_main_loop_new(nullptr);
@@ -321,5 +436,11 @@ int main(int argc, char **argv) {
   pw_stream_destroy(app.out_stream);
   pw_main_loop_destroy(app.main_loop);
   pw_deinit();
+
+  if (app.preview_enabled) {
+    gst_element_set_state(app.preview_pipeline, GST_STATE_NULL);
+    gst_object_unref(app.preview_appsrc);
+    gst_object_unref(app.preview_pipeline);
+  }
   return 0;
 }

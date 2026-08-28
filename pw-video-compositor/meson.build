@@ -19,11 +19,13 @@ executable(
 
 # Two-input, one-output linear cross-dissolve node - blends two
 # pw-video-compositor instances' outputs based on a "blend_position" Props
-# value, for the T-bar M/E switcher prototype.
+# value, for the T-bar M/E switcher prototype. Also owns an optional
+# --preview monitor window (program+preview stacked), hence the GStreamer
+# deps.
 executable(
     'video-blender',
     'src/video_blender.cpp',
-    dependencies : [pipewire_dep, threads_dep],
+    dependencies : [pipewire_dep, threads_dep, gst_dep, gst_app_dep],
     install : true)
 
 # Throwaway pure-PipeWire test tools (no GStreamer) used to verify the

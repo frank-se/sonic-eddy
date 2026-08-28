@@ -88,7 +88,6 @@ struct Args {
   std::string out_path;
   double seconds = 0.0; // 0 = run until Ctrl+C / SIGTERM, no duration timer scheduled
   uint32_t fps = 30; // target *output* video rate - independent of the audio tick rate
-  bool preview = false; // opens a window - see video_branch construction in main()
 };
 
 struct App {
@@ -321,8 +320,6 @@ bool parse_args(int argc, char **argv, Args &args) {
       args.seconds = std::strtod(next().c_str(), nullptr);
     else if (arg == "--fps")
       args.fps = static_cast<uint32_t>(std::strtoul(next().c_str(), nullptr, 10));
-    else if (arg == "--preview")
-      args.preview = true;
     else {
       std::cerr << "unknown argument: " << arg << '\n';
       return false;
@@ -334,7 +331,7 @@ bool parse_args(int argc, char **argv, Args &args) {
                  "--out <file.mp4> [--video-target <name>] [--width W] "
                  "[--height H] [--rate R] [--channels C] "
                  "[--seconds N (default: run until Ctrl+C)] "
-                 "[--fps F] [--preview]\n";
+                 "[--fps F]\n";
     return false;
   }
   return true;
@@ -353,26 +350,7 @@ int main(int argc, char **argv) {
   // unquoted commas to separate element properties, which collides with the
   // commas inside a caps string; unquoted, the caps property silently ends
   // up wrong/unset and the encoder never gets a fixed format to negotiate.
-  // --preview taps the video branch with a tee: one leg to the recorder as
-  // before, one leg through a 1-deep leaky queue (drops stale frames, so
-  // the sink always shows whatever's newest - no attempt at jitter-free
-  // pacing) into a plain window, sync=false so it displays frames as they
-  // arrive rather than pacing to the pipeline clock.
-  //
-  // waylandsink, not autovideosink: autovideosink's auto-selected sink
-  // triggers a GStreamer-CRITICAL assertion in gst_value_collect_int_range
-  // on this system, confirmed independent of anything in this tool
-  // (`gst-launch-1.0 videotestsrc ! autovideosink` alone reproduces it -
-  // some sink candidate's display/GL capability probing produces a
-  // degenerate caps range). waylandsink (this is a Wayland session -
-  // XDG_SESSION_TYPE=wayland) was confirmed clean on its own.
-  const std::string video_branch =
-      app.args.preview
-          ? "! tee name=vtee "
-            "vtee. ! queue ! videoconvert ! x264enc tune=zerolatency ! mux. "
-            "vtee. ! queue leaky=downstream max-size-buffers=1 "
-            "! videoconvert ! waylandsink sync=false "
-          : "! videoconvert ! x264enc tune=zerolatency ! mux. ";
+  const std::string video_branch = "! videoconvert ! x264enc tune=zerolatency ! mux. ";
   const std::string pipeline_desc =
       "mp4mux name=mux ! filesink name=sink "
       "appsrc name=vsrc is-live=true format=time "
