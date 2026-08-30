@@ -9,6 +9,13 @@
       "width": 1920,
       "height": 1080,
       "image_file": "blackout.png"
+    },
+    {
+      "type": "image",
+      "position": [1165, 820, 200],
+      "width": 240,
+      "height": 240,
+      "image_file": "pointer.png"
     }
   ]
 }
