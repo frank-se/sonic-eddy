@@ -14,9 +14,9 @@
 #
 # Usage: stream-c920 /dev/video2
 
-function stream-c920 --description 'Publish the C920 webcam into PipeWire at 1920x1080@30fps RGBA'
+function stream-unifi --description 'Publish the unifi webcam into PipeWire at 1920x1080@30fps RGBA'
     if test (count $argv) -ne 1
-        echo "usage: stream-c920 <device, e.g. /dev/video2>"
+        echo "usage: stream-c920 url"
         return 1
     end
 
@@ -27,10 +27,9 @@ function stream-c920 --description 'Publish the C920 webcam into PipeWire at 192
     # backgrounds `stream-c920 ... &` gets gst-launch-1.0's own PID back
     # (via $last_pid) instead of an intermediate fish process - needed for
     # start-cameras.fish to write a PID file that's actually killable.
-    exec gst-launch-1.0 v4l2src device=$device \
-        ! image/jpeg,width=1920,height=1080,framerate=30/1 \
-        ! jpegdec \
-        ! vapostproc \
-        ! video/x-raw,format=RGBA \
-        ! pipewiresink client-name="Webcam-RGBA-Stream-2" mode=provide
+    exec gst-launch-1.0 rtspsrc location="rtsps://192.168.0.1:7441/Lj4WaX8wzNZQMLxV" \
+        latency=200 tls-validation-flags=0 protocols=tcp \
+        ! rtph265depay ! h265parse ! vah265dec \
+        ! videocrop right=400 bottom=360 ! vapostproc ! video/x-raw,width=1920,height=1080,format=RGBA \
+        ! pipewiresink client-name="Webcam-RGBA-Stream-3" mode=provide
 end

@@ -30,7 +30,7 @@ function stream-airhug --description 'Publish the AIRHUG 02 webcam into PipeWire
     exec gst-launch-1.0 v4l2src device=$device \
         ! image/jpeg,width=1920,height=1080,framerate=30/1 \
         ! jpegdec \
-        ! videoconvert \
+        ! vapostproc \
         ! video/x-raw,format=RGBA \
         ! pipewiresink client-name="Webcam-RGBA-Stream" mode=provide
 end

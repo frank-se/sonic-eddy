@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Data;
 using Avalonia.Markup.Xaml;
 
 namespace SonicEddy.Controls.MixerControls;
@@ -111,7 +112,9 @@ public partial class ReturnChannelStrip : UserControl
      * Volume section
      */
     public static readonly StyledProperty<float> VolumeProperty =
-        AvaloniaProperty.Register<ReturnChannelStrip, float>(nameof(Volume));
+        AvaloniaProperty.Register<ReturnChannelStrip, float>(
+            nameof(Volume),
+            defaultBindingMode: BindingMode.TwoWay);
 
     public float Volume
     {
@@ -120,7 +123,9 @@ public partial class ReturnChannelStrip : UserControl
     }
 
     public static readonly StyledProperty<float> PanProperty =
-        AvaloniaProperty.Register<ReturnChannelStrip, float>(nameof(Pan));
+        AvaloniaProperty.Register<ReturnChannelStrip, float>(
+            nameof(Pan),
+            defaultBindingMode: BindingMode.TwoWay);
 
     public float Pan
     {
