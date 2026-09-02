@@ -22,21 +22,46 @@ namespace SonicEddy.Services.CameraRouter;
 // CompositorInstanceNames.All (both A and B panels of the T-bar M/E
 // switcher need to see the same live cameras), tracked as one link id per
 // (slot, instance) pair instead of one per slot.
+//
+// Also owns the fixed (non-user-assignable) downstream pipeline links - A/B
+// compositor outputs into video-blender's inputs, and video-blender's
+// output into se.downstream.base (see FixedLinks) - reusing the same
+// watch/retry plumbing rather than a separate dedicated service for each
+// one, now that MixerOverviewCompositorLinkService (the previous pattern
+// for a single fixed link) has been folded away. These aren't Slots/
+// AssignSlotAsync-visible - there's nothing to pick, they're always exactly
+// this source and this target.
 public sealed class CameraRouterService : ICameraRouterService, IDisposable
 {
     public const int SlotCount = CompositorInstanceNames.InputSlotCount;
 
     private static readonly string[] Instances = CompositorInstanceNames.All;
 
+    // Fixed source->target pairs, always the same, never user-assigned -
+    // the A/B -> video-blender -> Downstream pipeline. See class comment.
+    private static readonly (string Source, string Target)[] FixedLinks =
+    [
+        (CompositorInstanceNames.OutputNode(CompositorInstanceNames.A), "se.video-blender.in0"),
+        (CompositorInstanceNames.OutputNode(CompositorInstanceNames.B), "se.video-blender.in1"),
+        ("se.video-blender.out", CompositorInstanceNames.DownstreamBaseInputNode),
+    ];
+
     // Sonic Eddy's own video nodes never show up as pickable camera sources.
     // se.mixer-overview is NOT excluded here - it's just another candidate
     // source, assignable to any slot like a physical camera (no more
-    // dedicated always-on MixerOverviewCompositorLinkService).
+    // dedicated always-on MixerOverviewCompositorLinkService). The
+    // FixedLinks nodes ARE excluded - they're handled automatically, so
+    // offering them in the picker too would just be a confusing second path
+    // to the same destination.
     private static readonly HashSet<string> OwnNodeNames = BuildOwnNodeNames();
 
     private static HashSet<string> BuildOwnNodeNames()
     {
-        var names = new HashSet<string>();
+        var names = new HashSet<string>
+        {
+            "se.video-blender.in0", "se.video-blender.in1", "se.video-blender.out",
+            CompositorInstanceNames.DownstreamBaseInputNode, CompositorInstanceNames.DownstreamOutputNode,
+        };
         foreach (var instance in Instances)
         {
             for (var i = 0; i < SlotCount; ++i)
@@ -50,6 +75,8 @@ public sealed class CameraRouterService : ICameraRouterService, IDisposable
     private readonly string?[] _assignments = new string?[SlotCount];
     // [slotIndex, instanceIndex] - one link id per (slot, compositor instance).
     private readonly ulong?[,] _linkIds = new ulong?[SlotCount, Instances.Length];
+    // One link id per FixedLinks entry.
+    private readonly ulong?[] _fixedLinkIds = new ulong?[FixedLinks.Length];
     private readonly object _lock = new();
     private readonly SemaphoreSlim _storeLock = new(1, 1);
     private bool _initialized;
@@ -170,6 +197,19 @@ public sealed class CameraRouterService : ICameraRouterService, IDisposable
                     changed = true;
                 }
             }
+
+            for (var i = 0; i < FixedLinks.Length; ++i)
+            {
+                if (_fixedLinkIds[i] is not null) continue;
+
+                var sourcePort = FindOutputPort(FixedLinks[i].Source);
+                var targetPort = FindInputPort(FixedLinks[i].Target);
+                if (sourcePort is null || targetPort is null) continue;
+                if (!LinkConnects(link, sourcePort, targetPort)) continue;
+
+                _fixedLinkIds[i] = link.ObjectId;
+                changed = true;
+            }
         }
 
         if (changed) SlotsChanged?.Invoke();
@@ -189,6 +229,13 @@ public sealed class CameraRouterService : ICameraRouterService, IDisposable
                     changed = true;
                 }
             }
+
+            for (var i = 0; i < FixedLinks.Length; ++i)
+            {
+                if (_fixedLinkIds[i] != link.ObjectId) continue;
+                _fixedLinkIds[i] = null;
+                changed = true;
+            }
         }
 
         if (!changed) return;
@@ -201,6 +248,35 @@ public sealed class CameraRouterService : ICameraRouterService, IDisposable
     {
         for (var i = 0; i < SlotCount; ++i)
             TryConnectSlot(i);
+        TryConnectFixedLinks();
+    }
+
+    private void TryConnectFixedLinks()
+    {
+        for (var i = 0; i < FixedLinks.Length; ++i)
+        {
+            lock (_lock)
+            {
+                if (_fixedLinkIds[i] is not null) continue; // already connected
+            }
+
+            var sourcePort = FindOutputPort(FixedLinks[i].Source);
+            var targetPort = FindInputPort(FixedLinks[i].Target);
+            if (sourcePort is null || targetPort is null) continue;
+
+            var existingLink = FrSonic.LinkRegistry.Objects.FirstOrDefault(link =>
+                LinkConnects(link, sourcePort, targetPort));
+            if (existingLink is not null)
+            {
+                lock (_lock)
+                    _fixedLinkIds[i] = existingLink.ObjectId;
+                SlotsChanged?.Invoke();
+                continue;
+            }
+
+            // Link id becomes known via OnLinkAdded once WirePlumber reports it.
+            FrSonic.LinkFactory.CreateLink(sourcePort, targetPort);
+        }
     }
 
     private void TryConnectSlot(int slotIndex)
