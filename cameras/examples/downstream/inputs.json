@@ -1,0 +1,6 @@
+{
+  "inputs": [
+    { "name": "downstream-in0", "width": 1280, "height": 720 },
+    { "name": "downstream-in1", "width": 1280, "height": 720 }
+  ]
+}

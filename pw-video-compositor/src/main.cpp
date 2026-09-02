@@ -25,40 +25,16 @@
 
 #include <nlohmann/json.hpp>
 
+#include "camera_config.hpp"
 #include "scene.hpp"
 
 namespace {
 
 constexpr uint32_t kBytesPerPixel = 4; // SPA_VIDEO_FORMAT_RGBA
-// Fixed camera input slots (scene mode): 0/1 are the physical cameras
-// routed by CameraRouterService, 2 is permanently reserved for
-// se.mixer-overview - always linked by a small dedicated always-on
-// service, never user-picked, never routed through CameraRouterService.
-constexpr size_t kInputCount = 3;
-// Non-scene CLI mode is unrelated to scenes/mixer-overview - kept at a
-// fixed 2 inputs (--in0-*/--in1-*) for quick manual testing, independent
-// of kInputCount.
+// Non-scene CLI mode is unrelated to scenes/camera_config - kept at a
+// fixed 2 inputs (--in0-*/--in1-*) for quick manual testing.
 constexpr size_t kCliInputCount = 2;
 constexpr size_t kMaxScenes = 5;
-
-// Cameras don't declare their native resolution in the scene file - PipeWire
-// needs an exact width/height to negotiate a stream (a fixed SPA_RECTANGLE,
-// not a range), so scene mode assumes every camera source has already been
-// standardized on this (see cameras/stream-*.fish) rather than renegotiating
-// per camera. Applies to input indices 0/1 only - index 2 is not a camera,
-// see kMixerOverviewSourceWidth/Height below.
-constexpr uint32_t kSceneCameraSourceWidth = 1920;
-constexpr uint32_t kSceneCameraSourceHeight = 1080;
-
-// Input index 2 is permanently reserved for se.mixer-overview (see
-// MixerOverviewCompositorLinkService on the SonicEddy side) - a different
-// source with its own fixed resolution, matching
-// SonicEddy/Views/MixerOverviewViews/MixerOverviewWindow.axaml's pinned
-// Width/Height (that window's size must stay fixed for exactly this reason
-// - see its own comment on why SizeToContent was removed).
-constexpr uint32_t kMixerOverviewSourceWidth = 1400;
-constexpr uint32_t kMixerOverviewSourceHeight = 900;
-constexpr size_t kMixerOverviewInputIndex = 2;
 
 // Where a frame actually comes from: either a live PipeWire input stream
 // (camera-backed, `stream` non-null) or a one-shot decode at startup
@@ -146,7 +122,10 @@ struct App {
   uint32_t canvas_width = 1280;
   uint32_t canvas_height = 720;
 
-  std::array<FrameSource, kInputCount> camera_sources;
+  // deque, not array: input slot count is now runtime-determined (from
+  // camera_config::load), and FrameSource holds a std::mutex (non-movable)
+  // - same reasoning as image_sources below.
+  std::deque<FrameSource> camera_sources;
   // deque, not vector: FrameSource holds a std::mutex (non-movable), and
   // RenderSlot::source keeps a raw pointer into this container that must
   // stay valid as later scenes' images are added - vector would both fail
@@ -581,6 +560,10 @@ const pw_stream_events output_stream_events = {
 
 struct Args {
   std::vector<std::string> scene_paths; // if non-empty, scene mode - all other fields below are ignored
+  // Mandatory alongside scene_paths - see camera_config.hpp. The stable,
+  // scene-independent list of input slots (count, size, name) shared
+  // across every loaded scene.
+  std::string inputs_path;
 
   // Empty by default, reproducing today's exact node names unchanged (so
   // existing single-instance scripts/manual pw-link usage keeps working).
@@ -591,11 +574,9 @@ struct Args {
 
   uint32_t canvas_width = 1280;
   uint32_t canvas_height = 720;
-  // 0 = "not explicitly set" - CLI mode falls back to 960x720 at the point
-  // of use, scene mode falls back to kSceneCameraSourceWidth/Height. An
-  // explicit --inN-width/--inN-height overrides either mode's default -
-  // needed for e.g. a downstream-effects instance whose "video in" object
-  // is fed by another compositor's canvas resolution, not a webcam.
+  // CLI (non-scene) mode only - scene mode gets each input's size from
+  // --inputs instead (see camera_config.hpp). 0 = "not explicitly set",
+  // CLI mode falls back to 960x720 at the point of use.
   std::array<uint32_t, kCliInputCount> in_width{0, 0};
   std::array<uint32_t, kCliInputCount> in_height{0, 0};
   std::array<double, kCliInputCount> in_scale{0.5, 0.5};
@@ -640,7 +621,9 @@ bool parse_args(int argc, char **argv, Args &args) {
       // a relative path would silently fail to resolve there.
       args.scene_paths.push_back(
           std::filesystem::absolute(next(i)).string());
-    } else if (arg == "--instance-name")
+    } else if (arg == "--inputs")
+      args.inputs_path = next(i);
+    else if (arg == "--instance-name")
       args.instance_name = next(i);
     else if (arg == "--canvas-width")
       args.canvas_width = parse_u32(next(i));
@@ -671,7 +654,7 @@ bool parse_args(int argc, char **argv, Args &args) {
 }
 
 void print_usage() {
-  std::cerr << "usage: pw-video-compositor [--instance-name NAME] [--in0-width W --in0-height H] [--in1-width W --in1-height H] --scene <scene.json> [--scene <scene2.json> ...] (up to "
+  std::cerr << "usage: pw-video-compositor [--instance-name NAME] --inputs <inputs.json> --scene <scene.json> [--scene <scene2.json> ...] (up to "
             << kMaxScenes << ")\n"
                "   or: pw-video-compositor [--instance-name NAME] "
                "--canvas-width W --canvas-height H "
@@ -679,9 +662,9 @@ void print_usage() {
                "--in1-width W --in1-height H --in1-scale S [--in1-target NAME]\n"
                "--instance-name suffixes all node names (se.video-compositor.<NAME>.*) "
                "so multiple instances can run side by side.\n"
-               "--inN-width/--inN-height override that camera slot's default "
-               "resolution (1920x1080) in scene mode too, e.g. for a "
-               "downstream-effects instance fed by another compositor's canvas size.\n";
+               "--inputs <inputs.json> is mandatory in scene mode: the stable, "
+               "scene-independent list of input slots (count, size, name) - see "
+               "camera_config.hpp.\n";
 }
 
 pw_stream *connect_video_stream(pw_loop *loop, const char *name,
@@ -738,7 +721,8 @@ int main(int argc, char **argv) {
 
   App app;
   // node_names[idx] / target_objects[idx]: the PipeWire input stream to
-  // open for app.camera_sources[idx]. Always kInputCount entries.
+  // open for app.camera_sources[idx]. Always input_count (scene mode, from
+  // --inputs) or kCliInputCount (CLI mode) entries.
   std::vector<std::string> node_names;
   std::vector<std::string> target_objects;
 
@@ -746,6 +730,15 @@ int main(int argc, char **argv) {
   // before any PipeWire stream exists. Nothing below this block allocates.
   if (!args.scene_paths.empty()) {
     app.props_enabled = true;
+
+    if (args.inputs_path.empty()) {
+      std::cerr << "scene mode requires --inputs <file.json>\n";
+      return 1;
+    }
+    auto inputs = camera_config::load(args.inputs_path);
+    if (!inputs)
+      return 1;
+    const size_t input_count = inputs->size();
 
     std::vector<scene::SceneConfig> scene_configs;
     scene_configs.reserve(args.scene_paths.size());
@@ -772,36 +765,29 @@ int main(int argc, char **argv) {
       for (const auto &object : cfg.objects) {
         if (object.type != scene::ObjectType::Camera)
           continue;
-        if (object.target_camera_index >= kInputCount) {
+        if (object.target_camera_index >= input_count) {
           std::cerr << "scene: target_camera_index "
                      << object.target_camera_index << " is out of range (0.."
-                     << (kInputCount - 1) << ")\n";
+                     << (input_count - 1) << ")\n";
           return 1;
         }
       }
     }
 
     // Camera sources are shared across every scene - always build and
-    // (later) connect all kInputCount of them, regardless of which scenes
-    // actually reference each index.
-    for (size_t idx = 0; idx < kInputCount; ++idx) {
+    // (later) connect all input_count of them (per --inputs), regardless of
+    // which scenes actually reference each index.
+    app.camera_sources.resize(input_count);
+    for (size_t idx = 0; idx < input_count; ++idx) {
       auto &src = app.camera_sources[idx];
-      if (idx == kMixerOverviewInputIndex) {
-        src.width = kMixerOverviewSourceWidth;
-        src.height = kMixerOverviewSourceHeight;
-      } else if (args.in_width[idx] != 0 && args.in_height[idx] != 0) {
-        src.width = args.in_width[idx];
-        src.height = args.in_height[idx];
-      } else {
-        src.width = kSceneCameraSourceWidth;
-        src.height = kSceneCameraSourceHeight;
-      }
+      src.width = (*inputs)[idx].width;
+      src.height = (*inputs)[idx].height;
       src.frame.assign(
           static_cast<size_t>(src.width) * src.height * kBytesPerPixel, 0);
     }
-    node_names.assign(kInputCount, "");
-    target_objects.assign(kInputCount, "");
-    for (size_t idx = 0; idx < kInputCount; ++idx)
+    node_names.assign(input_count, "");
+    target_objects.assign(input_count, "");
+    for (size_t idx = 0; idx < input_count; ++idx)
       node_names[idx] = node_name(args, "in" + std::to_string(idx));
 
     for (size_t scene_i = 0; scene_i < scene_configs.size(); ++scene_i) {
@@ -887,14 +873,13 @@ int main(int argc, char **argv) {
 
     node_names.reserve(kCliInputCount);
     target_objects.reserve(kCliInputCount);
+    app.camera_sources.resize(kCliInputCount);
 
     app.scenes.emplace_back();
     auto &scene = app.scenes.back();
     for (size_t idx = 0; idx < kCliInputCount; ++idx) {
       auto &src = app.camera_sources[idx];
-      // CLI mode's own default (960x720) when not explicitly given - kept
-      // here rather than in Args' initializer so scene mode's separate
-      // default (kSceneCameraSourceWidth/Height) doesn't have to share it.
+      // CLI mode's own default (960x720) when not explicitly given.
       src.width = args.in_width[idx] != 0 ? args.in_width[idx] : 960;
       src.height = args.in_height[idx] != 0 ? args.in_height[idx] : 720;
       if (src.width == 0 || src.height == 0 || args.in_scale[idx] <= 0.0) {
@@ -933,10 +918,10 @@ int main(int argc, char **argv) {
   }
   auto *loop = pw_main_loop_get_loop(app.main_loop);
 
-  // node_names.size() here, not kInputCount: it's kCliInputCount (2) in
-  // non-scene CLI mode but kInputCount (3) in scene mode - camera_sources
-  // itself is always fixed at kInputCount, but only the entries this mode
-  // actually populated node_names for get a stream connected.
+  // node_names.size() here: it's kCliInputCount (2) in non-scene CLI mode
+  // but input_count (from --inputs) in scene mode - camera_sources is
+  // always sized to match, but only the entries this mode actually
+  // populated node_names for get a stream connected.
   for (size_t idx = 0; idx < node_names.size(); ++idx) {
     if (node_names[idx].empty())
       continue;

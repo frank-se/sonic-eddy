@@ -24,16 +24,19 @@ namespace SonicEddy.Services.CameraRouter;
 // (slot, instance) pair instead of one per slot.
 public sealed class CameraRouterService : ICameraRouterService, IDisposable
 {
-    public const int SlotCount = 2;
+    public const int SlotCount = CompositorInstanceNames.InputSlotCount;
 
     private static readonly string[] Instances = CompositorInstanceNames.All;
 
     // Sonic Eddy's own video nodes never show up as pickable camera sources.
+    // se.mixer-overview is NOT excluded here - it's just another candidate
+    // source, assignable to any slot like a physical camera (no more
+    // dedicated always-on MixerOverviewCompositorLinkService).
     private static readonly HashSet<string> OwnNodeNames = BuildOwnNodeNames();
 
     private static HashSet<string> BuildOwnNodeNames()
     {
-        var names = new HashSet<string> { "se.mixer-overview" };
+        var names = new HashSet<string>();
         foreach (var instance in Instances)
         {
             for (var i = 0; i < SlotCount; ++i)

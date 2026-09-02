@@ -9,11 +9,18 @@ public static class CompositorInstanceNames
     public const string A = "A";
     public const string B = "B";
 
-    // Deliberately NOT in All below - All drives CameraRouterService's/
-    // MixerOverviewCompositorLinkService's fan-out to the two T-bar M/E
-    // panels specifically. The downstream node's camera-type input (video
-    // in) is exclusively fed by the video-blender's output via a manual
-    // pw-link, never a physical camera or the mixer-overview.
+    // Total shared input slots (se.video-compositor.<instance>.in0..in9) -
+    // stable and uniform, populated per pw-video-compositor's --inputs
+    // camera-definition file. What feeds any given slot (physical camera,
+    // se.mixer-overview, a future generated stream) is purely a
+    // CameraRouterService assignment, not something this code special-cases.
+    public const int InputSlotCount = 10;
+
+    // Deliberately NOT in All below - All drives CameraRouterService's
+    // fan-out to the two T-bar M/E panels specifically. The downstream
+    // node's camera-type input (video in) is exclusively fed by the
+    // video-blender's output via a manual pw-link, never a physical camera
+    // or the mixer-overview.
     public const string Downstream = "Downstream";
 
     public static readonly string[] All = [A, B];

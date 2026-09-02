@@ -13,10 +13,10 @@ namespace SonicEddy.ViewModels.StreamingControlViewModels;
 public sealed class StreamingControlViewModel : ViewModelBase, IDisposable
 {
     private const int MaxScenes = 5;
-    // Must match pw-video-compositor's kInputCount - index 2 is the
-    // permanently-reserved mixer-overview input (see
-    // MixerOverviewCompositorLinkService), not user-routable camera 0/1.
-    private const int MaxCameraObjects = 3;
+    // Matches CompositorInstanceNames.InputSlotCount - all slots are
+    // uniform and user-routable via CameraRouterService (including
+    // whichever one se.mixer-overview happens to be assigned to).
+    private const int MaxCameraObjects = CompositorInstanceNames.InputSlotCount;
     private const int MaxImageObjects = 10;
 
     private readonly IStreamingControlService _service;

@@ -243,7 +243,7 @@ public class App : Application
         // Third instance for the downstream effects (DSK) node - not part
         // of CompositorInstanceNames.All, since its camera-type input is
         // exclusively fed by the video-blender, never routed through
-        // CameraRouterService/MixerOverviewCompositorLinkService like A/B.
+        // CameraRouterService like A/B.
         var streamingControlServiceDownstream = new StreamingControlService(
             CompositorInstanceNames.OutputNode(CompositorInstanceNames.Downstream));
         Locator.CurrentMutable.Register<IStreamingControlService>(() =>
@@ -262,9 +262,6 @@ public class App : Application
         Locator.CurrentMutable.Register<IVideoBlenderService>(() =>
             videoBlenderService);
         _ = videoBlenderService.InitializeAsync();
-
-        var mixerOverviewCompositorLinkService = new MixerOverviewCompositorLinkService();
-        _ = mixerOverviewCompositorLinkService.InitializeAsync();
 
         // Always-on, like GamepadService/VideoBlenderService above - the
         // physical connection and read loop start at app launch regardless

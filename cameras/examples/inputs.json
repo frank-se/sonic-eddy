@@ -1,0 +1,14 @@
+{
+  "inputs": [
+    { "name": "cam0", "width": 1920, "height": 1080 },
+    { "name": "cam1", "width": 1920, "height": 1080 },
+    { "name": "cam2", "width": 1920, "height": 1080 },
+    { "name": "cam3", "width": 1920, "height": 1080 },
+    { "name": "cam4", "width": 1920, "height": 1080 },
+    { "name": "cam5", "width": 1920, "height": 1080 },
+    { "name": "cam6", "width": 1920, "height": 1080 },
+    { "name": "cam7", "width": 1920, "height": 1080 },
+    { "name": "cam8", "width": 1920, "height": 1080 },
+    { "name": "overview", "width": 1400, "height": 900 }
+  ]
+}

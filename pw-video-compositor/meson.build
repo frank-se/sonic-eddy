@@ -12,7 +12,7 @@ gst_app_dep = dependency('gstreamer-app-1.0')
 
 executable(
     'pw-video-compositor',
-    ['src/main.cpp', 'src/scene.cpp'],
+    ['src/main.cpp', 'src/scene.cpp', 'src/camera_config.cpp'],
     include_directories : include_directories('third_party'),
     dependencies : [pipewire_dep, threads_dep, nlohmann_json_dep],
     install : true)
