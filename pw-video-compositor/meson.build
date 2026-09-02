@@ -17,6 +17,18 @@ executable(
     dependencies : [pipewire_dep, threads_dep, nlohmann_json_dep],
     install : true)
 
+# Purpose-built compositor for the DSK/"downstream effects" node - kept as
+# its own binary rather than a pw-video-compositor mode, since the two
+# concepts (generic N-camera compositor vs. one-baseline-plus-overlays)
+# were a real source of confusion when conflated. See downstream_main.cpp's
+# header comment.
+executable(
+    'downstream-compositor',
+    ['src/downstream_main.cpp', 'src/downstream_scene.cpp', 'src/downstream_camera_config.cpp'],
+    include_directories : include_directories('third_party'),
+    dependencies : [pipewire_dep, threads_dep, nlohmann_json_dep],
+    install : true)
+
 # Two-input, one-output linear cross-dissolve node - blends two
 # pw-video-compositor instances' outputs based on a "blend_position" Props
 # value, for the T-bar M/E switcher prototype. Also owns an optional

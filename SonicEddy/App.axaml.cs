@@ -240,12 +240,14 @@ public class App : Application
             streamingControlServiceB, CompositorInstanceNames.B);
         _ = streamingControlServiceB.InitializeAsync();
 
-        // Third instance for the downstream effects (DSK) node - not part
-        // of CompositorInstanceNames.All, since its camera-type input is
-        // exclusively fed by the video-blender, never routed through
+        // Third instance for the downstream effects (DSK) node - a
+        // separate downstream-compositor process, not a pw-video-compositor
+        // instance, so it uses its own fixed node name rather than
+        // CompositorInstanceNames.OutputNode. Not part of
+        // CompositorInstanceNames.All, since it's never routed through
         // CameraRouterService like A/B.
         var streamingControlServiceDownstream = new StreamingControlService(
-            CompositorInstanceNames.OutputNode(CompositorInstanceNames.Downstream));
+            CompositorInstanceNames.DownstreamOutputNode);
         Locator.CurrentMutable.Register<IStreamingControlService>(() =>
             streamingControlServiceDownstream, CompositorInstanceNames.Downstream);
         _ = streamingControlServiceDownstream.InitializeAsync();

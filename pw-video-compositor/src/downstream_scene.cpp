@@ -1,4 +1,4 @@
-#include "scene.hpp"
+#include "downstream_scene.hpp"
 
 #include <algorithm>
 #include <filesystem>
@@ -7,14 +7,15 @@
 
 #include <nlohmann/json.hpp>
 
-namespace scene {
+namespace downstream_scene {
 
 namespace {
 
 using nlohmann::json;
 
-// Soft UI limit, enforced here so a scene never has more images than a
-// SonicEddy object picker can offer slots for.
+// Soft UI limit, mirrors scene.cpp's kMaxImagesPerScene - enforced here so
+// a scene never has more images than a SonicEddy object picker can offer
+// slots for.
 constexpr size_t kMaxImagesPerScene = 10;
 
 bool parse_rotate(const json &object, uint32_t &out, const std::string &context) {
@@ -41,13 +42,13 @@ bool parse_object(const json &object, const std::filesystem::path &scene_dir,
     return false;
   }
   const auto type = object.at("type").get<std::string>();
-  if (type == "camera") {
-    out.type = ObjectType::Camera;
+  if (type == "video") {
+    out.type = ObjectType::Video;
   } else if (type == "image") {
     out.type = ObjectType::Image;
   } else {
     std::cerr << context << ": unknown \"type\" \"" << type
-               << "\" (expected \"camera\" or \"image\")\n";
+               << "\" (expected \"video\" or \"image\")\n";
     return false;
   }
 
@@ -78,14 +79,14 @@ bool parse_object(const json &object, const std::filesystem::path &scene_dir,
   if (!parse_rotate(object, out.rotate, context))
     return false;
 
-  if (out.type == ObjectType::Camera) {
-    if (!object.contains("target_camera_index")) {
+  if (out.type == ObjectType::Video) {
+    if (!object.contains("target_input_index")) {
       std::cerr << context
-                 << ": \"target_camera_index\" is mandatory for camera objects\n";
+                 << ": \"target_input_index\" is mandatory for video objects\n";
       return false;
     }
-    out.target_camera_index = object.at("target_camera_index").get<uint32_t>();
-  } else if (out.type == ObjectType::Image) {
+    out.target_input_index = object.at("target_input_index").get<uint32_t>();
+  } else {
     if (!object.contains("image_file") || !object.at("image_file").is_string()) {
       std::cerr << context
                  << ": \"image_file\" is mandatory for image objects\n";
@@ -103,7 +104,7 @@ bool parse_object(const json &object, const std::filesystem::path &scene_dir,
 std::optional<SceneConfig> load_scene(const std::string &path) {
   std::ifstream in(path);
   if (!in) {
-    std::cerr << "scene: failed to open \"" << path << "\"\n";
+    std::cerr << "downstream_scene: failed to open \"" << path << "\"\n";
     return std::nullopt;
   }
 
@@ -111,17 +112,17 @@ std::optional<SceneConfig> load_scene(const std::string &path) {
   try {
     in >> root;
   } catch (const json::exception &error) {
-    std::cerr << "scene: failed to parse \"" << path << "\": " << error.what()
-               << '\n';
+    std::cerr << "downstream_scene: failed to parse \"" << path << "\": "
+               << error.what() << '\n';
     return std::nullopt;
   }
 
   if (!root.contains("canvas_width") || !root.contains("canvas_height")) {
-    std::cerr << "scene: \"canvas_width\" and \"canvas_height\" are mandatory\n";
+    std::cerr << "downstream_scene: \"canvas_width\" and \"canvas_height\" are mandatory\n";
     return std::nullopt;
   }
   if (!root.contains("objects") || !root.at("objects").is_array()) {
-    std::cerr << "scene: \"objects\" is mandatory and must be an array\n";
+    std::cerr << "downstream_scene: \"objects\" is mandatory and must be an array\n";
     return std::nullopt;
   }
 
@@ -131,7 +132,7 @@ std::optional<SceneConfig> load_scene(const std::string &path) {
     config.canvas_width = root.at("canvas_width").get<uint32_t>();
     config.canvas_height = root.at("canvas_height").get<uint32_t>();
   } catch (const json::exception &error) {
-    std::cerr << "scene: invalid canvas size: " << error.what() << '\n';
+    std::cerr << "downstream_scene: invalid canvas size: " << error.what() << '\n';
     return std::nullopt;
   }
 
@@ -144,7 +145,7 @@ std::optional<SceneConfig> load_scene(const std::string &path) {
       if (!parse_object(objects.at(i), scene_dir, i, object))
         return std::nullopt;
     } catch (const json::exception &error) {
-      std::cerr << "scene: objects[" << i << "]: " << error.what() << '\n';
+      std::cerr << "downstream_scene: objects[" << i << "]: " << error.what() << '\n';
       return std::nullopt;
     }
     config.objects.push_back(std::move(object));
@@ -154,12 +155,13 @@ std::optional<SceneConfig> load_scene(const std::string &path) {
       config.objects.begin(), config.objects.end(),
       [](const SceneObject &object) { return object.type == ObjectType::Image; });
   if (static_cast<size_t>(image_count) > kMaxImagesPerScene) {
-    std::cerr << "scene: " << image_count << " image objects exceeds the max of "
-               << kMaxImagesPerScene << " per scene\n";
+    std::cerr << "downstream_scene: " << image_count
+               << " image objects exceeds the max of " << kMaxImagesPerScene
+               << " per scene\n";
     return std::nullopt;
   }
 
   return config;
 }
 
-} // namespace scene
+} // namespace downstream_scene

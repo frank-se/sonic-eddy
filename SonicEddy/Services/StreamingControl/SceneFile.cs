@@ -35,7 +35,11 @@ public sealed record SceneFileObject(
     public int Y => Position.Count > 1 ? Position[1] : 0;
     public int Z => Position.Count > 2 ? Position[2] : 0;
 
-    public bool IsCamera => string.Equals(Type, "camera", StringComparison.Ordinal);
+    // "camera" (pw-video-compositor's A/B routable slots) and "video"
+    // (downstream-compositor's routable overlay pool - "video in can
+    // include ANYTHING", not just a camera) are the same UI concept: a
+    // routable video-input object, shown in the same picker row.
+    public bool IsCamera => Type is "camera" or "video";
     public bool IsImage => string.Equals(Type, "image", StringComparison.Ordinal);
 }
 

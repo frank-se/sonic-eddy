@@ -17,10 +17,12 @@ public static class CompositorInstanceNames
     public const int InputSlotCount = 10;
 
     // Deliberately NOT in All below - All drives CameraRouterService's
-    // fan-out to the two T-bar M/E panels specifically. The downstream
-    // node's camera-type input (video in) is exclusively fed by the
-    // video-blender's output via a manual pw-link, never a physical camera
-    // or the mixer-overview.
+    // fan-out to the two T-bar M/E panels specifically. Downstream isn't a
+    // pw-video-compositor instance at all - it's the separate
+    // downstream-compositor binary (see pw-video-compositor/src/
+    // downstream_main.cpp), a different node namespace entirely. This
+    // constant survives only as the Splat DI key for its
+    // IStreamingControlService registration.
     public const string Downstream = "Downstream";
 
     public static readonly string[] All = [A, B];
@@ -28,4 +30,10 @@ public static class CompositorInstanceNames
     public static string OutputNode(string instance) => $"se.video-compositor.{instance}.out";
 
     public static string InputNode(string instance, int index) => $"se.video-compositor.{instance}.in{index}";
+
+    // downstream-compositor's own fixed node names - no --instance-name
+    // concept, since there's exactly one Downstream, ever. See
+    // downstream_main.cpp's connect_video_stream call sites.
+    public const string DownstreamOutputNode = "se.downstream.out";
+    public const string DownstreamBaseInputNode = "se.downstream.base";
 }
