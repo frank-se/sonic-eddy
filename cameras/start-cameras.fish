@@ -32,14 +32,19 @@ set script_dir (status dirname)
 set state_dir $script_dir/state
 mkdir -p $state_dir
 
-fish -c "source $script_dir/stream-airhug.fish; stream-airhug $argv[1]" > $state_dir/airhug.log 2>&1 &
+fish -c "source $script_dir/stream-airhug.fish; stream-airhug $argv[1]" >$state_dir/airhug.log 2>&1 &
 disown
-echo $last_pid > $state_dir/airhug.pid
+echo $last_pid >$state_dir/airhug.pid
 
-fish -c "source $script_dir/stream-c920.fish; stream-c920 $argv[2]" > $state_dir/c920.log 2>&1 &
+fish -c "source $script_dir/stream-c920.fish; stream-c920 $argv[2]" >$state_dir/c920.log 2>&1 &
 disown
-echo $last_pid > $state_dir/c920.pid
+echo $last_pid >$state_dir/c920.pid
+
+fish -c "source $script_dir/stream-unifi.fish; stream-unifi" >$state_dir/unifi.log 2>&1 &
+disown
+echo $last_pid >$state_dir/unifi.pid
 
 echo "started airhug (pid "(cat $state_dir/airhug.pid)", log $state_dir/airhug.log)"
 echo "started c920 (pid "(cat $state_dir/c920.pid)", log $state_dir/c920.log)"
+echo "started c920 (pid "(cat $state_dir/unifi.pid)", log $state_dir/unifi.log)"
 echo "stop with: $script_dir/stop-cameras.fish"

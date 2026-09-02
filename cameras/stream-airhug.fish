@@ -28,9 +28,15 @@ function stream-airhug --description 'Publish the AIRHUG 02 webcam into PipeWire
     # (via $last_pid) instead of an intermediate fish process - needed for
     # start-cameras.fish to write a PID file that's actually killable.
     exec gst-launch-1.0 v4l2src device=$device \
-        ! image/jpeg,width=1920,height=1080,framerate=30/1 \
+        ! image/jpeg,width=2592,height=1944,framerate=30/1 \
         ! jpegdec \
         ! vapostproc \
-        ! video/x-raw,format=RGBA \
-        ! pipewiresink client-name="Webcam-RGBA-Stream" mode=provide
+        ! 'video/x-raw(memory:VAMemory),format=NV12' \
+        ! tee name=t \
+        t. ! queue ! videocrop top=243 bottom=243 ! vapostproc ! video/x-raw,width=1920,height=1080,format=RGBA \
+        ! pipewiresink client-name="detail-camera-right" mode=provide \
+        t. ! queue ! vapostproc ! video/x-raw,width=400,height=300,format=RGBA \
+        ! pipewiresink client-name="detail-camera-right-small" mode=provide \
+        t. ! queue ! videocrop top=243 bottom=243 ! vapostproc ! video/x-raw,width=960,height=540 \
+        ! waylandsink
 end

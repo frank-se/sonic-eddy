@@ -28,9 +28,14 @@ function stream-c920 --description 'Publish the C920 webcam into PipeWire at 192
     # (via $last_pid) instead of an intermediate fish process - needed for
     # start-cameras.fish to write a PID file that's actually killable.
     exec gst-launch-1.0 v4l2src device=$device \
-        ! image/jpeg,width=1920,height=1080,framerate=30/1 \
-        ! jpegdec \
+        ! video/x-h264,width=1920,height=1080,framerate=30/1 \
+        ! h264parse \
+        ! vah264dec \
         ! vapostproc \
-        ! video/x-raw,format=RGBA \
-        ! pipewiresink client-name="Webcam-RGBA-Stream-2" mode=provide
+        ! 'video/x-raw(memory:VAMemory),format=NV12' \
+        ! tee name=t \
+        t. ! queue ! vapostproc ! video/x-raw,format=RGBA \
+        ! pipewiresink client-name="midi-controller-camera" mode=provide \
+        t. ! queue ! vapostproc ! video/x-raw,width=960,height=540 \
+        ! waylandsink
 end

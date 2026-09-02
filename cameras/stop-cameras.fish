@@ -8,7 +8,7 @@
 set script_dir (status dirname)
 set state_dir $script_dir/state
 
-for name in airhug c920
+for name in airhug c920 unifi
     set pid_file $state_dir/$name.pid
     if not test -f $pid_file
         echo "$name: no pid file, nothing to stop"

@@ -9,6 +9,6 @@
     { "name": "cam6", "width": 1920, "height": 1080 },
     { "name": "cam7", "width": 1920, "height": 1080 },
     { "name": "cam8", "width": 1920, "height": 1080 },
-    { "name": "overview", "width": 1400, "height": 900 }
+    { "name": "overview", "width": 1000, "height": 800 }
   ]
 }
