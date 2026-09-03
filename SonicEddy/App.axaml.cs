@@ -10,7 +10,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using ReactiveUI;
 using Serilog;
 using SonicEddy.Services.AppData;
-using SonicEddy.Services.CameraRouter;
 using SonicEddy.Services.StreamingControl;
 using SonicEddy.Services.Gamepad;
 using SonicEddy.Services.Midi;
@@ -218,11 +217,6 @@ public class App : Application
             midiRouterService);
         _ = midiRouterService.InitializeAsync();
 
-        var cameraRouterService = new CameraRouterService(appDataService);
-        Locator.CurrentMutable.Register<ICameraRouterService>(() =>
-            cameraRouterService);
-        _ = cameraRouterService.InitializeAsync();
-
         // Two independent instances, one per T-bar M/E switcher panel (see
         // CompositorInstanceNames) - registered under Splat contracts A/B
         // rather than as a single unkeyed IStreamingControlService, since
@@ -244,8 +238,9 @@ public class App : Application
         // separate downstream-compositor process, not a pw-video-compositor
         // instance, so it uses its own fixed node name rather than
         // CompositorInstanceNames.OutputNode. Not part of
-        // CompositorInstanceNames.All, since it's never routed through
-        // CameraRouterService like A/B.
+        // CompositorInstanceNames.All, since its upstream routing is fixed
+        // (video-blender -> downstream baseline via target_object, not A/B
+        // camera-slot routing).
         var streamingControlServiceDownstream = new StreamingControlService(
             CompositorInstanceNames.DownstreamOutputNode);
         Locator.CurrentMutable.Register<IStreamingControlService>(() =>

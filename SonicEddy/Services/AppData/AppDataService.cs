@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using ProtoBuf;
-using SonicEddy.Contracts.CameraRouter;
 using SonicEddy.Contracts.Gamepad;
 using SonicEddy.Contracts.FilterGraph;
 using SonicEddy.Contracts.MidiRouter;
@@ -126,26 +125,6 @@ public class AppDataService(
         var bytes = await File.ReadAllBytesAsync(filePath);
         using var memoryStream = new MemoryStream(bytes);
         return Serializer.Deserialize<MidiRouterConfig>(memoryStream);
-    }
-
-    public async Task StoreCameraRouterConfig(CameraRouterConfig config)
-    {
-        var filePath =
-            Path.Combine(preferencesFolderPath, "camera-router.grpc");
-        await using var file = File.Create(filePath);
-        Serializer.Serialize(file, config);
-        await file.FlushAsync();
-    }
-
-    public async Task<CameraRouterConfig?> LoadCameraRouterConfig()
-    {
-        var filePath =
-            Path.Combine(preferencesFolderPath, "camera-router.grpc");
-        if (!File.Exists(filePath)) return null;
-
-        var bytes = await File.ReadAllBytesAsync(filePath);
-        using var memoryStream = new MemoryStream(bytes);
-        return Serializer.Deserialize<CameraRouterConfig>(memoryStream);
     }
 
     public async Task StoreGamepadBindingsConfig(GamepadBindingsConfig config)

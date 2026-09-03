@@ -14,8 +14,9 @@ public sealed class StreamingControlViewModel : ViewModelBase, IDisposable
 {
     private const int MaxScenes = 5;
     // Matches CompositorInstanceNames.InputSlotCount - all slots are
-    // uniform and user-routable via CameraRouterService (including
-    // whichever one se.mixer-overview happens to be assigned to).
+    // uniform, routed via target_object entries in the compositor's
+    // --inputs camera-definition file (including whichever one
+    // se.mixer-overview happens to be assigned to).
     private const int MaxCameraObjects = CompositorInstanceNames.InputSlotCount;
     private const int MaxImageObjects = 10;
 

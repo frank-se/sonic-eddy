@@ -11,8 +11,7 @@ public sealed class GamepadBindingsConfig
 
 // ActionName matches SonicEddy.Services.Gamepad.GamepadAction's enum name -
 // stored as a string (not the enum type itself) so this Contracts-layer
-// record doesn't need a reference to the app-layer project, mirroring
-// CameraRouterConfig's plain-primitives convention.
+// record doesn't need a reference to the app-layer project.
 [ProtoContract]
 public sealed class GamepadActionBindingConfig
 {
