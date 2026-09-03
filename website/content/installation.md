@@ -10,4 +10,4 @@ Sonic Eddy currently runs on Linux with PipeWire. Pre-built packages are planned
 Full step-by-step instructions, including prerequisites and PipeWire
 configuration, are maintained in the repository:
 
-[**Installation guide →**](https://git.sr.ht/~frank6/sonic-eddy/tree/main/item/INSTALLATION.md)
+[**Installation guide →**](https://github.com/frank-se/sonic-eddy/blob/main/INSTALLATION.md)

@@ -102,7 +102,7 @@ interfaces provided by synthesizers like the Roland SE-02, is also on board.
 ## Development
 
 Sonic Eddy is developed as open source project in the
-[**Repository**](https://git.sr.ht/~frank6/sonic-eddy) on source hut.
+[**Repository**](https://github.com/frank-se/sonic-eddy) on GitHub.
 
 ## Stay in Touch
 
@@ -123,6 +123,23 @@ Sonic Eddy is developed as open source project in the
   </p>
 </form>
 
-### Matrix channel
+### Elsewhere
 
-Join the discussion in our [**Matrix room**](https://matrix.to/#/#general:matrix.sonic-eddy.org).
+<div class="contact-links">
+  <a class="contact-link" href="mailto:frank@sonic-eddy.org">
+    <span class="contact-link-label">Email</span>
+    <span class="contact-link-value">frank@sonic-eddy.org</span>
+  </a>
+  <a class="contact-link" href="https://discord.gg/HUA7rJmwE" target="_blank" rel="noopener">
+    <span class="contact-link-label">Discord</span>
+    <span class="contact-link-value">Join the server</span>
+  </a>
+  <a class="contact-link" href="https://www.youtube.com/@SonicEddyAV" target="_blank" rel="noopener">
+    <span class="contact-link-label">YouTube</span>
+    <span class="contact-link-value">Sonic Eddy</span>
+  </a>
+  <a class="contact-link" href="https://github.com/frank-se/sonic-eddy" target="_blank" rel="noopener">
+    <span class="contact-link-label">GitHub</span>
+    <span class="contact-link-value">frank-se/sonic-eddy</span>
+  </a>
+</div>

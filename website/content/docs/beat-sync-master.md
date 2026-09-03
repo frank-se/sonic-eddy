@@ -10,7 +10,7 @@ capabilities described in the following sections.
 ## Synchronization
 
 The synchronization protocol used by Sonic Eddy is described in the
-[Sonic Eddy Synchronization Protocol Specification](https://git.sr.ht/~frank6/sonic-eddy/tree/main/item/docs/sync.md).
+[Sonic Eddy Synchronization Protocol Specification](https://github.com/frank-se/sonic-eddy/blob/main/docs/sync.md).
 The synchronization master is controlled by the synchronization tool, accessible
 under `Sync -> Synchronization ...` in the application menu.
 

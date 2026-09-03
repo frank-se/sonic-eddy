@@ -655,6 +655,41 @@ main {
   color: var(--text-muted);
 }
 
+/* Contact links */
+.contact-links {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.contact-link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.85rem 1.1rem;
+  transition: border-color 0.15s;
+}
+.contact-link:hover { border-color: var(--accent); text-decoration: none; }
+
+.contact-link-label {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.contact-link-value {
+  color: var(--text);
+  font-weight: 500;
+  word-break: break-word;
+}
+.contact-link:hover .contact-link-value { color: var(--accent-hover); }
+
 /* Footer */
 footer {
   border-top: 1px solid var(--border);
