@@ -16,10 +16,13 @@
 //   wrong but won't crash. (This constraint is about the blend itself -
 //   see the separate --preview monitor window below, which does its own
 //   independent downscaling and isn't subject to it.)
-// - Inputs are never autoconnected (PW_KEY_TARGET_OBJECT is never set) -
-//   video autoconnect is unreliable on this system (confirmed repeatedly
-//   elsewhere in this project), so linking source compositors' outputs into
-//   se.video-blender.in0/in1 stays a manual `pw-link` step.
+// - Inputs auto-link via --in0-target/--in1-target (sets PW_KEY_TARGET_OBJECT
+//   + PW_STREAM_FLAG_AUTOCONNECT) when given; omit either to keep that
+//   stream on manual `pw-link`. The output is never given a target here -
+//   this project's convention is the consumer side sets target_object (the
+//   producer is usually outside our control), so se.video-blender.out is
+//   whatever downstream node's own --*-target points back at this node's
+//   name.
 //
 // Optional --preview: opens a local GStreamer/waylandsink window showing two
 // downscaled (1/4 linear size) panes stacked vertically - top is "program"
@@ -67,6 +70,7 @@ struct App {
   pw_main_loop *main_loop = nullptr;
   uint32_t width = 0;
   uint32_t height = 0;
+  std::array<std::string, kInputCount> in_target; // optional PW_KEY_TARGET_OBJECT per input
 
   std::array<FrameSource, kInputCount> sources;
   pw_stream *out_stream = nullptr;
@@ -299,15 +303,16 @@ pw_stream *connect_video_stream(pw_loop *loop, const char *name,
                                  const char *media_class,
                                  pw_direction direction,
                                  const pw_stream_events *events, void *user_data,
-                                 uint32_t width, uint32_t height) {
+                                 uint32_t width, uint32_t height,
+                                 const std::string &target_object = {}) {
   auto *properties = pw_properties_new(
       PW_KEY_MEDIA_TYPE, "Video", PW_KEY_MEDIA_CATEGORY,
       direction == PW_DIRECTION_INPUT ? "Capture" : "Playback",
       PW_KEY_MEDIA_ROLE, "Video", PW_KEY_MEDIA_CLASS, media_class,
       PW_KEY_NODE_NAME, name, PW_KEY_NODE_DESCRIPTION,
       "Sonic Eddy video blender", nullptr);
-  // Deliberately no PW_KEY_TARGET_OBJECT - video autoconnect is unreliable
-  // here, linking stays a manual `pw-link` step (see file header).
+  if (!target_object.empty())
+    pw_properties_set(properties, PW_KEY_TARGET_OBJECT, target_object.c_str());
 
   auto *stream = pw_stream_new_simple(loop, name, properties, events, user_data);
   if (stream == nullptr)
@@ -321,11 +326,15 @@ pw_stream *connect_video_stream(pw_loop *loop, const char *name,
   const spa_pod *params[] = {
       spa_format_video_raw_build(&builder, SPA_PARAM_EnumFormat, &video_info)};
 
-  const auto result = pw_stream_connect(
-      stream, direction, PW_ID_ANY,
-      static_cast<pw_stream_flags>(PW_STREAM_FLAG_MAP_BUFFERS |
-                                   PW_STREAM_FLAG_RT_PROCESS),
-      params, 1);
+  // AUTOCONNECT only when a target was actually given - PW_KEY_TARGET_OBJECT
+  // alone does not make WirePlumber attempt a link; both are required
+  // together.
+  auto flags = static_cast<pw_stream_flags>(PW_STREAM_FLAG_MAP_BUFFERS |
+                                            PW_STREAM_FLAG_RT_PROCESS);
+  if (!target_object.empty())
+    flags = static_cast<pw_stream_flags>(flags | PW_STREAM_FLAG_AUTOCONNECT);
+
+  const auto result = pw_stream_connect(stream, direction, PW_ID_ANY, flags, params, 1);
   if (result < 0) {
     std::cerr << name << ": pw_stream_connect failed: " << result << '\n';
     pw_stream_destroy(stream);
@@ -348,13 +357,18 @@ int main(int argc, char **argv) {
       app.height = static_cast<uint32_t>(std::strtoul(next().c_str(), nullptr, 10));
     else if (arg == "--preview")
       app.preview_enabled = true;
+    else if (arg == "--in0-target")
+      app.in_target[0] = next();
+    else if (arg == "--in1-target")
+      app.in_target[1] = next();
     else {
       std::cerr << "unknown argument: " << arg << '\n';
       return 1;
     }
   }
   if (app.width == 0 || app.height == 0) {
-    std::cerr << "usage: video-blender --width W --height H [--preview]\n";
+    std::cerr << "usage: video-blender --width W --height H [--preview] "
+                 "[--in0-target NAME_OR_ID] [--in1-target NAME_OR_ID]\n";
     return 1;
   }
 
@@ -412,7 +426,8 @@ int main(int argc, char **argv) {
   for (size_t idx = 0; idx < kInputCount; ++idx) {
     app.sources[idx].stream = connect_video_stream(
         loop, kInputNames[idx], "Stream/Input/Video", PW_DIRECTION_INPUT,
-        &input_stream_events, &app.sources[idx], app.width, app.height);
+        &input_stream_events, &app.sources[idx], app.width, app.height,
+        app.in_target[idx]);
     if (app.sources[idx].stream == nullptr)
       return 1;
   }

@@ -8,12 +8,13 @@
 //
 // Shape: exactly one baseline video input (App::base_video_source) -
 // always present, never a scene object, never part of the --inputs pool,
-// always composited first/full-canvas, fed by a manual pw-link (today) from
-// whatever's upstream (the A/B compositor via video-blender in the real
-// system, but this binary doesn't know or care). On top of that: an
-// optional --inputs-loaded pool of routable overlay video inputs ("video in
-// can include ANYTHING", not just cameras) plus static images, both
-// addressed as scene objects exactly like pw-video-compositor's scenes.
+// always composited first/full-canvas, fed by whatever's upstream (the A/B
+// compositor via video-blender in the real system, but this binary doesn't
+// know or care - it just optionally auto-links to a --baseline-target if
+// given, otherwise stays a manual pw-link). On top of that: an optional
+// --inputs-loaded pool of routable overlay video inputs ("video in can
+// include ANYTHING", not just cameras) plus static images, both addressed
+// as scene objects exactly like pw-video-compositor's scenes.
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -485,6 +486,7 @@ const pw_stream_events output_stream_events = {
 struct Args {
   std::vector<std::string> scene_paths;
   std::string inputs_path; // optional - empty pool if not given
+  std::string baseline_target; // optional PW_KEY_TARGET_OBJECT for se.downstream.base
 };
 
 bool parse_args(int argc, char **argv, Args &args) {
@@ -504,6 +506,8 @@ bool parse_args(int argc, char **argv, Args &args) {
       args.scene_paths.push_back(std::filesystem::absolute(next(i)).string());
     } else if (arg == "--inputs") {
       args.inputs_path = next(i);
+    } else if (arg == "--baseline-target") {
+      args.baseline_target = next(i);
     } else {
       std::cerr << "unknown argument: " << arg << '\n';
       return false;
@@ -514,9 +518,12 @@ bool parse_args(int argc, char **argv, Args &args) {
 
 void print_usage() {
   std::cerr << "usage: downstream-compositor --scene <scene.json> [--scene <scene2.json> ...] "
-               "(up to " << kMaxScenes << ") [--inputs <inputs.json>]\n"
+               "(up to " << kMaxScenes << ") [--inputs <inputs.json>] "
+               "[--baseline-target NAME_OR_ID]\n"
                "--inputs is optional - omit it if the scene(s) have no \"video\"-type "
-               "objects (only the always-on baseline input, se.downstream.base).\n";
+               "objects (only the always-on baseline input, se.downstream.base).\n"
+               "--baseline-target auto-links se.downstream.base to the given node on "
+               "startup (e.g. se.video-blender.out); omit to keep it a manual pw-link.\n";
 }
 
 pw_stream *connect_video_stream(pw_loop *loop, const char *name,
@@ -744,7 +751,7 @@ int main(int argc, char **argv) {
   app.base_video_source.stream = connect_video_stream(
       loop, "se.downstream.base", "Stream/Input/Video", PW_DIRECTION_INPUT,
       &input_stream_events, &app.base_video_source, app.base_video_source.width,
-      app.base_video_source.height);
+      app.base_video_source.height, args.baseline_target);
   if (app.base_video_source.stream == nullptr)
     return 1;
 

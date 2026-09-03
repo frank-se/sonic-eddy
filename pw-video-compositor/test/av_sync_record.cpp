@@ -40,44 +40,6 @@ namespace {
 
 constexpr const char *kVideoStreamName = "se.av_sync_record.video";
 
-// pw-link's own CLI only resolves node names (or the ephemeral registry
-// id) - not object.serial, even though PW_KEY_TARGET_OBJECT itself accepts
-// either. So a serial-based --video-target has to be resolved to a name
-// once, up front, before the actual manual link (see link_video_node()
-// below - WirePlumber's autoconnect policy is audio-tuned and was found
-// unreliable for video in earlier testing in this project, so linking is
-// done explicitly rather than relying on it).
-std::string resolve_node_name(const std::string &target) {
-  if (target.empty() ||
-      target.find_first_not_of("0123456789") != std::string::npos)
-    return target; // not purely numeric - already a name
-
-  FILE *pipe = popen("pw-dump", "r");
-  if (pipe == nullptr)
-    return target;
-  std::string output;
-  std::array<char, 4096> buf{};
-  size_t n = 0;
-  while ((n = std::fread(buf.data(), 1, buf.size(), pipe)) > 0)
-    output.append(buf.data(), n);
-  pclose(pipe);
-
-  auto dump = nlohmann::json::parse(output, nullptr, false);
-  if (dump.is_discarded() || !dump.is_array())
-    return target;
-  const int64_t wanted_serial = std::strtoll(target.c_str(), nullptr, 10);
-  for (const auto &obj : dump) {
-    if (obj.value("type", "") != "PipeWire:Interface:Node")
-      continue;
-    const auto &props = obj["info"]["props"];
-    // object.serial comes back as a JSON number from pw-dump (unlike
-    // pw-cli's text output, which quotes everything as strings).
-    if (props.value("object.serial", int64_t{-1}) == wanted_serial)
-      return props.value("node.name", target);
-  }
-  return target;
-}
-
 struct Args {
   std::string video_target = "se.video-compositor.out";
   std::string target_object; // audio tick source - required, never autoconnect-to-default
@@ -259,19 +221,6 @@ void on_quit_signal(void *data, int) { begin_shutdown(*static_cast<App *>(data))
 
 void on_duration_timer(void *data, uint64_t) { begin_shutdown(*static_cast<App *>(data)); }
 
-// Fired once, shortly after startup, to give our video stream's node time
-// to register before we try to link it.
-void on_link_timer(void *data, uint64_t) {
-  auto &app = *static_cast<App *>(data);
-  const std::string source_name = resolve_node_name(app.args.video_target);
-  const std::string command = "pw-link \"" + source_name + ":output_1\" \"" +
-                              std::string(kVideoStreamName) + ":input_1\"";
-  const int result = std::system(command.c_str());
-  if (result != 0)
-    std::cerr << "warning: manual video link failed (source=" << source_name
-              << "), command exit status " << result << '\n';
-}
-
 void watch_bus(App &app) {
   auto *bus = gst_element_get_bus(app.pipeline);
   while (true) {
@@ -422,7 +371,8 @@ int main(int argc, char **argv) {
   auto *video_properties = pw_properties_new(
       PW_KEY_MEDIA_TYPE, "Video", PW_KEY_MEDIA_CATEGORY, "Capture",
       PW_KEY_MEDIA_ROLE, "Video", PW_KEY_MEDIA_CLASS, "Stream/Input/Video",
-      PW_KEY_NODE_NAME, kVideoStreamName, nullptr);
+      PW_KEY_NODE_NAME, kVideoStreamName, PW_KEY_TARGET_OBJECT,
+      app.args.video_target.c_str(), nullptr);
   app.video_stream = pw_stream_new_simple(loop, kVideoStreamName,
                                           video_properties, &video_stream_events, &app);
   if (app.video_stream == nullptr)
@@ -439,6 +389,7 @@ int main(int argc, char **argv) {
 
   if (pw_stream_connect(app.video_stream, PW_DIRECTION_INPUT, PW_ID_ANY,
                         static_cast<pw_stream_flags>(PW_STREAM_FLAG_DRIVER |
+                                                     PW_STREAM_FLAG_AUTOCONNECT |
                                                      PW_STREAM_FLAG_MAP_BUFFERS |
                                                      PW_STREAM_FLAG_RT_PROCESS),
                         video_params, 1) < 0) {
@@ -448,11 +399,6 @@ int main(int argc, char **argv) {
 
   pw_loop_add_signal(loop, SIGINT, on_quit_signal, &app);
   pw_loop_add_signal(loop, SIGTERM, on_quit_signal, &app);
-  // one-shot: give our video node ~300ms to register before linking it
-  auto *link_timer = pw_loop_add_timer(loop, on_link_timer, &app);
-  const struct timespec link_ts = {0, 300'000'000};
-  pw_loop_update_timer(loop, link_timer, const_cast<struct timespec *>(&link_ts),
-                       nullptr, false);
   // --seconds 0 (default) means "no duration timer" - run until Ctrl+C.
   if (app.args.seconds > 0.0) {
     // one-shot: fire once after --seconds, never again
