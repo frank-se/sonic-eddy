@@ -16,6 +16,10 @@ struct InputDef {
   std::string name;
   uint32_t width = 0;
   uint32_t height = 0;
+  // Optional PW_KEY_TARGET_OBJECT (node name or object.serial) to auto-link
+  // this input to on startup - empty means no auto-link (route it later
+  // with a manual pw-link, today's default).
+  std::string target_object;
 };
 
 // Loads and validates a camera-definition file. Every entry's "name" must

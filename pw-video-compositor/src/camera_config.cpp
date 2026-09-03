@@ -32,6 +32,14 @@ bool parse_input(const json &entry, size_t index, InputDef &out) {
     return false;
   }
 
+  if (entry.contains("target_object")) {
+    if (!entry.at("target_object").is_string()) {
+      std::cerr << context << ": \"target_object\" must be a string\n";
+      return false;
+    }
+    out.target_object = entry.at("target_object").get<std::string>();
+  }
+
   return true;
 }
 

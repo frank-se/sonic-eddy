@@ -523,13 +523,16 @@ pw_stream *connect_video_stream(pw_loop *loop, const char *name,
                                  const char *media_class,
                                  pw_direction direction,
                                  const pw_stream_events *events, void *user_data,
-                                 uint32_t width, uint32_t height) {
+                                 uint32_t width, uint32_t height,
+                                 const std::string &target_object = {}) {
   auto *properties = pw_properties_new(
       PW_KEY_MEDIA_TYPE, "Video", PW_KEY_MEDIA_CATEGORY,
       direction == PW_DIRECTION_INPUT ? "Capture" : "Playback",
       PW_KEY_MEDIA_ROLE, "Video", PW_KEY_MEDIA_CLASS, media_class,
       PW_KEY_NODE_NAME, name, PW_KEY_NODE_DESCRIPTION,
       "Sonic Eddy downstream compositor", nullptr);
+  if (!target_object.empty())
+    pw_properties_set(properties, PW_KEY_TARGET_OBJECT, target_object.c_str());
 
   auto *stream = pw_stream_new_simple(loop, name, properties, events, user_data);
   if (stream == nullptr)
@@ -543,11 +546,15 @@ pw_stream *connect_video_stream(pw_loop *loop, const char *name,
   const spa_pod *params[] = {
       spa_format_video_raw_build(&builder, SPA_PARAM_EnumFormat, &video_info)};
 
-  const auto result = pw_stream_connect(
-      stream, direction, PW_ID_ANY,
-      static_cast<pw_stream_flags>(PW_STREAM_FLAG_MAP_BUFFERS |
-                                   PW_STREAM_FLAG_RT_PROCESS),
-      params, 1);
+  // AUTOCONNECT only when a target was actually given - PW_KEY_TARGET_OBJECT
+  // alone does not make WirePlumber attempt a link; both are required
+  // together (confirmed empirically - see pw-video-compositor's git log).
+  auto flags = static_cast<pw_stream_flags>(PW_STREAM_FLAG_MAP_BUFFERS |
+                                            PW_STREAM_FLAG_RT_PROCESS);
+  if (!target_object.empty())
+    flags = static_cast<pw_stream_flags>(flags | PW_STREAM_FLAG_AUTOCONNECT);
+
+  const auto result = pw_stream_connect(stream, direction, PW_ID_ANY, flags, params, 1);
   if (result < 0) {
     std::cerr << name << ": pw_stream_connect failed: " << result << '\n';
     pw_stream_destroy(stream);
@@ -746,7 +753,7 @@ int main(int argc, char **argv) {
     const std::string node_name = "se.downstream.video" + std::to_string(idx);
     src.stream = connect_video_stream(loop, node_name.c_str(), "Stream/Input/Video",
                                       PW_DIRECTION_INPUT, &input_stream_events, &src,
-                                      src.width, src.height);
+                                      src.width, src.height, inputs[idx].target_object);
     if (src.stream == nullptr)
       return 1;
   }
