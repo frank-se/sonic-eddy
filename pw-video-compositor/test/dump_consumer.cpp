@@ -16,23 +16,27 @@
 
 namespace {
 
-constexpr uint32_t kBytesPerPixel = 3;
-
 struct App {
   pw_main_loop *main_loop = nullptr;
   pw_stream *stream = nullptr;
   uint32_t width = 0;
   uint32_t height = 0;
+  uint32_t bytes_per_pixel = 3; // 3 = RGB (gradient_producer/compositor CLI mode), 4 = RGBA (compositor scene mode, midi-cube)
+  spa_video_format format = SPA_VIDEO_FORMAT_RGB;
   uint32_t skip_frames = 5; // let the graph settle before capturing
   std::string out_path;
 };
 
-void write_ppm(const App &app, const uint8_t *rgb, uint32_t stride) {
+// Always writes a PPM (RGB, no alpha) regardless of the source format -
+// drops the alpha byte for RGBA sources, since PPM has no alpha channel.
+void write_ppm(const App &app, const uint8_t *src, uint32_t stride) {
   std::ofstream out(app.out_path, std::ios::binary);
   out << "P6\n" << app.width << ' ' << app.height << "\n255\n";
-  for (uint32_t y = 0; y < app.height; ++y)
-    out.write(reinterpret_cast<const char *>(rgb + static_cast<size_t>(y) * stride),
-              app.width * kBytesPerPixel);
+  for (uint32_t y = 0; y < app.height; ++y) {
+    const uint8_t *row = src + static_cast<size_t>(y) * stride;
+    for (uint32_t x = 0; x < app.width; ++x)
+      out.write(reinterpret_cast<const char *>(row + static_cast<size_t>(x) * app.bytes_per_pixel), 3);
+  }
 }
 
 void on_process(void *data) {
@@ -47,7 +51,7 @@ void on_process(void *data) {
       --app.skip_frames;
     } else {
       auto &spa_data = buffer->datas[0];
-      const uint32_t stride = app.width * kBytesPerPixel;
+      const uint32_t stride = app.width * app.bytes_per_pixel;
       write_ppm(app, static_cast<const uint8_t *>(spa_data.data), stride);
       std::cout << "wrote " << app.out_path << '\n';
       pw_stream_queue_buffer(app.stream, pw_buffer);
@@ -81,14 +85,23 @@ int main(int argc, char **argv) {
       app.height = static_cast<uint32_t>(std::strtoul(next().c_str(), nullptr, 10));
     else if (arg == "--out")
       app.out_path = next();
-    else {
+    else if (arg == "--format") {
+      const std::string format = next();
+      if (format == "rgba") {
+        app.bytes_per_pixel = 4;
+        app.format = SPA_VIDEO_FORMAT_RGBA;
+      } else if (format != "rgb") {
+        std::cerr << "--format must be \"rgb\" or \"rgba\"\n";
+        return 1;
+      }
+    } else {
       std::cerr << "unknown argument: " << arg << '\n';
       return 1;
     }
   }
   if (target_object.empty() || app.width == 0 || app.height == 0 || app.out_path.empty()) {
     std::cerr << "usage: dump_consumer --target <node-name> --width W "
-                 "--height H --out <file.ppm>\n";
+                 "--height H --out <file.ppm> [--format rgb|rgba]\n";
     return 1;
   }
 
@@ -110,7 +123,7 @@ int main(int argc, char **argv) {
 
   std::array<uint8_t, 1024> pod_buffer{};
   auto builder = SPA_POD_BUILDER_INIT(pod_buffer.data(), pod_buffer.size());
-  auto video_info = SPA_VIDEO_INFO_RAW_INIT(.format = SPA_VIDEO_FORMAT_RGB,
+  auto video_info = SPA_VIDEO_INFO_RAW_INIT(.format = app.format,
                                             .size = SPA_RECTANGLE(app.width, app.height),
                                             .framerate = SPA_FRACTION(0, 0));
   const spa_pod *params[] = {

@@ -260,9 +260,7 @@ void on_quit_signal(void *data, int) { begin_shutdown(*static_cast<App *>(data))
 void on_duration_timer(void *data, uint64_t) { begin_shutdown(*static_cast<App *>(data)); }
 
 // Fired once, shortly after startup, to give our video stream's node time
-// to register before we try to link it - see the comment above the video
-// pw_stream_connect() call for why this is a manual pw-link rather than
-// PW_STREAM_FLAG_AUTOCONNECT.
+// to register before we try to link it.
 void on_link_timer(void *data, uint64_t) {
   auto &app = *static_cast<App *>(data);
   const std::string source_name = resolve_node_name(app.args.video_target);
@@ -421,19 +419,6 @@ int main(int argc, char **argv) {
   // Video: this 2-node component (compositor out -> here) has no driver of
   // its own, so we have to be one - trigger_process() is called from the
   // audio callback above, in lockstep with the real audio clock.
-  //
-  // Deliberately no PW_KEY_TARGET_OBJECT here (unlike audio above) - it
-  // doesn't just get ignored the way plain "no autoconnect flag" would
-  // suggest. WirePlumber's own policy reads target.object regardless of
-  // PW_STREAM_FLAG_AUTOCONNECT and repeatedly retries linking it on every
-  // internal rescan (confirmed via `journalctl --user`:
-  // "wp-event-dispatcher: ... failed: tried to link on last rescan, not
-  // retrying nil", flooding continuously) - it doesn't resolve our
-  // object.serial the way pw-dump does, fails, and races against our own
-  // manual pw-link below for the same port, which was breaking it
-  // ("failed to link ports: Success"). Since linking is fully manual here
-  // on purpose, target.object metadata is unnecessary and was actively
-  // harmful - leave it unset.
   auto *video_properties = pw_properties_new(
       PW_KEY_MEDIA_TYPE, "Video", PW_KEY_MEDIA_CATEGORY, "Capture",
       PW_KEY_MEDIA_ROLE, "Video", PW_KEY_MEDIA_CLASS, "Stream/Input/Video",
@@ -452,12 +437,6 @@ int main(int argc, char **argv) {
   const spa_pod *video_params[] = {
       spa_format_video_raw_build(&video_builder, SPA_PARAM_EnumFormat, &video_info)};
 
-  // No PW_STREAM_FLAG_AUTOCONNECT here on purpose - WirePlumber's default
-  // linking policy is tuned for audio; targeting a video node via
-  // target-object + autoconnect was found unreliable in earlier testing in
-  // this project (sometimes silently linked to the wrong node instead of
-  // failing). We link explicitly with `pw-link` after this node registers
-  // (see below), matching the pattern that's actually proven reliable here.
   if (pw_stream_connect(app.video_stream, PW_DIRECTION_INPUT, PW_ID_ANY,
                         static_cast<pw_stream_flags>(PW_STREAM_FLAG_DRIVER |
                                                      PW_STREAM_FLAG_MAP_BUFFERS |

@@ -9,6 +9,7 @@ threads_dep = dependency('threads')
 nlohmann_json_dep = dependency('nlohmann_json')
 gst_dep = dependency('gstreamer-1.0')
 gst_app_dep = dependency('gstreamer-app-1.0')
+raylib_dep = dependency('raylib')
 
 executable(
     'pw-video-compositor',
@@ -62,3 +63,16 @@ executable(
     'test/av_sync_record.cpp',
     dependencies : [pipewire_dep, threads_dep, gst_dep, gst_app_dep, nlohmann_json_dep],
     install : false)
+
+# MIDI note-on/off events visualized as a 3D "cube" (X=time, Y=note number,
+# Z=channel) and pushed out as its own PipeWire video source - see
+# src/midi_cube_main.cpp header comment. Self-contained: its own minimal
+# MIDI byte parser (no fr-sonic dependency) and raylib for offscreen 3D
+# rendering with real depth-buffer occlusion and lighting.
+executable(
+    'midi-cube',
+    ['src/midi_cube_main.cpp', 'src/cube_renderer.cpp', 'src/midi_cube_midi.cpp',
+     'src/midi_note_registry.cpp'],
+    include_directories : include_directories('third_party'),
+    dependencies : [pipewire_dep, threads_dep, raylib_dep],
+    install : true)
