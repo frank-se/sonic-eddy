@@ -9,3 +9,5 @@ _site/
 api/
 public/
 DIAG/
+cameras/state/
+video-setup/state/
