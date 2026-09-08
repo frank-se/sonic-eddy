@@ -5,9 +5,9 @@
 #include <string>
 #include <vector>
 
-namespace downstream_camera_config {
+namespace downstream_video_config {
 
-// Mirrors pw-video-compositor's camera_config.hpp - one entry per routable
+// Mirrors pw-video-compositor's video_config.hpp - one entry per routable
 // overlay video-input slot (array order = slot index, the same index
 // downstream_scene.json's "target_input_index" refers to). Unlike
 // pw-video-compositor's --inputs, this list does NOT include the baseline
@@ -24,7 +24,7 @@ struct InputDef {
 };
 
 // Loads and validates an --inputs file. Same shape/error style as
-// camera_config::load - "name" mandatory non-empty string, "width"/
+// video_config::load - "name" mandatory non-empty string, "width"/
 // "height" mandatory and > 0. Unlike pw-video-compositor, an empty/absent
 // --inputs is a normal, common case here (today's real Downstream usage
 // has zero overlay video inputs) - callers should treat "not given at
@@ -32,4 +32,4 @@ struct InputDef {
 // a path was actually provided.
 std::optional<std::vector<InputDef>> load(const std::string &path);
 
-} // namespace downstream_camera_config
+} // namespace downstream_video_config

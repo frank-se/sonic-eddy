@@ -1,11 +1,11 @@
-#include "camera_config.hpp"
+#include "video_config.hpp"
 
 #include <fstream>
 #include <iostream>
 
 #include <nlohmann/json.hpp>
 
-namespace camera_config {
+namespace video_config {
 
 namespace {
 
@@ -48,7 +48,7 @@ bool parse_input(const json &entry, size_t index, InputDef &out) {
 std::optional<std::vector<InputDef>> load(const std::string &path) {
   std::ifstream in(path);
   if (!in) {
-    std::cerr << "camera_config: failed to open \"" << path << "\"\n";
+    std::cerr << "video_config: failed to open \"" << path << "\"\n";
     return std::nullopt;
   }
 
@@ -56,13 +56,13 @@ std::optional<std::vector<InputDef>> load(const std::string &path) {
   try {
     in >> root;
   } catch (const json::exception &error) {
-    std::cerr << "camera_config: failed to parse \"" << path << "\": " << error.what()
+    std::cerr << "video_config: failed to parse \"" << path << "\": " << error.what()
                << '\n';
     return std::nullopt;
   }
 
   if (!root.contains("inputs") || !root.at("inputs").is_array()) {
-    std::cerr << "camera_config: \"inputs\" is mandatory and must be an array\n";
+    std::cerr << "video_config: \"inputs\" is mandatory and must be an array\n";
     return std::nullopt;
   }
 
@@ -75,7 +75,7 @@ std::optional<std::vector<InputDef>> load(const std::string &path) {
       if (!parse_input(inputs.at(i), i, def))
         return std::nullopt;
     } catch (const json::exception &error) {
-      std::cerr << "camera_config: inputs[" << i << "]: " << error.what() << '\n';
+      std::cerr << "video_config: inputs[" << i << "]: " << error.what() << '\n';
       return std::nullopt;
     }
     result.push_back(std::move(def));
@@ -84,4 +84,4 @@ std::optional<std::vector<InputDef>> load(const std::string &path) {
   return result;
 }
 
-} // namespace camera_config
+} // namespace video_config

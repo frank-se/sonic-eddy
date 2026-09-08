@@ -25,24 +25,24 @@
 
 #include <nlohmann/json.hpp>
 
-#include "camera_config.hpp"
+#include "video_config.hpp"
 #include "scene.hpp"
 
 namespace {
 
 constexpr uint32_t kBytesPerPixel = 4; // SPA_VIDEO_FORMAT_RGBA
-// Non-scene CLI mode is unrelated to scenes/camera_config - kept at a
+// Non-scene CLI mode is unrelated to scenes/video_config - kept at a
 // fixed 2 inputs (--in0-*/--in1-*) for quick manual testing.
 constexpr size_t kCliInputCount = 2;
 constexpr size_t kMaxScenes = 5;
 
 // Where a frame actually comes from: either a live PipeWire input stream
-// (camera-backed, `stream` non-null) or a one-shot decode at startup
+// (video-backed, `stream` non-null) or a one-shot decode at startup
 // (image-backed, scene mode only, `stream` null, `has_frame` permanently
-// true). Camera sources are shared - every scene's camera-type objects
+// true). Video sources are shared - every scene's video-type objects
 // that target the same index point at the *same* FrameSource, so the
-// physical camera is only captured once regardless of how many scenes or
-// objects reference it.
+// underlying source is only captured once regardless of how many scenes
+// or objects reference it.
 struct FrameSource {
   uint32_t width = 0;
   uint32_t height = 0;
@@ -52,7 +52,7 @@ struct FrameSource {
   pw_stream *stream = nullptr;
   // True if any decoded pixel's alpha byte is < 255 - scanned once at image
   // load time (see stbi_load call site) so composite_input can skip the
-  // per-pixel alpha check for the common case. Always false for camera
+  // per-pixel alpha check for the common case. Always false for video
   // sources: GStreamer's videoconvert->RGBA (cameras/stream-*.fish) and the
   // mixer-overview producer (always-opaque UI, see
   // project_mixer_overview_video_stream memory) both guarantee alpha=255
@@ -72,7 +72,7 @@ struct FrameSource {
 // synchronization story per RenderSlot, matching FrameSource::frame_mutex's
 // existing "lock for the whole composite_input body" precedent.
 struct RenderSlot {
-  FrameSource *source = nullptr; // shared (camera) or owned via App::image_sources (image)
+  FrameSource *source = nullptr; // shared (video) or owned via App::image_sources (image)
 
   double scale_x = 1.0;
   double scale_y = 1.0;
@@ -123,9 +123,9 @@ struct App {
   uint32_t canvas_height = 720;
 
   // deque, not array: input slot count is now runtime-determined (from
-  // camera_config::load), and FrameSource holds a std::mutex (non-movable)
+  // video_config::load), and FrameSource holds a std::mutex (non-movable)
   // - same reasoning as image_sources below.
-  std::deque<FrameSource> camera_sources;
+  std::deque<FrameSource> video_sources;
   // deque, not vector: FrameSource holds a std::mutex (non-movable), and
   // RenderSlot::source keeps a raw pointer into this container that must
   // stay valid as later scenes' images are added - vector would both fail
@@ -560,7 +560,7 @@ const pw_stream_events output_stream_events = {
 
 struct Args {
   std::vector<std::string> scene_paths; // if non-empty, scene mode - all other fields below are ignored
-  // Mandatory alongside scene_paths - see camera_config.hpp. The stable,
+  // Mandatory alongside scene_paths - see video_config.hpp. The stable,
   // scene-independent list of input slots (count, size, name) shared
   // across every loaded scene.
   std::string inputs_path;
@@ -575,7 +575,7 @@ struct Args {
   uint32_t canvas_width = 1280;
   uint32_t canvas_height = 720;
   // CLI (non-scene) mode only - scene mode gets each input's size from
-  // --inputs instead (see camera_config.hpp). 0 = "not explicitly set",
+  // --inputs instead (see video_config.hpp). 0 = "not explicitly set",
   // CLI mode falls back to 960x720 at the point of use.
   std::array<uint32_t, kCliInputCount> in_width{0, 0};
   std::array<uint32_t, kCliInputCount> in_height{0, 0};
@@ -664,7 +664,7 @@ void print_usage() {
                "so multiple instances can run side by side.\n"
                "--inputs <inputs.json> is mandatory in scene mode: the stable, "
                "scene-independent list of input slots (count, size, name) - see "
-               "camera_config.hpp.\n";
+               "video_config.hpp.\n";
 }
 
 pw_stream *connect_video_stream(pw_loop *loop, const char *name,
@@ -726,7 +726,7 @@ int main(int argc, char **argv) {
 
   App app;
   // node_names[idx] / target_objects[idx]: the PipeWire input stream to
-  // open for app.camera_sources[idx]. Always input_count (scene mode, from
+  // open for app.video_sources[idx]. Always input_count (scene mode, from
   // --inputs) or kCliInputCount (CLI mode) entries.
   std::vector<std::string> node_names;
   std::vector<std::string> target_objects;
@@ -740,7 +740,7 @@ int main(int argc, char **argv) {
       std::cerr << "scene mode requires --inputs <file.json>\n";
       return 1;
     }
-    auto inputs = camera_config::load(args.inputs_path);
+    auto inputs = video_config::load(args.inputs_path);
     if (!inputs)
       return 1;
     const size_t input_count = inputs->size();
@@ -768,11 +768,11 @@ int main(int argc, char **argv) {
 
     for (const auto &cfg : scene_configs) {
       for (const auto &object : cfg.objects) {
-        if (object.type != scene::ObjectType::Camera)
+        if (object.type != scene::ObjectType::Video)
           continue;
-        if (object.target_camera_index >= input_count) {
-          std::cerr << "scene: target_camera_index "
-                     << object.target_camera_index << " is out of range (0.."
+        if (object.target_input_index >= input_count) {
+          std::cerr << "scene: target_input_index "
+                     << object.target_input_index << " is out of range (0.."
                      << (input_count - 1) << ")\n";
           return 1;
         }
@@ -782,9 +782,9 @@ int main(int argc, char **argv) {
     // Camera sources are shared across every scene - always build and
     // (later) connect all input_count of them (per --inputs), regardless of
     // which scenes actually reference each index.
-    app.camera_sources.resize(input_count);
+    app.video_sources.resize(input_count);
     for (size_t idx = 0; idx < input_count; ++idx) {
-      auto &src = app.camera_sources[idx];
+      auto &src = app.video_sources[idx];
       src.width = (*inputs)[idx].width;
       src.height = (*inputs)[idx].height;
       src.frame.assign(
@@ -822,8 +822,8 @@ int main(int argc, char **argv) {
 
         uint32_t src_width = 0;
         uint32_t src_height = 0;
-        if (object.type == scene::ObjectType::Camera) {
-          slot.source = &app.camera_sources[object.target_camera_index];
+        if (object.type == scene::ObjectType::Video) {
+          slot.source = &app.video_sources[object.target_input_index];
           src_width = slot.source->width;
           src_height = slot.source->height;
         } else {
@@ -880,12 +880,12 @@ int main(int argc, char **argv) {
 
     node_names.reserve(kCliInputCount);
     target_objects.reserve(kCliInputCount);
-    app.camera_sources.resize(kCliInputCount);
+    app.video_sources.resize(kCliInputCount);
 
     app.scenes.emplace_back();
     auto &scene = app.scenes.back();
     for (size_t idx = 0; idx < kCliInputCount; ++idx) {
-      auto &src = app.camera_sources[idx];
+      auto &src = app.video_sources[idx];
       // CLI mode's own default (960x720) when not explicitly given.
       src.width = args.in_width[idx] != 0 ? args.in_width[idx] : 960;
       src.height = args.in_height[idx] != 0 ? args.in_height[idx] : 720;
@@ -926,13 +926,13 @@ int main(int argc, char **argv) {
   auto *loop = pw_main_loop_get_loop(app.main_loop);
 
   // node_names.size() here: it's kCliInputCount (2) in non-scene CLI mode
-  // but input_count (from --inputs) in scene mode - camera_sources is
+  // but input_count (from --inputs) in scene mode - video_sources is
   // always sized to match, but only the entries this mode actually
   // populated node_names for get a stream connected.
   for (size_t idx = 0; idx < node_names.size(); ++idx) {
     if (node_names[idx].empty())
       continue;
-    auto &src = app.camera_sources[idx];
+    auto &src = app.video_sources[idx];
     src.stream = connect_video_stream(loop, node_names[idx].c_str(),
                                       "Stream/Input/Video", PW_DIRECTION_INPUT,
                                       &input_stream_events, &src, src.width,
@@ -963,7 +963,7 @@ int main(int argc, char **argv) {
             << std::flush;
   pw_main_loop_run(app.main_loop);
 
-  for (auto &src : app.camera_sources)
+  for (auto &src : app.video_sources)
     if (src.stream != nullptr)
       pw_stream_destroy(src.stream);
   pw_stream_destroy(app.out_stream);

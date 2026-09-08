@@ -41,13 +41,13 @@ bool parse_object(const json &object, const std::filesystem::path &scene_dir,
     return false;
   }
   const auto type = object.at("type").get<std::string>();
-  if (type == "camera") {
-    out.type = ObjectType::Camera;
+  if (type == "video") {
+    out.type = ObjectType::Video;
   } else if (type == "image") {
     out.type = ObjectType::Image;
   } else {
     std::cerr << context << ": unknown \"type\" \"" << type
-               << "\" (expected \"camera\" or \"image\")\n";
+               << "\" (expected \"video\" or \"image\")\n";
     return false;
   }
 
@@ -78,13 +78,13 @@ bool parse_object(const json &object, const std::filesystem::path &scene_dir,
   if (!parse_rotate(object, out.rotate, context))
     return false;
 
-  if (out.type == ObjectType::Camera) {
-    if (!object.contains("target_camera_index")) {
+  if (out.type == ObjectType::Video) {
+    if (!object.contains("target_input_index")) {
       std::cerr << context
-                 << ": \"target_camera_index\" is mandatory for camera objects\n";
+                 << ": \"target_input_index\" is mandatory for video objects\n";
       return false;
     }
-    out.target_camera_index = object.at("target_camera_index").get<uint32_t>();
+    out.target_input_index = object.at("target_input_index").get<uint32_t>();
   } else if (out.type == ObjectType::Image) {
     if (!object.contains("image_file") || !object.at("image_file").is_string()) {
       std::cerr << context

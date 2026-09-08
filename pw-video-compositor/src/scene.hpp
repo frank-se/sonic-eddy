@@ -7,10 +7,14 @@
 
 namespace scene {
 
-enum class ObjectType { Camera, Image };
+// Video (not Camera - target_object can point at any PipeWire video
+// producer, not just a physical camera) references target_input_index
+// into the --inputs-loaded pool (video_config). Image is unchanged -
+// static, decoded at startup.
+enum class ObjectType { Video, Image };
 
 struct SceneObject {
-  ObjectType type = ObjectType::Camera;
+  ObjectType type = ObjectType::Video;
 
   int32_t x = 0;
   int32_t y = 0;
@@ -23,8 +27,8 @@ struct SceneObject {
   bool flip_vertical = false;
   uint32_t rotate = 0; // 0, 90, 180 or 270
 
-  // type == Camera
-  uint32_t target_camera_index = 0;
+  // type == Video
+  uint32_t target_input_index = 0;
 
   // type == Image - absolute path, already resolved relative to the scene
   // file's own directory.

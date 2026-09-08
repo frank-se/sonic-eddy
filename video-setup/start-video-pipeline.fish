@@ -1,8 +1,7 @@
 #!/usr/bin/env fish
 
-# Starts the baseline video processing pipeline - the four always-on
-# nodes that exist regardless of which cameras/sources are plugged into
-# them:
+# Starts the baseline video processing pipeline - the always-on nodes that
+# exist regardless of which cameras/sources are plugged into them:
 #
 #   pw-video-compositor (A) --\
 #                               >-- video-blender --> downstream-compositor
@@ -11,17 +10,35 @@
 # Two pw-video-compositor instances (A/B, one per T-bar M/E switcher panel)
 # feed video-blender, which cross-dissolves them; video-blender's output
 # feeds downstream-compositor's always-on baseline input for DSK/overlay
-# effects. Camera/source routing (target_object entries in inputs-a.json /
-# inputs-b.json, plus scene-a.json / scene-b.json's scene objects) is a
-# separate, later step - today each compositor starts with an empty
-# --inputs pool and an empty scene, so this just proves the pipeline
-# topology is up before anything is plugged into it.
+# effects. A and B intentionally share the exact same inputs.json/scene.json
+# - they're the two sides of one T-bar, so both need access to the same
+# video source pool and the same set of scene layouts (to cut between different
+# arrangements of the same sources), not two independently-drifting
+# configs. downstream-inputs.json is downstream-compositor's own separate
+# overlay pool (DSK-style, "video in can include ANYTHING" - not cameras
+# specifically), addressed from downstream-scene.json, which uses a
+# different object schema (Video/Image, not Camera) so it can't be shared
+# with scene.json even though the two look similar.
 #
-# All four wire up to each other automatically via target_object +
+# Camera/source routing (target_object entries, scene objects) is a
+# separate, later step - today all three --inputs files start empty and
+# both scenes have no objects, so this just proves the pipeline topology
+# is up before anything is plugged into it.
+#
+# Those four wire up to each other automatically via target_object +
 # PW_STREAM_FLAG_AUTOCONNECT (consumer side sets the target, per this
 # project's convention) - no manual pw-link needed, and start order
 # doesn't matter since WirePlumber retries a link on every rescan until
 # both ends exist.
+#
+# Also starts midi-cube (the 3D MIDI note/piano-roll visualizer) standalone
+# - not wired into anything above yet, no --midi-target given, so it just
+# registers its two nodes (se.midi-cube.midi-in, se.midi-cube.out) and sits
+# idle. Output is 400x300 (not the 1920x1080 canvas) - its intended
+# on-canvas slot, once assigned, is meant to be used unscaled. Connect its
+# MIDI input and route its video output into a compositor slot manually
+# (pw-link, or a future --midi-target/target_object entry) once you know
+# what should feed it and where it should land.
 #
 # Usage: ./start-video-pipeline.fish
 # Stop with: ./stop-video-pipeline.fish
@@ -36,13 +53,13 @@ set canvas_width 1920
 set canvas_height 1080
 
 $build_dir/pw-video-compositor --instance-name A \
-    --inputs $script_dir/inputs-a.json --scene $script_dir/scene-a.json \
+    --inputs $script_dir/inputs.json --scene $script_dir/scene.json \
     >$state_dir/compositor-a.log 2>&1 &
 disown
 echo $last_pid >$state_dir/compositor-a.pid
 
 $build_dir/pw-video-compositor --instance-name B \
-    --inputs $script_dir/inputs-b.json --scene $script_dir/scene-b.json \
+    --inputs $script_dir/inputs.json --scene $script_dir/scene.json \
     >$state_dir/compositor-b.log 2>&1 &
 disown
 echo $last_pid >$state_dir/compositor-b.pid
@@ -54,13 +71,20 @@ disown
 echo $last_pid >$state_dir/video-blender.pid
 
 $build_dir/downstream-compositor --scene $script_dir/downstream-scene.json \
-    --baseline-target se.video-blender.out \
+    --inputs $script_dir/downstream-inputs.json --baseline-target se.video-blender.out \
     >$state_dir/downstream.log 2>&1 &
 disown
 echo $last_pid >$state_dir/downstream.pid
+
+$build_dir/midi-cube --video-width 400 --video-height 300 \
+    >$state_dir/midi-cube.log 2>&1 &
+disown
+echo $last_pid >$state_dir/midi-cube.pid
 
 echo "started compositor-a (pid "(cat $state_dir/compositor-a.pid)", log $state_dir/compositor-a.log)"
 echo "started compositor-b (pid "(cat $state_dir/compositor-b.pid)", log $state_dir/compositor-b.log)"
 echo "started video-blender (pid "(cat $state_dir/video-blender.pid)", log $state_dir/video-blender.log)"
 echo "started downstream-compositor (pid "(cat $state_dir/downstream.pid)", log $state_dir/downstream.log)"
+echo "started midi-cube (pid "(cat $state_dir/midi-cube.pid)", log $state_dir/midi-cube.log) - "\
+"unconnected, nodes: se.midi-cube.midi-in / se.midi-cube.out"
 echo "stop with: $script_dir/stop-video-pipeline.fish"

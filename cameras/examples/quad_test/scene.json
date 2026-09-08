@@ -11,25 +11,25 @@
       "image_file": "splash.png"
     },
     {
-      "type": "camera",
+      "type": "video",
       "position": [960, 0, 1],
       "width": 960,
       "height": 540,
-      "target_camera_index": 0
+      "target_input_index": 0
     },
     {
-      "type": "camera",
+      "type": "video",
       "position": [0, 540, 2],
       "width": 960,
       "height": 540,
-      "target_camera_index": 1
+      "target_input_index": 1
     },
     {
-      "type": "camera",
+      "type": "video",
       "position": [960, 540, 3],
       "width": 960,
       "height": 540,
-      "target_camera_index": 9
+      "target_input_index": 9
     }
   ]
 }

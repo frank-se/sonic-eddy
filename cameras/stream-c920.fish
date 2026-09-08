@@ -35,7 +35,7 @@ function stream-c920 --description 'Publish the C920 webcam into PipeWire at 192
         ! "video/x-raw(memory:VAMemory),width=1920,height=1080" \
         ! videocrop bottom=240 \
         ! vapostproc \
-        ! "video/x-raw(memory:VAMemory),width=480,height=210" \
+        ! "video/x-raw(memory:VAMemory),width=400,height=210" \
         ! tee name=t \
         t. ! queue ! vapostproc ! video/x-raw,format=RGBA \
         ! pipewiresink client-name="midi-controller-camera" mode=provide \

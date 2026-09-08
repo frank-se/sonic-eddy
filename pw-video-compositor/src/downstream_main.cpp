@@ -1,8 +1,8 @@
 // downstream-compositor: purpose-built compositor for the DSK/"downstream
-// effects" node. Deliberately NOT pw-video-compositor's generic N-camera
+// effects" node. Deliberately NOT pw-video-compositor's generic N-input
 // model, even though most of the machinery below mirrors main.cpp closely -
 // kept as a separate binary on purpose (see the plan discussion this came
-// from) because conflating "generic N-camera compositor" and "downstream
+// from) because conflating "generic N-input compositor" and "downstream
 // effects, always fed by one baseline input" concepts was a real source of
 // confusion, more costly than the modest code duplication here.
 //
@@ -41,7 +41,7 @@
 
 #include <nlohmann/json.hpp>
 
-#include "downstream_camera_config.hpp"
+#include "downstream_video_config.hpp"
 #include "downstream_scene.hpp"
 
 namespace {
@@ -586,9 +586,9 @@ int main(int argc, char **argv) {
 
   App app;
 
-  std::vector<downstream_camera_config::InputDef> inputs;
+  std::vector<downstream_video_config::InputDef> inputs;
   if (!args.inputs_path.empty()) {
-    auto loaded = downstream_camera_config::load(args.inputs_path);
+    auto loaded = downstream_video_config::load(args.inputs_path);
     if (!loaded)
       return 1;
     inputs = std::move(*loaded);
@@ -637,7 +637,7 @@ int main(int argc, char **argv) {
 
   // Routable overlay pool - shared across every loaded scene, same
   // "always build all of them regardless of which scenes reference each
-  // index" reasoning as pw-video-compositor's camera_sources.
+  // index" reasoning as pw-video-compositor's video_sources.
   app.video_sources.resize(input_count);
   for (size_t idx = 0; idx < input_count; ++idx) {
     auto &src = app.video_sources[idx];

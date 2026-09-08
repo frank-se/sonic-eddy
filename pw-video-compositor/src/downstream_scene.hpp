@@ -9,7 +9,7 @@ namespace downstream_scene {
 
 // Video (not Camera - "video in can include ANYTHING", not just a camera)
 // references target_input_index into the --inputs-loaded pool
-// (downstream_camera_config). Image is unchanged - static, decoded at
+// (downstream_video_config). Image is unchanged - static, decoded at
 // startup. Neither type can address the baseline input - see
 // downstream_main.cpp's App::base_video_source, which is implicit and
 // never a scene object at all.
