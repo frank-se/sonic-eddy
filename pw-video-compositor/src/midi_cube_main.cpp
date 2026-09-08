@@ -376,6 +376,7 @@ int main(int argc, char **argv) {
   if (!args.midi_target.empty()) {
     pw_properties_set(midi_properties, PW_KEY_TARGET_OBJECT, args.midi_target.c_str());
     pw_properties_set(midi_properties, "node.dont-fallback", "true");
+    pw_properties_set(midi_properties, "node.linger", "true");
   }
 
   app.midi_in_stream = pw_stream_new_simple(loop, midi_in_node_name.c_str(),

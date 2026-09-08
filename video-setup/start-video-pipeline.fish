@@ -70,7 +70,7 @@ $build_dir/pw-video-compositor --instance-name B \
 disown
 echo $last_pid >$state_dir/compositor-b.pid
 
-$build_dir/video-blender --width $canvas_width --height $canvas_height \
+$build_dir/video-blender --width $canvas_width --height $canvas_height --preview \
     --in0-target se.video-compositor.A.out --in1-target se.video-compositor.B.out \
     >$state_dir/video-blender.log 2>&1 &
 disown

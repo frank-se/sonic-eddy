@@ -686,6 +686,10 @@ pw_stream *connect_video_stream(pw_loop *loop, const char *name,
     // causing a storm of doomed format-negotiation attempts against
     // unrelated nodes instead of just waiting for the real target.
     pw_properties_set(properties, "node.dont-fallback", "true");
+    // Without this, WirePlumber's session-manager GC removes the node the
+    // moment it notices it's unlinked (target not up yet) - it never gets a
+    // chance to link later when the target actually appears.
+    pw_properties_set(properties, "node.linger", "true");
   }
 
   auto *stream = pw_stream_new_simple(loop, name, properties, events, user_data);

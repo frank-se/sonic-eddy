@@ -405,7 +405,11 @@ void apply_object_params(App &app, const std::string &json_text) {
 
 // Mirrors pw-video-compositor/src/main.cpp's handle_output_props.
 void handle_output_props(App &app, const spa_pod *param) {
+  std::cerr << "[debug] handle_output_props called\n"; // TEMP
   const auto *params_prop = spa_pod_find_prop(param, nullptr, SPA_PROP_params);
+  std::cerr << "[debug] params_prop=" << (void *)params_prop
+             << " type=" << (params_prop ? params_prop->value.type : -1)
+             << " want=" << SPA_TYPE_Struct << "\n"; // TEMP
   if (params_prop == nullptr || params_prop->value.type != SPA_TYPE_Struct)
     return;
 
@@ -415,10 +419,13 @@ void handle_output_props(App &app, const spa_pod *param) {
   bool changed = false;
   SPA_POD_FOREACH(static_cast<spa_pod *>(SPA_POD_BODY(&params_prop->value)),
                   SPA_POD_BODY_SIZE(&params_prop->value), child) {
+    std::cerr << "[debug] foreach index=" << index << " child->type=" << child->type
+               << " child->size=" << child->size << "\n"; // TEMP
     if (index % 2 == 0) {
       key = nullptr;
       if (child->type == SPA_TYPE_String)
         spa_pod_get_string(child, &key);
+      std::cerr << "[debug] key=" << (key ? key : "(null)") << "\n"; // TEMP
     } else if (key != nullptr && std::strcmp(key, "active_scene_index") == 0) {
       int32_t value = 0;
       if (spa_pod_get_int(child, &value) == 0 && !app.scenes.empty()) {
@@ -429,8 +436,11 @@ void handle_output_props(App &app, const spa_pod *param) {
       }
     } else if (key != nullptr && std::strcmp(key, "object_params") == 0) {
       const char *json_text = nullptr;
-      if (child->type == SPA_TYPE_String &&
-          spa_pod_get_string(child, &json_text) == 0 && json_text != nullptr)
+      const int rc = spa_pod_get_string(child, &json_text);
+      std::cerr << "[debug] object_params branch: child->type=" << child->type
+                 << " want=" << SPA_TYPE_String << " rc=" << rc
+                 << " json_text=" << (json_text ? json_text : "(null)") << "\n"; // TEMP
+      if (child->type == SPA_TYPE_String && rc == 0 && json_text != nullptr)
         apply_object_params(app, json_text);
     }
     ++index;
@@ -545,6 +555,10 @@ pw_stream *connect_video_stream(pw_loop *loop, const char *name,
     // causing a storm of doomed format-negotiation attempts against
     // unrelated nodes instead of just waiting for the real target.
     pw_properties_set(properties, "node.dont-fallback", "true");
+    // Without this, WirePlumber's session-manager GC removes the node the
+    // moment it notices it's unlinked (target not up yet) - it never gets a
+    // chance to link later when the target actually appears.
+    pw_properties_set(properties, "node.linger", "true");
   }
 
   auto *stream = pw_stream_new_simple(loop, name, properties, events, user_data);

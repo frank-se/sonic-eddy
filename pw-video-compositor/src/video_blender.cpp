@@ -35,12 +35,14 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <condition_variable>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include <mutex>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include <pipewire/keys.h>
@@ -87,6 +89,23 @@ struct App {
   GstElement *preview_appsrc = nullptr;
   uint32_t preview_pane_width = 0;
   uint32_t preview_pane_height = 0;
+
+  // on_output_process (RT thread, SCHED_FIFO) must never call into
+  // GStreamer/Wayland directly - gst_app_src_push_buffer can block on a
+  // Wayland round-trip to the compositor, and blocking a realtime thread on
+  // that risks priority inversion (kwin's own input-handling thread starved
+  // while it never gets scheduled), not just a dropped video frame. So the
+  // RT thread only memcpy's into these buffers - same "RT callback does a
+  // dumb copy" split as midi_cube_main.cpp's render_thread/latest_frame -
+  // and preview_thread owns the actual push_preview_frame/GStreamer calls.
+  std::mutex preview_pending_mutex;
+  std::condition_variable preview_pending_cv;
+  std::vector<uint8_t> preview_pending_program;
+  std::vector<uint8_t> preview_pending_side;
+  bool preview_pending_side_valid = false;
+  bool preview_pending_ready = false;
+  std::atomic<bool> preview_thread_running{false};
+  std::thread preview_thread;
 };
 
 void on_input_process(void *data) {
@@ -163,6 +182,36 @@ void push_preview_frame(App &app, const uint8_t *program,
   gst_app_src_push_buffer(GST_APP_SRC(app.preview_appsrc), gst_buffer);
 }
 
+// Owns every GStreamer/Wayland call for the preview path, off the PipeWire
+// RT thread (see App::preview_pending_* comment). Local program/side buffers
+// start pre-sized so every swap below exchanges same-sized vectors and
+// on_output_process never has to resize under its lock.
+void preview_thread_main(App *app_ptr) {
+  auto &app = *app_ptr;
+  const size_t frame_size =
+      static_cast<size_t>(app.width) * app.height * kBytesPerPixel;
+  std::vector<uint8_t> program(frame_size, 0);
+  std::vector<uint8_t> side(frame_size, 0);
+
+  while (true) {
+    bool side_valid = false;
+    {
+      std::unique_lock<std::mutex> lock(app.preview_pending_mutex);
+      app.preview_pending_cv.wait(lock, [&app] {
+        return app.preview_pending_ready ||
+               !app.preview_thread_running.load(std::memory_order_relaxed);
+      });
+      if (!app.preview_pending_ready)
+        return; // shutdown requested, nothing left to flush
+      program.swap(app.preview_pending_program);
+      side.swap(app.preview_pending_side);
+      side_valid = app.preview_pending_side_valid;
+      app.preview_pending_ready = false;
+    }
+    push_preview_frame(app, program.data(), side_valid ? side.data() : nullptr);
+  }
+}
+
 void on_output_process(void *data) {
   auto &app = *static_cast<App *>(data);
   auto *pw_buffer = pw_stream_dequeue_buffer(app.out_stream);
@@ -210,9 +259,21 @@ void on_output_process(void *data) {
 
   if (app.preview_enabled) {
     // Minority-weight side, so preview never converges with program at the
-    // t=0/t=1 extremes - see file header for the rationale.
+    // t=0/t=1 extremes - see file header for the rationale. Only memcpy here
+    // - preview_thread does the actual GStreamer push (see App::preview_pending_*).
     const uint8_t *preview_src = (t < 0.5f) ? b : a;
-    push_preview_frame(app, dst, preview_src);
+    {
+      std::lock_guard<std::mutex> preview_lock(app.preview_pending_mutex);
+      std::memcpy(app.preview_pending_program.data(), dst, needed);
+      if (preview_src != nullptr) {
+        std::memcpy(app.preview_pending_side.data(), preview_src, needed);
+        app.preview_pending_side_valid = true;
+      } else {
+        app.preview_pending_side_valid = false;
+      }
+      app.preview_pending_ready = true;
+    }
+    app.preview_pending_cv.notify_one();
   }
 
   spa_data.chunk->offset = 0;
@@ -318,6 +379,10 @@ pw_stream *connect_video_stream(pw_loop *loop, const char *name,
     // causing a storm of doomed format-negotiation attempts against
     // unrelated nodes instead of just waiting for the real target.
     pw_properties_set(properties, "node.dont-fallback", "true");
+    // Without this, WirePlumber's session-manager GC removes the node the
+    // moment it notices it's unlinked (target not up yet) - it never gets a
+    // chance to link later when the target actually appears.
+    pw_properties_set(properties, "node.linger", "true");
   }
 
   auto *stream = pw_stream_new_simple(loop, name, properties, events, user_data);
@@ -388,8 +453,8 @@ int main(int argc, char **argv) {
     gst_init(&argc, &argv);
 
     // Program (top) + preview (bottom) stacked into one taller frame, pushed
-    // by push_preview_frame() every time on_output_process() runs.
-    // do-timestamp=true (rather than av_sync_record's manual epoch/CFR-grid
+    // by push_preview_frame() from preview_thread every time on_output_process()
+    // hands off a new frame. do-timestamp=true (rather than av_sync_record's manual epoch/CFR-grid
     // PTS bookkeeping) is enough here - there's no muxer to satisfy, this is
     // a pure live monitor. framerate=30/1 is a nominal caps value only;
     // actual display cadence follows however often on_output_process() fires
@@ -417,6 +482,13 @@ int main(int argc, char **argv) {
       std::cerr << "preview: failed to start gstreamer pipeline\n";
       return 1;
     }
+
+    const size_t frame_size =
+        static_cast<size_t>(app.width) * app.height * kBytesPerPixel;
+    app.preview_pending_program.assign(frame_size, 0);
+    app.preview_pending_side.assign(frame_size, 0);
+    app.preview_thread_running.store(true, std::memory_order_relaxed);
+    app.preview_thread = std::thread(preview_thread_main, &app);
   }
 
   pw_init(&argc, &argv);
@@ -459,6 +531,12 @@ int main(int argc, char **argv) {
   pw_deinit();
 
   if (app.preview_enabled) {
+    // Stop feeding new frames and join before touching the pipeline - the
+    // worker thread is the only thing calling into it.
+    app.preview_thread_running.store(false, std::memory_order_relaxed);
+    app.preview_pending_cv.notify_all();
+    app.preview_thread.join();
+
     gst_element_set_state(app.preview_pipeline, GST_STATE_NULL);
     gst_object_unref(app.preview_appsrc);
     gst_object_unref(app.preview_pipeline);
