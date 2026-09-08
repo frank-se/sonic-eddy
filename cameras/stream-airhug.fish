@@ -35,7 +35,7 @@ function stream-airhug --description 'Publish the AIRHUG 02 webcam into PipeWire
         ! tee name=t \
         t. ! queue ! vapostproc ! video/x-raw,width=400,height=300,format=RGBA \
         ! queue leaky=downstream max-size-buffers=1 \
-        ! pipewiresink client-name="detail-camera-right-small" mode=provide \
+        ! pipewiresink client-name="detail-camera-right-small" mode=provide sync=false qos=true \
         t. ! queue ! videocrop top=243 bottom=243 ! vapostproc ! video/x-raw,width=960,height=540 \
         ! waylandsink
 end

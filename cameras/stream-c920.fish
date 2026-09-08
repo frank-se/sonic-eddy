@@ -39,6 +39,6 @@ function stream-c920 --description 'Publish the C920 webcam into PipeWire at 192
         ! tee name=t \
         t. ! queue ! vapostproc ! video/x-raw,format=RGBA \
         ! queue leaky=downstream max-size-buffers=1 \
-        ! pipewiresink client-name="midi-controller-camera" mode=provide \
+        ! pipewiresink client-name="midi-controller-camera" mode=provide sync=false qos=true \
         t. ! queue ! vapostproc ! waylandsink
 end

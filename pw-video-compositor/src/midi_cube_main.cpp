@@ -24,10 +24,11 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
-#include <mutex>
 #include <string>
 #include <thread>
 #include <vector>
+
+#include <boost/lockfree/spsc_value.hpp>
 
 #include <pipewire/keys.h>
 #include <pipewire/pipewire.h>
@@ -45,6 +46,42 @@
 namespace {
 
 constexpr uint32_t kBytesPerPixel = 4; // SPA_VIDEO_FORMAT_RGBA
+
+// Fixed-size (std::array), not runtime-sized (std::vector) - mirrors
+// pw-video-compositor/src/main.cpp's kMaxCanvasWidth/Height. See that
+// file's comment, and the feedback_rt_thread_no_locks / feedback_no_
+// custom_concurrency_primitives memories, for why: boost::lockfree::
+// spsc_value (the audited SPSC "latest value" triple buffer used below,
+// replacing the frame_mutex this file used to have) default-constructs its
+// 3 internal slots with no way to pass a runtime size in, so only
+// compile-time-sized payloads fit without the RT thread ever allocating.
+constexpr uint32_t kMaxCanvasWidth = 1920;
+constexpr uint32_t kMaxCanvasHeight = 1080;
+constexpr size_t kMaxFrameBytes =
+    static_cast<size_t>(kMaxCanvasWidth) * kMaxCanvasHeight * kBytesPerPixel;
+
+bool validate_frame_size(uint32_t width, uint32_t height) {
+  const size_t bytes = static_cast<size_t>(width) * height * kBytesPerPixel;
+  if (bytes > kMaxFrameBytes) {
+    std::cerr << "midi-cube: --video-width/--video-height (" << width << "x" << height
+               << ") exceeds the compiled-in max (" << kMaxCanvasWidth << "x"
+               << kMaxCanvasHeight << "). RT frame buffers are fixed-size for "
+                 "RT-safety (see feedback_rt_thread_no_locks memory) - bump "
+                 "kMaxCanvasWidth/kMaxCanvasHeight in midi_cube_main.cpp and "
+                 "rebuild.\n";
+    return false;
+  }
+  return true;
+}
+
+// allow_multiple_reads<true>: on_output_process just wants "the latest
+// frame the render thread produced", peeked at freely - it's fine to see a
+// slightly-stale (or, before the first frame, all-zero/has_frame=false)
+// value.
+struct FrameSlot {
+  std::array<uint8_t, kMaxFrameBytes> data{};
+  bool has_frame = false;
+};
 
 struct App {
   pw_main_loop *main_loop = nullptr;
@@ -66,8 +103,14 @@ struct App {
   // Render thread publishes here; RT process callback (on_output_process)
   // just memcpy's whatever's latest - same "RT callback does a dumb copy,
   // rendering happens elsewhere" split as fr-sonic/src/video/Producer.cpp.
-  std::mutex frame_mutex;
-  std::vector<uint8_t> latest_frame;
+  // boost::lockfree::spsc_value, NOT a mutex: a mutex shared between this
+  // normal-priority render_thread and the SCHED_FIFO RT process callback is
+  // exactly the priority-inversion hazard documented in
+  // feedback_rt_thread_no_locks - this file used to have that bug (dormant
+  // only because midi-cube is currently disabled in start-video-pipeline.
+  // fish), fixed at the same time as video_blender.cpp's equivalent case.
+  boost::lockfree::spsc_value<FrameSlot, boost::lockfree::allow_multiple_reads<true>> frame_buffer;
+  FrameSlot render_scratch; // render_thread's own persistent staging slot
 
   std::atomic<bool> running{true};
   std::thread render_thread;
@@ -89,12 +132,12 @@ void render_thread_main(App *app_ptr) {
         std::chrono::duration<double>(frame_start.time_since_epoch()).count();
 
     const auto spans = app.note_registry.snapshot(now, app.time_window_seconds);
-    renderer.render(spans, now, scratch);
+    renderer.render(spans, now, scratch); // resizes scratch to exactly width*height*4
 
-    {
-      std::lock_guard<std::mutex> lock(app.frame_mutex);
-      app.latest_frame = scratch;
-    }
+    const size_t copy_size = std::min(scratch.size(), app.render_scratch.data.size());
+    std::memcpy(app.render_scratch.data.data(), scratch.data(), copy_size);
+    app.render_scratch.has_frame = true;
+    app.frame_buffer.write(app.render_scratch); // copy - render_scratch stays ours to reuse
 
     std::this_thread::sleep_until(frame_start + frame_interval);
   }
@@ -166,13 +209,16 @@ void on_output_process(void *data) {
   }
 
   auto *dst = static_cast<uint8_t *>(spa_data.data);
-  {
-    std::lock_guard<std::mutex> lock(app.frame_mutex);
-    if (app.latest_frame.size() == needed)
-      std::memcpy(dst, app.latest_frame.data(), needed);
-    else
-      std::memset(dst, 0, needed); // render thread hasn't produced a frame yet
-  }
+  // consume() is wait-free (allow_multiple_reads<true> - always succeeds,
+  // never blocks on render_thread's scheduling).
+  bool has_frame = false;
+  app.frame_buffer.consume([&](const FrameSlot &slot) {
+    has_frame = slot.has_frame;
+    if (has_frame)
+      std::memcpy(dst, slot.data.data(), needed);
+  });
+  if (!has_frame)
+    std::memset(dst, 0, needed); // render thread hasn't produced a frame yet
 
   spa_data.chunk->offset = 0;
   spa_data.chunk->size = static_cast<uint32_t>(needed);
@@ -312,7 +358,12 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  App app;
+  if (!validate_frame_size(args.width, args.height))
+    return 1;
+
+  // static, not a stack local: App::frame_buffer + render_scratch are now
+  // ~32MB fixed (see kMaxFrameBytes above) - well beyond a safe stack frame.
+  static App app;
   app.width = args.width;
   app.height = args.height;
   app.fps = args.fps == 0 ? 30 : args.fps;

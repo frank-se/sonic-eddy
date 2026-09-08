@@ -14,9 +14,9 @@ function stream-unifi-left --description 'Publish the unifi webcam into PipeWire
         t. ! queue ! videocrop left=1350 right=1050 top=1000 bottom=80 \
         ! vapostproc ! video/x-raw,width=400,height=300,format=RGBA \
         ! queue leaky=downstream max-size-buffers=1 \
-        ! pipewiresink client-name="cozy-camera" mode=provide \
+        ! pipewiresink client-name="cozy-camera" mode=provide sync=false qos=true \
         t. ! queue ! videocrop left=1650 right=750 top=80 bottom=1000 \
         ! vapostproc ! video/x-raw,width=400,height=300,format=RGBA \
         ! queue leaky=downstream max-size-buffers=1 \
-        ! pipewiresink client-name="detail-camera-left-small" mode=provide
+        ! pipewiresink client-name="detail-camera-left-small" mode=provide sync=false qos=true
 end

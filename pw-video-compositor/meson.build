@@ -10,12 +10,22 @@ nlohmann_json_dep = dependency('nlohmann_json')
 gst_dep = dependency('gstreamer-1.0')
 gst_app_dep = dependency('gstreamer-app-1.0')
 raylib_dep = dependency('raylib')
+# Header-only - only used for boost::lockfree::spsc_value, the audited
+# SPSC "latest value" triple buffer used to hand data from PW_STREAM_FLAG_
+# RT_PROCESS (SCHED_FIFO) callbacks to other threads without ever taking a
+# mutex. See feedback_rt_thread_no_locks / feedback_no_custom_concurrency_
+# primitives memories for why a mutex or a hand-rolled primitive here is
+# unacceptable.
+boost_dep = dependency('boost')
+egl_dep = dependency('egl')
+glesv2_dep = dependency('glesv2')
+gbm_dep = dependency('gbm')
 
 executable(
     'pw-video-compositor',
     ['src/main.cpp', 'src/scene.cpp', 'src/video_config.cpp'],
     include_directories : include_directories('third_party'),
-    dependencies : [pipewire_dep, threads_dep, nlohmann_json_dep],
+    dependencies : [pipewire_dep, threads_dep, nlohmann_json_dep, boost_dep],
     install : true)
 
 # Purpose-built compositor for the DSK/"downstream effects" node - kept as
@@ -27,7 +37,7 @@ executable(
     'downstream-compositor',
     ['src/downstream_main.cpp', 'src/downstream_scene.cpp', 'src/downstream_video_config.cpp'],
     include_directories : include_directories('third_party'),
-    dependencies : [pipewire_dep, threads_dep, nlohmann_json_dep],
+    dependencies : [pipewire_dep, threads_dep, nlohmann_json_dep, boost_dep],
     install : true)
 
 # Two-input, one-output linear cross-dissolve node - blends two
@@ -38,7 +48,7 @@ executable(
 executable(
     'video-blender',
     'src/video_blender.cpp',
-    dependencies : [pipewire_dep, threads_dep, gst_dep, gst_app_dep],
+    dependencies : [pipewire_dep, threads_dep, gst_dep, gst_app_dep, boost_dep],
     install : true)
 
 # Throwaway pure-PipeWire test tools (no GStreamer) used to verify the
@@ -55,13 +65,24 @@ executable(
     dependencies : [pipewire_dep, threads_dep],
     install : false)
 
+# Standalone sibling of fr-sonic's SilenceProducer (Services/MixerServiceV2
+# channels use it to stop WirePlumber suspending idle nodes) - continuous-
+# zeros playback stream aimed at av_sync_record's --target-object, so that
+# node never goes idle/suspended between real audio and av_sync_record's
+# follower keeps ticking instead of freezing.
+executable(
+    'silence_producer',
+    'test/silence_producer.cpp',
+    dependencies : [pipewire_dep, threads_dep],
+    install : false)
+
 # Prototype: pulls compositor video in lockstep with a real audio clock and
 # hands both to an in-process GStreamer pipeline via appsrc, recording a
 # synced-A/V MP4. See pw-video-compositor test/av_sync_record.cpp for why.
 executable(
     'av_sync_record',
     'test/av_sync_record.cpp',
-    dependencies : [pipewire_dep, threads_dep, gst_dep, gst_app_dep, nlohmann_json_dep],
+    dependencies : [pipewire_dep, threads_dep, gst_dep, gst_app_dep, nlohmann_json_dep, boost_dep],
     install : false)
 
 # MIDI note-on/off events visualized as a 3D "cube" (X=time, Y=note number,
@@ -69,10 +90,22 @@ executable(
 # src/midi_cube_main.cpp header comment. Self-contained: its own minimal
 # MIDI byte parser (no fr-sonic dependency) and raylib for offscreen 3D
 # rendering with real depth-buffer occlusion and lighting.
+# Unified GPU-native replacement for pw-video-compositor(A+B) + video-blender
+# + downstream-compositor + av_sync_record - see src/gpu_compositor_main.cpp
+# header comment. Built up incrementally alongside the existing binaries
+# (not replacing them yet) until verified.
+executable(
+    'gpu-compositor',
+    ['src/gpu_compositor_main.cpp', 'src/scene.cpp', 'src/video_config.cpp'],
+    include_directories : include_directories('third_party'),
+    dependencies : [egl_dep, glesv2_dep, gbm_dep, nlohmann_json_dep, pipewire_dep,
+                    threads_dep, boost_dep, raylib_dep],
+    install : true)
+
 executable(
     'midi-cube',
     ['src/midi_cube_main.cpp', 'src/cube_renderer.cpp', 'src/midi_cube_midi.cpp',
      'src/midi_note_registry.cpp'],
     include_directories : include_directories('third_party'),
-    dependencies : [pipewire_dep, threads_dep, raylib_dep],
+    dependencies : [pipewire_dep, threads_dep, raylib_dep, boost_dep],
     install : true)

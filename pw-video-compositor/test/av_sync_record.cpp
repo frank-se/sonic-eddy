@@ -17,14 +17,18 @@
 #include <array>
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <cstdio>
 #include <csignal>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <mutex>
 #include <string>
 #include <thread>
+
+#include <boost/lockfree/spsc_queue.hpp>
 
 #include <pipewire/keys.h>
 #include <pipewire/pipewire.h>
@@ -39,6 +43,64 @@
 namespace {
 
 constexpr const char *kVideoStreamName = "se.av_sync_record.video";
+
+// on_audio_process/on_video_process run as PW_STREAM_FLAG_RT_PROCESS
+// (SCHED_FIFO) callbacks - the audio one is the real hardware-driven clock
+// for this whole tool. They used to call gst_buffer_new_allocate() (heap
+// alloc) and gst_app_src_push_buffer() (takes GstAppSrc's own internal
+// GLib mutex) directly inline - the same "call into GStreamer/take a lock
+// from the RT thread" mistake already found and fixed in video_blender.cpp's
+// preview path (see feedback_rt_thread_no_locks memory), just never applied
+// here since this file predates that fix and was never actually driven
+// end-to-end (nothing pulled this graph's output) until video-setup/
+// start-video-pipeline.fish's --record-target wiring. Fix is the same
+// pattern: RT callbacks only memcpy into a fixed-size slot and push it onto
+// a boost::lockfree::spsc_queue (FIFO, not spsc_value's "latest wins" -
+// audio/video frames here must not be silently overwritten mid-stream).
+// Push failing (queue genuinely full) still can't block the RT thread, but
+// unlike video_blender.cpp's live preview, a drop here is corrupted/missing
+// recording output, not a cosmetic glitch - so the queues are sized with
+// generous (~30s) headroom and a drop is treated as a loud, reported
+// anomaly (see kVideoQueueCapacity/report_drops), not routine degradation.
+// Then a separate encode_thread owns every
+// GstBuffer/appsrc call.
+constexpr uint32_t kBytesPerPixel = 4; // SPA_VIDEO_FORMAT_RGBA
+// Same rationale/precedent as video_blender.cpp's kMaxCanvasWidth/Height:
+// fixed compile-time cap so VideoFrameSlot never allocates on the RT thread.
+// Bump and rebuild if a larger canvas is ever needed; --width/--height
+// exceeding this is rejected at startup, never silently truncated.
+constexpr uint32_t kMaxCanvasWidth = 1920;
+constexpr uint32_t kMaxCanvasHeight = 1080;
+constexpr size_t kMaxVideoFrameBytes =
+    static_cast<size_t>(kMaxCanvasWidth) * kMaxCanvasHeight * kBytesPerPixel;
+// A recorder must not drop frames as routine/expected behavior the way a
+// live preview can (see project_video_blender_preview_rt_thread_freeze
+// memory) - a dropped frame here is a permanently corrupted/incomplete
+// output file, not a cosmetic glitch. The old capacity (4 - ~133ms at
+// 30fps) meant any ordinary transient stall (a slow disk write, a brief
+// scheduling hiccup) would drop real recording data. Frank's call: memory
+// is cheap on this box (60GB+), streaming straight to disk in lockstep with
+// capture isn't required, so size this generously (~30s at 30fps) instead
+// of tightly - a real stall should fall behind and drain later, not lose
+// data. runtime-sized boost::lockfree::spsc_queue heap-allocates its buffer
+// once at construction (this is a static App, constructed once at process
+// start, well before any RT callback runs) - not embedded inline, so this
+// doesn't grow App's own footprint the way a std::array member would.
+constexpr size_t kVideoQueueCapacity = 900; // 30s @ 30fps, ~6.9GiB
+constexpr size_t kMaxAudioChunkBytes = 65536; // 8192-sample/2ch/F32 quantum headroom
+constexpr size_t kAudioQueueCapacity = 1536; // ~30s @ ~48Hz (1024/48kHz) tick rate
+
+struct AudioChunkSlot {
+  std::array<uint8_t, kMaxAudioChunkBytes> data{};
+  uint32_t size = 0;
+  GstClockTime pts = 0;
+};
+
+struct VideoFrameSlot {
+  std::array<uint8_t, kMaxVideoFrameBytes> data{};
+  uint32_t size = 0;
+  GstClockTime pts = 0;
+};
 
 struct Args {
   std::string video_target = "se.video-compositor.out";
@@ -83,6 +145,26 @@ struct App {
   size_t pending_pts_tail = 0; // next slot to push (audio process callback)
 
   std::thread bus_thread;
+
+  // RT->encode_thread handoff (see comment above VideoFrameSlot). write_
+  // scratch members are each RT callback's own persistent staging slot -
+  // never touched by encode_thread - same reasoning as video_blender.cpp's
+  // FrameSource::write_scratch: avoids constructing a large temporary on the
+  // RT thread's stack every call.
+  boost::lockfree::spsc_queue<AudioChunkSlot> audio_queue{kAudioQueueCapacity};
+  AudioChunkSlot audio_write_scratch;
+  boost::lockfree::spsc_queue<VideoFrameSlot> video_queue{kVideoQueueCapacity};
+  VideoFrameSlot video_write_scratch;
+  // Incremented (RT-safe atomic, no lock) whenever push() fails because the
+  // queue is genuinely full - at 30s of headroom this should never happen
+  // in practice, so encode_thread reports it loudly (see drain()) rather
+  // than the old silent-drop behavior, which was correct for a live preview
+  // but not for something whose entire job is not losing data.
+  std::atomic<uint64_t> video_frames_dropped{0};
+  std::atomic<uint64_t> audio_chunks_dropped{0};
+  std::condition_variable encode_wake_cv; // wakeup hint only, no data behind it
+  std::atomic<bool> encode_thread_running{false};
+  std::thread encode_thread;
 };
 
 void push_pending_pts(App &app, GstClockTime pts) {
@@ -123,17 +205,29 @@ void on_audio_process(void *data) {
       buffer->datas[0].chunk != nullptr && buffer->datas[0].chunk->size > 0) {
     const auto &spa_data = buffer->datas[0];
     const GstClockTime pts = pts_since_epoch(app);
+    // Defense in depth, same reasoning as video_blender.cpp's on_input_
+    // process clamp - chunk->size is expected to fit kMaxAudioChunkBytes
+    // (see the constant's comment) but never trust it blindly on the RT
+    // thread.
+    const size_t copy_size =
+        std::min<size_t>(spa_data.chunk->size, kMaxAudioChunkBytes);
 
-    auto *gst_buffer = gst_buffer_new_allocate(nullptr, spa_data.chunk->size, nullptr);
-    GstMapInfo map;
-    gst_buffer_map(gst_buffer, &map, GST_MAP_WRITE);
-    std::memcpy(map.data,
+    auto &slot = app.audio_write_scratch;
+    std::memcpy(slot.data.data(),
                 static_cast<uint8_t *>(spa_data.data) + spa_data.chunk->offset,
-                spa_data.chunk->size);
-    gst_buffer_unmap(gst_buffer, &map);
-    GST_BUFFER_PTS(gst_buffer) = pts;
-
-    gst_app_src_push_buffer(GST_APP_SRC(app.audio_appsrc), gst_buffer);
+                copy_size);
+    slot.size = static_cast<uint32_t>(copy_size);
+    slot.pts = pts;
+    // push() is wait-free and never allocates - required on the RT thread
+    // regardless of queue size. At 30s of headroom (kAudioQueueCapacity)
+    // this failing means encode_thread has fallen behind by more than 30s,
+    // a real anomaly worth knowing about - counted (RT-safe atomic) and
+    // reported loudly by encode_thread's drain(), not silently swallowed as
+    // routine (that framing was correct for video_blender.cpp's live
+    // preview, not for a recorder where a drop is corrupted output).
+    if (!app.audio_queue.push(slot))
+      app.audio_chunks_dropped.fetch_add(1, std::memory_order_relaxed);
+    app.encode_wake_cv.notify_one();
   }
 
   pw_stream_queue_buffer(app.audio_stream, pw_buffer);
@@ -141,26 +235,30 @@ void on_audio_process(void *data) {
   if (app.stopping.load(std::memory_order_relaxed))
     return;
 
-  // CFR grid: pull a new video frame for every ideal deadline
-  // (frame_index * frame_duration) that's now in the past - usually one,
-  // but loop in case the target fps ever exceeds the audio tick rate (e.g.
-  // fps=60 against a 1024-sample/48kHz ~47Hz tick), so we catch up by
-  // pulling more than once per tick instead of silently under-producing.
-  // Recomputing the deadline via (index * GST_SECOND) / fps each time -
-  // rather than accumulating a pre-rounded per-frame duration - means no
-  // per-frame rounding error can accumulate into long-term drift.
+  // CFR grid: pull a video frame if its ideal deadline (frame_index *
+  // frame_duration) is now in the past. At most one trigger_process per
+  // tick, never a catch-up loop: this ticks at ~21ms (1024/48kHz) and
+  // defaults to 30fps video (~33ms/frame), so the audio tick is already
+  // faster than a frame is ever needed - a real backlog only happens after
+  // an actual stall, and demanding several full renders back-to-back from
+  // the compositor at exactly that moment (its already-slowest point) only
+  // deepens the stall instead of recovering from it. Drop the backlog
+  // instead: jump next_frame_index to the frame due for `now`, don't replay
+  // every missed deadline.
   const GstClockTime now = pts_since_epoch(app);
-  while (!app.stopping.load(std::memory_order_relaxed)) {
-    const GstClockTime deadline = static_cast<GstClockTime>(
-        (static_cast<uint64_t>(app.next_frame_index) * GST_SECOND) / app.args.fps);
-    if (now < deadline)
-      break;
+  const GstClockTime deadline = static_cast<GstClockTime>(
+      (static_cast<uint64_t>(app.next_frame_index) * GST_SECOND) / app.args.fps);
+  if (now >= deadline) {
     // Stamp with the ideal grid time, not `now` - actual sampling may
     // land a few ms after the deadline (bounded by the audio tick
     // period), but the label stays exactly on-grid either way.
     push_pending_pts(app, deadline);
     pw_stream_trigger_process(app.video_stream);
-    ++app.next_frame_index;
+    const uint64_t caught_up_index =
+        (static_cast<uint64_t>(now) * app.args.fps) / GST_SECOND + 1;
+    app.next_frame_index = caught_up_index > app.next_frame_index + 1
+                                ? caught_up_index
+                                : app.next_frame_index + 1;
   }
 }
 
@@ -179,17 +277,22 @@ void on_video_process(void *data) {
       buffer->datas[0].chunk != nullptr && buffer->datas[0].chunk->size > 0 &&
       !app.stopping.load(std::memory_order_relaxed)) {
     const auto &spa_data = buffer->datas[0];
+    const size_t copy_size =
+        std::min<size_t>(spa_data.chunk->size, kMaxVideoFrameBytes);
 
-    auto *gst_buffer = gst_buffer_new_allocate(nullptr, spa_data.chunk->size, nullptr);
-    GstMapInfo map;
-    gst_buffer_map(gst_buffer, &map, GST_MAP_WRITE);
-    std::memcpy(map.data,
+    auto &slot = app.video_write_scratch;
+    std::memcpy(slot.data.data(),
                 static_cast<uint8_t *>(spa_data.data) + spa_data.chunk->offset,
-                spa_data.chunk->size);
-    gst_buffer_unmap(gst_buffer, &map);
-    GST_BUFFER_PTS(gst_buffer) = pts;
-
-    gst_app_src_push_buffer(GST_APP_SRC(app.video_appsrc), gst_buffer);
+                copy_size);
+    slot.size = static_cast<uint32_t>(copy_size);
+    slot.pts = pts;
+    // Same wait-free push/drop-on-full as audio above - see the comment
+    // there. At 30s of headroom, a drop here means encode_thread is more
+    // than 30s behind, a real anomaly - counted and reported loudly, not
+    // treated as routine.
+    if (!app.video_queue.push(slot))
+      app.video_frames_dropped.fetch_add(1, std::memory_order_relaxed);
+    app.encode_wake_cv.notify_one();
   }
 
   pw_stream_queue_buffer(app.video_stream, pw_buffer);
@@ -205,14 +308,90 @@ const pw_stream_events video_stream_events = {
     .process = on_video_process,
 };
 
+// Owns every GstBuffer allocation and gst_app_src_push_buffer call, off the
+// PipeWire RT threads - see the comment above VideoFrameSlot. Drains both
+// queues in FIFO order (audio first, but that only matters for interleaving
+// of unrelated appsrcs, not correctness) on each wake tick; the wait_for
+// below is a plain sleep/wake hint with a bounded timeout fallback, not a
+// data handshake, same idiom as video_blender.cpp's preview_thread_main -
+// the RT threads' notify_one() calls are fire-and-forget (no mutex held).
+void encode_thread_main(App *app_ptr) {
+  auto &app = *app_ptr;
+  constexpr auto kWakePollInterval = std::chrono::milliseconds(10);
+  std::mutex wake_mutex; // guards only the condition_variable wait, never the queued data
+  uint64_t last_reported_video_drops = 0;
+  uint64_t last_reported_audio_drops = 0;
+
+  // Surfaces video_frames_dropped/audio_chunks_dropped loudly - at 30s of
+  // queue headroom a drop means something is seriously wrong (encode has
+  // fallen more than 30s behind), not routine degradation, so this is a
+  // std::cerr warning, not a silent counter nobody looks at.
+  auto report_drops = [&app, &last_reported_video_drops, &last_reported_audio_drops] {
+    const uint64_t video_drops = app.video_frames_dropped.load(std::memory_order_relaxed);
+    if (video_drops != last_reported_video_drops) {
+      std::cerr << "av_sync_record: WARNING - " << video_drops
+                << " video frame(s) dropped (encode_thread more than "
+                   "kVideoQueueCapacity behind) - recording is missing frames\n";
+      last_reported_video_drops = video_drops;
+    }
+    const uint64_t audio_drops = app.audio_chunks_dropped.load(std::memory_order_relaxed);
+    if (audio_drops != last_reported_audio_drops) {
+      std::cerr << "av_sync_record: WARNING - " << audio_drops
+                << " audio chunk(s) dropped (encode_thread more than "
+                   "kAudioQueueCapacity behind) - recording has audio gaps\n";
+      last_reported_audio_drops = audio_drops;
+    }
+  };
+
+  auto drain = [&app, &report_drops] {
+    report_drops();
+    AudioChunkSlot audio_slot;
+    while (app.audio_queue.pop(audio_slot)) {
+      auto *gst_buffer = gst_buffer_new_allocate(nullptr, audio_slot.size, nullptr);
+      GstMapInfo map;
+      gst_buffer_map(gst_buffer, &map, GST_MAP_WRITE);
+      std::memcpy(map.data, audio_slot.data.data(), audio_slot.size);
+      gst_buffer_unmap(gst_buffer, &map);
+      GST_BUFFER_PTS(gst_buffer) = audio_slot.pts;
+      gst_app_src_push_buffer(GST_APP_SRC(app.audio_appsrc), gst_buffer);
+    }
+    VideoFrameSlot video_slot;
+    while (app.video_queue.pop(video_slot)) {
+      auto *gst_buffer = gst_buffer_new_allocate(nullptr, video_slot.size, nullptr);
+      GstMapInfo map;
+      gst_buffer_map(gst_buffer, &map, GST_MAP_WRITE);
+      std::memcpy(map.data, video_slot.data.data(), video_slot.size);
+      gst_buffer_unmap(gst_buffer, &map);
+      GST_BUFFER_PTS(gst_buffer) = video_slot.pts;
+      gst_app_src_push_buffer(GST_APP_SRC(app.video_appsrc), gst_buffer);
+    }
+  };
+
+  while (app.encode_thread_running.load(std::memory_order_relaxed)) {
+    {
+      std::unique_lock<std::mutex> lock(wake_mutex);
+      app.encode_wake_cv.wait_for(lock, kWakePollInterval);
+    }
+    drain();
+  }
+  drain(); // flush anything queued right before shutdown
+}
+
 // mp4mux only writes a valid moov atom at EOS - hard-killing the pipeline
 // instead would leave an unplayable file, so shutdown must push EOS through
 // both appsrcs and wait for it to actually reach the bus before quitting.
+// Stops and joins encode_thread *before* sending EOS - it's the only thing
+// still pushing buffers into the appsrcs, so this guarantees no buffer can
+// land after EOS (which GStreamer treats as an error) and that every
+// already-queued audio/video chunk gets flushed out first.
 void begin_shutdown(App &app) {
   bool expected = false;
   if (!app.stopping.compare_exchange_strong(expected, true))
     return;
   std::cout << "shutting down, flushing encoder...\n" << std::flush;
+  app.encode_thread_running.store(false, std::memory_order_relaxed);
+  app.encode_wake_cv.notify_all();
+  app.encode_thread.join();
   gst_app_src_end_of_stream(GST_APP_SRC(app.audio_appsrc));
   gst_app_src_end_of_stream(GST_APP_SRC(app.video_appsrc));
 }
@@ -287,9 +466,22 @@ bool parse_args(int argc, char **argv, Args &args) {
 } // namespace
 
 int main(int argc, char **argv) {
-  App app;
+  // static, not a stack local: VideoFrameSlot's kMaxVideoFrameBytes array x
+  // kVideoQueueCapacity (~32MB) plus the audio queue make App far too big
+  // for a stack frame - same trap already hit and fixed in video_blender.cpp
+  // (see kMaxCanvasWidth comment there).
+  static App app;
   if (!parse_args(argc, argv, app.args))
     return 1;
+  if (app.args.width > kMaxCanvasWidth || app.args.height > kMaxCanvasHeight) {
+    std::cerr << "av_sync_record: --width/--height (" << app.args.width << "x"
+               << app.args.height << ") exceeds the compiled-in max ("
+               << kMaxCanvasWidth << "x" << kMaxCanvasHeight
+               << "). RT frame buffers are fixed-size for RT-safety (see "
+                  "feedback_rt_thread_no_locks memory) - bump kMaxCanvasWidth/"
+                  "kMaxCanvasHeight in av_sync_record.cpp and rebuild.\n";
+    return 1;
+  }
 
   gst_init(&argc, &argv);
 
@@ -322,6 +514,12 @@ int main(int argc, char **argv) {
   app.video_appsrc = gst_bin_get_by_name(GST_BIN(app.pipeline), "vsrc");
   app.audio_appsrc = gst_bin_get_by_name(GST_BIN(app.pipeline), "asrc");
 
+  // Owns every GstBuffer/appsrc call from here on - must be running before
+  // either PipeWire stream connects below, since on_audio_process/
+  // on_video_process only enqueue and rely on this thread to actually drain.
+  app.encode_thread_running.store(true, std::memory_order_relaxed);
+  app.encode_thread = std::thread(encode_thread_main, &app);
+
   if (gst_element_set_state(app.pipeline, GST_STATE_PLAYING) ==
       GST_STATE_CHANGE_FAILURE) {
     std::cerr << "failed to start gstreamer pipeline\n";
@@ -341,7 +539,17 @@ int main(int argc, char **argv) {
       PW_KEY_MEDIA_TYPE, "Audio", PW_KEY_MEDIA_CATEGORY, "Capture",
       PW_KEY_MEDIA_ROLE, "Production", PW_KEY_MEDIA_CLASS, "Stream/Input/Audio",
       PW_KEY_NODE_NAME, "se.av_sync_record.audio", PW_KEY_TARGET_OBJECT,
-      app.args.target_object.c_str(), nullptr);
+      app.args.target_object.c_str(),
+      // Every PW_KEY_TARGET_OBJECT stream in this codebase must pair it with
+      // these two - see video_blender.cpp's connect_video_stream comment.
+      // Without node.dont-fallback, WirePlumber falls back to linking any
+      // other compatible node (including a raw camera device) when the
+      // named target isn't up yet, which is the exact "no more input
+      // formats" negotiation storm found in journalctl right before the
+      // 2026-09-09 amdgpu hang - this stream was the one gap. Without
+      // node.linger, WirePlumber's session-manager GC can remove the node
+      // before the target ever comes up.
+      "node.dont-fallback", "true", "node.linger", "true", nullptr);
   app.audio_stream = pw_stream_new_simple(loop, "se.av_sync_record.audio",
                                           audio_properties, &audio_stream_events, &app);
   if (app.audio_stream == nullptr)
@@ -372,7 +580,8 @@ int main(int argc, char **argv) {
       PW_KEY_MEDIA_TYPE, "Video", PW_KEY_MEDIA_CATEGORY, "Capture",
       PW_KEY_MEDIA_ROLE, "Video", PW_KEY_MEDIA_CLASS, "Stream/Input/Video",
       PW_KEY_NODE_NAME, kVideoStreamName, PW_KEY_TARGET_OBJECT,
-      app.args.video_target.c_str(), nullptr);
+      app.args.video_target.c_str(), "node.dont-fallback", "true",
+      "node.linger", "true", nullptr);
   app.video_stream = pw_stream_new_simple(loop, kVideoStreamName,
                                           video_properties, &video_stream_events, &app);
   if (app.video_stream == nullptr)

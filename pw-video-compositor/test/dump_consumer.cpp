@@ -114,7 +114,10 @@ int main(int argc, char **argv) {
   auto *properties = pw_properties_new(
       PW_KEY_MEDIA_TYPE, "Video", PW_KEY_MEDIA_CATEGORY, "Capture",
       PW_KEY_MEDIA_ROLE, "Video", PW_KEY_MEDIA_CLASS, "Stream/Input/Video",
-      PW_KEY_TARGET_OBJECT, target_object.c_str(), nullptr);
+      PW_KEY_TARGET_OBJECT, target_object.c_str(),
+      // Every PW_KEY_TARGET_OBJECT stream in this codebase must pair it with
+      // these two - see video_blender.cpp's connect_video_stream comment.
+      "node.dont-fallback", "true", "node.linger", "true", nullptr);
 
   app.stream = pw_stream_new_simple(loop, "se.dump_consumer", properties,
                                     &stream_events, &app);
@@ -129,10 +132,15 @@ int main(int argc, char **argv) {
   const spa_pod *params[] = {
       spa_format_video_raw_build(&builder, SPA_PARAM_EnumFormat, &video_info)};
 
+  // AUTOCONNECT is required alongside PW_KEY_TARGET_OBJECT for WirePlumber
+  // to actually attempt a link - target_object alone does nothing (same
+  // real bug found and fixed in gradient_producer.cpp 2026-09-09: both
+  // nodes existed in the graph but were never linked without this).
   const auto result = pw_stream_connect(
       app.stream, PW_DIRECTION_INPUT, PW_ID_ANY,
       static_cast<pw_stream_flags>(PW_STREAM_FLAG_MAP_BUFFERS |
-                                   PW_STREAM_FLAG_RT_PROCESS),
+                                   PW_STREAM_FLAG_RT_PROCESS |
+                                   PW_STREAM_FLAG_AUTOCONNECT),
       params, 1);
   if (result < 0) {
     std::cerr << "pw_stream_connect failed: " << result << '\n';

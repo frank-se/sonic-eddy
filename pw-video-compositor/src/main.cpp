@@ -8,9 +8,10 @@
 #include <deque>
 #include <filesystem>
 #include <iostream>
-#include <mutex>
 #include <string>
 #include <vector>
+
+#include <boost/lockfree/spsc_value.hpp>
 
 #include <pipewire/keys.h>
 #include <pipewire/pipewire.h>
@@ -36,19 +37,67 @@ constexpr uint32_t kBytesPerPixel = 4; // SPA_VIDEO_FORMAT_RGBA
 constexpr size_t kCliInputCount = 2;
 constexpr size_t kMaxScenes = 5;
 
+// Every RT frame/layout buffer below is fixed-size (std::array), capped at
+// this canvas size, rather than runtime-sized (std::vector). That's what
+// lets boost::lockfree::spsc_value hold them directly - it default-
+// constructs its 3 internal slots with no way to pass a runtime size in, so
+// only compile-time-sized payloads fit without the RT thread ever
+// allocating. See feedback_rt_thread_no_locks / feedback_no_custom_
+// concurrency_primitives memories for why a mutex or a hand-rolled
+// primitive here is unacceptable, and why this codebase uses boost's
+// audited spsc_value instead. 1920x1080 covers every canvas/camera config
+// in this repo as of 2026-09-08 - bump this and rebuild if a larger canvas
+// is ever needed. Configs that exceed it are rejected at startup (see
+// validate_frame_size), never silently truncated.
+constexpr uint32_t kMaxCanvasWidth = 1920;
+constexpr uint32_t kMaxCanvasHeight = 1080;
+constexpr size_t kMaxFrameBytes =
+    static_cast<size_t>(kMaxCanvasWidth) * kMaxCanvasHeight * kBytesPerPixel;
+
+bool validate_frame_size(uint32_t width, uint32_t height, const char *what) {
+  const size_t bytes = static_cast<size_t>(width) * height * kBytesPerPixel;
+  if (bytes > kMaxFrameBytes) {
+    std::cerr << what << ": " << width << "x" << height
+               << " exceeds the compiled-in max (" << kMaxCanvasWidth << "x"
+               << kMaxCanvasHeight << "). RT frame buffers are fixed-size for "
+                 "RT-safety (see feedback_rt_thread_no_locks memory) - bump "
+                 "kMaxCanvasWidth/kMaxCanvasHeight in main.cpp and rebuild.\n";
+    return false;
+  }
+  return true;
+}
+
+// Payload for FrameSource::buffer. allow_multiple_reads<true> (see
+// FrameSource below) means "peek at the latest value any number of times",
+// which is what composite_input needs - it's fine to see a slightly-stale
+// (or, before the first frame, all-zero/has_frame=false) value; it never
+// needs to distinguish "no update since last read".
+struct FrameSlot {
+  std::array<uint8_t, kMaxFrameBytes> data{};
+  bool has_frame = false;
+};
+
 // Where a frame actually comes from: either a live PipeWire input stream
 // (video-backed, `stream` non-null) or a one-shot decode at startup
-// (image-backed, scene mode only, `stream` null, `has_frame` permanently
-// true). Video sources are shared - every scene's video-type objects
-// that target the same index point at the *same* FrameSource, so the
-// underlying source is only captured once regardless of how many scenes
-// or objects reference it.
+// (image-backed, scene mode only, `stream` null, has_frame permanently true
+// - see the image-loading block in main()). Video sources are shared -
+// every scene's video-type objects that target the same index point at the
+// *same* FrameSource, so the underlying source is only captured once
+// regardless of how many scenes or objects reference it.
+//
+// buffer is the only thing that crosses the on_input_process/
+// on_output_process (composite_input) thread boundary - the audited
+// boost::lockfree triple buffer, never a mutex. write_scratch is
+// on_input_process's own persistent staging buffer (also reused once at
+// startup for image sources - see main()): it exists purely so there's
+// somewhere to memcpy incoming bytes into before handing a *copy* to
+// buffer.write(), without allocating (or using a giant stack local) on
+// every RT callback.
 struct FrameSource {
   uint32_t width = 0;
   uint32_t height = 0;
-  std::vector<uint8_t> frame;
-  std::mutex frame_mutex;
-  bool has_frame = false;
+  boost::lockfree::spsc_value<FrameSlot, boost::lockfree::allow_multiple_reads<true>> buffer;
+  FrameSlot write_scratch;
   pw_stream *stream = nullptr;
   // True if any decoded pixel's alpha byte is < 255 - scanned once at image
   // load time (see stbi_load call site) so composite_input can skip the
@@ -56,24 +105,21 @@ struct FrameSource {
   // sources: GStreamer's videoconvert->RGBA (cameras/stream-*.fish) and the
   // mixer-overview producer (always-opaque UI, see
   // project_mixer_overview_video_stream memory) both guarantee alpha=255
-  // everywhere, so there's nothing to scan per-frame.
+  // everywhere, so there's nothing to scan per-frame. Static after startup -
+  // read directly with no synchronization, same as width/height above.
   bool has_alpha = false;
 };
 
-// One object's compositing geometry within a scene: which FrameSource to
-// sample, the precomputed nearest-neighbor sample maps, and where it lands
-// on the canvas. Everything here is sized and built once, up front, so
-// process() never allocates.
-// Everything below (except `source`, which is fixed at build time) is
+// One object's compositing geometry within a scene: which src-per-dst
+// mapping to use and where it lands on the canvas. Everything here is
 // live-controllable via the "object_params" Props channel - see
-// handle_output_props(). layout_mutex guards all of it uniformly (rather
-// than mixing lock-free atomics for the cheap fields with a mutex for the
-// ones that need col_map/row_map rebuilt) so there's exactly one
-// synchronization story per RenderSlot, matching FrameSource::frame_mutex's
-// existing "lock for the whole composite_input body" precedent.
-struct RenderSlot {
-  FrameSource *source = nullptr; // shared (video) or owned via App::image_sources (image)
-
+// apply_object_params(). Lives inside RenderSlot::config_buffer (an audited
+// spsc_value, allow_multiple_reads<true> - composite_input just wants "the
+// latest config", peeked at freely) rather than being guarded by a mutex:
+// apply_object_params runs on the control thread (param_changed), while
+// composite_input runs on the RT output thread - exactly the cross-priority
+// mutex hazard documented in feedback_rt_thread_no_locks.
+struct RenderSlotConfig {
   double scale_x = 1.0;
   double scale_y = 1.0;
   bool flip_horizontal = false;
@@ -101,18 +147,29 @@ struct RenderSlot {
   // (size dst_height) -> source row. Transposed (90/270 rotation): the
   // roles swap - col_map (indexed by dst x) holds the source ROW and
   // row_map (indexed by dst y) holds the source COLUMN, since a 90/270
-  // rotation can't be expressed as two independent per-axis maps.
-  std::vector<uint32_t> col_map;
-  std::vector<uint32_t> row_map;
+  // rotation can't be expressed as two independent per-axis maps. Fixed
+  // max-size arrays (see kMaxCanvasWidth/Height above) - only the first
+  // dst_width/dst_height entries are ever meaningful or read.
+  std::array<uint32_t, kMaxCanvasWidth> col_map{};
+  std::array<uint32_t, kMaxCanvasHeight> row_map{};
+};
 
-  std::mutex layout_mutex;
+struct RenderSlot {
+  FrameSource *source = nullptr; // shared (video) or owned via App::image_sources (image) - fixed at build time, no sync needed
+
+  boost::lockfree::spsc_value<RenderSlotConfig, boost::lockfree::allow_multiple_reads<true>> config_buffer;
+  // Control thread's own working copy - apply_object_params mutates this
+  // directly (never touched by the RT thread) then publishes a copy via
+  // config_buffer.write(). Seeded to match config_buffer's initial state at
+  // scene-build time (see main()) so the two never start out of sync.
+  RenderSlotConfig control_config;
 };
 
 struct Scene {
   std::string name;
   std::string file; // the --scene path this was loaded from (empty in CLI mode)
-  // deque, not vector: RenderSlot holds a std::mutex (non-movable) - same
-  // reasoning as App::image_sources below.
+  // deque, not vector: RenderSlot holds a spsc_value (contains atomics, not
+  // movable) - same reasoning as App::image_sources below.
   std::deque<RenderSlot> render_slots;
   std::vector<size_t> paint_order; // indices into render_slots, back-to-front
 };
@@ -123,19 +180,19 @@ struct App {
   uint32_t canvas_height = 720;
 
   // deque, not array: input slot count is now runtime-determined (from
-  // video_config::load), and FrameSource holds a std::mutex (non-movable)
-  // - same reasoning as image_sources below.
+  // video_config::load), and FrameSource holds a spsc_value (not movable) -
+  // same reasoning as image_sources below.
   std::deque<FrameSource> video_sources;
-  // deque, not vector: FrameSource holds a std::mutex (non-movable), and
+  // deque, not vector: FrameSource holds a spsc_value (not movable), and
   // RenderSlot::source keeps a raw pointer into this container that must
   // stay valid as later scenes' images are added - vector would both fail
-  // to compile (mutex isn't MoveInsertable) and, worse, silently
+  // to compile (spsc_value isn't MoveInsertable) and, worse, silently
   // invalidate those pointers on reallocation. deque never relocates
   // existing elements on growth, so both problems go away.
   std::deque<FrameSource> image_sources;
 
   // deque, not vector: Scene holds a deque<RenderSlot>, and RenderSlot's
-  // mutex makes it neither copyable nor move-noexcept - vector's growth
+  // spsc_value makes it neither copyable nor move-noexcept - vector's growth
   // path can fall back to copy-constructing Scene (which would try to
   // copy-construct each RenderSlot) unless Scene's move is provably
   // noexcept, which the compiler doesn't reliably infer through two
@@ -149,43 +206,42 @@ struct App {
   std::array<uint8_t, 4096> params_buffer{};
 };
 
-void build_sample_maps(RenderSlot &slot, uint32_t src_width, uint32_t src_height) {
-  slot.transposed = slot.rotate == 90 || slot.rotate == 270;
-  const uint32_t rotated_width = slot.transposed ? src_height : src_width;
-  const uint32_t rotated_height = slot.transposed ? src_width : src_height;
+// Fills config.col_map/row_map (only the first dst_width/dst_height entries
+// of each - see RenderSlotConfig comment) from src_width/src_height.
+void build_sample_maps(RenderSlotConfig &config, uint32_t src_width, uint32_t src_height) {
+  config.transposed = config.rotate == 90 || config.rotate == 270;
+  const uint32_t rotated_width = config.transposed ? src_height : src_width;
+  const uint32_t rotated_height = config.transposed ? src_width : src_height;
 
   // dst -> position within the rotated-but-unflipped frame.
-  std::vector<uint32_t> rx(slot.dst_width);
-  for (uint32_t x = 0; x < slot.dst_width; ++x) {
-    uint32_t v = std::min<uint32_t>(static_cast<uint32_t>(x / slot.scale_x),
+  std::array<uint32_t, kMaxCanvasWidth> rx{};
+  for (uint32_t x = 0; x < config.dst_width; ++x) {
+    uint32_t v = std::min<uint32_t>(static_cast<uint32_t>(x / config.scale_x),
                                     rotated_width - 1);
-    rx[x] = slot.flip_horizontal ? rotated_width - 1 - v : v;
+    rx[x] = config.flip_horizontal ? rotated_width - 1 - v : v;
   }
-  std::vector<uint32_t> ry(slot.dst_height);
-  for (uint32_t y = 0; y < slot.dst_height; ++y) {
-    uint32_t v = std::min<uint32_t>(static_cast<uint32_t>(y / slot.scale_y),
+  std::array<uint32_t, kMaxCanvasHeight> ry{};
+  for (uint32_t y = 0; y < config.dst_height; ++y) {
+    uint32_t v = std::min<uint32_t>(static_cast<uint32_t>(y / config.scale_y),
                                     rotated_height - 1);
-    ry[y] = slot.flip_vertical ? rotated_height - 1 - v : v;
+    ry[y] = config.flip_vertical ? rotated_height - 1 - v : v;
   }
 
-  slot.col_map.resize(slot.dst_width);
-  slot.row_map.resize(slot.dst_height);
-
-  if (!slot.transposed) {
+  if (!config.transposed) {
     // rotate 0: source = (rx, ry); rotate 180 = flip both axes.
-    for (uint32_t x = 0; x < slot.dst_width; ++x)
-      slot.col_map[x] = slot.rotate == 180 ? src_width - 1 - rx[x] : rx[x];
-    for (uint32_t y = 0; y < slot.dst_height; ++y)
-      slot.row_map[y] = slot.rotate == 180 ? src_height - 1 - ry[y] : ry[y];
+    for (uint32_t x = 0; x < config.dst_width; ++x)
+      config.col_map[x] = config.rotate == 180 ? src_width - 1 - rx[x] : rx[x];
+    for (uint32_t y = 0; y < config.dst_height; ++y)
+      config.row_map[y] = config.rotate == 180 ? src_height - 1 - ry[y] : ry[y];
   } else {
     // rotate 90 CW:  src_x = ry,             src_y = src_height-1-rx
     // rotate 270 CW: src_x = src_width-1-ry, src_y = rx
     // col_map (indexed by dst x = rx) carries src_y; row_map (indexed by
     // dst y = ry) carries src_x - composite_input swaps their roles.
-    for (uint32_t x = 0; x < slot.dst_width; ++x)
-      slot.col_map[x] = slot.rotate == 90 ? src_height - 1 - rx[x] : rx[x];
-    for (uint32_t y = 0; y < slot.dst_height; ++y)
-      slot.row_map[y] = slot.rotate == 90 ? ry[y] : src_width - 1 - ry[y];
+    for (uint32_t x = 0; x < config.dst_width; ++x)
+      config.col_map[x] = config.rotate == 90 ? src_height - 1 - rx[x] : rx[x];
+    for (uint32_t y = 0; y < config.dst_height; ++y)
+      config.row_map[y] = config.rotate == 90 ? ry[y] : src_width - 1 - ry[y];
   }
 }
 
@@ -207,12 +263,15 @@ void on_input_process(void *data) {
       static_cast<size_t>(source.width) * source.height * kBytesPerPixel;
   // chunk->size alone isn't trustworthy - maxsize is the actual mapped
   // buffer size and can be smaller (e.g. transitional negotiation buffers).
+  // kMaxFrameBytes clamp is defense in depth - main() already rejects
+  // width/height configs that would exceed it.
   const size_t copy_size = std::min<size_t>(
-      {expected, spa_data.chunk->size, static_cast<size_t>(spa_data.maxsize)});
+      {expected, spa_data.chunk->size, static_cast<size_t>(spa_data.maxsize),
+       kMaxFrameBytes});
   if (copy_size > 0) {
-    std::lock_guard<std::mutex> lock(source.frame_mutex);
-    std::memcpy(source.frame.data(), spa_data.data, copy_size);
-    source.has_frame = true;
+    std::memcpy(source.write_scratch.data.data(), spa_data.data, copy_size);
+    source.write_scratch.has_frame = true;
+    source.buffer.write(source.write_scratch); // copy - write_scratch stays ours to reuse
   }
 
   pw_stream_queue_buffer(source.stream, pw_buffer);
@@ -231,69 +290,80 @@ inline uint8_t blend_channel(uint8_t src, uint8_t dst, float opacity) {
       0.0f, 255.0f));
 }
 
+// Both config_buffer.consume() and source->buffer.consume() are wait-free
+// (single atomic exchange each, allow_multiple_reads<true> so they never
+// fail) - no lock, no blocking, bounded time regardless of what the control
+// thread or on_input_process are doing. The pointers/references captured
+// from inside these lambdas stay valid past the lambda body because they
+// point into each spsc_value's own permanently-allocated storage, not into
+// anything that can be freed or reused before this function calls
+// consume() again on that same buffer (it doesn't, within one call).
 void composite_input(RenderSlot &slot, uint8_t *dst, uint32_t dst_stride) {
-  std::lock_guard<std::mutex> layout_lock(slot.layout_mutex);
-  if (!slot.visible)
-    return;
+  slot.config_buffer.consume([&](const RenderSlotConfig &config) {
+    if (!config.visible)
+      return;
 
-  auto &source = *slot.source;
-  std::lock_guard<std::mutex> lock(source.frame_mutex);
-  if (!source.has_frame)
-    return;
+    auto &source = *slot.source;
+    source.buffer.consume([&](const FrameSlot &frame_slot) {
+      if (!frame_slot.has_frame)
+        return;
 
-  // Fast path: identity gain, fully opaque (the defaults), and a source with
-  // no per-pixel transparency keep today's plain memcpy - no performance
-  // regression for objects that don't use color control, a T-bar-tied fade,
-  // or an alpha-cutout image (frame/keyer PNGs).
-  const bool identity_gain =
-      slot.red_gain == 1.0f && slot.green_gain == 1.0f && slot.blue_gain == 1.0f;
-  const bool opaque = slot.opacity >= 1.0f;
-  const bool fast_path = identity_gain && opaque && !source.has_alpha;
-  const float opacity = std::clamp(slot.opacity, 0.0f, 1.0f);
+      // Fast path: identity gain, fully opaque (the defaults), and a source
+      // with no per-pixel transparency keep today's plain memcpy - no
+      // performance regression for objects that don't use color control, a
+      // T-bar-tied fade, or an alpha-cutout image (frame/keyer PNGs).
+      const bool identity_gain =
+          config.red_gain == 1.0f && config.green_gain == 1.0f && config.blue_gain == 1.0f;
+      const bool opaque = config.opacity >= 1.0f;
+      const bool fast_path = identity_gain && opaque && !source.has_alpha;
+      const float opacity = std::clamp(config.opacity, 0.0f, 1.0f);
 
-  const uint32_t src_stride = source.width * kBytesPerPixel;
-  for (uint32_t y = 0; y < slot.dst_height; ++y) {
-    uint8_t *dst_row = dst + static_cast<size_t>(slot.dst_y + y) * dst_stride +
-                       static_cast<size_t>(slot.dst_x) * kBytesPerPixel;
-    if (!slot.transposed) {
-      const uint8_t *src_row =
-          source.frame.data() + static_cast<size_t>(slot.row_map[y]) * src_stride;
-      for (uint32_t x = 0; x < slot.dst_width; ++x) {
-        const uint8_t *src_px =
-            src_row + static_cast<size_t>(slot.col_map[x]) * kBytesPerPixel;
-        uint8_t *dst_px = dst_row + static_cast<size_t>(x) * kBytesPerPixel;
-        if (fast_path) {
-          std::memcpy(dst_px, src_px, kBytesPerPixel);
+      const uint32_t src_stride = source.width * kBytesPerPixel;
+      const uint8_t *src_base = frame_slot.data.data();
+      for (uint32_t y = 0; y < config.dst_height; ++y) {
+        uint8_t *dst_row = dst + static_cast<size_t>(config.dst_y + y) * dst_stride +
+                           static_cast<size_t>(config.dst_x) * kBytesPerPixel;
+        if (!config.transposed) {
+          const uint8_t *src_row =
+              src_base + static_cast<size_t>(config.row_map[y]) * src_stride;
+          for (uint32_t x = 0; x < config.dst_width; ++x) {
+            const uint8_t *src_px =
+                src_row + static_cast<size_t>(config.col_map[x]) * kBytesPerPixel;
+            uint8_t *dst_px = dst_row + static_cast<size_t>(x) * kBytesPerPixel;
+            if (fast_path) {
+              std::memcpy(dst_px, src_px, kBytesPerPixel);
+            } else {
+              const float weight =
+                  source.has_alpha ? opacity * (static_cast<float>(src_px[3]) / 255.0f) : opacity;
+              dst_px[0] = blend_channel(apply_gain(src_px[0], config.red_gain), dst_px[0], weight);
+              dst_px[1] = blend_channel(apply_gain(src_px[1], config.green_gain), dst_px[1], weight);
+              dst_px[2] = blend_channel(apply_gain(src_px[2], config.blue_gain), dst_px[2], weight);
+              dst_px[3] = blend_channel(255, dst_px[3], weight);
+            }
+          }
         } else {
-          const float weight =
-              source.has_alpha ? opacity * (static_cast<float>(src_px[3]) / 255.0f) : opacity;
-          dst_px[0] = blend_channel(apply_gain(src_px[0], slot.red_gain), dst_px[0], weight);
-          dst_px[1] = blend_channel(apply_gain(src_px[1], slot.green_gain), dst_px[1], weight);
-          dst_px[2] = blend_channel(apply_gain(src_px[2], slot.blue_gain), dst_px[2], weight);
-          dst_px[3] = blend_channel(255, dst_px[3], weight);
+          const uint32_t src_col = config.row_map[y];
+          for (uint32_t x = 0; x < config.dst_width; ++x) {
+            const uint32_t src_row = config.col_map[x];
+            const uint8_t *src_px = src_base +
+                static_cast<size_t>(src_row) * src_stride +
+                static_cast<size_t>(src_col) * kBytesPerPixel;
+            uint8_t *dst_px = dst_row + static_cast<size_t>(x) * kBytesPerPixel;
+            if (fast_path) {
+              std::memcpy(dst_px, src_px, kBytesPerPixel);
+            } else {
+              const float weight =
+                  source.has_alpha ? opacity * (static_cast<float>(src_px[3]) / 255.0f) : opacity;
+              dst_px[0] = blend_channel(apply_gain(src_px[0], config.red_gain), dst_px[0], weight);
+              dst_px[1] = blend_channel(apply_gain(src_px[1], config.green_gain), dst_px[1], weight);
+              dst_px[2] = blend_channel(apply_gain(src_px[2], config.blue_gain), dst_px[2], weight);
+              dst_px[3] = blend_channel(255, dst_px[3], weight);
+            }
+          }
         }
       }
-    } else {
-      const uint32_t src_col = slot.row_map[y];
-      for (uint32_t x = 0; x < slot.dst_width; ++x) {
-        const uint32_t src_row = slot.col_map[x];
-        const uint8_t *src_px = source.frame.data() +
-            static_cast<size_t>(src_row) * src_stride +
-            static_cast<size_t>(src_col) * kBytesPerPixel;
-        uint8_t *dst_px = dst_row + static_cast<size_t>(x) * kBytesPerPixel;
-        if (fast_path) {
-          std::memcpy(dst_px, src_px, kBytesPerPixel);
-        } else {
-          const float weight =
-              source.has_alpha ? opacity * (static_cast<float>(src_px[3]) / 255.0f) : opacity;
-          dst_px[0] = blend_channel(apply_gain(src_px[0], slot.red_gain), dst_px[0], weight);
-          dst_px[1] = blend_channel(apply_gain(src_px[1], slot.green_gain), dst_px[1], weight);
-          dst_px[2] = blend_channel(apply_gain(src_px[2], slot.blue_gain), dst_px[2], weight);
-          dst_px[3] = blend_channel(255, dst_px[3], weight);
-        }
-      }
-    }
-  }
+    });
+  });
 }
 
 void on_output_process(void *data) {
@@ -392,6 +462,12 @@ void publish_scene_params(App &app) {
 // this function only ever accepts final, absolute values (e.g. dst_x/
 // dst_y) - any ABS/REL, "unify" or other derived UX logic is SonicEddy's
 // job, not this one's.
+//
+// Runs on the control thread (param_changed) - mutates slot.control_config
+// directly (uncontended, this thread is its only writer) then publishes a
+// copy via slot.config_buffer.write(). Never touches slot.config_buffer's
+// internals directly and never blocks on anything the RT thread might be
+// doing - see RenderSlot/RenderSlotConfig comments.
 void apply_object_params(App &app, const std::string &json_text) {
   nlohmann::json command;
   try {
@@ -417,49 +493,50 @@ void apply_object_params(App &app, const std::string &json_text) {
     return;
   }
   auto &slot = scene.render_slots[object_idx];
-
-  std::lock_guard<std::mutex> lock(slot.layout_mutex);
+  auto &config = slot.control_config;
 
   if (command.contains("dst_x") && command["dst_x"].is_number()) {
     const uint32_t requested = command["dst_x"].get<uint32_t>();
-    slot.dst_x = app.canvas_width > slot.dst_width
-                     ? std::min(requested, app.canvas_width - slot.dst_width)
-                     : 0;
+    config.dst_x = app.canvas_width > config.dst_width
+                       ? std::min(requested, app.canvas_width - config.dst_width)
+                       : 0;
     std::cerr << "[debug] dst_x requested=" << requested
-               << " applied=" << slot.dst_x << " dst_width=" << slot.dst_width
+               << " applied=" << config.dst_x << " dst_width=" << config.dst_width
                << " canvas_width=" << app.canvas_width << '\n'; // TEMP
   }
   if (command.contains("dst_y") && command["dst_y"].is_number()) {
     const uint32_t requested = command["dst_y"].get<uint32_t>();
-    slot.dst_y = app.canvas_height > slot.dst_height
-                     ? std::min(requested, app.canvas_height - slot.dst_height)
-                     : 0;
+    config.dst_y = app.canvas_height > config.dst_height
+                       ? std::min(requested, app.canvas_height - config.dst_height)
+                       : 0;
     std::cerr << "[debug] dst_y requested=" << requested
-               << " applied=" << slot.dst_y << " dst_height=" << slot.dst_height
+               << " applied=" << config.dst_y << " dst_height=" << config.dst_height
                << " canvas_height=" << app.canvas_height << '\n'; // TEMP
   }
   if (command.contains("visible") && command["visible"].is_boolean())
-    slot.visible = command["visible"].get<bool>();
+    config.visible = command["visible"].get<bool>();
   if (command.contains("red_gain") && command["red_gain"].is_number())
-    slot.red_gain = command["red_gain"].get<float>();
+    config.red_gain = command["red_gain"].get<float>();
   if (command.contains("green_gain") && command["green_gain"].is_number())
-    slot.green_gain = command["green_gain"].get<float>();
+    config.green_gain = command["green_gain"].get<float>();
   if (command.contains("blue_gain") && command["blue_gain"].is_number())
-    slot.blue_gain = command["blue_gain"].get<float>();
+    config.blue_gain = command["blue_gain"].get<float>();
   if (command.contains("opacity") && command["opacity"].is_number())
-    slot.opacity = std::clamp(command["opacity"].get<float>(), 0.0f, 1.0f);
+    config.opacity = std::clamp(command["opacity"].get<float>(), 0.0f, 1.0f);
 
   bool rebuild = false;
   if (command.contains("flip_horizontal") && command["flip_horizontal"].is_boolean()) {
-    slot.flip_horizontal = command["flip_horizontal"].get<bool>();
+    config.flip_horizontal = command["flip_horizontal"].get<bool>();
     rebuild = true;
   }
   if (command.contains("flip_vertical") && command["flip_vertical"].is_boolean()) {
-    slot.flip_vertical = command["flip_vertical"].get<bool>();
+    config.flip_vertical = command["flip_vertical"].get<bool>();
     rebuild = true;
   }
   if (rebuild)
-    build_sample_maps(slot, slot.source->width, slot.source->height);
+    build_sample_maps(config, slot.source->width, slot.source->height);
+
+  slot.config_buffer.write(config);
 }
 
 // Receives external Props updates (e.g. `pw-cli set-param <id> Props
@@ -775,6 +852,8 @@ int main(int argc, char **argv) {
         return 1;
       }
     }
+    if (!validate_frame_size(app.canvas_width, app.canvas_height, "scene: canvas"))
+      return 1;
 
     for (const auto &cfg : scene_configs) {
       for (const auto &object : cfg.objects) {
@@ -797,8 +876,8 @@ int main(int argc, char **argv) {
       auto &src = app.video_sources[idx];
       src.width = (*inputs)[idx].width;
       src.height = (*inputs)[idx].height;
-      src.frame.assign(
-          static_cast<size_t>(src.width) * src.height * kBytesPerPixel, 0);
+      if (!validate_frame_size(src.width, src.height, "scene: input"))
+        return 1;
     }
     node_names.assign(input_count, "");
     target_objects.resize(input_count);
@@ -817,18 +896,19 @@ int main(int argc, char **argv) {
       for (const auto &object : cfg.objects) {
         scene.render_slots.emplace_back();
         auto &slot = scene.render_slots.back();
+        auto &config = slot.control_config;
 
-        slot.dst_x = object.x < 0 ? 0 : static_cast<uint32_t>(object.x);
-        slot.dst_y = object.y < 0 ? 0 : static_cast<uint32_t>(object.y);
-        slot.dst_width = slot.dst_x < app.canvas_width
-                             ? std::min(object.width, app.canvas_width - slot.dst_x)
-                             : 0;
-        slot.dst_height = slot.dst_y < app.canvas_height
-                              ? std::min(object.height, app.canvas_height - slot.dst_y)
-                              : 0;
-        slot.flip_horizontal = object.flip_horizontal;
-        slot.flip_vertical = object.flip_vertical;
-        slot.rotate = object.rotate;
+        config.dst_x = object.x < 0 ? 0 : static_cast<uint32_t>(object.x);
+        config.dst_y = object.y < 0 ? 0 : static_cast<uint32_t>(object.y);
+        config.dst_width = config.dst_x < app.canvas_width
+                                ? std::min(object.width, app.canvas_width - config.dst_x)
+                                : 0;
+        config.dst_height = config.dst_y < app.canvas_height
+                                 ? std::min(object.height, app.canvas_height - config.dst_y)
+                                 : 0;
+        config.flip_horizontal = object.flip_horizontal;
+        config.flip_vertical = object.flip_vertical;
+        config.rotate = object.rotate;
 
         uint32_t src_width = 0;
         uint32_t src_height = 0;
@@ -845,20 +925,32 @@ int main(int argc, char **argv) {
                        << "\": " << stbi_failure_reason() << '\n';
             return 1;
           }
+          if (!validate_frame_size(static_cast<uint32_t>(width),
+                                   static_cast<uint32_t>(height),
+                                   "scene: image")) {
+            stbi_image_free(pixels);
+            return 1;
+          }
           app.image_sources.emplace_back();
           auto &img = app.image_sources.back();
           img.width = static_cast<uint32_t>(width);
           img.height = static_cast<uint32_t>(height);
-          img.frame.assign(pixels, pixels + static_cast<size_t>(width) * height *
-                                               kBytesPerPixel);
+          const size_t byte_count =
+              static_cast<size_t>(width) * height * kBytesPerPixel;
+          std::memcpy(img.write_scratch.data.data(), pixels, byte_count);
+          img.write_scratch.has_frame = true;
           stbi_image_free(pixels);
-          img.has_frame = true;
-          for (size_t px = 3; px < img.frame.size(); px += kBytesPerPixel) {
-            if (img.frame[px] != 255) {
+          for (size_t px = 3; px < byte_count; px += kBytesPerPixel) {
+            if (img.write_scratch.data[px] != 255) {
               img.has_alpha = true;
               break;
             }
           }
+          // Images never get a live producer thread, so this one write() at
+          // build time (single-threaded, before pw_main_loop_run) is the
+          // only publish they'll ever get - composite_input will keep
+          // reading this same slot forever via allow_multiple_reads.
+          img.buffer.write(img.write_scratch);
           slot.source = &img;
           src_width = img.width;
           src_height = img.height;
@@ -868,12 +960,15 @@ int main(int argc, char **argv) {
         // dst-per-src (stretch-to-fit the destination box, independent x/y
         // factors - scene objects aren't required to preserve source aspect
         // ratio). Rotation swaps which source axis dst width/height map onto.
-        const bool rotated90 = slot.rotate == 90 || slot.rotate == 270;
+        const bool rotated90 = config.rotate == 90 || config.rotate == 270;
         const uint32_t rotated_src_width = rotated90 ? src_height : src_width;
         const uint32_t rotated_src_height = rotated90 ? src_width : src_height;
-        slot.scale_x = slot.dst_width / static_cast<double>(rotated_src_width);
-        slot.scale_y = slot.dst_height / static_cast<double>(rotated_src_height);
-        build_sample_maps(slot, src_width, src_height);
+        config.scale_x = config.dst_width / static_cast<double>(rotated_src_width);
+        config.scale_y = config.dst_height / static_cast<double>(rotated_src_height);
+        build_sample_maps(config, src_width, src_height);
+        // Initial publish: composite_input must see the real layout from
+        // its very first call, not config_buffer's default-constructed one.
+        slot.config_buffer.write(config);
       }
 
       scene.paint_order.resize(scene.render_slots.size());
@@ -887,6 +982,8 @@ int main(int argc, char **argv) {
   } else {
     app.canvas_width = args.canvas_width;
     app.canvas_height = args.canvas_height;
+    if (!validate_frame_size(app.canvas_width, app.canvas_height, "CLI: canvas"))
+      return 1;
 
     node_names.reserve(kCliInputCount);
     target_objects.reserve(kCliInputCount);
@@ -903,21 +1000,23 @@ int main(int argc, char **argv) {
         std::cerr << "invalid configuration for input " << idx << '\n';
         return 1;
       }
-      src.frame.assign(
-          static_cast<size_t>(src.width) * src.height * kBytesPerPixel, 0);
+      if (!validate_frame_size(src.width, src.height, "CLI: input"))
+        return 1;
 
       scene.render_slots.emplace_back();
       auto &slot = scene.render_slots.back();
+      auto &config = slot.control_config;
       slot.source = &src;
-      slot.scale_x = args.in_scale[idx];
-      slot.scale_y = args.in_scale[idx];
-      slot.dst_x = idx == 0 ? 0 : app.canvas_width / 2;
-      slot.dst_y = 0;
-      slot.dst_width = std::min<uint32_t>(
-          static_cast<uint32_t>(src.width * slot.scale_x), app.canvas_width / 2);
-      slot.dst_height = std::min<uint32_t>(
-          static_cast<uint32_t>(src.height * slot.scale_y), app.canvas_height);
-      build_sample_maps(slot, src.width, src.height);
+      config.scale_x = args.in_scale[idx];
+      config.scale_y = args.in_scale[idx];
+      config.dst_x = idx == 0 ? 0 : app.canvas_width / 2;
+      config.dst_y = 0;
+      config.dst_width = std::min<uint32_t>(
+          static_cast<uint32_t>(src.width * config.scale_x), app.canvas_width / 2);
+      config.dst_height = std::min<uint32_t>(
+          static_cast<uint32_t>(src.height * config.scale_y), app.canvas_height);
+      build_sample_maps(config, src.width, src.height);
+      slot.config_buffer.write(config);
 
       node_names.push_back(node_name(args, "in" + std::to_string(idx)));
       target_objects.push_back(args.in_target[idx]);
