@@ -11,6 +11,10 @@ function stream-unifi --description 'Publish the unifi webcam into PipeWire at 1
         ! tee name=t \
         t. ! queue ! vapostproc ! video/x-raw,width=1920,height=1080,format=RGBA \
         ! pipewiresink client-name="overview-camera" mode=provide \
+        t. ! queue ! vapostproc ! video/x-raw,width=1920,height=1080 \
+        ! videocrop left=400 right=240 top=160 bottom=0 \
+        ! vapostproc ! video/x-raw,width=1280,height=920,format=RGBA \
+        ! pipewiresink client-name="overview-camera-medium" mode=provide \
         t. ! queue ! vapostproc ! video/x-raw,width=960,height=540 \
         ! waylandsink
 end

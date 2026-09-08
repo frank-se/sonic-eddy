@@ -1,0 +1,64 @@
+{
+  "inputs": [
+    {
+      "name": "detail-camera-right",
+      "width": 1920,
+      "height": 1080,
+      "target_object": "detail-camera-right"
+    },
+    {
+      "name": "detail-camera-right-small",
+      "width": 400,
+      "height": 300,
+      "target_object": "detail-camera-right-small"
+    },
+    {
+      "name": "detail-camera-left",
+      "width": 1920,
+      "height": 1080,
+      "target_object": "detail-camera-left"
+    },
+    {
+      "name": "detail-camera-left-small",
+      "width": 400,
+      "height": 300,
+      "target_object": "detail-camera-left-small"
+    },
+    {
+      "name": "midi-controller-camera",
+      "width": 400,
+      "height": 210,
+      "target_object": "midi-controller-camera"
+    },
+    {
+      "name": "overview-camera",
+      "width": 1920,
+      "height": 1080,
+      "target_object": "overview-camera"
+    },
+    {
+      "name": "overview",
+      "width": 1000,
+      "height": 800,
+      "target_object": "se.mixer-overview"
+    },
+    {
+      "name": "midi-cube",
+      "width": 400,
+      "height": 300,
+      "target_object": "se.midi-cube.out"
+    },
+    {
+      "name": "cozy-camera",
+      "width": 400,
+      "height": 300,
+      "target_object": "cozy-camera"
+    },
+    {
+      "name": "overview-camera-medium",
+      "width": 1280,
+      "height": 920,
+      "target_object": "overview-camera-medium"
+    }
+  ]
+}

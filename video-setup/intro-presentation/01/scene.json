@@ -1,0 +1,73 @@
+{
+  "name": "Scene 1",
+  "canvas_width": 1920,
+  "canvas_height": 1080,
+  "objects": [
+    {
+      "type": "video",
+      "position": [
+        1440,
+        80,
+        1
+      ],
+      "width": 400,
+      "height": 300,
+      "target_input_index": 1
+    },
+    {
+      "type": "video",
+      "position": [
+        1440,
+        600,
+        1
+      ],
+      "width": 400,
+      "height": 300,
+      "target_input_index": 7
+    },
+    {
+      "type": "image",
+      "position": [
+        80,
+        80,
+        50
+      ],
+      "width": 1280,
+      "height": 920,
+      "image_file": "full-signal-flow.png"
+    },
+    {
+      "type": "video",
+      "position": [
+        80,
+        80,
+        49
+      ],
+      "width": 1280,
+      "height": 920,
+      "target_input_index": 9
+    },
+    {
+      "type": "image",
+      "position": [
+        80,
+        80,
+        48
+      ],
+      "width": 1280,
+      "height": 920,
+      "image_file": "technology-stack.png"
+    },
+    {
+      "type": "image",
+      "position": [
+        0,
+        0,
+        100
+      ],
+      "width": 1920,
+      "height": 1080,
+      "image_file": "overlay-three-windows.png"
+    }
+  ]
+}

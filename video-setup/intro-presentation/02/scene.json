@@ -1,0 +1,40 @@
+{
+  "name": "Scene 2",
+  "canvas_width": 1920,
+  "canvas_height": 1080,
+  "objects": [
+    {
+      "type": "image",
+      "position": [
+        0,
+        0,
+        50
+      ],
+      "width": 1920,
+      "height": 1080,
+      "image_file": "audio-routing.png"
+    },
+    {
+      "type": "video",
+      "position": [
+        0,
+        0,
+        49
+      ],
+      "width": 1920,
+      "height": 1080,
+      "target_input_index": 5
+    },
+    {
+      "type": "image",
+      "position": [
+        0,
+        0,
+        100
+      ],
+      "width": 1920,
+      "height": 1080,
+      "image_file": "overlay-one-windows.png"
+    }
+  ]
+}

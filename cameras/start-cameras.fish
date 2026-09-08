@@ -44,7 +44,12 @@ fish -c "source $script_dir/stream-unifi.fish; stream-unifi" >$state_dir/unifi.l
 disown
 echo $last_pid >$state_dir/unifi.pid
 
+fish -c "source $script_dir/stream-unifi-left.fish; stream-unifi-left" >$state_dir/unifi-left.log 2>&1 &
+disown
+echo $last_pid >$state_dir/unifi-left.pid
+
 echo "started airhug (pid "(cat $state_dir/airhug.pid)", log $state_dir/airhug.log)"
 echo "started c920 (pid "(cat $state_dir/c920.pid)", log $state_dir/c920.log)"
-echo "started c920 (pid "(cat $state_dir/unifi.pid)", log $state_dir/unifi.log)"
+echo "started unifi (pid "(cat $state_dir/unifi.pid)", log $state_dir/unifi.log)"
+echo "started unifi-left (pid "(cat $state_dir/unifi-left.pid)", log $state_dir/unifi-left.log)"
 echo "stop with: $script_dir/stop-cameras.fish"

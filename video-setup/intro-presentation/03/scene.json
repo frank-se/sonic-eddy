@@ -1,0 +1,51 @@
+{
+  "name": "Scene 3",
+  "canvas_width": 1920,
+  "canvas_height": 1080,
+  "objects": [
+    {
+      "type": "video",
+      "position": [
+        220,
+        80,
+        1
+      ],
+      "width": 1000,
+      "height": 800,
+      "target_input_index": 6
+    },
+    {
+      "type": "video",
+      "position": [
+        1440,
+        80,
+        1
+      ],
+      "width": 400,
+      "height": 300,
+      "target_input_index": 3
+    },
+    {
+      "type": "video",
+      "position": [
+        1440,
+        790,
+        1
+      ],
+      "width": 400,
+      "height": 210,
+      "target_input_index": 4
+    },
+    {
+      "type": "image",
+      "position": [
+        0,
+        0,
+        100
+      ],
+      "width": 1920,
+      "height": 1080,
+      "image_file": "overlay-three-windows-special.png"
+    }
+  ]
+}
