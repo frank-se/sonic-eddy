@@ -373,8 +373,10 @@ int main(int argc, char **argv) {
       PW_KEY_FORMAT_DSP, "8 bit raw midi", PW_KEY_NODE_NAME,
       midi_in_node_name.c_str(), PW_KEY_NODE_DESCRIPTION,
       "Sonic Eddy MIDI cube visualizer - MIDI input", nullptr);
-  if (!args.midi_target.empty())
+  if (!args.midi_target.empty()) {
     pw_properties_set(midi_properties, PW_KEY_TARGET_OBJECT, args.midi_target.c_str());
+    pw_properties_set(midi_properties, "node.dont-fallback", "true");
+  }
 
   app.midi_in_stream = pw_stream_new_simple(loop, midi_in_node_name.c_str(),
                                             midi_properties, &midi_input_stream_events,

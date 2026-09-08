@@ -538,8 +538,14 @@ pw_stream *connect_video_stream(pw_loop *loop, const char *name,
       PW_KEY_MEDIA_ROLE, "Video", PW_KEY_MEDIA_CLASS, media_class,
       PW_KEY_NODE_NAME, name, PW_KEY_NODE_DESCRIPTION,
       "Sonic Eddy downstream compositor", nullptr);
-  if (!target_object.empty())
+  if (!target_object.empty()) {
     pw_properties_set(properties, PW_KEY_TARGET_OBJECT, target_object.c_str());
+    // Without this, WirePlumber falls back to linking any other compatible
+    // node (e.g. a raw camera device) when the named target isn't up yet -
+    // causing a storm of doomed format-negotiation attempts against
+    // unrelated nodes instead of just waiting for the real target.
+    pw_properties_set(properties, "node.dont-fallback", "true");
+  }
 
   auto *stream = pw_stream_new_simple(loop, name, properties, events, user_data);
   if (stream == nullptr)

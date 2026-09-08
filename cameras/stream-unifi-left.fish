@@ -9,12 +9,14 @@ function stream-unifi-left --description 'Publish the unifi webcam into PipeWire
         ! rtph265depay ! h265parse ! vah265dec \
         ! vapostproc ! 'video/x-raw(memory:VAMemory),format=NV12' \
         ! tee name=t \
-        t. ! queue ! vapostproc ! video/x-raw,width=1920,height=1080,format=RGBA \
-        ! pipewiresink client-name="detail-camera-left" mode=provide \
         t. ! queue ! vapostproc ! video/x-raw,width=960,height=540 \
         ! waylandsink \
         t. ! queue ! videocrop left=1350 right=1050 top=1000 bottom=80 \
-        ! vapostproc ! video/x-raw,width=400,height=300 ! pipewiresink client-name="cozy-camera" mode=provide \
+        ! vapostproc ! video/x-raw,width=400,height=300,format=RGBA \
+        ! queue leaky=downstream max-size-buffers=1 \
+        ! pipewiresink client-name="cozy-camera" mode=provide \
         t. ! queue ! videocrop left=1650 right=750 top=80 bottom=1000 \
-        ! vapostproc ! video/x-raw,width=400,height=300 ! pipewiresink client-name="detail-camera-left-small" mode=provide
+        ! vapostproc ! video/x-raw,width=400,height=300,format=RGBA \
+        ! queue leaky=downstream max-size-buffers=1 \
+        ! pipewiresink client-name="detail-camera-left-small" mode=provide
 end

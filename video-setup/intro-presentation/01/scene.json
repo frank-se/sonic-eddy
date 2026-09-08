@@ -12,7 +12,7 @@
       ],
       "width": 400,
       "height": 300,
-      "target_input_index": 1
+      "target_input_index": 0
     },
     {
       "type": "video",
@@ -23,7 +23,7 @@
       ],
       "width": 400,
       "height": 300,
-      "target_input_index": 7
+      "target_input_index": 5
     },
     {
       "type": "image",
@@ -45,7 +45,7 @@
       ],
       "width": 1280,
       "height": 920,
-      "target_input_index": 9
+      "target_input_index": 7
     },
     {
       "type": "image",

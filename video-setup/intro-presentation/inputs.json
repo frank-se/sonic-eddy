@@ -1,22 +1,10 @@
 {
   "inputs": [
     {
-      "name": "detail-camera-right",
-      "width": 1920,
-      "height": 1080,
-      "target_object": "detail-camera-right"
-    },
-    {
       "name": "detail-camera-right-small",
       "width": 400,
       "height": 300,
       "target_object": "detail-camera-right-small"
-    },
-    {
-      "name": "detail-camera-left",
-      "width": 1920,
-      "height": 1080,
-      "target_object": "detail-camera-left"
     },
     {
       "name": "detail-camera-left-small",

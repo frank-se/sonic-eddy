@@ -82,15 +82,17 @@ $build_dir/downstream-compositor --scene $intro_dir/downstream/scene.json \
 disown
 echo $last_pid >$state_dir/downstream.pid
 
-$build_dir/midi-cube --video-width 400 --video-height 300 \
-    >$state_dir/midi-cube.log 2>&1 &
-disown
-echo $last_pid >$state_dir/midi-cube.pid
+# Temporarily disabled - suspected GPU hang trigger (raylib/OpenGL render
+# loop runs continuously at 30fps even while unconnected) when combined
+# with the VA-API camera pipelines. See start-cameras.fish.
+# $build_dir/midi-cube --video-width 400 --video-height 300 \
+#     >$state_dir/midi-cube.log 2>&1 &
+# disown
+# echo $last_pid >$state_dir/midi-cube.pid
 
 echo "started compositor-a (pid "(cat $state_dir/compositor-a.pid)", log $state_dir/compositor-a.log)"
 echo "started compositor-b (pid "(cat $state_dir/compositor-b.pid)", log $state_dir/compositor-b.log)"
 echo "started video-blender (pid "(cat $state_dir/video-blender.pid)", log $state_dir/video-blender.log)"
 echo "started downstream-compositor (pid "(cat $state_dir/downstream.pid)", log $state_dir/downstream.log)"
-echo "started midi-cube (pid "(cat $state_dir/midi-cube.pid)", log $state_dir/midi-cube.log) - "\
-"unconnected, nodes: se.midi-cube.midi-in / se.midi-cube.out"
+echo "midi-cube disabled (suspected GPU hang trigger, see comment above)"
 echo "stop with: $script_dir/stop-video-pipeline.fish"
